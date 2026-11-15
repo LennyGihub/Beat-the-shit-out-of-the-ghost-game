@@ -58,7 +58,7 @@ function Shop.init(toggle: (boolean) -> ())
 	gui = Instance.new("ScreenGui")
 	gui.Name = "UltShop"; gui.ResetOnSpawn = false; gui.IgnoreGuiInset = true; gui.Enabled = false
 	gui.Parent = lp:WaitForChild("PlayerGui")
-	panel = Grunge.panel(gui, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.52), Size = UDim2.fromScale(0.7, 0.84), Rotation = -0.5 }, 21)
+	panel = Grunge.panel(gui, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.52), Size = UDim2.fromScale(0.7, 0.84), Rotation = 0 }, 21) -- no rotation: rotated frames stop the list from clipping
 	local ar = Instance.new("UIAspectRatioConstraint"); ar.AspectRatio = 1.3; ar.Parent = panel
 	Grunge.text(panel, { Text = "THE HOODED DEALER", Font = Grunge.HORROR, Position = UDim2.fromScale(0.04, 0.02), Size = UDim2.fromScale(0.6, 0.08), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(255, 110, 60), ZIndex = 10 })
 	Grunge.text(panel, { Text = "\"Ultimates. Fill your brutality bar, press Q, make her regret dying.\"", Font = Grunge.TYPE, Position = UDim2.fromScale(0.04, 0.1), Size = UDim2.fromScale(0.66, 0.035), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(190, 180, 160), ZIndex = 10 })
@@ -75,7 +75,7 @@ function Shop.init(toggle: (boolean) -> ())
 	end
 	local list = Instance.new("ScrollingFrame")
 	list.BackgroundTransparency = 1; list.BorderSizePixel = 0; list.Position = UDim2.fromScale(0.04, 0.225); list.Size = UDim2.fromScale(0.92, 0.68)
-	list.ScrollBarThickness = 8; list.ScrollBarImageColor3 = Color3.fromRGB(150, 30, 26); list.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	list.ScrollBarThickness = 8; list.ClipsDescendants = true; list.ScrollBarImageColor3 = Color3.fromRGB(150, 30, 26); list.AutomaticCanvasSize = Enum.AutomaticSize.Y
 	list.CanvasSize = UDim2.new(); list.ZIndex = 10; list.Parent = panel
 	local layout = Instance.new("UIListLayout"); layout.Padding = UDim.new(0, 6); layout.SortOrder = Enum.SortOrder.LayoutOrder; layout.Parent = list
 	for i, u in Ultimates.list do

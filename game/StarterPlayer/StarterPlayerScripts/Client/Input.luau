@@ -11,6 +11,7 @@ local Remotes = RS:WaitForChild("Remotes")
 local VM = require(script.Parent.Viewmodel)
 local HUD = require(script.Parent.HUD)
 local Sfx = require(script.Parent.Sfx)
+local Hotbar = require(script.Parent.Hotbar)
 
 local Input = {}
 local lp = Players.LocalPlayer
@@ -64,6 +65,7 @@ local function punch()
 		VM.slam()
 		return
 	end
+	if Hotbar.primary() then return end
 	local now = os.clock()
 	if now - lastPunch < Config.Punch.Cooldown then return end
 	if (lp:GetAttribute("Stamina") or 100) < Config.Punch.StaminaCost then
@@ -100,7 +102,8 @@ local function setSprint(on: boolean)
 end
 
 function Input.init()
-	CAS:BindAction("Punch", function(_, st)
+	CAS:BindAction("Punch", function(_, st, input)
+		if input and input.UserInputType == Enum.UserInputType.Touch then Hotbar.touchHold = st == Enum.UserInputState.Begin end
 		if st == Enum.UserInputState.Begin then punch() end
 		return Enum.ContextActionResult.Pass
 	end, true, Enum.UserInputType.MouseButton1, Enum.KeyCode.ButtonR2)

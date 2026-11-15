@@ -62,7 +62,7 @@ function Ghost.spawn(level: number, pos: Vector3)
 		vel = Vector3.zero, state = "Spawn", stateStart = os.clock(), stateUntil = os.clock() + 2.2,
 		nextAttack = os.clock() + 3, nextScare = os.clock() + rng:NextNumber(C.ScareMin, C.ScareMax),
 		damageBy = {} :: { [Player]: number }, target = nil :: Player?, rp = structParams(),
-		frozenUntil = 0, slowMult = 1, slowUntil = 0, burns = {}, ts = nil :: any, launch = nil :: any, fire = nil :: Fire?,
+		frozenUntil = 0, slowMult = 1, slowUntil = 0, vulnMult = 1, vulnUntil = 0, burns = {}, ts = nil :: any, launch = nil :: any, fire = nil :: Fire?,
 	}
 	Ghost.current = g
 	setState(g, "Spawn", 2.2)
@@ -113,6 +113,7 @@ function Ghost.damage(amount: number, by: Player?)
 		return
 	end
 	if os.clock() < g.frozenUntil then amount *= 1.5 end
+	if os.clock() < g.vulnUntil then amount *= g.vulnMult end
 	g.hp = math.max(0, g.hp - amount)
 	g.model:SetAttribute("HP", g.hp)
 	if g.hp <= 0 then die(g) end
@@ -157,6 +158,25 @@ function Ghost.launch(h: number, d: number, by: Player?)
 	g.model:SetAttribute("Vanish", false)
 	g.launch = { phase = "up", topY = g.hrp.Position.Y + h, d = d, by = by }
 	setState(g, "Launched")
+end
+
+-- she takes extra damage for a while (cursed doll)
+function Ghost.vuln(mult: number, t: number)
+	local g = Ghost.current
+	if not g then return end
+	g.vulnMult = mult
+	g.vulnUntil = os.clock() + t
+	g.model:SetAttribute("Vulnerable", true)
+	task.delay(t, function() if g.model.Parent and os.clock() >= g.vulnUntil - 0.05 then g.model:SetAttribute("Vulnerable", false) end end)
+end
+
+-- push her with a velocity (leaf blower, shop vac, harpoon) without damage
+function Ghost.shove(v: Vector3)
+	local g = Ghost.current
+	if not g or g.state == "Dead" or g.state == "Spawn" or g.state == "Launched" then return end
+	if g.ts and os.clock() < g.ts.untilT then return end
+	g.vel = v
+	if g.state ~= "Knocked" then setState(g, "Knocked", 0.12) end
 end
 
 function Ghost.setVortex(t: number)
@@ -238,8 +258,12 @@ local function stepKnocked(g, dt: number, now: number)
 	if g.vel.Magnitude < 6 and now > g.stateUntil then setState(g, "Recover", 0.5) end
 end
 
+local function warded(p: Player?): boolean
+	return p ~= nil and p:GetAttribute("Warded") == true
+end
+
 local function claw(g, target: Player?, thrp: BasePart?)
-	if not target or not thrp then return end
+	if not target or not thrp or warded(target) then return end
 	local to = thrp.Position - g.hrp.Position
 	if to.Magnitude <= C.SwipeReach then
 		local dmg = C.SwipeDamage + (g.level - 1) * C.SwipeDamagePerLevel
@@ -326,7 +350,7 @@ function Ghost.step(dt: number)
 		if dist < C.AttackRange and now > g.nextAttack then
 			setState(g, "WindUp", C.WindUp)
 			Remotes.Fx:FireAllClients("GhostWindUp", pos)
-		elseif now > g.nextScare and dist > 12 then
+		elseif now > g.nextScare and dist > 12 and not warded(target) then
 			setState(g, "Vanish", 1.4)
 			g.model:SetAttribute("Vanish", true)
 			Remotes.Fx:FireAllClients("GhostVanish", pos)

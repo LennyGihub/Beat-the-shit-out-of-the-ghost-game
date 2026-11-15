@@ -201,6 +201,43 @@ function Fx.handle(kind: string, ...)
 			Sfx.play("Cash")
 			if typeof(at) == "Vector3" then burst(at + Vector3.new(0, 1.5, 0), Color3.fromRGB(150, 220, 110), 24, 10, 0.5) end
 		end
+	elseif kind == "Tracer" then
+		local from, ends, color, by = args[1], args[2], args[3], args[4]
+		for _, to in ends do
+			local len = (to - from).Magnitude
+			local o = from + (to - from).Unit * 2
+			local tr = Instance.new("Part")
+			tr.Anchored = true; tr.CanCollide = false; tr.CanQuery = false; tr.CanTouch = false; tr.CastShadow = false
+			tr.Material = Enum.Material.Neon; tr.Color = color; tr.Size = Vector3.new(0.12, 0.12, math.max(0.5, len - 2))
+			tr.CFrame = CFrame.lookAt((o + to) / 2, to); tr.Parent = workspace.Terrain
+			TweenService:Create(tr, TweenInfo.new(0.12), { Transparency = 1 }):Play()
+			Debris:AddItem(tr, 0.15)
+		end
+		Sfx.at("PunchHeavy", from, { PlaybackSpeed = 1.6, Volume = 0.7 })
+		if by == lp then Fx.shake(0.15); Fx.kick(3) end
+	elseif kind == "ItemBoom" then
+		local pos, radius, color, loud = args[1], args[2], args[3], args[4]
+		flashBall(pos, color, radius * 1.6, 0.35)
+		burst(pos, color, 20 + radius * 2, 15 + radius, 1)
+		Sfx.at(loud and "Explosion" or "PunchHeavy", pos, { Volume = loud and 1.2 or 0.9, PlaybackSpeed = loud and 1 or 0.8 })
+		local d = (cam.CFrame.Position - pos).Magnitude
+		if d < 60 then Fx.shake((loud and 0.7 or 0.3) * (1 - d / 60)) end
+	elseif kind == "TrapSnap" then
+		Sfx.at("PunchHeavy", args[1], { PlaybackSpeed = 1.3, Volume = 1.2 })
+		burst(args[1], Color3.fromRGB(150, 150, 150), 14, 10, 0.5)
+	elseif kind == "ItemSwing" then
+		local by = args[1]
+		if by ~= lp and by and by.Character and by.Character:FindFirstChild("Head") then
+			Sfx.at("Whoosh", by.Character.Head.Position, { PlaybackSpeed = 0.8 })
+		end
+	elseif kind == "ItemBroke" then
+		HUD.toast("YOUR " .. string.upper(args[1]) .. " IS SPENT")
+	elseif kind == "ItemUsed" then
+		Sfx.play("Cash", { PlaybackSpeed = 1.6, Volume = 0.5 })
+	elseif kind == "RunOver" then
+		local reason, cash, k = args[1], args[2], args[3]
+		HUD.banner(reason == "died" and "SHE GOT YOU" or "RUN OVER", "+$" .. tostring(cash) .. "  (" .. tostring(k) .. " GHOSTS)", 5)
+		Sfx.play("Cash")
 	elseif kind == "Toast" then
 		HUD.toast(args[1])
 	elseif kind == "BackInLobby" then
@@ -213,14 +250,16 @@ function Fx.handle(kind: string, ...)
 	elseif kind == "Tired" then
 		HUD.flash(Color3.fromRGB(120, 110, 40), 0.25)
 	elseif kind == "Intro" then
-		HUD.banner("SHE IS IN THE HOUSE", "GHOST LV " .. tostring(args[1]), 4.5)
+		HUD.banner("SHE IS IN THE HOUSE", "GHOST " .. tostring(args[1]), 4)
 		Sfx.play("GhostWhisper", { Volume = 1 })
 	elseif kind == "Victory" then
-		HUD.banner("GHOST DESTROYED", "+$" .. tostring(args[1]) .. "   NOW GO OUTSIDE", 5)
+		HUD.banner("GHOST DESTROYED", "+$" .. tostring(args[1]) .. " RUN CASH", 4)
 		Sfx.play("Cash")
 		setMusic(false)
 	elseif kind == "ShopReady" then
-		HUD.banner("SOMEONE SURVIVED THE CRASH", "HIS STAND IS OPEN - CASH ONLY", 4)
+		local k = args[1]
+		local title = k == "van" and "A VAN SMASHED INTO THE HOUSE" or (k == "train" and "THE TRAIN JUMPED THE RAILS" or "SOMEONE SURVIVED THE CRASH")
+		HUD.banner(title, "SHOP OPEN - RUN CASH ONLY", 4)
 	end
 end
 
@@ -233,7 +272,11 @@ local PRESETS = {
 		Tint = Color3.fromRGB(230, 238, 200), Sat = -0.25, Contrast = 0.2 },
 }
 PRESETS.yard = table.clone(PRESETS.inside)
-PRESETS.yard.Exposure = 0.6
+PRESETS.yard.Exposure = 0.35
+PRESETS.yard.AtmDensity = 0.42
+PRESETS.yard.AtmColor = Color3.fromRGB(26, 28, 32)
+PRESETS.yard.AtmDecay = Color3.fromRGB(14, 14, 18)
+PRESETS.yard.AtmHaze = 1.3
 local currentZone = ""
 function Fx.applyZone(zone: string, dt: number)
 	local p = PRESETS[zone]

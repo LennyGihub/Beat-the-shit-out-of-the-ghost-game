@@ -17,25 +17,17 @@ local state = {} :: { [Player]: any }
 Combat.runUltimate = nil :: ((player: Player, def: any, center: Vector3) -> ())?
 Combat.explode = nil :: ((player: Player, pos: Vector3, radius: number, color: Color3) -> ())?
 
--- combined stat across owned items (health/lifesteal add, the rest multiply)
-function Combat.stat(player: Player, key: string): number
-	local d = Data.get(player)
-	local add = Items.additive[key] == true
-	local v = add and 0 or 1
-	if not d then return v end
-	for id in d.Owned do
-		local it = Items.byId[id]
-		local s = it and it.stats[key]
-		if s then if add then v += s else v *= s end end
-	end
-	return v
+-- upgrades were removed: stats are neutral (kept so call sites stay simple)
+function Combat.stat(_player: Player, key: string): number
+	return (key == "health" or key == "lifesteal") and 0 or 1
 end
 
 local function st(player: Player)
 	local s = state[player]
 	if not s then
 		s = { stamina = ST.Max, lastUse = 0, brut = 0, ultUntil = 0, ultDur = 1, buff = {}, ultColor = Color3.new(1, 0.3, 0.1),
-			combo = 0, lastHit = 0, lastPunch = 0, carrying = nil, sprinting = false, lastSync = 0, onePunch = false, giantUntil = 0 }
+			combo = 0, lastHit = 0, lastPunch = 0, carrying = nil, sprinting = false, lastSync = 0, onePunch = false, giantUntil = 0,
+			speedMult = 1, speedUntil = 0, shield = 0 }
 		state[player] = s
 	end
 	return s
@@ -77,7 +69,7 @@ local function setWalk(player: Player, s)
 	local hum = alive(player)
 	if not hum then return end
 	local base = s.sprinting and s.stamina > 2 and Config.Player.SprintSpeed or Config.Player.WalkSpeed
-	base *= Combat.stat(player, "speed") * bmul(s, "speed")
+	base *= bmul(s, "speed") * (os.clock() < s.speedUntil and s.speedMult or 1)
 	if s.carrying and s.carrying.Parent then
 		base = math.max(8, base - Furniture.weight(s.carrying) * CA.SlowPerWeight * (ult(s) and 0.3 or 1))
 	end
@@ -98,9 +90,15 @@ end
 
 function Combat.damagePlayer(player: Player, amount: number, staminaDrain: number?)
 	local hum = alive(player)
-	if not hum then return end
-	hum:TakeDamage(amount * Combat.stat(player, "armor"))
+	if not hum or player:GetAttribute("Warded") then return end
 	local s = st(player)
+	if s.shield > 0 then
+		local absorbed = math.min(s.shield, amount)
+		s.shield -= absorbed
+		amount -= absorbed
+		player:SetAttribute("Shield", math.floor(s.shield))
+	end
+	hum:TakeDamage(amount)
 	if staminaDrain then
 		s.stamina = math.max(0, s.stamina - staminaDrain)
 		s.lastUse = os.clock()
@@ -120,6 +118,38 @@ function Combat.refillStamina(player: Player)
 	sync(player, s, true)
 end
 
+function Combat.speedBuff(player: Player, mult: number, t: number)
+	local s = st(player)
+	s.speedMult = mult
+	s.speedUntil = os.clock() + t
+	setWalk(player, s)
+	task.delay(t + 0.05, function() if state[player] == s then setWalk(player, s) end end)
+end
+
+function Combat.addShield(player: Player, n: number)
+	local s = st(player)
+	s.shield += n
+	player:SetAttribute("Shield", math.floor(s.shield))
+end
+
+function Combat.fillBrutality(player: Player)
+	local s = st(player)
+	if not ult(s) then s.brut = BR.Max; sync(player, s, true) end
+end
+
+function Combat.useStamina(player: Player, n: number): boolean
+	local s = st(player)
+	if buff(s, "staminaFree") then return true end
+	if s.stamina < n then
+		Remotes.Fx:FireClient(player, "Tired")
+		return false
+	end
+	s.stamina -= n
+	s.lastUse = os.clock()
+	sync(player, s, true)
+	return true
+end
+
 function Combat.giant(player: Player, scale: number, dur: number)
 	local ch = player.Character
 	if not ch then return end
@@ -133,6 +163,61 @@ function Combat.giant(player: Player, scale: number, dur: number)
 	end)
 end
 
+-- where a strike from this player's head along dir hits the ghost (nil = miss)
+function Combat.tryHit(player: Player, dir: Vector3, range: number): Vector3?
+	local _, hrp = alive(player)
+	local g = Ghost.current
+	if not hrp or not g or not Ghost.alive() or g.state == "Spawn" or g.model:GetAttribute("Vanish") then return nil end
+	local head = (player.Character :: Model):FindFirstChild("Head") :: BasePart?
+	local from = head and head.Position or hrp.Position
+	range *= math.max(1, (player.Character :: Model):GetScale())
+	local best, hitPos = math.huge, nil
+	for _, name in { "HumanoidRootPart", "UpperTorso", "Head", "LowerTorso" } do
+		local part = g.model:FindFirstChild(name) :: BasePart?
+		if part then
+			local to = part.Position - from
+			if to.Magnitude < best and dir:Dot(to.Unit) >= P.ConeDot then best = to.Magnitude; hitPos = part.Position end
+		end
+	end
+	if best <= range then return hitPos end
+	return nil
+end
+
+-- a landed hit: combo, ultimate buffs, knockback, brutality, effects. Returns the damage dealt.
+function Combat.registerHit(player: Player, dir: Vector3, hitPos: Vector3, baseDmg: number, baseKnock: number, knockPerCombo: number?, comboStep: number?): number
+	local s = st(player)
+	local now = os.clock()
+	local step = comboStep or 1
+	if buff(s, "comboLock") then
+		s.combo += 2 * step
+	elseif step > 0 then
+		s.combo = (now - s.lastHit <= P.ComboWindow) and s.combo + 1 or 1
+	elseif now - s.lastHit > P.ComboWindow then
+		s.combo = 0
+	end
+	s.lastHit = now
+	local cscale = math.min(1 + math.max(s.combo - 1, 0) * P.ComboDamageStep, P.MaxComboScale)
+	local isUlt = ult(s)
+	local dmg = baseDmg * cscale * bmul(s, "damage")
+	if buff(s, "onePunch") and s.onePunch then
+		dmg *= 20
+		s.onePunch = false
+		Remotes.Fx:FireAllClients("OnePunch", hitPos, player)
+	end
+	local knock = math.min(baseKnock + s.combo * (knockPerCombo or P.KnockPerCombo), P.MaxKnock) * bmul(s, "knock")
+	Ghost.hit(player, dir, knock, dmg)
+	local ls = (buff(s, "lifesteal") :: number?) or 0
+	if ls > 0 then heal(player, dmg * ls) end
+	local burn = buff(s, "burnOnHit")
+	if burn then Ghost.burn(burn, 3, s.ultColor) end
+	local ex = buff(s, "explode")
+	if ex and Combat.explode then Combat.explode(player, hitPos, ex, s.ultColor) end
+	if not isUlt then s.brut = math.min(BR.Max, s.brut + (BR.PerHit + math.min(s.combo, 20) * BR.PerCombo) * (step > 0 and 1 or 0.35)) end
+	Remotes.Fx:FireAllClients("Hit", hitPos, math.max(s.combo, 1), dmg, isUlt, player)
+	sync(player, s, true)
+	return dmg
+end
+
 local function onPunch(player: Player, look: any)
 	local dir = validDir(look)
 	local hum, hrp = alive(player)
@@ -141,57 +226,10 @@ local function onPunch(player: Player, look: any)
 	local now = os.clock()
 	if s.carrying then return end
 	if now - s.lastPunch < P.Cooldown * 0.8 then return end
-	local cost = buff(s, "staminaFree") and 0 or P.StaminaCost * Combat.stat(player, "staminaCost")
-	if s.stamina < cost then
-		Remotes.Fx:FireClient(player, "Tired")
-		return
-	end
+	if not Combat.useStamina(player, P.StaminaCost) then return end
 	s.lastPunch = now
-	s.stamina -= cost
-	s.lastUse = now
-	local g = Ghost.current
-	if g and Ghost.alive() and g.state ~= "Spawn" and not g.model:GetAttribute("Vanish") then
-		local head = (player.Character :: Model):FindFirstChild("Head") :: BasePart?
-		local from = head and head.Position or hrp.Position
-		local scale = (player.Character :: Model):GetScale()
-		local range = P.Range * Combat.stat(player, "reach") * math.max(1, scale)
-		local best = math.huge
-		local hitPos = g.hrp.Position
-		for _, name in { "HumanoidRootPart", "UpperTorso", "Head", "LowerTorso" } do
-			local part = g.model:FindFirstChild(name) :: BasePart?
-			if part then
-				local to = part.Position - from
-				if to.Magnitude < best and dir:Dot(to.Unit) >= P.ConeDot then best = to.Magnitude; hitPos = part.Position end
-			end
-		end
-		if best <= range then
-			local window = P.ComboWindow * Combat.stat(player, "combo")
-			if buff(s, "comboLock") then
-				s.combo += 2
-			else
-				s.combo = (now - s.lastHit <= window) and s.combo + 1 or 1
-			end
-			s.lastHit = now
-			local cscale = math.min(1 + (s.combo - 1) * P.ComboDamageStep, P.MaxComboScale)
-			local isUlt = ult(s)
-			local dmg = P.BaseDamage * cscale * Combat.stat(player, "damage") * bmul(s, "damage")
-			if buff(s, "onePunch") and s.onePunch then
-				dmg *= 20
-				s.onePunch = false
-				Remotes.Fx:FireAllClients("OnePunch", hitPos, player)
-			end
-			local knock = math.min(P.BaseKnock + s.combo * P.KnockPerCombo, P.MaxKnock) * Combat.stat(player, "knock") * bmul(s, "knock")
-			Ghost.hit(player, dir, knock, dmg)
-			local ls = Combat.stat(player, "lifesteal") + ((buff(s, "lifesteal") :: number?) or 0)
-			if ls > 0 then heal(player, dmg * ls) end
-			local burn = buff(s, "burnOnHit")
-			if burn then Ghost.burn(burn, 3, s.ultColor) end
-			local ex = buff(s, "explode")
-			if ex and Combat.explode then Combat.explode(player, hitPos, ex, s.ultColor) end
-			if not isUlt then s.brut = math.min(BR.Max, s.brut + (BR.PerHit + s.combo * BR.PerCombo) * Combat.stat(player, "brutality")) end
-			Remotes.Fx:FireAllClients("Hit", hitPos, s.combo, dmg, isUlt, player)
-		end
-	end
+	local hitPos = Combat.tryHit(player, dir, P.Range)
+	if hitPos then Combat.registerHit(player, dir, hitPos, P.BaseDamage, P.BaseKnock) end
 	sync(player, s, true)
 end
 
@@ -288,6 +326,9 @@ local function setupCharacter(player: Player, ch: Model)
 	s.stamina = ST.Max
 	s.combo = 0
 	s.ultUntil = 0
+	s.shield = 0
+	s.speedUntil = 0
+	player:SetAttribute("Shield", 0)
 	player:SetAttribute("Carrying", false)
 	local hum = ch:WaitForChild("Humanoid") :: Humanoid
 	hum.MaxHealth = Config.Player.MaxHealth + Combat.stat(player, "health")

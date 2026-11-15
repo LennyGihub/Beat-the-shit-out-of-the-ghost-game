@@ -11,5 +11,7 @@ Order: `mansion` (walls, floors, stairs, roof, porch) -> `lights` (Lighting + fi
 (prepend both: `cat lib2 furn_lib furn_place`) -> `ghost` (ServerStorage.GhostTemplate) -> `plane`
 (ReplicatedStorage.PlaneModel, ServerStorage.MerchantTemplate) -> `stand` (ServerStorage.StandTemplate + PilotLying)
 -> `lobby` (PS2 park at z = 1000 with 8 queue rooms and the ultimate dealer; needs ServerStorage.LobbyAssets, the AI meshes).
+-> `events_models` (ReplicatedStorage.EventModels: Van, TrainLoco, TrainWagon, TrainShopWagon)
+-> `grounds` (dark forest, yard walls/fence, railway; needs LobbyAssets.PineTree + DeadTreeA).
 Each script replaces what it built before.
 The PS2 textures are MaterialVariants in MaterialService.AssistantMaterials (made with Studio's generate_material).

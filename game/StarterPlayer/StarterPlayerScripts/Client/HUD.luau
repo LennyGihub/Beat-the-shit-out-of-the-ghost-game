@@ -238,7 +238,14 @@ function HUD.update(dt: number)
 	updateWaypoint()
 	local showCash = not inMatch or (roundState ~= "Fight" and roundState ~= "Intro")
 	cashLabel.Visible = showCash
-	cashLabel.Text = "$" .. tostring(lp:GetAttribute("Cash") or 0)
+	if inMatch then
+		cashLabel.Text = "RUN $" .. tostring(lp:GetAttribute("RunCash") or 0)
+		cashLabel.Visible = true
+	else
+		cashLabel.Text = "$" .. tostring(lp:GetAttribute("Cash") or 0)
+	end
+	local sh = lp:GetAttribute("Shield") or 0
+	health.label.Text = sh > 0 and ("HEALTH  +" .. sh .. " ARMOR") or "HEALTH"
 end
 
 return HUD

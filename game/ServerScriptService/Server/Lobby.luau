@@ -8,7 +8,7 @@ local TeleportService = game:GetService("TeleportService")
 local Ultimates = require(RS.Shared.Ultimates)
 local Remotes = require(script.Parent.Remotes)
 local Data = require(script.Parent.Data)
-local Round = require(script.Parent.Round)
+local Run = require(script.Parent.Run)
 
 local Lobby = {}
 local COUNTDOWN = 5
@@ -35,11 +35,11 @@ end
 local function launch(room, members: { Player })
 	room.countdownStart = nil
 	if RunService:IsStudio() then
-		if Round.running() then
+		if Run.running() then
 			for _, p in members do Remotes.Fx:FireClient(p, "Toast", "A match is already running in this Studio test") end
 			return
 		end
-		Round.beginMatch(members)
+		Run.beginMatch(members)
 		return
 	end
 	setSign(room, room.size .. " PLAYER" .. (room.size > 1 and "S" or ""), "TELEPORTING...", Color3.fromRGB(150, 220, 110))
@@ -93,17 +93,17 @@ local function tick()
 end
 
 function Lobby.returnPlayer(p: Player)
-	if Round.mode == "Match" then
+	if Run.mode == "Match" then
 		Data.save(p)
 		local ok, err = pcall(function() TeleportService:TeleportAsync(game.PlaceId, { p }) end)
 		if not ok then warn("[Lobby] return failed: " .. tostring(err)) end
 		return
 	end
-	Round.removeFromMatch(p)
+	Run.removeFromMatch(p)
 	local sp = workspace:FindFirstChild("LobbySpawn") :: BasePart?
 	if sp and p.Character then p.Character:PivotTo(sp.CFrame + Vector3.new(math.random(-6, 6), 4, math.random(-6, 6))) end
 	Remotes.Fx:FireClient(p, "BackInLobby")
-	if #Round.matchPlayers() == 0 then Round.endMatch() end
+	if #Run.matchPlayers() == 0 then Run.endMatch() end
 end
 
 local function onBuyUlt(p: Player, id: any)
@@ -143,6 +143,7 @@ function Lobby.start()
 		local pp = Instance.new("ProximityPrompt")
 		pp.ActionText = "Ultimate Shop"; pp.ObjectText = "The Hooded Dealer"; pp.HoldDuration = 0
 		pp.MaxActivationDistance = 12; pp.RequiresLineOfSight = false; pp.KeyboardKeyCode = Enum.KeyCode.F
+		pp.Style = Enum.ProximityPromptStyle.Custom
 		pp.Parent = vTorso
 		pp.Triggered:Connect(function(p) Remotes.Fx:FireClient(p, "OpenUltShop") end)
 	end
@@ -154,10 +155,10 @@ function Lobby.start()
 		end
 	end)
 	Remotes.ReturnLobby.OnServerEvent:Connect(function(p)
-		if p:GetAttribute("InMatch") and (Round.state() == "Shop" or Round.state() == "Idle") then Lobby.returnPlayer(p) end
+		if p:GetAttribute("InMatch") then Run.leave(p, "left") end
 	end)
-	Round.onReturnLobby = Lobby.returnPlayer
-	if Round.mode == "Lobby" then
+	Run.onReturnLobby = Lobby.returnPlayer
+	if Run.mode == "Lobby" then
 		task.spawn(function()
 			while true do
 				tick()

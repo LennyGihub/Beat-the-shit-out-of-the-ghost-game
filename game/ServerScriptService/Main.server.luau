@@ -17,48 +17,51 @@ PhysicsService:CollisionGroupSetCollidable("Thrown", "Debris", false)
 local Data = require(Server.Data)
 local Furniture = require(Server.Furniture)
 local Combat = require(Server.Combat)
-local Round = require(Server.Round)
+local Run = require(Server.Run)
+local Inventory = require(Server.Inventory)
 local Lobby = require(Server.Lobby)
 local UltRunner = require(Server.UltRunner)
 
 local isMatchServer = game.PrivateServerId ~= "" and game.PrivateServerOwnerId == 0
-Round.mode = isMatchServer and "Match" or "Lobby"
+Run.mode = isMatchServer and "Match" or "Lobby"
 Players.CharacterAutoLoads = false
 
 Data.start()
 Furniture.init()
 Combat.start()
 UltRunner.start()
-Round.start()
+Inventory.start()
+Run.start()
 Lobby.start()
 
 local expected = 1
 local firstJoin = nil :: number?
 local function onPlayer(p: Player)
-	if Round.mode == "Match" then
-		Round.addToMatch(p)
+	if Run.mode == "Match" then
+		Run.addToMatch(p)
 		local jd = p:GetJoinData()
 		local td = jd and jd.TeleportData
 		if type(td) == "table" and tonumber(td.size) then expected = math.max(expected, math.clamp(tonumber(td.size) :: number, 1, 4)) end
 	else
-		Round.removeFromMatch(p)
+		Run.removeFromMatch(p)
 	end
 	-- CharacterAutoLoads is off (so the spawn location is set first): respawn 4 s after dying
 	p.CharacterAdded:Connect(function(ch)
 		local hum = ch:WaitForChild("Humanoid") :: Humanoid
 		hum.Died:Once(function()
+			Run.onDied(p)
 			task.delay(4, function() if p.Parent and p.Character == ch then p:LoadCharacter() end end)
 		end)
 	end)
 	p:LoadCharacter()
 	Data.load(p)
-	if Round.mode == "Match" then
+	if Run.mode == "Match" then
 		firstJoin = firstJoin or os.clock()
 		-- start when the whole party has arrived (or after 15 s)
 		task.spawn(function()
-			while not Round.running() do
-				if #Round.matchPlayers() >= expected or os.clock() - (firstJoin :: number) > 15 then
-					Round.startFight()
+			while not Run.running() do
+				if #Run.matchPlayers() >= expected or os.clock() - (firstJoin :: number) > 15 then
+					Run.startFight()
 					break
 				end
 				task.wait(0.5)

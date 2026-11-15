@@ -1,5 +1,7 @@
 -- First-person fists: guard pose, alternating jabs, hooks on high combos, carry pose, ultimate glow.
 local Players = game:GetService("Players")
+local RS = game:GetService("ReplicatedStorage")
+local ItemModels = require(RS.Shared.ItemModels)
 local RunService = game:GetService("RunService")
 
 local VM = {}
@@ -15,6 +17,9 @@ local bobT = 0
 local carryAlpha = 0
 local shakeOff = CFrame.new()
 local skinColor = Color3.fromRGB(120, 88, 70)
+local held: Model? = nil
+local heldItem: any = nil
+local heldOffset = CFrame.new()
 
 local function mk(name: string, size: Vector3, color: Color3, mat: Enum.Material?): BasePart
 	local p = Instance.new("Part")
@@ -63,6 +68,43 @@ end
 
 function VM.setShake(cf: CFrame) shakeOff = cf end
 
+-- show an item in the right hand (nil = bare fists)
+function VM.setItem(it: any)
+	if it == heldItem then return end
+	heldItem = it
+	if held then held:Destroy(); held = nil end
+	if not it then return end
+	local m = ItemModels.build(it.shape, it.color, it.glow)
+	m:ScaleTo(0.55) -- first-person hands are close to the camera
+	for _, p in m:GetDescendants() do if p:IsA("BasePart") then p.CastShadow = false end end
+	m.Parent = model
+	held = m
+	if it.kind == "melee" then
+		heldOffset = CFrame.new(0, 0.1, 0) * CFrame.Angles(math.rad(70), 0, 0) * CFrame.new(0, 0, 0.6)
+	elseif it.kind == "gun" or it.kind == "spray" then
+		heldOffset = CFrame.new(-0.05, 0.15, -0.1)
+	else
+		heldOffset = CFrame.new(0, 0.25, -0.15) * CFrame.Angles(0, math.rad(25), 0)
+	end
+end
+
+-- world position of the held item's far end (spray nozzle)
+function VM.itemTip(): Vector3?
+	if not held then return nil end
+	local cf, size = held:GetBoundingBox()
+	return (cf * CFrame.new(0, 0, -size.Z / 2)).Position
+end
+
+function VM.swing(fast: boolean)
+	table.insert(punches, { side = "R", t0 = os.clock(), kind = fast and "saw" or "swing", dur = fast and 0.1 or 0.32 })
+end
+function VM.recoil(power: number)
+	table.insert(punches, { side = "R", t0 = os.clock(), kind = "recoil", dur = 0.18, power = power })
+end
+function VM.toss()
+	table.insert(punches, { side = "R", t0 = os.clock(), kind = "toss", dur = 0.35 })
+end
+
 local function punchOffset(side: string, now: number): CFrame
 	local out = CFrame.new()
 	for i = #punches, 1, -1 do
@@ -80,6 +122,17 @@ local function punchOffset(side: string, now: number): CFrame
 				out = CFrame.new(sx * 1.4 * ext, 0.45 * ext, -1.2 * ext) * CFrame.Angles(0, sx * 1.1 * ext, sx * -0.6 * ext)
 			elseif p.kind == "upper" then
 				out = CFrame.new(sx * 0.7 * ext, 1.1 * ext, -1.4 * ext) * CFrame.Angles(1.0 * ext, 0, 0)
+			elseif p.kind == "swing" then
+				-- overhead diagonal chop
+				local a2 = math.clamp(a / 0.45, 0, 1)
+				local back = 1 - math.clamp((a - 0.45) / 0.55, 0, 1)
+				out = CFrame.new(-0.6 * a2 * back, (0.5 - 1.3 * a2) * back + 0.2 * (1 - back), -1.2 * a2 * back) * CFrame.Angles((1.1 - 2.2 * a2) * back, 0.4 * a2 * back, 0.5 * a2 * back)
+			elseif p.kind == "saw" then
+				out = CFrame.new(math.random() * 0.06, math.random() * 0.06, -0.5)
+			elseif p.kind == "recoil" then
+				out = CFrame.new(0, 0.1 * ext * (p.power or 1), 0.5 * ext * (p.power or 1)) * CFrame.Angles(0.35 * ext * (p.power or 1), 0, 0)
+			elseif p.kind == "toss" then
+				out = CFrame.new(-0.2 * ext, 0.9 * ext, -1.4 * ext) * CFrame.Angles(-0.8 * ext, 0, 0)
 			else -- slam (ultimate)
 				out = CFrame.new(sx * 0.4 * ext, -0.6 * ext + (1 - ext) * 1.2, -1.6 * ext) * CFrame.Angles(-0.9 * ext, 0, 0)
 			end
@@ -94,7 +147,11 @@ function VM.update(dt: number)
 	local firstPerson = (cam.CFrame.Position - cam.Focus.Position).Magnitude < 1.5
 	local show = hum ~= nil and hum.Health > 0 and firstPerson
 	for _, a in arms do for _, p in a do (p :: BasePart).LocalTransparencyModifier = show and 0 or 1 end end
-	if not show then lastCamCF = cam.CFrame; return end
+	if not show then
+		lastCamCF = cam.CFrame
+		if held then for _, p in held:GetDescendants() do if p:IsA("BasePart") then p.LocalTransparencyModifier = 1 end end end
+		return
+	end
 	local now = os.clock()
 	-- sway from camera turning, bob from walking
 	local rx, ry = (lastCamCF:ToObjectSpace(cam.CFrame)):ToOrientation()
@@ -108,7 +165,7 @@ function VM.update(dt: number)
 	local ult = lp:GetAttribute("UltActive") == true
 	local jitter = ult and CFrame.new(math.random() * 0.03, math.random() * 0.03, 0) or CFrame.new()
 	local base = cam.CFrame * shakeOff * bob * jitter * CFrame.new(-sway.X * 1.2, sway.Y * 1.2, 0)
-	local hasBrass = string.find(lp:GetAttribute("Owned") or "", "BrassKnuckles") ~= nil
+	local hasBrass = false
 	for side, a in arms do
 		local sx = side == "R" and 1 or -1
 		local guard = CFrame.new(sx * 0.62, -0.62 + (side == "L" and -0.04 or 0), -1.5) * CFrame.Angles(0.22, sx * -0.14, sx * -0.25)
@@ -119,9 +176,13 @@ function VM.update(dt: number)
 		a.arm.CFrame = fistCF * CFrame.new(0, -0.04, 1.05)
 		a.sleeve.CFrame = fistCF * CFrame.new(0, -0.04, 2.0)
 		a.brass.CFrame = fistCF * CFrame.new(0, 0.1, -0.22)
-		a.brass.LocalTransparencyModifier = hasBrass and 0 or 1
+		a.brass.LocalTransparencyModifier = 1
 		a.fist.Material = ult and Enum.Material.Neon or Enum.Material.SmoothPlastic
 		a.fist.Color = ult and Color3.fromRGB(255, 70, 30) or skinColor
+		if side == "R" and held then
+			held:PivotTo(fistCF * heldOffset)
+			for _, p in held:GetDescendants() do if p:IsA("BasePart") then p.LocalTransparencyModifier = carryAlpha > 0.5 and 1 or 0 end end
+		end
 	end
 end
 
