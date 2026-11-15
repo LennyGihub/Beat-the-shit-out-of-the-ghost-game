@@ -1,0 +1,122 @@
+{
+  "game/ReplicatedStorage/Shared/Config.luau": {
+    "mtime": 1794764132.8915732,
+    "seen": 1794764139.7560005,
+    "ast_hash": "e208a450c0d3af2567200173f62ffd2f",
+    "semantic_hash": ""
+  },
+  "game/ReplicatedStorage/Shared/Items.luau": {
+    "mtime": 1794764133.1713588,
+    "seen": 1794764139.756009,
+    "ast_hash": "83ddc31affacf1304ee19feb78ed2aec",
+    "semantic_hash": ""
+  },
+  "game/ReplicatedStorage/Shared/Sounds.luau": {
+    "mtime": 1794764133.446569,
+    "seen": 1794764139.7560132,
+    "ast_hash": "1630df571e2124539aa9793af5e403fc",
+    "semantic_hash": ""
+  },
+  "game/ServerScriptService/Main.server.luau": {
+    "mtime": 1794764133.723761,
+    "seen": 1794764139.756015,
+    "ast_hash": "5438fe26613f588cd77e6e461430c36c",
+    "semantic_hash": ""
+  },
+  "game/ServerScriptService/Server/Combat.luau": {
+    "mtime": 1794764134.0817943,
+    "seen": 1794764139.756017,
+    "ast_hash": "31e9e5e04ff17f27867409852cd3b8ca",
+    "semantic_hash": ""
+  },
+  "game/ServerScriptService/Server/Data.luau": {
+    "mtime": 1794764134.4400783,
+    "seen": 1794764139.7560184,
+    "ast_hash": "4de6154fd3f3ef3200f2b20d569a1bb7",
+    "semantic_hash": ""
+  },
+  "game/ServerScriptService/Server/Furniture.luau": {
+    "mtime": 1794764134.7382898,
+    "seen": 1794764139.7560203,
+    "ast_hash": "0ae5fca67cc2075313125a0e3c870f94",
+    "semantic_hash": ""
+  },
+  "game/ServerScriptService/Server/Ghost.luau": {
+    "mtime": 1794764135.0233634,
+    "seen": 1794764139.7560217,
+    "ast_hash": "a72eb8b4edfb79d3907a9bc675f33ca4",
+    "semantic_hash": ""
+  },
+  "game/ServerScriptService/Server/Remotes.luau": {
+    "mtime": 1794764135.3034408,
+    "seen": 1794764139.7560375,
+    "ast_hash": "ae13f427f43048e2e20deb88b00cdca9",
+    "semantic_hash": ""
+  },
+  "game/ServerScriptService/Server/Round.luau": {
+    "mtime": 1794764135.5889132,
+    "seen": 1794764139.7560403,
+    "ast_hash": "2dd6704791847461401f3b16a3818844",
+    "semantic_hash": ""
+  },
+  "game/StarterPlayer/StarterPlayerScripts/Client/Fx.luau": {
+    "mtime": 1794764135.8730822,
+    "seen": 1794764139.7560425,
+    "ast_hash": "fc42b287f6c73178f01836645c644d28",
+    "semantic_hash": ""
+  },
+  "game/StarterPlayer/StarterPlayerScripts/Client/GhostAnim.luau": {
+    "mtime": 1794764136.1719165,
+    "seen": 1794764139.756045,
+    "ast_hash": "4f3fcbb82b713880027cda54a7e3af1c",
+    "semantic_hash": ""
+  },
+  "game/StarterPlayer/StarterPlayerScripts/Client/Grunge.luau": {
+    "mtime": 1794764136.4470298,
+    "seen": 1794764139.7560468,
+    "ast_hash": "0a1b44d172aad4dd1624bcba581e9fe2",
+    "semantic_hash": ""
+  },
+  "game/StarterPlayer/StarterPlayerScripts/Client/HUD.luau": {
+    "mtime": 1794764136.720096,
+    "seen": 1794764139.7560487,
+    "ast_hash": "d9946f4fd7777e7d842c69967837350c",
+    "semantic_hash": ""
+  },
+  "game/StarterPlayer/StarterPlayerScripts/Client/Input.luau": {
+    "mtime": 1794764136.9906843,
+    "seen": 1794764139.7560496,
+    "ast_hash": "fdafcbf3c316532e935ae8d7d94d6b03",
+    "semantic_hash": ""
+  },
+  "game/StarterPlayer/StarterPlayerScripts/Client/PlaneFx.luau": {
+    "mtime": 1794764137.270266,
+    "seen": 1794764139.7560513,
+    "ast_hash": "70d0cfa743bcb3154879a803155cf24e",
+    "semantic_hash": ""
+  },
+  "game/StarterPlayer/StarterPlayerScripts/Client/Sfx.luau": {
+    "mtime": 1794764137.5368702,
+    "seen": 1794764139.7560525,
+    "ast_hash": "71c793375a4df14433cb69887cb25c8d",
+    "semantic_hash": ""
+  },
+  "game/StarterPlayer/StarterPlayerScripts/Client/ShopUI.luau": {
+    "mtime": 1794764137.8015633,
+    "seen": 1794764139.756054,
+    "ast_hash": "ea3150659f8b0d2ab19f4fce4dca7909",
+    "semantic_hash": ""
+  },
+  "game/StarterPlayer/StarterPlayerScripts/Client/Viewmodel.luau": {
+    "mtime": 1794764138.0680864,
+    "seen": 1794764139.7560558,
+    "ast_hash": "cf1a4dc08afe994c407f7cd2e5dd4bba",
+    "semantic_hash": ""
+  },
+  "game/StarterPlayer/StarterPlayerScripts/ClientMain.client.luau": {
+    "mtime": 1794764138.3455245,
+    "seen": 1794764139.756057,
+    "ast_hash": "032e39b5aaefb68fe30bd7924be5ddf5",
+    "semantic_hash": ""
+  }
+}
