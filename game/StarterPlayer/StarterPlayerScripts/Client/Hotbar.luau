@@ -83,16 +83,11 @@ function Hotbar.primary(): boolean
 	local cd = it.cd or 0.6
 	if now - (lastUse[it.id] or 0) < cd then return true end
 	lastUse[it.id] = now
+	VM.use()
 	if it.kind == "melee" then
-		VM.swing(it.cd < 0.15)
-		Sfx.play("Whoosh", { PlaybackSpeed = 0.7 + math.random() * 0.3 })
-	elseif it.kind == "gun" then
-		VM.recoil(it.knock > 50 and 1.6 or 1)
+		Sfx.play("Whoosh", { PlaybackSpeed = (it.cd > 0.6 and 0.55 or 0.75) + math.random() * 0.25 })
 	elseif it.kind == "throw" or it.kind == "trap" then
-		VM.toss()
 		Sfx.play("Whoosh", { PlaybackSpeed = 0.6 })
-	elseif it.kind == "use" then
-		VM.toss()
 	end
 	Remotes.Use:FireServer(sel, cam.CFrame.LookVector)
 	return true
@@ -100,6 +95,7 @@ end
 
 local function setSpray(on: boolean, it)
 	spraying = on
+	VM.setSpraying(on)
 	if on and it then
 		if not sprayAtt then
 			sprayAtt = Instance.new("Attachment"); sprayAtt.Parent = workspace.Terrain

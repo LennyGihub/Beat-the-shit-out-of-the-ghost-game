@@ -21,6 +21,7 @@ local Run = require(Server.Run)
 local Inventory = require(Server.Inventory)
 local Lobby = require(Server.Lobby)
 local UltRunner = require(Server.UltRunner)
+local MapLoader = require(Server.MapLoader)
 
 local isMatchServer = game.PrivateServerId ~= "" and game.PrivateServerOwnerId == 0
 Run.mode = isMatchServer and "Match" or "Lobby"
@@ -28,6 +29,7 @@ Players.CharacterAutoLoads = false
 
 Data.start()
 Furniture.init()
+MapLoader.init()
 Combat.start()
 UltRunner.start()
 Inventory.start()
@@ -36,12 +38,18 @@ Lobby.start()
 
 local expected = 1
 local firstJoin = nil :: number?
+local configured = false
 local function onPlayer(p: Player)
 	if Run.mode == "Match" then
 		Run.addToMatch(p)
 		local jd = p:GetJoinData()
 		local td = jd and jd.TeleportData
 		if type(td) == "table" and tonumber(td.size) then expected = math.max(expected, math.clamp(tonumber(td.size) :: number, 1, 4)) end
+		-- the party picked a map + difficulty on the lobby pad
+		if not configured and not Run.running() then
+			configured = true
+			Run.configure(type(td) == "table" and type(td.map) == "string" and td.map or nil, type(td) == "table" and type(td.diff) == "string" and td.diff or nil)
+		end
 	else
 		Run.removeFromMatch(p)
 	end

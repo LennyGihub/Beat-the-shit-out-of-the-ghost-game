@@ -1,17 +1,25 @@
--- The woman ghost: floats through walls toward the nearest player, claws, scares, gets knocked flying.
--- Knockback is scripted: it stops at walls (wall slam) and smashes furniture on the way.
+-- The monster of the current ghost wave (the Woman on wave 1, then a random one from Shared/Monsters).
+-- Floats/walks through walls toward the nearest player, claws, uses its special ability (Abilities.luau),
+-- gets knocked flying. Knockback is scripted: it stops at walls (wall slam) and smashes furniture on the way.
 local Players = game:GetService("Players")
 local SS = game:GetService("ServerStorage")
 local RS = game:GetService("ReplicatedStorage")
 local Config = require(RS.Shared.Config)
 local Remotes = require(script.Parent.Remotes)
 local Furniture = require(script.Parent.Furniture)
+local Abilities = require(script.Parent.Abilities)
+local Monsters = require(RS.Shared.Monsters)
 local C = Config.Ghost
 
 local Ghost = {}
 Ghost.current = nil :: any
 Ghost.onDeath = nil :: ((g: any) -> ())?
 Ghost.damagePlayer = nil :: ((p: Player, n: number, staminaDrain: number?) -> ())?
+-- injected by Combat: damage + fling a player, and pin a player in place
+Ghost.hitPlayer = nil :: any
+Ghost.rootPlayer = nil :: any
+-- difficulty of the current run (set by Run): multipliers on monster hp / damage / speed
+Ghost.diff = { hp = 1, dmg = 1, speed = 1 }
 local rng = Random.new()
 
 local function structParams(): RaycastParams
@@ -28,21 +36,56 @@ local function floorBelow(pos: Vector3, rp: RaycastParams): number
 end
 
 local function setState(g, s: string, dur: number?)
+	if g.state == "Ability" and s ~= "Ability" and g.ab then Abilities.interrupt(g) end
 	g.state = s
 	g.stateStart = os.clock()
 	g.stateUntil = os.clock() + (dur or 0)
 	g.model:SetAttribute("State", s)
 end
+Ghost.setState = setState
 
 function Ghost.alive(): boolean
 	return Ghost.current ~= nil and Ghost.current.state ~= "Dead"
 end
 
-function Ghost.spawn(level: number, pos: Vector3)
+-- the monster's model: ServerStorage.Monsters.<template> (falls back to the Woman's GhostTemplate)
+local function template(def): Model
+	local folder = SS:FindFirstChild("Monsters")
+	local t = folder and folder:FindFirstChild(def.template)
+	return (t or SS:WaitForChild("GhostTemplate")) :: Model
+end
+
+function Ghost.spawn(level: number, pos: Vector3, monsterId: string?)
 	Ghost.despawn()
-	local m = (SS:WaitForChild("GhostTemplate") :: Model):Clone()
+	local def = Monsters.byId[monsterId or "Woman"] or Monsters.byId.Woman
+	local m = template(def):Clone()
 	m.Name = "Ghost"
 	local hrp = m:WaitForChild("HumanoidRootPart") :: BasePart
+	-- an auto-rigged monster keeps its Humanoid for the joints, but must not walk/fall by itself
+	local hum = m:FindFirstChildOfClass("Humanoid")
+	if hum then
+		hum.EvaluateStateMachine = false
+		hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+		hum.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
+	end
+	for _, d in m:GetDescendants() do
+		if d:IsA("BasePart") then d.Anchored = false; d.CanCollide = false; d.CanTouch = false; d.Massless = d ~= hrp end
+	end
+	-- walkers stand on the floor: their "hover" is the root's height above their feet
+	local hover = def.hover
+	if def.walker then
+		-- the lowest foot (weapons in the hands can hang lower than the feet, so not the bounding box)
+		local bottom = math.huge
+		for _, n in { "LeftFoot", "RightFoot" } do
+			local f = m:FindFirstChild(n) :: BasePart?
+			if f then bottom = math.min(bottom, f.Position.Y - f.Size.Y / 2) end
+		end
+		if bottom == math.huge then
+			local cf, size = m:GetBoundingBox()
+			bottom = cf.Position.Y - size.Y / 2
+		end
+		hover = hrp.Position.Y - bottom
+	end
 	local att = Instance.new("Attachment"); att.Parent = hrp
 	local lv = Instance.new("LinearVelocity")
 	lv.Attachment0 = att; lv.MaxForce = math.huge; lv.RelativeTo = Enum.ActuatorRelativeTo.World
@@ -51,10 +94,15 @@ function Ghost.spawn(level: number, pos: Vector3)
 	ao.Attachment0 = att; ao.Mode = Enum.OrientationAlignmentMode.OneAttachment
 	ao.MaxTorque = math.huge; ao.Responsiveness = 30; ao.Parent = hrp
 	m:PivotTo(CFrame.new(pos))
-	local maxHp = C.BaseHP + (level - 1) * C.HPPerLevel
+	local maxHp = math.floor((C.BaseHP + (level - 1) * C.HPPerLevel) * def.hp * Ghost.diff.hp)
 	m:SetAttribute("HP", maxHp)
 	m:SetAttribute("MaxHP", maxHp)
 	m:SetAttribute("Level", level)
+	m:SetAttribute("MonsterId", def.id)
+	m:SetAttribute("MonsterName", def.title)
+	m:SetAttribute("Rarity", def.rarity)
+	m:SetAttribute("Walker", def.walker)
+	m:SetAttribute("Ability", "")
 	m.Parent = workspace
 	pcall(function() hrp:SetNetworkOwner(nil) end)
 	local g = {
@@ -63,10 +111,12 @@ function Ghost.spawn(level: number, pos: Vector3)
 		nextAttack = os.clock() + 3, nextScare = os.clock() + rng:NextNumber(C.ScareMin, C.ScareMax),
 		damageBy = {} :: { [Player]: number }, target = nil :: Player?, rp = structParams(),
 		frozenUntil = 0, slowMult = 1, slowUntil = 0, vulnMult = 1, vulnUntil = 0, burns = {}, ts = nil :: any, launch = nil :: any, fire = nil :: Fire?,
+		def = def, hover = hover, bob = def.walker and 0 or 0.35, ab = nil :: any, nextAbility = os.clock() + 5,
+		speedMult = def.speed * Ghost.diff.speed, dmgMult = def.dmg * Ghost.diff.dmg,
 	}
 	Ghost.current = g
 	setState(g, "Spawn", 2.2)
-	Remotes.Fx:FireAllClients("GhostSpawn", pos)
+	Remotes.Fx:FireAllClients("GhostSpawn", pos, def.id)
 	return g
 end
 
@@ -74,7 +124,11 @@ function Ghost.despawn()
 	local g = Ghost.current
 	if g and g.model then g.model:Destroy() end
 	Ghost.current = nil
+	Abilities.clear()
 end
+
+-- mirror clones can be punched apart
+Ghost.hitClone = Abilities.hitClone
 
 local function pickTarget(g): (Player?, BasePart?)
 	local best, bestD, bestHrp = nil, math.huge, nil
@@ -96,6 +150,8 @@ end
 
 local function die(g)
 	setState(g, "Dead")
+	Abilities.clear()
+	g.model:SetAttribute("Shadow", false)
 	g.lv.VectorVelocity = Vector3.new(0, 2, 0)
 	Remotes.Fx:FireAllClients("GhostDeath", g.hrp.Position)
 	if Ghost.onDeath then task.spawn(Ghost.onDeath, g) end
@@ -124,7 +180,7 @@ function Ghost.freeze(t: number)
 	local g = Ghost.current
 	if not g or g.state == "Dead" then return end
 	g.frozenUntil = math.max(g.frozenUntil, os.clock() + t)
-	if g.state == "WindUp" or g.state == "Swipe" or g.state == "Vanish" or g.state == "Scare" then
+	if g.state == "WindUp" or g.state == "Swipe" or g.state == "Vanish" or g.state == "Scare" or g.state == "Ability" then
 		g.model:SetAttribute("Vanish", false)
 		setState(g, "Chase")
 	end
@@ -229,7 +285,7 @@ end
 local function stepKnocked(g, dt: number, now: number)
 	local pos = g.hrp.Position
 	local floorY = floorBelow(pos, g.rp)
-	local hoverY = floorY + C.HoverHeight
+	local hoverY = floorY + g.hover
 	g.vel *= math.exp(-1.7 * dt)
 	g.vel += Vector3.new(0, (hoverY - pos.Y) * 6 * dt - g.vel.Y * 2.5 * dt, 0)
 	local step = g.vel * dt
@@ -266,7 +322,7 @@ local function claw(g, target: Player?, thrp: BasePart?)
 	if not target or not thrp or warded(target) then return end
 	local to = thrp.Position - g.hrp.Position
 	if to.Magnitude <= C.SwipeReach then
-		local dmg = C.SwipeDamage + (g.level - 1) * C.SwipeDamagePerLevel
+		local dmg = (C.SwipeDamage + (g.level - 1) * C.SwipeDamagePerLevel) * g.dmgMult
 		if Ghost.damagePlayer then Ghost.damagePlayer(target, dmg) end
 		local flat = Vector3.new(to.X, 0, to.Z)
 		Remotes.Fx:FireClient(target, "Clawed", flat.Magnitude > 0.01 and flat.Unit or Vector3.zero)
@@ -282,6 +338,7 @@ function Ghost.step(dt: number)
 		g.lv.VectorVelocity = Vector3.new(0, 3, 0)
 		return
 	end
+	Abilities.tick(Ghost, dt, now)
 	-- burning (damage over time) + its fire
 	for i = #g.burns, 1, -1 do
 		local b = g.burns[i]
@@ -317,7 +374,7 @@ function Ghost.step(dt: number)
 	end
 
 	local floorY = floorBelow(thrp and thrp.Position or pos, g.rp)
-	local hoverY = floorY + C.HoverHeight + math.sin(now * 2.1) * 0.35
+	local hoverY = floorY + g.hover + math.sin(now * 2.1) * g.bob
 	local function face(tp: Vector3)
 		local flat = Vector3.new(tp.X, pos.Y, tp.Z)
 		if (flat - pos).Magnitude > 0.1 then g.ao.CFrame = CFrame.lookAt(pos, flat).Rotation end
@@ -342,15 +399,16 @@ function Ghost.step(dt: number)
 		end
 		face(thrp.Position)
 		local dist = (Vector3.new(thrp.Position.X, 0, thrp.Position.Z) - Vector3.new(pos.X, 0, pos.Z)).Magnitude
-		local speed = (C.Speed + (g.level - 1) * C.SpeedPerLevel) * (now < g.slowUntil and g.slowMult or 1)
+		local speed = (C.Speed + (g.level - 1) * C.SpeedPerLevel) * g.speedMult * (now < g.slowUntil and g.slowMult or 1)
 		-- creepy rhythm: she sometimes freezes for a moment, then lunges
 		local phase = (now * 0.6) % 1
 		if phase < 0.12 and dist > 14 then speed *= 0.1 elseif phase < 0.3 and dist > 14 then speed *= 1.8 end
 		moveToward(thrp.Position, speed)
+		if now >= g.slowUntil and Abilities.try(g, Ghost, now, target, thrp, dist) then return end
 		if dist < C.AttackRange and now > g.nextAttack then
 			setState(g, "WindUp", C.WindUp)
 			Remotes.Fx:FireAllClients("GhostWindUp", pos)
-		elseif now > g.nextScare and dist > 12 and not warded(target) then
+		elseif g.def.ability.kind == "scare" and now > g.nextScare and dist > 12 and not warded(target) then
 			setState(g, "Vanish", 1.4)
 			g.model:SetAttribute("Vanish", true)
 			Remotes.Fx:FireAllClients("GhostVanish", pos)
@@ -374,7 +432,7 @@ function Ghost.step(dt: number)
 				local look = Vector3.new(thrp.CFrame.LookVector.X, 0, thrp.CFrame.LookVector.Z)
 				look = look.Magnitude > 0.01 and look.Unit or Vector3.new(0, 0, -1)
 				local at = thrp.Position + look * 3.4
-				at = Vector3.new(at.X, floorBelow(thrp.Position, g.rp) + C.HoverHeight - 0.4, at.Z)
+				at = Vector3.new(at.X, floorBelow(thrp.Position, g.rp) + g.hover - 0.4, at.Z)
 				g.model:PivotTo(CFrame.lookAt(at, Vector3.new(thrp.Position.X, at.Y, thrp.Position.Z)))
 				g.ao.CFrame = g.model:GetPivot().Rotation
 				g.model:SetAttribute("Vanish", false)
@@ -388,6 +446,8 @@ function Ghost.step(dt: number)
 			end
 			g.nextScare = now + rng:NextNumber(C.ScareMin, C.ScareMax)
 		end
+	elseif s == "Ability" then
+		Abilities.step(g, Ghost, dt, now, target, thrp, hoverY)
 	elseif s == "Scare" then
 		g.lv.VectorVelocity = Vector3.zero
 		if now > g.stateUntil then

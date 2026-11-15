@@ -125,6 +125,11 @@ end
 local function useMelee(p: Player, n: number, it, dir: Vector3)
 	if not Combat.useStamina(p, it.stamina) then return end
 	consume(p, n)
+	local _, _, head = alive(p)
+	if head and Ghost.hitClone(head.Position, dir, it.range) then
+		Remotes.Fx:FireAllClients("ItemSwing", p, it.id, true)
+		return
+	end
 	local hitPos = Combat.tryHit(p, dir, it.range)
 	Remotes.Fx:FireAllClients("ItemSwing", p, it.id, hitPos ~= nil)
 	if hitPos then
@@ -183,8 +188,24 @@ local function useGun(p: Player, n: number, it, dir: Vector3)
 	end
 end
 
-local function explode(p: Player, it, pos: Vector3)
+local function explode(p: Player, it, pos: Vector3, direct: Player?)
 	Remotes.Fx:FireAllClients("ItemBoom", pos, it.radius, it.color, it.boom == true, it.id)
+	-- PvP: the player it hit takes the full hit, others caught in a blast take part of it (never the thrower)
+	for _, other in Players:GetPlayers() do
+		if other ~= p and other:GetAttribute("InMatch") then
+			local _, ohrp = alive(other)
+			if ohrp then
+				local d = (ohrp.Position - pos).Magnitude
+				local inBlast = (it.boom or it.smash) and d <= it.radius
+				if other == direct or inBlast then
+					local f = other == direct and 1 or math.clamp(1 - d / (it.radius + 1), 0.3, 1) * 0.7
+					local away = ohrp.Position - pos
+					away = Vector3.new(away.X, 0, away.Z)
+					Combat.hitPlayer(other, p, it.dmg * Combat.PVP_MULT * f, (away.Magnitude > 0.1 and away.Unit or Vector3.new(0, 0, 1)) * (40 + it.knock * 0.3), it.name)
+				end
+			end
+		end
+	end
 	local g = ghostAlive()
 	if g and (g.hrp.Position - pos).Magnitude <= it.radius + 3 then
 		local dir = g.hrp.Position - pos
@@ -325,11 +346,14 @@ local function step(dt: number)
 		local boomAt: Vector3? = nil
 		if hit then boomAt = hit.Position end
 		if g and (g.hrp.Position - new).Magnitude < 4 then boomAt = new end
+		-- PvP: a thrown item that reaches another player hits them
+		local victim = os.clock() - pr.t0 > 0.08 and Combat.playerNear(new, 3.2, pr.by) or nil
+		if victim then boomAt = new end
 		if os.clock() - pr.t0 > 4 then boomAt = new end
 		if boomAt then
 			pr.part:Destroy()
 			table.remove(projectiles, k)
-			if pr.by.Parent then explode(pr.by, pr.it, boomAt) end
+			if pr.by.Parent then explode(pr.by, pr.it, boomAt, victim) end
 		else
 			pr.pos = new
 			pr.part.CFrame = CFrame.lookAt(new, new + pr.vel) * CFrame.Angles(os.clock() * 12, 0, 0)

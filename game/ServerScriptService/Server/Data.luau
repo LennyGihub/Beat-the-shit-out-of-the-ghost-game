@@ -101,6 +101,12 @@ function Data.owns(player: Player, id: string): boolean
 	local d = Data.get(player); return d ~= nil and d.Owned[id] == true
 end
 
+-- maps are stored in Owned as "Map_<id>" (the Mansion is free)
+function Data.ownsMap(player: Player, id: string): boolean
+	if id == "Mansion" then return true end
+	local d = Data.get(player); return d ~= nil and d.Owned["Map_" .. id] == true
+end
+
 function Data.ownsUlt(player: Player, id: string): boolean
 	local d = Data.get(player); return d ~= nil and d.Ults[id] == true
 end

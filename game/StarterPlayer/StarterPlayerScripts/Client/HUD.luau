@@ -13,6 +13,7 @@ local lp = Players.LocalPlayer
 local gui: ScreenGui
 local health, stamina, brut, ghostBar
 local ghostRoot: Frame
+local ghostTitle: TextLabel
 local comboLabel: TextLabel
 local comboWord: TextLabel
 local hint: TextLabel
@@ -57,7 +58,7 @@ function HUD.init()
 	-- top-centre ghost health
 	ghostRoot = Grunge.frame(gui, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 26), Size = UDim2.fromScale(0.44, 0.09), Visible = false })
 	local gar = Instance.new("UIAspectRatioConstraint"); gar.AspectRatio = 9; gar.Parent = ghostRoot
-	Grunge.text(ghostRoot, { Text = "THE WOMAN IN THE HOUSE", Font = Grunge.HORROR, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0), Size = UDim2.fromScale(0.8, 0.42), TextColor3 = Color3.fromRGB(200, 225, 228), ZIndex = 7 })
+	ghostTitle = Grunge.text(ghostRoot, { Text = "THE WOMAN IN THE HOUSE", Font = Grunge.HORROR, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0), Size = UDim2.fromScale(0.8, 0.42), TextColor3 = Color3.fromRGB(200, 225, 228), ZIndex = 7 })
 	ghostBar = Grunge.bar(ghostRoot, { size = UDim2.fromScale(1, 0.42), pos = UDim2.fromScale(0, 0.5), color = Color3.fromRGB(150, 205, 210), rot = 0.4, seed = 51, slices = 40 })
 
 	-- crosshair + transient labels
@@ -211,6 +212,10 @@ function HUD.update(dt: number)
 	elseif g and g:GetAttribute("MaxHP") and g:GetAttribute("State") ~= "Dead" then
 		ghostRoot.Visible = true
 		ghostBar:set((g:GetAttribute("HP") or 0) / g:GetAttribute("MaxHP"), dt)
+		-- monster name, tinted by rarity (rare blue, legendary gold)
+		local rar = g:GetAttribute("Rarity") or 0
+		ghostTitle.Text = g:GetAttribute("MonsterName") or "THE WOMAN IN THE HOUSE"
+		ghostTitle.TextColor3 = rar == 3 and Color3.fromRGB(255, 190, 70) or (rar == 2 and Color3.fromRGB(120, 175, 255) or Color3.fromRGB(200, 225, 228))
 	elseif g and g:GetAttribute("State") == "Dead" then
 		ghostBar:set(0, dt)
 	else

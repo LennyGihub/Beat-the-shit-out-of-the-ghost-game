@@ -20,6 +20,16 @@ function Furniture.init()
 	debrisFolder.Parent = workspace
 end
 
+-- a new map was loaded into workspace.Mansion: its furniture becomes the template for every fight
+function Furniture.recapture()
+	local live = workspace.Mansion:FindFirstChild("Furniture")
+	if not live then return end
+	if template then template:Destroy() end
+	template = live:Clone()
+	template.Name = "FurnitureTemplate"
+	template.Parent = SS
+end
+
 function Furniture.folder(): Instance?
 	local m = workspace:FindFirstChild("Mansion")
 	return m and m:FindFirstChild("Furniture")

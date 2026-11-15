@@ -77,32 +77,67 @@ local function label(parent: BasePart, it, high: boolean)
 	t("$" .. it.price, 0.66, 0.34, Color3.fromRGB(150, 220, 110), Enum.Font.PermanentMarker)
 end
 
+-- a slot marked Ground (van) sits on the ground behind the wreck: find the real ground under it, level
+local function groundCF(slot: Attachment, shop: Instance): CFrame
+	local rp = RaycastParams.new()
+	rp.FilterType = Enum.RaycastFilterType.Exclude
+	rp.FilterDescendantsInstances = { shop }
+	local pos = slot.WorldPosition
+	local r = workspace:Raycast(pos + Vector3.new(0, 8, 0), Vector3.new(0, -20, 0), rp)
+	local y = r and r.Position.Y or pos.Y
+	local look = slot.WorldCFrame.LookVector
+	local yaw = math.atan2(-look.X, -look.Z)
+	return CFrame.new(pos.X, y, pos.Z) * CFrame.Angles(0, yaw, 0)
+end
+
+-- an old blanket on the ground under the ground items
+local function tarp(shop: Instance, cfs: { CFrame })
+	if #cfs == 0 then return end
+	local c = Vector3.zero
+	for _, cf in cfs do c += cf.Position end
+	c /= #cfs
+	local t = Instance.new("Part")
+	t.Name = "Tarp"; t.Anchored = true; t.CanCollide = false; t.CanQuery = false; t.CanTouch = false
+	t.Size = Vector3.new(9.5, 0.12, 4.2); t.Material = Enum.Material.Fabric; t.Color = Color3.fromRGB(70, 74, 60)
+	t.CFrame = CFrame.new(c + Vector3.new(0, 0.07, 0)) * cfs[1].Rotation * CFrame.Angles(0, math.rad(rng:NextNumber(-4, 4)), 0)
+	t.Parent = shop
+end
+
 -- put the stock on the shop's Slot1..6 attachments
 local function stock(shop: Instance, list: { any })
+	local groundSpots = {}
 	for i, it in list do
 		local slot = shop:FindFirstChild("Slot" .. i, true) :: Attachment?
 		if slot then
-			local m = ItemModels.build(it.shape, it.color, it.glow)
+			local m = ItemModels.build(it.shape, it.color, it.glow, it.id)
 			m.Name = "Item_" .. it.id
 			local lie = ItemModels.isLong(it.shape)
+			local onGround = slot:GetAttribute("Ground") == true
+			local base = onGround and groundCF(slot, shop) or slot.WorldCFrame
+			if onGround then table.insert(groundSpots, base) end
 			-- long items lie along the shelf (models extend toward -Z), short ones stand on it
-			local cf = lie and slot.WorldCFrame * CFrame.new(0, 0.35, 0) * CFrame.Angles(0, math.pi / 2, 0) * CFrame.new(0, 0, 1.6)
-				or slot.WorldCFrame * CFrame.new(0, 0.15, 0) * CFrame.Angles(0, math.rad(rng:NextNumber(-30, 30)), 0)
+			local cf = lie and base * CFrame.new(0, 0.35, 0) * CFrame.Angles(0, math.pi / 2, 0) * CFrame.new(0, 0, 1.6)
+				or base * CFrame.new(0, 0.15, 0) * CFrame.Angles(0, math.rad(rng:NextNumber(-30, 30)), 0)
 			m:PivotTo(cf)
+			-- sit it on the shelf / ground (meshes have their pivot at the grip, not the bottom)
+			local bcf, bsz = m:GetBoundingBox()
+			m:PivotTo(m:GetPivot() + Vector3.new(0, base.Position.Y + 0.12 - (bcf.Position.Y - bsz.Y / 2), 0))
 			m.Parent = shop
 			-- rarity glow under the item
 			local r = Items.rarity[it.rarity]
 			local glowPart = Instance.new("Part")
 			glowPart.Name = "RarityGlow"; glowPart.Anchored = true; glowPart.CanCollide = false; glowPart.CanQuery = false
 			glowPart.Shape = Enum.PartType.Cylinder; glowPart.Size = Vector3.new(0.08, 2, 2); glowPart.Color = r.color; glowPart.Material = Enum.Material.Neon
-			glowPart.Transparency = 0.55; glowPart.CFrame = slot.WorldCFrame * CFrame.new(0, 0.05, 0) * CFrame.Angles(0, 0, math.pi / 2)
+			glowPart.Transparency = 0.55; glowPart.CFrame = base * CFrame.new(0, onGround and 0.16 or 0.05, 0) * CFrame.Angles(0, 0, math.pi / 2)
 			glowPart.Parent = m
 			local promptPart = glowPart
 			label(promptPart, it, i > 3)
 			local pp = Events.prompt(promptPart, "Buy  $" .. it.price, it.name .. "  -  " .. it.desc, 0.3)
-			pp.Triggered:Connect(function(p) if Events.onBuy then Events.onBuy(p, it.id, slot.WorldPosition) end end)
+			local at = base.Position
+			pp.Triggered:Connect(function(p) if Events.onBuy then Events.onBuy(p, it.id, at) end end)
 		end
 	end
+	tarp(shop, groundSpots)
 end
 
 local function vendor(cf: CFrame, line: string, ev)

@@ -73,6 +73,7 @@ local function setWalk(player: Player, s)
 	if s.carrying and s.carrying.Parent then
 		base = math.max(8, base - Furniture.weight(s.carrying) * CA.SlowPerWeight * (ult(s) and 0.3 or 1))
 	end
+	if os.clock() < (s.rootUntil or 0) then base = 0 end
 	hum.WalkSpeed = base
 end
 
@@ -228,6 +229,13 @@ local function onPunch(player: Player, look: any)
 	if now - s.lastPunch < P.Cooldown * 0.8 then return end
 	if not Combat.useStamina(player, P.StaminaCost) then return end
 	s.lastPunch = now
+	local head = (player.Character :: Model):FindFirstChild("Head") :: BasePart?
+	local clonePos = Ghost.hitClone((head or hrp).Position, dir, P.Range)
+	if clonePos then
+		Remotes.Fx:FireAllClients("Hit", clonePos, 1, 0, false, player)
+		sync(player, s, true)
+		return
+	end
 	local hitPos = Combat.tryHit(player, dir, P.Range)
 	if hitPos then Combat.registerHit(player, dir, hitPos, P.BaseDamage, P.BaseKnock) end
 	sync(player, s, true)
@@ -288,12 +296,80 @@ local function onThrow(player: Player, look: any)
 	sync(player, s, true)
 end
 
+-- PvP: something a player threw hits another player in the run. Damage + a fling, no damage to the thrower.
+Combat.PVP_MULT = 0.5 -- player-vs-player damage is half of what the ghost would take
+-- raw = vel is the exact fling velocity (monster throws), otherwise it is scaled to a PvP knock
+function Combat.hitPlayer(victim: Player, by: Player?, dmg: number, vel: Vector3, label: string?, raw: boolean?)
+	if victim == by or not victim:GetAttribute("InMatch") then return end
+	if not by and victim:GetAttribute("Warded") then return end
+	local hum, hrp = alive(victim)
+	if not hum or not hrp then return end
+	Combat.damagePlayer(victim, dmg)
+	local fling = vel
+	if not raw then
+		local flat = Vector3.new(vel.X, 0, vel.Z)
+		flat = flat.Magnitude > 0.1 and flat.Unit or Vector3.new(0, 0, 1)
+		fling = flat * math.clamp(vel.Magnitude * 0.6, 30, 70) + Vector3.new(0, 26, 0)
+	end
+	Remotes.Fx:FireClient(victim, "Fling", fling, raw and 1.2 or 0.9, by and by.Name or "")
+	Remotes.Fx:FireAllClients("PlayerHit", hrp.Position, dmg, by, label or "")
+end
+
+-- the closest other match player within radius of pos (not the thrower)
+function Combat.playerNear(pos: Vector3, radius: number, except: Player?): Player?
+	local best, bestD = nil, radius
+	for _, p in Players:GetPlayers() do
+		if p ~= except and p:GetAttribute("InMatch") then
+			local _, hrp = alive(p)
+			if hrp then
+				local d = (hrp.Position - pos).Magnitude
+				if d < bestD then best, bestD = p, d end
+			end
+		end
+	end
+	return best
+end
+
+local function checkThrownPlayers()
+	for m, info in Furniture.thrown do
+		local prim = m.PrimaryPart
+		-- thrown by a player (PvP) or by a monster (poltergeist: info.monster = its damage)
+		if prim and m.Parent and (info.by or info.monster) and os.clock() - info.t > 0.1 then
+			local _, size = m:GetBoundingBox()
+			local victim = Combat.playerNear(prim.Position, 2.6 + size.Magnitude * 0.25, info.by)
+			if victim then
+				local w = Furniture.weight(m)
+				local vel = prim.AssemblyLinearVelocity
+				local dmg = info.monster or (CA.BaseDamage + w * CA.DamagePerWeight) * Combat.PVP_MULT
+				Combat.hitPlayer(victim, info.by, dmg, vel, "furniture")
+				Furniture.smash(m, vel, 120)
+			end
+		end
+	end
+end
+
+-- pinned to the floor (crawler pounce): no walking for t seconds
+function Combat.root(player: Player, t: number)
+	local s = st(player)
+	s.rootUntil = os.clock() + t
+	setWalk(player, s)
+	player:SetAttribute("Pinned", true)
+	task.delay(t + 0.05, function()
+		if state[player] == s then
+			player:SetAttribute("Pinned", false)
+			setWalk(player, s)
+		end
+	end)
+end
+
 -- thrown furniture that reaches the ghost hits her hard
 local function checkThrown()
+	checkThrownPlayers()
 	local g = Ghost.current
 	if not g or not Ghost.alive() or g.state == "Spawn" then return end
 	for m, info in Furniture.thrown do
 		local prim = m.PrimaryPart
+		if info.monster then continue end -- the monster's own throws (poltergeist) don't hit it
 		if not prim or not m.Parent then
 			Furniture.thrown[m] = nil
 		else
@@ -367,6 +443,8 @@ end
 
 function Combat.start()
 	Ghost.damagePlayer = Combat.damagePlayer
+	Ghost.hitPlayer = Combat.hitPlayer
+	Ghost.rootPlayer = Combat.root
 	Remotes.Punch.OnServerEvent:Connect(onPunch)
 	Remotes.Ultimate.OnServerEvent:Connect(onUltimate)
 	Remotes.Grab.OnServerEvent:Connect(onGrab)

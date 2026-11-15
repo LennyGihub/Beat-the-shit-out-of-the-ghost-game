@@ -6,12 +6,13 @@ local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TeleportService = game:GetService("TeleportService")
 local Ultimates = require(RS.Shared.Ultimates)
+local Maps = require(RS.Shared.Maps)
 local Remotes = require(script.Parent.Remotes)
 local Data = require(script.Parent.Data)
 local Run = require(script.Parent.Run)
 
 local Lobby = {}
-local COUNTDOWN = 5
+local COUNTDOWN = 8 -- seconds once the room is full (time to pick a map)
 local rooms = {} :: { any }
 
 local function hrpOf(p: Player): BasePart?
@@ -23,13 +24,50 @@ local function onPad(pad: BasePart, pos: Vector3): boolean
 	return math.abs(lp.X) <= pad.Size.X / 2 and math.abs(lp.Z) <= pad.Size.Z / 2 and lp.Y > -1 and lp.Y < 9
 end
 
+-- the map + difficulty line on the sign (both faces)
+local function setMapLine(room)
+	if not room.sign then return end
+	local m = Maps.byId[room.map] or Maps.byId.Mansion
+	local d = Maps.diffById[room.diff] or Maps.diffById.Normal
+	for _, gname in { "Gui", "GuiBack" } do
+		local gui = room.sign:FindFirstChild(gname)
+		local l = gui and gui:FindFirstChild("MapLine") :: TextLabel?
+		if l then
+			l.Text = string.upper(m.name) .. "  -  " .. d.name
+			l.TextColor3 = d.color
+		end
+	end
+end
+
+-- squeeze the two sign lines and add the map line between them
+local function prepSign(room)
+	if not room.sign then return end
+	for _, gname in { "Gui", "GuiBack" } do
+		local gui = room.sign:FindFirstChild(gname)
+		if gui and not gui:FindFirstChild("MapLine") then
+			local count = gui:FindFirstChild("Count") :: TextLabel?
+			local status = gui:FindFirstChild("Status") :: TextLabel?
+			if count then count.Position = UDim2.new(0.03, 0, 0.02, 0); count.Size = UDim2.new(0.94, 0, 0.38, 0) end
+			if status then status.Position = UDim2.new(0.03, 0, 0.66, 0); status.Size = UDim2.new(0.94, 0, 0.3, 0) end
+			local l = (count and count:Clone() or Instance.new("TextLabel")) :: TextLabel
+			l.Name = "MapLine"; l.Position = UDim2.new(0.08, 0, 0.41, 0); l.Size = UDim2.new(0.84, 0, 0.22, 0); l.Rotation = 0; l.Parent = gui
+		end
+	end
+	setMapLine(room)
+end
+
 local function setSign(room, title: string, line: string, color: Color3?)
-	local gui = room.sign and room.sign:FindFirstChild("Gui")
-	if not gui then return end
-	local t = gui:FindFirstChild("Count") :: TextLabel?
-	local s = gui:FindFirstChild("Status") :: TextLabel?
-	if t then t.Text = title end
-	if s then s.Text = line; s.TextColor3 = color or Color3.fromRGB(220, 210, 180) end
+	if not room.sign then return end
+	-- the sign has a front face (plaza side) and a back face (readable from the pad)
+	for _, gname in { "Gui", "GuiBack" } do
+		local gui = room.sign:FindFirstChild(gname)
+		if gui then
+			local t = gui:FindFirstChild("Count") :: TextLabel?
+			local s = gui:FindFirstChild("Status") :: TextLabel?
+			if t then t.Text = title end
+			if s then s.Text = line; s.TextColor3 = color or Color3.fromRGB(220, 210, 180) end
+		end
+	end
 end
 
 local function launch(room, members: { Player })
@@ -39,7 +77,7 @@ local function launch(room, members: { Player })
 			for _, p in members do Remotes.Fx:FireClient(p, "Toast", "A match is already running in this Studio test") end
 			return
 		end
-		Run.beginMatch(members)
+		Run.beginMatch(members, room.map, room.diff)
 		return
 	end
 	setSign(room, room.size .. " PLAYER" .. (room.size > 1 and "S" or ""), "TELEPORTING...", Color3.fromRGB(150, 220, 110))
@@ -51,7 +89,7 @@ local function launch(room, members: { Player })
 	end
 	local opts = Instance.new("TeleportOptions")
 	opts.ReservedServerAccessCode = code
-	opts:SetTeleportData({ size = #members })
+	opts:SetTeleportData({ size = #members, map = room.map, diff = room.diff })
 	for _, p in members do Data.save(p) end
 	local tok, err = pcall(function() TeleportService:TeleportAsync(game.PlaceId, members, opts) end)
 	if not tok then
@@ -73,6 +111,17 @@ local function tick()
 			end
 		end
 		for _, p in members do p:SetAttribute("QueueRoom", room.name) end
+		-- the first player who stepped on the pad picks the map and difficulty
+		if not room.leader or not table.find(members, room.leader) then
+			room.leader = members[1]
+			room.model:SetAttribute("Leader", room.leader and room.leader.UserId or 0)
+			-- a new leader who doesn't own the picked map falls back to the Mansion
+			if room.leader and not Data.ownsMap(room.leader, room.map) then
+				room.map = "Mansion"
+				room.model:SetAttribute("Map", room.map)
+				setMapLine(room)
+			end
+		end
 		local title = room.size .. " PLAYER" .. (room.size > 1 and "S" or "")
 		if #members >= room.size then
 			room.countdownStart = room.countdownStart or now
@@ -132,10 +181,13 @@ function Lobby.start()
 		for _, r in roomFolder:GetChildren() do
 			local pad = r:FindFirstChild("Pad", true) :: BasePart?
 			if pad then
-				table.insert(rooms, { name = r.Name, size = r:GetAttribute("Size") or 1, pad = pad, sign = r:FindFirstChild("Sign", true), countdownStart = nil })
+				table.insert(rooms, { name = r.Name, size = r:GetAttribute("Size") or 1, pad = pad, sign = r:FindFirstChild("Sign", true), countdownStart = nil,
+					model = r, map = "Mansion", diff = "Normal", leader = nil :: Player? })
+				r:SetAttribute("Map", "Mansion"); r:SetAttribute("Diff", "Normal"); r:SetAttribute("Leader", 0)
 			end
 		end
 		table.sort(rooms, function(a, b) return a.name < b.name end)
+		for _, room in rooms do prepSign(room) end
 	end
 	local vendor = lobby and lobby:FindFirstChild("UltVendor", true)
 	local vTorso = vendor and vendor:FindFirstChild("Torso", true) :: BasePart?
@@ -148,6 +200,30 @@ function Lobby.start()
 		pp.Triggered:Connect(function(p) Remotes.Fx:FireClient(p, "OpenUltShop") end)
 	end
 	Remotes.BuyUlt.OnServerEvent:Connect(onBuyUlt)
+	-- the room leader changes the map / difficulty (must own the map)
+	Remotes.RoomPick.OnServerEvent:Connect(function(p, roomName, mapId, diffId)
+		if type(roomName) ~= "string" or type(mapId) ~= "string" or type(diffId) ~= "string" then return end
+		for _, room in rooms do
+			if room.name == roomName and room.leader == p then
+				if room.countdownStart then room.countdownStart = os.clock() end -- a new pick restarts the countdown
+				if Maps.byId[mapId] and Data.ownsMap(p, mapId) then room.map = mapId end
+				if Maps.diffById[diffId] then room.diff = diffId end
+				room.model:SetAttribute("Map", room.map)
+				room.model:SetAttribute("Diff", room.diff)
+				setMapLine(room)
+			end
+		end
+	end)
+	-- buy a map at the dealer
+	Remotes.BuyMap.OnServerEvent:Connect(function(p, mapId)
+		local m = type(mapId) == "string" and Maps.byId[mapId]
+		if not m then return end
+		if Data.ownsMap(p, m.id) then Remotes.Fx:FireClient(p, "UltResult", true, "You already own " .. m.name); return end
+		if not Data.spend(p, m.price) then Remotes.Fx:FireClient(p, "UltResult", false, "Not enough cash for " .. m.name); return end
+		Data.own(p, "Map_" .. m.id)
+		task.spawn(Data.save, p)
+		Remotes.Fx:FireClient(p, "UltResult", true, "Bought " .. m.name .. " - pick it on a room pad")
+	end)
 	Remotes.EquipUlt.OnServerEvent:Connect(function(p, id)
 		if type(id) == "string" and Data.equipUlt(p, id) then
 			local u = Ultimates.byId[id]

@@ -1,9 +1,10 @@
--- Lobby ultimate shop (grunge): 50 ultimates by rarity, buy with cash, equip one.
+-- Lobby shop (grunge) at the Hooded Dealer: 50 ultimates by rarity (buy with cash, equip one) + a MAPS tab.
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local Ultimates = require(RS.Shared.Ultimates)
 local Items = require(RS.Shared.Items)
+local Maps = require(RS.Shared.Maps)
 local Grunge = require(script.Parent.Grunge)
 local Sfx = require(script.Parent.Sfx)
 local Remotes = RS:WaitForChild("Remotes")
@@ -15,7 +16,8 @@ local panel: Frame
 local cashText: TextLabel
 local statusText: TextLabel
 local rows = {} :: { [string]: { btn: TextButton, row: Frame } }
-local filter = 0
+local mapRows = {} :: { [string]: { btn: TextButton, row: Frame } }
+local filter = 0 -- 0 = all ultimates, 1..5 = a rarity, -1 = maps
 local onToggle: ((boolean) -> ())? = nil
 
 local function button(parent: Instance, text: string, props: { [string]: any }): TextButton
@@ -35,9 +37,28 @@ local function owned(): { [string]: boolean }
 	return o
 end
 
+local function ownedMaps(): { [string]: boolean }
+	local o = { Mansion = true }
+	for id in string.gmatch(lp:GetAttribute("Owned") or "", "[^,]+") do
+		local m = string.match(id, "^Map_(.+)$")
+		if m then o[m] = true end
+	end
+	return o
+end
+
 local function refresh()
 	if not gui then return end
 	cashText.Text = "$" .. tostring(lp:GetAttribute("Cash") or 0)
+	local om = ownedMaps()
+	for _, m in Maps.list do
+		local r = mapRows[m.id]
+		r.row.Visible = filter == -1
+		if om[m.id] then
+			r.btn.Text = "OWNED"; r.btn.BackgroundColor3 = Color3.fromRGB(60, 110, 50)
+		else
+			r.btn.Text = "$" .. m.price; r.btn.BackgroundColor3 = Color3.fromRGB(120, 24, 20)
+		end
+	end
 	local o = owned()
 	local eq = lp:GetAttribute("EquippedUlt") or "Rage"
 	for _, u in Ultimates.list do
@@ -68,10 +89,12 @@ function Shop.init(toggle: (boolean) -> ())
 	local tl = Instance.new("UIListLayout"); tl.FillDirection = Enum.FillDirection.Horizontal; tl.Padding = UDim.new(0.01, 0); tl.Parent = tabs
 	local names = { "ALL" }
 	for _, r in Items.rarity do table.insert(names, r.name) end
+	table.insert(names, "MAPS")
 	for i, n in names do
-		local col = i == 1 and Color3.fromRGB(60, 50, 44) or Items.rarity[i - 1].color:Lerp(Color3.new(0, 0, 0), 0.45)
-		local b = button(tabs, n, { Size = UDim2.fromScale(1 / 6 - 0.01, 1), BackgroundColor3 = col, ZIndex = 11, LayoutOrder = i })
-		b.MouseButton1Click:Connect(function() Sfx.play("Click"); filter = i - 1; refresh() end)
+		local isMaps = n == "MAPS"
+		local col = i == 1 and Color3.fromRGB(60, 50, 44) or (isMaps and Color3.fromRGB(40, 70, 90) or Items.rarity[i - 1].color:Lerp(Color3.new(0, 0, 0), 0.45))
+		local b = button(tabs, n, { Size = UDim2.fromScale(1 / 7 - 0.01, 1), BackgroundColor3 = col, ZIndex = 11, LayoutOrder = i })
+		b.MouseButton1Click:Connect(function() Sfx.play("Click"); filter = isMaps and -1 or i - 1; refresh() end)
 	end
 	local list = Instance.new("ScrollingFrame")
 	list.BackgroundTransparency = 1; list.BorderSizePixel = 0; list.Position = UDim2.fromScale(0.04, 0.225); list.Size = UDim2.fromScale(0.92, 0.68)
@@ -93,10 +116,23 @@ function Shop.init(toggle: (boolean) -> ())
 		end)
 		rows[u.id] = { btn = btn, row = row }
 	end
+	-- maps (bought once, then picked on a room pad)
+	for i, m in Maps.list do
+		local row = Grunge.frame(list, { Size = UDim2.new(1, -12, 0, 64), BackgroundTransparency = 0.55, BackgroundColor3 = Color3.fromRGB(10, 8, 7), ZIndex = 10, LayoutOrder = 1000 + i, Visible = false })
+		Grunge.frame(row, { BackgroundTransparency = 0, BackgroundColor3 = m.color, Size = UDim2.new(0, 8, 1, 0), ZIndex = 11 })
+		Grunge.text(row, { Text = string.upper(m.name), Position = UDim2.new(0, 18, 0.04, 0), Size = UDim2.new(0.6, 0, 0.5, 0), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 11 })
+		Grunge.text(row, { Text = m.desc, Font = Grunge.TYPE, Position = UDim2.new(0, 18, 0.56, 0), Size = UDim2.new(0.72, 0, 0.38, 0), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(190, 180, 160), ZIndex = 11 })
+		local btn = button(row, "", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0), Size = UDim2.new(0.2, 0, 0.7, 0), ZIndex = 12 })
+		btn.MouseButton1Click:Connect(function()
+			Sfx.play("Click")
+			if not ownedMaps()[m.id] then Remotes.BuyMap:FireServer(m.id) end
+		end)
+		mapRows[m.id] = { btn = btn, row = row }
+	end
 	statusText = Grunge.text(panel, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0.04, 0.92), Size = UDim2.fromScale(0.92, 0.045), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 10 })
 	local close = button(panel, "LEAVE", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(0.96, 0.095), Size = UDim2.fromScale(0.2, 0.052), ZIndex = 12, Rotation = 1.5, BackgroundColor3 = Color3.fromRGB(45, 40, 36), Modal = true })
 	close.MouseButton1Click:Connect(function() Sfx.play("Click"); Shop.close() end)
-	for _, a in { "Cash", "OwnedUlts", "EquippedUlt" } do lp:GetAttributeChangedSignal(a):Connect(refresh) end
+	for _, a in { "Cash", "OwnedUlts", "EquippedUlt", "Owned" } do lp:GetAttributeChangedSignal(a):Connect(refresh) end
 end
 
 function Shop.open()

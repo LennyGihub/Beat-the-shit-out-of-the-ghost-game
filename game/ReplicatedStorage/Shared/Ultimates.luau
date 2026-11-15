@@ -72,4 +72,6 @@ local List: { Ult } = {
 
 local byId: { [string]: Ult } = {}
 for _, x in List do byId[x.id] = x end
+-- economy: ultimates cost 3x their listed price so unlocking them takes longer
+for _, u in List do u.price *= 3 end
 return { list = List, byId = byId, default = "Rage" }

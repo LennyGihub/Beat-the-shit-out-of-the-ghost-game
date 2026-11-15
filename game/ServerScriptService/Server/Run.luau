@@ -14,6 +14,9 @@ local Ghost = require(script.Parent.Ghost)
 local Combat = require(script.Parent.Combat)
 local Inventory = require(script.Parent.Inventory)
 local Events = require(script.Parent.Events)
+local Monsters = require(RS.Shared.Monsters)
+local Maps = require(RS.Shared.Maps)
+local MapLoader = require(script.Parent.MapLoader)
 
 local Run = {}
 Run.mode = "Lobby" -- "Lobby" (public / Studio) or "Match" (reserved server)
@@ -24,16 +27,14 @@ local level = 1
 local event = nil :: any
 local eventLeft = 0
 local lastKind = ""
+local lastMonster = ""
 local busy = false
 local breakUntil = 0
 local stats = {} :: { [Player]: { earned: number, damage: number, kills: number, paid: boolean } }
 local temp = {} :: { Instance }
 local rng = Random.new()
 local DOOR = Vector3.new(0, 7, 62)
-local SPAWNS = {
-	Vector3.new(0, 27.6, -24), Vector3.new(-57, 6.6, -30), Vector3.new(57, 6.6, 30),
-	Vector3.new(-57, 6.6, 30), Vector3.new(-18, 27.6, -44), Vector3.new(18, 6.6, -44),
-}
+local diff = Maps.diffById[Maps.defaultDiff] -- difficulty of this run (monster stats + cash multiplier)
 
 local function setState(s: string, objective: string?)
 	state = s
@@ -87,7 +88,7 @@ function Run.payout(p: Player, reason: string): number
 	st.paid = true
 	local g = Ghost.current
 	if g and g.damageBy[p] then st.damage += g.damageBy[p]; g.damageBy[p] = 0 end
-	local cash = math.floor(st.earned + st.damage / Config.Payout.DamageDiv)
+	local cash = math.floor(st.earned + st.damage / Config.Payout.DamageDiv * diff.reward)
 	Data.addCash(p, cash)
 	task.spawn(Data.save, p)
 	Remotes.Fx:FireClient(p, "RunOver", reason, cash, st.kills)
@@ -120,15 +121,21 @@ function Run.startFight()
 	for _, p in list do
 		local hrp = hrpOf(p)
 		if hrp and not insideHouse(hrp.Position) then
-			(p.Character :: Model):PivotTo(CFrame.new(Config.SpawnInside + Vector3.new(rng:NextInteger(-6, 6), 0, 0)))
+			(p.Character :: Model):PivotTo(CFrame.new(MapLoader.spawnInside() + Vector3.new(rng:NextInteger(-6, 6), 0, 0)))
 		end
 	end
-	setState("Intro", "GHOST " .. level .. " IS COMING...")
-	for _, p in list do Remotes.Fx:FireClient(p, "Intro", level) end
+	-- ghost 1 is always the Woman, then a random monster by rarity (Studio hook: RS attribute DebugMonster = id)
+	local def = Monsters.pick(level, lastMonster, rng)
+	local forced = RunService:IsStudio() and RS:GetAttribute("DebugMonster")
+	if type(forced) == "string" and Monsters.byId[forced] then def = Monsters.byId[forced] end
+	lastMonster = def.id
+	setState("Intro", def.title .. " IS COMING...")
+	for _, p in list do Remotes.Fx:FireClient(p, "Intro", level, def.title, def.rarity) end
 	task.wait(5)
 	if #Run.matchPlayers() == 0 then busy = false; return end
-	local best, bestD = SPAWNS[1], -1
-	for _, sp in SPAWNS do
+	local spawns = MapLoader.ghostSpawns()
+	local best, bestD = spawns[1], -1
+	for _, sp in spawns do
 		local d = math.huge
 		for _, p in Run.matchPlayers() do
 			local hrp = hrpOf(p)
@@ -136,7 +143,7 @@ function Run.startFight()
 		end
 		if d > bestD and d < math.huge then best, bestD = sp, d end
 	end
-	Ghost.spawn(level, best)
+	Ghost.spawn(level, best, def.id)
 	setState("Fight", "")
 	busy = false
 end
@@ -150,11 +157,12 @@ end
 
 local function onGhostDeath(g)
 	kills += 1
-	local reward = Config.Reward.Base + (g.level - 1) * Config.Reward.PerLevel
+	local mult = (g.def and g.def.reward or 1) * diff.reward
+	local reward = math.floor((Config.Reward.Base + (g.level - 1) * Config.Reward.PerLevel) * mult)
 	for _, p in Run.matchPlayers() do
 		local st = stats[p]
 		if st then
-			st.earned += Config.Payout.PerKill + Config.Payout.PerLevel * g.level
+			st.earned += (Config.Payout.PerKill + Config.Payout.PerLevel * g.level) * mult
 			st.kills += 1
 			st.damage += g.damageBy[p] or 0
 			g.damageBy[p] = 0
@@ -233,14 +241,23 @@ function Run.onDied(p: Player)
 	end)
 end
 
+-- which map and difficulty this match uses (before the first fight)
+function Run.configure(mapId: string?, diffId: string?)
+	MapLoader.load(mapId or Maps.default)
+	diff = Maps.diffById[diffId or ""] or Maps.diffById[Maps.defaultDiff]
+	Ghost.diff = { hp = diff.hp, dmg = diff.dmg, speed = diff.speed }
+	RS:SetAttribute("Difficulty", diff.id)
+end
+
 -- start a match with these players (Studio local match, or the players of a reserved server)
-function Run.beginMatch(list: { Player })
-	kills, level, eventLeft, lastKind = 0, 1, 0, ""
+function Run.beginMatch(list: { Player }, mapId: string?, diffId: string?)
+	Run.configure(mapId, diffId)
+	kills, level, eventLeft, lastKind, lastMonster = 0, 1, 0, "", ""
 	if event then Events.despawn(event); event = nil end
 	for _, p in list do
 		Run.addToMatch(p)
 		local ch = p.Character
-		if ch then ch:PivotTo(CFrame.new(Config.SpawnInside + Vector3.new(rng:NextInteger(-6, 6), 0, 0))) end
+		if ch then ch:PivotTo(CFrame.new(MapLoader.spawnInside() + Vector3.new(rng:NextInteger(-6, 6), 0, 0))) end
 	end
 	task.spawn(Run.startFight)
 end

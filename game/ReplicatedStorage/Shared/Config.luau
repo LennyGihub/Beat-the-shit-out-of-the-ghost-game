@@ -56,7 +56,7 @@ local Config = {
 		WallSlamFactor = 0.12,
 	},
 	Reward = { Base = 200, PerLevel = 120 }, -- RUN cash per ghost (spent on items, lost after the run)
-	Payout = { PerKill = 80, PerLevel = 40, DamageDiv = 12 }, -- real cash paid when you die or leave the run
+	Payout = { PerKill = 40, PerLevel = 18, DamageDiv = 30 }, -- real cash paid when you die or leave the run (x difficulty reward)
 	BreakTime = 40, -- seconds between ghosts (or start early at the front door)
 	EventLife = 3, -- an event's shop stays for the next 3 ghosts
 	Yard = { Min = Vector3.new(-95, -5, 60), Max = Vector3.new(95, 80, 165) },

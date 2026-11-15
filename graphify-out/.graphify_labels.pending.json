@@ -1,0 +1,20 @@
+{
+  "0": "Ghost.luau",
+  "1": "Fx.handle",
+  "2": "ItemModels.luau",
+  "3": "ClientMain.client.luau",
+  "4": "Data.luau",
+  "5": "Viewmodel.luau",
+  "6": "Inventory.luau",
+  "7": "RoomPickUI.luau",
+  "8": "Config.luau",
+  "9": "Items.luau",
+  "10": "Sounds.luau",
+  "11": "Remotes.luau",
+  "12": "Events.luau",
+  "13": "Run.luau",
+  "14": "Ultimates.luau",
+  "15": "EventFx.luau",
+  "16": "Monsters.luau",
+  "17": "Maps.luau"
+}

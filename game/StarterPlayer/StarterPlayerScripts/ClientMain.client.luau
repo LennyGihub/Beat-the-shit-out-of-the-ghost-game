@@ -26,6 +26,9 @@ local PlaneFx = require(Client.PlaneFx)
 local EventFx = require(Client.EventFx)
 local Prompts = require(Client.Prompts)
 local Hotbar = require(Client.Hotbar)
+local MonsterFx = require(Client.MonsterFx)
+local RoomPickUI = require(Client.RoomPickUI)
+local ThirdPersonItems = require(Client.ThirdPersonItems)
 
 HUD.init()
 VM.init()
@@ -36,6 +39,9 @@ PlaneFx.init(Fx)
 EventFx.init(Fx)
 Prompts.init()
 Hotbar.init()
+MonsterFx.init(Fx, HUD, require(Client.Sfx))
+RoomPickUI.init()
+ThirdPersonItems.init()
 UltShop.init(function(open)
 	Input.setShopOpen(open)
 	shopOpen = open
@@ -53,7 +59,30 @@ Remotes.Fx.OnClientEvent:Connect(function(kind: string, ...)
 		PlaneFx.impact(...)
 	elseif kind == "VanCrash" or kind == "VanImpact" or kind == "TrainCrash" or kind == "TrainImpact" then
 		EventFx.handle(kind, ...)
+	elseif kind == "Fling" then
+		MonsterFx.release() -- thrown out of a monster's hand
+		Fx.handle(kind, ...)
+	elseif kind == "ItemSwing" then
+		local by = ...
+		if by ~= Players.LocalPlayer then ThirdPersonItems.swing(by) end
+		Fx.handle(kind, ...)
+	elseif MonsterFx.handles(kind) then
+		MonsterFx.handle(kind, ...)
 	else
 		Fx.handle(kind, ...)
 	end
 end)
+
+-- Studio-only test hook: player attribute DebugCam = CFrame puts the camera there (nil = normal camera)
+if game:GetService("RunService"):IsStudio() then
+	lp:GetAttributeChangedSignal("DebugCam"):Connect(function()
+		local cam = workspace.CurrentCamera
+		local cf = lp:GetAttribute("DebugCam")
+		if typeof(cf) == "CFrame" then
+			cam.CameraType = Enum.CameraType.Scriptable
+			cam.CFrame = cf
+		else
+			cam.CameraType = Enum.CameraType.Custom
+		end
+	end)
+end

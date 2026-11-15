@@ -1,4 +1,5 @@
--- Low-poly 3D models for the 50 items (stands + first-person hands).
+-- 3D models for the 50 items (stands + first-person hands). Each item has an AI-made textured mesh in
+-- ReplicatedStorage.ItemMeshes.<ItemId> (pivot = grip, pointing toward -Z); the part-built shapes below are the fallback.
 -- Model space: grip at the origin, the item points/extends toward -Z (barrel, blade tip), +Y is up.
 local ItemModels = {}
 local M = Enum.Material
@@ -79,7 +80,21 @@ function B.beartrap(m, c)
 	for k = 0, 5 do p(m, Vector3.new(0.1, 0.35, 0.1), CFrame.new(0, 0, -0.6) * CFrame.Angles(0, k * math.pi / 3, 0) * CFrame.new(0, 0.2, 0.7), STEEL, M.Metal) end
 end
 
-function ItemModels.build(shape: string, color: Color3, glow: Color3?): Model
+function ItemModels.build(shape: string, color: Color3, glow: Color3?, id: string?): Model
+	local meshes = game:GetService("ReplicatedStorage"):FindFirstChild("ItemMeshes")
+	local mesh = id and meshes and meshes:FindFirstChild(id)
+	if mesh then
+		local m = mesh:Clone()
+		m.Name = "Item_" .. shape
+		for _, d in m:GetDescendants() do
+			if d:IsA("BasePart") then d.Anchored = true; d.CanCollide = false; d.CanQuery = false; d.CanTouch = false; d.CastShadow = false end
+		end
+		if glow then
+			local root = m:FindFirstChildWhichIsA("BasePart", true)
+			if root then local l = Instance.new("PointLight"); l.Color = glow; l.Range = 8; l.Brightness = 1.2; l.Parent = root end
+		end
+		return m
+	end
 	local m = Instance.new("Model")
 	m.Name = "Item_" .. shape
 	local grip = p(m, Vector3.one * 0.2, CFrame.new(), color)

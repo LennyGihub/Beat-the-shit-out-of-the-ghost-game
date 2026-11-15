@@ -14,6 +14,7 @@ local GA = require(script.Parent.GhostAnim)
 local Grunge = require(script.Parent.Grunge)
 local UltFx = require(script.Parent.UltFx)
 local Ultimates = require(RS.Shared.Ultimates)
+local Items = require(RS.Shared.Items)
 
 local Fx = {}
 local lp = Players.LocalPlayer
@@ -142,6 +143,45 @@ function Fx.handle(kind: string, ...)
 		Fx.shake(0.6)
 		local hrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 		if hrp and typeof(dir) == "Vector3" then hrp.AssemblyLinearVelocity = dir * 55 + Vector3.new(0, 22, 0) end
+	elseif kind == "Fling" then
+		-- thrown across the room (a monster grab, or another player's throw): tumble, then get back up
+		local vel, t, byName = args[1], args[2], args[3]
+		local ch = lp.Character
+		local hrp = ch and ch:FindFirstChild("HumanoidRootPart") :: BasePart?
+		local hum = ch and ch:FindFirstChildOfClass("Humanoid")
+		if hrp and hum and typeof(vel) == "Vector3" then
+			hum:ChangeState(Enum.HumanoidStateType.FallingDown)
+			hrp.AssemblyLinearVelocity = vel
+			hrp.AssemblyAngularVelocity = Vector3.new(rng:NextNumber(-8, 8), rng:NextNumber(-4, 4), rng:NextNumber(-8, 8))
+			-- hold the launch speed for a moment so floor friction can't eat it (a real throw across the room)
+			local att = Instance.new("Attachment"); att.Parent = hrp
+			local lv = Instance.new("LinearVelocity")
+			lv.Attachment0 = att; lv.RelativeTo = Enum.ActuatorRelativeTo.World; lv.MaxForce = 1e6
+			lv.VelocityConstraintMode = Enum.VelocityConstraintMode.Vector; lv.VectorVelocity = vel; lv.Parent = hrp
+			local t0 = os.clock()
+			local conn
+			conn = RunService.Heartbeat:Connect(function()
+				local e = os.clock() - t0
+				if e > 0.28 or not lv.Parent then
+					conn:Disconnect(); lv:Destroy(); att:Destroy()
+					return
+				end
+				lv.VectorVelocity = vel + Vector3.new(0, -workspace.Gravity * e, 0)
+			end)
+			task.delay(typeof(t) == "number" and t or 1, function()
+				if hum.Parent and hum.Health > 0 then hum:ChangeState(Enum.HumanoidStateType.GettingUp) end
+			end)
+		end
+		Sfx.play("PunchHeavy", { PlaybackSpeed = 0.7 })
+		HUD.flash(Color3.fromRGB(150, 0, 0), 0.4)
+		Fx.shake(0.8)
+		if type(byName) == "string" and byName ~= "" then HUD.toast(string.upper(byName) .. " HIT YOU") end
+	elseif kind == "PlayerHit" then
+		local pos, dmg, by = args[1], args[2], args[3]
+		flashBall(pos, Color3.fromRGB(255, 90, 60), 3, 0.18)
+		burst(pos, Color3.fromRGB(150, 20, 20), 14, 18, 0.5)
+		Sfx.at("PunchHeavy", pos, { PlaybackSpeed = 0.9 })
+		if by == lp then Fx.kick(4); HUD.toast("HIT A TEAMMATE  -" .. math.floor(dmg or 0)) end
 	elseif kind == "Jumpscare" then
 		jumpscare()
 	elseif kind == "GhostScream" then
@@ -226,9 +266,18 @@ function Fx.handle(kind: string, ...)
 		Sfx.at("PunchHeavy", args[1], { PlaybackSpeed = 1.3, Volume = 1.2 })
 		burst(args[1], Color3.fromRGB(150, 150, 150), 14, 10, 0.5)
 	elseif kind == "ItemSwing" then
-		local by = args[1]
+		local by, id, hit = args[1], args[2], args[3]
 		if by ~= lp and by and by.Character and by.Character:FindFirstChild("Head") then
 			Sfx.at("Whoosh", by.Character.Head.Position, { PlaybackSpeed = 0.8 })
+		elseif by == lp and hit then
+			-- the swing connected: hit-stop, a heavier shake for heavy weapons, sparks at the weapon's end
+			local it = Items.byId[id]
+			local heavy = it ~= nil and (it.knock or 0) >= 60
+			VM.impact(heavy)
+			Fx.shake(heavy and 0.45 or 0.22)
+			Fx.kick(heavy and 6 or 3)
+			local tip = VM.itemTip()
+			if tip then burst(tip, Color3.fromRGB(255, 220, 160), heavy and 18 or 10, 14, 0.25, "rbxasset://textures/particles/sparkles_main.dds") end
 		end
 	elseif kind == "ItemBroke" then
 		HUD.toast("YOUR " .. string.upper(args[1]) .. " IS SPENT")
@@ -236,7 +285,7 @@ function Fx.handle(kind: string, ...)
 		Sfx.play("Cash", { PlaybackSpeed = 1.6, Volume = 0.5 })
 	elseif kind == "RunOver" then
 		local reason, cash, k = args[1], args[2], args[3]
-		HUD.banner(reason == "died" and "SHE GOT YOU" or "RUN OVER", "+$" .. tostring(cash) .. "  (" .. tostring(k) .. " GHOSTS)", 5)
+		HUD.banner(reason == "died" and "YOU DIED" or "RUN OVER", "+$" .. tostring(cash) .. "  (" .. tostring(k) .. " GHOSTS)", 5)
 		Sfx.play("Cash")
 	elseif kind == "Toast" then
 		HUD.toast(args[1])
@@ -250,7 +299,10 @@ function Fx.handle(kind: string, ...)
 	elseif kind == "Tired" then
 		HUD.flash(Color3.fromRGB(120, 110, 40), 0.25)
 	elseif kind == "Intro" then
-		HUD.banner("SHE IS IN THE HOUSE", "GHOST " .. tostring(args[1]), 4)
+		-- args: ghost number, monster title, rarity
+		local rar = args[3] or 0
+		local tag = rar == 3 and "LEGENDARY - " or (rar == 2 and "RARE - " or "")
+		HUD.banner(args[2] or "SHE IS IN THE HOUSE", tag .. "GHOST " .. tostring(args[1]), 4)
 		Sfx.play("GhostWhisper", { Volume = 1 })
 	elseif kind == "Victory" then
 		HUD.banner("GHOST DESTROYED", "+$" .. tostring(args[1]) .. " RUN CASH", 4)
@@ -278,8 +330,17 @@ PRESETS.yard.AtmColor = Color3.fromRGB(26, 28, 32)
 PRESETS.yard.AtmDecay = Color3.fromRGB(14, 14, 18)
 PRESETS.yard.AtmHaze = 1.3
 local currentZone = ""
+local Maps = require(RS.Shared.Maps)
 function Fx.applyZone(zone: string, dt: number)
 	local p = PRESETS[zone]
+	-- each map has its own interior look (tint, ambient, grade)
+	if zone == "inside" then
+		local m = Maps.byId[RS:GetAttribute("MapId") or "Mansion"]
+		if m and m.id ~= "Mansion" then
+			p = table.clone(p)
+			for k, v in m.light do p[k] = v end
+		end
+	end
 	local a = zone == currentZone and math.min(1, dt * 2) or 1
 	currentZone = zone
 	local atm = Lighting:FindFirstChildOfClass("Atmosphere")

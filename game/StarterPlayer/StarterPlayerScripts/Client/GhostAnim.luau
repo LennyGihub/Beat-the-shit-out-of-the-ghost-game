@@ -1,5 +1,6 @@
--- Procedural animation for the ghost (runs on every client): twitchy float, claw wind-up and swipe,
--- flailing knockback, arms-wide scare, vanish fade, white hit flash, dissolve on death.
+-- Procedural animation for the monster (runs on every client): twitchy float or a walk cycle (walkers),
+-- claw wind-up and swipe, a pose per special ability, flailing knockback, arms-wide scare, vanish / shadow fade,
+-- white hit flash, dissolve on death. Every monster rig uses the same R15 joint names.
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
@@ -47,9 +48,87 @@ function GA.flash(strength: number?)
 	TweenService:Create(highlight, TweenInfo.new(0.16), { FillTransparency = 1 }):Play()
 end
 
+-- a pose while a special ability runs (Ability / AbilityPhase attributes)
+local function abilityPose(ab: string, phase: string, t: number, since: number): { [string]: CFrame }
+	local s = math.sin
+	local p = {}
+	local a = math.min(1, since / 0.35)
+	if ab == "grabThrow" then
+		if phase == "wind" then
+			p.Root = A(0.3 * a, 0, 0); p.Waist = A(0.25 * a, 0, 0)
+			p.RightShoulder = A(1.4 * a, 0, -0.3); p.LeftShoulder = A(1.4 * a, 0, 0.3)
+			p.RightElbow = A(0.2, 0, 0); p.LeftElbow = A(0.2, 0, 0)
+		else -- hold: lift the victim overhead with the right arm, then throw
+			p.Waist = A(-0.25, 0.3, 0); p.Neck = A(-0.3, 0, 0)
+			p.RightShoulder = A(2.9, 0, -0.2); p.RightElbow = A(0.3, 0, 0)
+			p.LeftShoulder = A(0.6, 0, 0.6)
+		end
+	elseif ab == "pounce" then
+		if phase == "crouch" then
+			p.Root = A(0.6 * a, 0, 0); p.Waist = A(0.4 * a, 0, 0); p.Neck = A(-0.6 * a, 0, s(t * 30) * 0.1)
+			p.RightHip = A(1.4 * a, 0, 0); p.LeftHip = A(1.4 * a, 0, 0); p.RightKnee = A(-2.0 * a, 0, 0); p.LeftKnee = A(-2.0 * a, 0, 0)
+			p.RightShoulder = A(0.9, 0, 0.3); p.LeftShoulder = A(0.9, 0, -0.3)
+		else
+			p.Root = A(-0.4, 0, 0); p.RightShoulder = A(2.8, 0, -0.4); p.LeftShoulder = A(2.8, 0, 0.4)
+			p.RightHip = A(-0.6, 0, 0); p.LeftHip = A(0.4, 0, 0); p.RightKnee = A(-0.4, 0, 0); p.LeftKnee = A(-1.2, 0, 0)
+		end
+	elseif ab == "wail" then
+		local k = phase == "wind" and a or 1
+		p.Root = A(-0.3 * k, 0, 0); p.Waist = A(-0.35 * k, 0, 0); p.Neck = A(-0.7 * k + s(t * 60) * 0.05, s(t * 47) * 0.08, 0)
+		p.RightShoulder = A(0.4, 0, 1.9 * k); p.LeftShoulder = A(0.4, 0, -1.9 * k)
+		p.RightElbow = A(0.1, 0, 0); p.LeftElbow = A(0.1, 0, 0); p.RightWrist = A(-0.5, 0, 0); p.LeftWrist = A(-0.5, 0, 0)
+	elseif ab == "blackout" then
+		p.Root = A(0.35, 0, 0); p.Waist = A(0.3, 0, 0); p.Neck = A(-0.3, s(t * 9) * 0.3, 0)
+		p.RightShoulder = A(0.9 + s(t * 14) * 0.3, 0, 0.2); p.LeftShoulder = A(0.9 - s(t * 14) * 0.3, 0, -0.2)
+		p.RightElbow = A(0.6, 0, 0); p.LeftElbow = A(0.6, 0, 0)
+		p.RightHip = A(s(t * 14) * 0.9, 0, 0); p.LeftHip = A(-s(t * 14) * 0.9, 0, 0)
+		p.RightKnee = A(-0.4 - math.max(0, s(t * 14)) * 0.6, 0, 0); p.LeftKnee = A(-0.4 - math.max(0, -s(t * 14)) * 0.6, 0, 0)
+	elseif ab == "gas" then
+		local k = math.min(1, since / 0.3)
+		p.Waist = A(0, -0.5 + k * 0.9, 0)
+		p.RightShoulder = A(k < 0.6 and 2.6 or 1.2, 0, -0.3); p.RightElbow = A(k < 0.6 and 1.2 or 0.1, 0, 0)
+		p.LeftShoulder = A(0.4, 0, 0.3)
+	elseif ab == "hellfire" or ab == "furnitureStorm" or ab == "clones" then
+		p.Root = A(-0.2, 0, 0); p.Waist = A(-0.2, 0, 0); p.Neck = A(-0.5, 0, s(t * 20) * 0.08)
+		p.RightShoulder = A(2.6 * a, 0, -0.5 * a); p.LeftShoulder = A(2.6 * a, 0, 0.5 * a)
+		p.RightElbow = A(0.2, 0, 0); p.LeftElbow = A(0.2, 0, 0)
+		p.RightWrist = A(-0.4 + s(t * 25) * 0.2, 0, 0); p.LeftWrist = A(-0.4 - s(t * 25) * 0.2, 0, 0)
+	elseif ab == "charge" then
+		if phase == "wind" then
+			p.Root = A(0.15, 0, 0); p.Waist = A(0, -0.6 * a, 0)
+			p.RightShoulder = A(1.6 * a, 0.4, -0.4); p.RightElbow = A(0.2, 0, 0)
+			p.LeftShoulder = A(0.5, 0, 0.5); p.RightHip = A(0.4, 0, 0); p.LeftHip = A(-0.4, 0, 0)
+		else
+			p.Root = A(0.45, 0, 0); p.Waist = A(0.2, 0.3, 0)
+			p.RightShoulder = A(1.6, 0, -0.1); p.RightElbow = A(0, 0, 0); p.LeftShoulder = A(-0.6, 0, 0.4)
+			p.RightHip = A(s(t * 22) * 1.1, 0, 0); p.LeftHip = A(-s(t * 22) * 1.1, 0, 0)
+			p.RightKnee = A(-0.3 - math.max(0, s(t * 22)) * 1.0, 0, 0); p.LeftKnee = A(-0.3 - math.max(0, -s(t * 22)) * 1.0, 0, 0)
+		end
+	end
+	return p
+end
+
+-- walk cycle for monsters that walk on the floor (speed = studs / s)
+local function walkPose(p: { [string]: CFrame }, t: number, speed: number)
+	local s = math.sin
+	local k = math.clamp(speed / 14, 0, 1.4)
+	local ph = t * (5 + speed * 0.35)
+	p.RightHip = A(s(ph) * 0.75 * k, 0, 0); p.LeftHip = A(-s(ph) * 0.75 * k, 0, 0)
+	p.RightKnee = A(-0.15 - math.max(0, s(ph + 1.2)) * 0.9 * k, 0, 0); p.LeftKnee = A(-0.15 - math.max(0, -s(ph + 1.2)) * 0.9 * k, 0, 0)
+	p.RightAnkle = A(0.15 * k, 0, 0); p.LeftAnkle = A(0.15 * k, 0, 0)
+	p.RightShoulder = A(-s(ph) * 0.5 * k + 0.2, 0, 0.08); p.LeftShoulder = A(s(ph) * 0.5 * k + 0.2, 0, -0.08)
+	p.RightElbow = A(0.35, 0, 0); p.LeftElbow = A(0.35, 0, 0)
+	p.Root = A(0.08 * k, s(ph) * 0.06 * k, 0) * CFrame.new(0, math.abs(s(ph)) * 0.25 * k, 0)
+	p.Waist = A(0.05, -s(ph) * 0.12 * k, 0)
+end
+
 local function target(state: string, t: number, sinceState: number): { [string]: CFrame }
 	local s = math.sin
 	local p = {}
+	local g = current :: Model
+	if state == "Ability" then
+		return abilityPose(g:GetAttribute("Ability") or "", g:GetAttribute("AbilityPhase") or "", t, sinceState)
+	end
 	if state == "WindUp" then
 		local a = math.min(1, sinceState / 0.45)
 		p.Root = A(0.25 * a, 0, 0)
@@ -89,6 +168,20 @@ local function target(state: string, t: number, sinceState: number): { [string]:
 		p.Neck = A(0.9, 0, 0.5)
 		p.RightShoulder = A(-0.3, 0, 0.9); p.LeftShoulder = A(-0.3, 0, -0.9)
 		p.RightHip = A(-0.4, 0, 0); p.LeftHip = A(-0.2, 0, 0)
+	elseif g:GetAttribute("Walker") then -- Chase / Spawn: walk (the crawler crawls on all fours)
+		local hrp = g:FindFirstChild("HumanoidRootPart") :: BasePart?
+		local v = hrp and hrp.AssemblyLinearVelocity or Vector3.zero
+		local speed = Vector3.new(v.X, 0, v.Z).Magnitude
+		walkPose(p, t, speed)
+		if g:GetAttribute("MonsterId") == "Crawler" then
+			p.Root = A(1.15, 0, s(t * 9) * 0.1) * CFrame.new(0, -1.6, 0)
+			p.Neck = A(-1.1, 0, s(t * 23) * 0.2)
+			p.RightShoulder = A(1.6 + s(t * 9) * 0.6, 0, -0.2); p.LeftShoulder = A(1.6 - s(t * 9) * 0.6, 0, 0.2)
+			p.RightHip = A(-0.2 - s(t * 9) * 0.5, 0, 0.2); p.LeftHip = A(-0.2 + s(t * 9) * 0.5, 0, -0.2)
+		elseif g:GetAttribute("MonsterId") == "Butcher" or g:GetAttribute("MonsterId") == "HollowKing" then
+			p.Waist = (p.Waist or CFrame.new()) * A(0.25, 0, 0) -- hunched
+			p.Neck = A(-0.2, 0, s(t * 1.3) * 0.08)
+		end
 	else -- Chase / Spawn / Vanish: dangling float with twitches
 		if t > twitch.t then
 			twitch.t = t + rng:NextNumber(0.4, 2.2)
@@ -130,7 +223,7 @@ function GA.update(dt: number)
 	end
 	if swirl then swirl.Enabled = current:GetAttribute("Vortex") == true end
 	local tp = target(state, t, t - stateT)
-	local speed = (state == "Swipe" or state == "Knocked") and 30 or 10
+	local speed = (state == "Swipe" or state == "Knocked" or state == "Ability") and 22 or 12
 	local a = 1 - math.exp(-speed * dt)
 	for name, m in joints do
 		if frozen then m.Transform = pose[name]; continue end
@@ -141,6 +234,7 @@ function GA.update(dt: number)
 	-- vanish / spawn / death fade
 	local want = 0
 	if current:GetAttribute("Vanish") then want = 1 end
+	if current:GetAttribute("Shadow") then want = 0.88 end -- the stalker in the dark: barely visible
 	if state == "Dead" then want = math.min(1, (t - stateT) / 2.5) end
 	if state == "Spawn" then want = 1 - math.min(1, (t - stateT) / 1.8) end
 	fade += (want - fade) * math.min(1, dt * (state == "Dead" and 3 or 6))
