@@ -10,6 +10,7 @@ local pose = {} :: { [string]: CFrame }
 local fade = 0
 local twitch = { t = 0, z = 0, x = 0 }
 local highlight: Highlight? = nil
+local swirl: ParticleEmitter? = nil
 local rng = Random.new()
 
 local A = CFrame.Angles
@@ -26,6 +27,18 @@ local function bind(g: Model)
 	highlight.FillTransparency = 1
 	highlight.DepthMode = Enum.HighlightDepthMode.Occluded
 	highlight.Parent = g
+	local hrp = g:FindFirstChild("HumanoidRootPart")
+	if hrp then
+		local a = Instance.new("Attachment"); a.Parent = hrp
+		local pe = Instance.new("ParticleEmitter")
+		pe.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+		pe.Shape = Enum.ParticleEmitterShape.Sphere; pe.ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface
+		pe.Color = ColorSequence.new(Color3.fromRGB(150, 60, 255), Color3.fromRGB(20, 0, 40))
+		pe.Size = NumberSequence.new(1.2, 0.2); pe.Speed = NumberRange.new(-24, -16); pe.Lifetime = NumberRange.new(0.6, 0.9)
+		pe.Rate = 120; pe.RotSpeed = NumberRange.new(200, 400); pe.LightEmission = 0.8; pe.Enabled = false
+		pe.Parent = a
+		swirl = pe
+	end
 end
 
 function GA.flash(strength: number?)
@@ -105,10 +118,22 @@ function GA.update(dt: number)
 	local t = os.clock()
 	local state = current:GetAttribute("State") or "Chase"
 	if state ~= stateSeen then stateSeen = state; stateT = t end
+	local frozen = current:GetAttribute("Frozen") == true
+	if highlight then
+		if frozen then
+			highlight.FillColor = Color3.fromRGB(150, 210, 255)
+			if highlight.FillTransparency > 0.55 then highlight.FillTransparency = 0.55 end
+		elseif highlight.FillColor ~= Color3.new(1, 1, 1) then
+			highlight.FillColor = Color3.new(1, 1, 1)
+			highlight.FillTransparency = 1
+		end
+	end
+	if swirl then swirl.Enabled = current:GetAttribute("Vortex") == true end
 	local tp = target(state, t, t - stateT)
 	local speed = (state == "Swipe" or state == "Knocked") and 30 or 10
 	local a = 1 - math.exp(-speed * dt)
 	for name, m in joints do
+		if frozen then m.Transform = pose[name]; continue end
 		local want = tp[name] or CFrame.new()
 		pose[name] = pose[name]:Lerp(want, a)
 		m.Transform = pose[name]

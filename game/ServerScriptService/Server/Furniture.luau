@@ -5,7 +5,7 @@ local Debris = game:GetService("Debris")
 local Remotes = require(script.Parent.Remotes)
 
 local Furniture = {}
-Furniture.thrown = {} :: { [Model]: { by: Player, t: number, power: number } }
+Furniture.thrown = {} :: { [Model]: { by: Player?, t: number, power: number } }
 local template: Model? = nil
 local debrisFolder: Folder
 local rng = Random.new()
@@ -99,7 +99,7 @@ function Furniture.near(pos: Vector3, radius: number): { Model }
 end
 
 function Furniture.grab(player: Player, m: Model): boolean
-	local char = player.Character
+	local char = player and player.Character
 	local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
 	if not hrp or not Furniture.isValid(m) or m:GetAttribute("CarriedBy") then return false end
 	local prim = m.PrimaryPart :: BasePart
@@ -132,7 +132,7 @@ function Furniture.release(m: Model)
 	m:SetAttribute("CarriedBy", nil)
 end
 
-function Furniture.throw(player: Player, m: Model, dir: Vector3, power: number)
+function Furniture.throw(player: Player?, m: Model, dir: Vector3, power: number)
 	if not m or not m.Parent or m:GetAttribute("Broken") then return end
 	Furniture.release(m)
 	local prim = m.PrimaryPart :: BasePart
@@ -141,11 +141,12 @@ function Furniture.throw(player: Player, m: Model, dir: Vector3, power: number)
 			p.CanCollide = true; p.CanTouch = true; p.Massless = false; p.CollisionGroup = "Thrown"
 		end
 	end
+	prim.Anchored = false
 	pcall(function() prim:SetNetworkOwner(nil) end)
 	prim.AssemblyLinearVelocity = dir * power + Vector3.new(0, 10, 0)
 	prim.AssemblyAngularVelocity = Vector3.new(rng:NextNumber(-6, 6), rng:NextNumber(-6, 6), rng:NextNumber(-6, 6))
 	Furniture.thrown[m] = { by = player, t = os.clock(), power = power }
-	local char = player.Character
+	local char = player and player.Character
 	local conns = {}
 	local function onTouch(hit: BasePart)
 		if not Furniture.thrown[m] then return end
@@ -160,6 +161,35 @@ function Furniture.throw(player: Player, m: Model, dir: Vector3, power: number)
 	task.delay(5, function()
 		if Furniture.thrown[m] and m.Parent then Furniture.smash(m, Vector3.zero, 20) end
 	end)
+end
+
+-- launch a piece straight at a point (ultimate barrages / black holes)
+function Furniture.flingAt(m: Model, target: Vector3, by: Player?, power: number)
+	if not Furniture.isValid(m) or m:GetAttribute("CarriedBy") then return end
+	local from = m:GetBoundingBox().Position
+	local to = target - from
+	if to.Magnitude < 0.5 then return end
+	-- lift it a bit first so it does not scrape the floor
+	local prim = m.PrimaryPart :: BasePart
+	prim.CFrame += Vector3.new(0, 2, 0)
+	Furniture.throw(by, m, (to + Vector3.new(0, to.Magnitude * 0.08, 0)).Unit, power)
+end
+
+-- furniture models sorted by distance to a point
+function Furniture.nearest(pos: Vector3, maxDist: number, count: number): { Model }
+	local f = Furniture.folder()
+	if not f then return {} end
+	local list = {}
+	for _, m in f:GetChildren() do
+		if m:IsA("Model") and Furniture.isValid(m) and not m:GetAttribute("CarriedBy") and m.PrimaryPart then
+			local d = (m.PrimaryPart.Position - pos).Magnitude
+			if d < maxDist then table.insert(list, { m = m, d = d }) end
+		end
+	end
+	table.sort(list, function(a, b) return a.d < b.d end)
+	local out = {}
+	for i = 1, math.min(count, #list) do out[i] = list[i].m end
+	return out
 end
 
 return Furniture

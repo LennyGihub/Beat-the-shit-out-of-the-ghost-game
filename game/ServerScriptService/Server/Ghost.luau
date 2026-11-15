@@ -62,6 +62,7 @@ function Ghost.spawn(level: number, pos: Vector3)
 		vel = Vector3.zero, state = "Spawn", stateStart = os.clock(), stateUntil = os.clock() + 2.2,
 		nextAttack = os.clock() + 3, nextScare = os.clock() + rng:NextNumber(C.ScareMin, C.ScareMax),
 		damageBy = {} :: { [Player]: number }, target = nil :: Player?, rp = structParams(),
+		frozenUntil = 0, slowMult = 1, slowUntil = 0, burns = {}, ts = nil :: any, launch = nil :: any, fire = nil :: Fire?,
 	}
 	Ghost.current = g
 	setState(g, "Spawn", 2.2)
@@ -81,7 +82,7 @@ local function pickTarget(g): (Player?, BasePart?)
 		local ch = p.Character
 		local hum = ch and ch:FindFirstChildOfClass("Humanoid")
 		local hrp = ch and ch:FindFirstChild("HumanoidRootPart") :: BasePart?
-		if hum and hum.Health > 0 and hrp then
+		if hum and hum.Health > 0 and hrp and p:GetAttribute("InMatch") then
 			local pos = hrp.Position
 			local inside = pos.X > Config.House.Min.X and pos.X < Config.House.Max.X and pos.Z > Config.House.Min.Z and pos.Z < Config.House.Max.Z
 			if inside then
@@ -106,10 +107,87 @@ end
 function Ghost.damage(amount: number, by: Player?)
 	local g = Ghost.current
 	if not g or g.state == "Dead" or g.state == "Spawn" then return end
+	if by then g.damageBy[by] = (g.damageBy[by] or 0) + amount end
+	if g.ts and os.clock() < g.ts.untilT then
+		g.ts.stored += amount -- time is stopped: damage lands all at once later
+		return
+	end
+	if os.clock() < g.frozenUntil then amount *= 1.5 end
 	g.hp = math.max(0, g.hp - amount)
 	g.model:SetAttribute("HP", g.hp)
-	if by then g.damageBy[by] = (g.damageBy[by] or 0) + amount end
 	if g.hp <= 0 then die(g) end
+end
+
+-- ultimate effects -------------------------------------------------------
+function Ghost.freeze(t: number)
+	local g = Ghost.current
+	if not g or g.state == "Dead" then return end
+	g.frozenUntil = math.max(g.frozenUntil, os.clock() + t)
+	if g.state == "WindUp" or g.state == "Swipe" or g.state == "Vanish" or g.state == "Scare" then
+		g.model:SetAttribute("Vanish", false)
+		setState(g, "Chase")
+	end
+	g.model:SetAttribute("Frozen", true)
+end
+
+function Ghost.timeStop(t: number, mult: number)
+	local g = Ghost.current
+	if not g or g.state == "Dead" then return end
+	g.ts = { untilT = os.clock() + t, stored = 0, mult = mult }
+	g.model:SetAttribute("TimeStop", true)
+	Ghost.freeze(t)
+end
+
+function Ghost.slow(mult: number, t: number)
+	local g = Ghost.current
+	if not g then return end
+	g.slowMult = mult
+	g.slowUntil = os.clock() + t
+end
+
+function Ghost.burn(dps: number, t: number, color: Color3?, by: Player?)
+	local g = Ghost.current
+	if not g or g.state == "Dead" then return end
+	table.insert(g.burns, { dps = dps, untilT = os.clock() + t, color = color or Color3.fromRGB(255, 110, 30), by = by })
+end
+
+function Ghost.launch(h: number, d: number, by: Player?)
+	local g = Ghost.current
+	if not g or g.state == "Dead" or g.state == "Spawn" then return end
+	g.model:SetAttribute("Vanish", false)
+	g.launch = { phase = "up", topY = g.hrp.Position.Y + h, d = d, by = by }
+	setState(g, "Launched")
+end
+
+function Ghost.setVortex(t: number)
+	local g = Ghost.current
+	if not g then return end
+	g.model:SetAttribute("Vortex", true)
+	task.delay(t, function() if g.model.Parent then g.model:SetAttribute("Vortex", false) end end)
+	Ghost.slow(0.05, t)
+end
+
+local function stepLaunched(g, dt: number)
+	local L = g.launch
+	local pos = g.hrp.Position
+	if L.phase == "up" then
+		local r = workspace:Raycast(pos, Vector3.new(0, 6, 0), g.rp)
+		if pos.Y >= L.topY or r then
+			if r then Remotes.Fx:FireAllClients("WallSlam", r.Position, 90) end
+			L.phase = "down"
+		end
+		g.lv.VectorVelocity = Vector3.new(0, 75, 0)
+	else
+		g.lv.VectorVelocity = Vector3.new(0, -170, 0)
+		local r = workspace:Raycast(pos, Vector3.new(0, -7, 0), g.rp)
+		if r then
+			Remotes.Fx:FireAllClients("WallSlam", r.Position, 160)
+			for _, f in Furniture.near(r.Position, 14) do Furniture.smash(f, Vector3.new(0, 40, 0), 90) end
+			g.launch = nil
+			setState(g, "Recover", 0.7)
+			Ghost.damage(L.d, L.by)
+		end
+	end
 end
 
 -- Called by combat for punches, throws and the ultimate shockwave.
@@ -119,6 +197,8 @@ function Ghost.hit(by: Player?, dir: Vector3, knock: number, damage: number)
 	if g.model:GetAttribute("Vanish") then g.model:SetAttribute("Vanish", false) end
 	Ghost.damage(damage, by)
 	if g.state == "Dead" then return end
+	if g.ts and os.clock() < g.ts.untilT then return end -- frozen in time: no knockback
+	if g.state == "Launched" then return end
 	local flat = Vector3.new(dir.X, 0, dir.Z)
 	flat = flat.Magnitude > 0.01 and flat.Unit or Vector3.new(0, 0, -1)
 	g.vel = flat * knock + Vector3.new(0, math.min(knock * 0.15, 18), 0)
@@ -178,10 +258,39 @@ function Ghost.step(dt: number)
 		g.lv.VectorVelocity = Vector3.new(0, 3, 0)
 		return
 	end
+	-- burning (damage over time) + its fire
+	for i = #g.burns, 1, -1 do
+		local b = g.burns[i]
+		if now > b.untilT then table.remove(g.burns, i) else Ghost.damage(b.dps * dt, b.by) end
+	end
+	if not Ghost.alive() then return end
+	if #g.burns > 0 and not g.fire then
+		local f = Instance.new("Fire"); f.Size = 7; f.Heat = 12
+		f.Color = g.burns[#g.burns].color; f.SecondaryColor = Color3.new(1, 1, 0.6)
+		f.Parent = g.model:FindFirstChild("UpperTorso"); g.fire = f
+	elseif #g.burns == 0 and g.fire then
+		g.fire:Destroy(); g.fire = nil
+	end
+	-- time stop ends: everything stored lands at once
+	if g.ts and now >= g.ts.untilT then
+		local stored = g.ts.stored * g.ts.mult
+		g.ts = nil
+		g.model:SetAttribute("TimeStop", false)
+		Remotes.Fx:FireAllClients("TimeResume", g.hrp.Position, stored)
+		Ghost.damage(stored, nil)
+		if not Ghost.alive() then return end
+	end
 	local target, thrp = pickTarget(g)
 	g.target = target
 	local pos = g.hrp.Position
+	if s == "Launched" then return stepLaunched(g, dt) end
 	if s == "Knocked" then return stepKnocked(g, dt, now) end
+	if now < g.frozenUntil then
+		g.lv.VectorVelocity = Vector3.zero
+		return
+	elseif g.model:GetAttribute("Frozen") then
+		g.model:SetAttribute("Frozen", false)
+	end
 
 	local floorY = floorBelow(thrp and thrp.Position or pos, g.rp)
 	local hoverY = floorY + C.HoverHeight + math.sin(now * 2.1) * 0.35
@@ -209,7 +318,7 @@ function Ghost.step(dt: number)
 		end
 		face(thrp.Position)
 		local dist = (Vector3.new(thrp.Position.X, 0, thrp.Position.Z) - Vector3.new(pos.X, 0, pos.Z)).Magnitude
-		local speed = C.Speed + (g.level - 1) * C.SpeedPerLevel
+		local speed = (C.Speed + (g.level - 1) * C.SpeedPerLevel) * (now < g.slowUntil and g.slowMult or 1)
 		-- creepy rhythm: she sometimes freezes for a moment, then lunges
 		local phase = (now * 0.6) % 1
 		if phase < 0.12 and dist > 14 then speed *= 0.1 elseif phase < 0.3 and dist > 14 then speed *= 1.8 end

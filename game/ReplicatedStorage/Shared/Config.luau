@@ -55,7 +55,7 @@ local Config = {
 		FurnitureHitDamagePerWeight = 4,
 		WallSlamFactor = 0.12,
 	},
-	Reward = { Base = 150, PerLevel = 90 },
+	Reward = { Base = 200, PerLevel = 120 },
 	SpawnInside = Vector3.new(0, 5, 46),
 	OutsideZ = 64, -- crossing this (out the front porch) counts as outside
 	House = { Min = Vector3.new(-80, -5, -60), Max = Vector3.new(80, 80, 60) },

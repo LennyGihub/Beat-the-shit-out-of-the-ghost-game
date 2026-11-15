@@ -1,4 +1,4 @@
--- Client entry: first-person camera, HUD, fists, ghost animation, effects, input, shop, plane crash.
+-- Client entry: first-person camera, HUD, fists, ghost animation, effects, input, ultimate shop, plane crash.
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local lp = Players.LocalPlayer
@@ -13,7 +13,7 @@ local VM = require(Client.Viewmodel)
 local GA = require(Client.GhostAnim)
 local Fx = require(Client.Fx)
 local Input = require(Client.Input)
-local Shop = require(Client.ShopUI)
+local UltShop = require(Client.UltShopUI)
 local PlaneFx = require(Client.PlaneFx)
 
 HUD.init()
@@ -22,16 +22,16 @@ GA.init()
 Fx.init()
 Input.init()
 PlaneFx.init(Fx)
-Shop.init(function(open)
+UltShop.init(function(open)
 	Input.setShopOpen(open)
 	lp.CameraMode = open and Enum.CameraMode.Classic or Enum.CameraMode.LockFirstPerson
 end)
 
 Remotes.Fx.OnClientEvent:Connect(function(kind: string, ...)
-	if kind == "OpenShop" then
-		Shop.open()
-	elseif kind == "BuyResult" then
-		Shop.result(...)
+	if kind == "OpenUltShop" then
+		UltShop.open()
+	elseif kind == "UltResult" then
+		UltShop.result(...)
 	elseif kind == "PlaneCrash" then
 		PlaneFx.crash(...)
 	elseif kind == "PlaneImpact" then

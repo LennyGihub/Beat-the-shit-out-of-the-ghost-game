@@ -6,6 +6,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Config = require(RS.Shared.Config)
 local Grunge = require(script.Parent.Grunge)
+local Ultimates = require(RS.Shared.Ultimates)
 
 local HUD = {}
 local lp = Players.LocalPlayer
@@ -23,6 +24,13 @@ local bannerTitle: TextLabel
 local bannerSub: TextLabel
 local vignette: Frame
 local crosshair: Frame
+local barsRoot: Frame
+local ultName: TextLabel
+local marker: Frame
+local markerText: TextLabel
+local arrow: Frame
+local toast: TextLabel
+local objSplat: ImageLabel
 
 function HUD.init()
 	gui = Instance.new("ScreenGui")
@@ -35,6 +43,7 @@ function HUD.init()
 	-- bottom-right player bars
 	local br = Grunge.frame(gui, { AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -24, 1, -24), Size = UDim2.fromScale(0.36, 0.3) })
 	local ar = Instance.new("UIAspectRatioConstraint"); ar.AspectRatio = 2.4; ar.Parent = br
+	barsRoot = br
 	health = Grunge.bar(br, { size = UDim2.fromScale(1, 0.24), pos = UDim2.fromScale(0, 0.12), color = Color3.fromRGB(150, 18, 20), label = "HEALTH", rot = -1.2, seed = 11 })
 	stamina = Grunge.bar(br, { size = UDim2.fromScale(0.86, 0.15), pos = UDim2.fromScale(0.14, 0.5), color = Color3.fromRGB(196, 176, 64), label = "STAMINA", rot = 0.8, seed = 23, slices = 26 })
 	brut = Grunge.bar(br, { size = UDim2.fromScale(0.94, 0.19), pos = UDim2.fromScale(0.06, 0.78), color = Color3.fromRGB(230, 96, 20), label = "BRUTALITY", rot = -0.6, seed = 37 })
@@ -42,6 +51,8 @@ function HUD.init()
 		Text = "PRESS Q", AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(0, -6, 0.86, 0), Size = UDim2.fromScale(0.34, 0.2),
 		TextColor3 = Color3.fromRGB(255, 120, 40), Rotation = -6, Visible = false, ZIndex = 8,
 	})
+
+	ultName = Grunge.text(br, { Text = "", Font = Grunge.TYPE, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -4, 1.0, 0), Size = UDim2.fromScale(0.9, 0.11), TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = Color3.fromRGB(255, 150, 80), ZIndex = 8 })
 
 	-- top-centre ghost health
 	ghostRoot = Grunge.frame(gui, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 26), Size = UDim2.fromScale(0.44, 0.09), Visible = false })
@@ -55,7 +66,21 @@ function HUD.init()
 	comboLabel = Grunge.text(gui, { Text = "", AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0.56, 0, 0.42, 0), Size = UDim2.fromScale(0.12, 0.1), TextColor3 = Color3.fromRGB(230, 40, 30), Rotation = -8, Visible = false })
 	comboWord = Grunge.text(gui, { Text = "", Font = Grunge.HORROR, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0.565, 0, 0.5, 0), Size = UDim2.fromScale(0.16, 0.06), TextColor3 = Grunge.PAPER, Rotation = -4, Visible = false })
 	hint = Grunge.text(gui, { Text = "", Font = Grunge.TYPE, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.53, 0), Size = UDim2.fromScale(0.2, 0.035), Visible = false })
-	objective = Grunge.text(gui, { Text = "", Font = Grunge.TYPE, AnchorPoint = Vector2.new(0, 0), Position = UDim2.new(0, 24, 0, 24), Size = UDim2.fromScale(0.3, 0.04), TextXAlignment = Enum.TextXAlignment.Left, Visible = false })
+	-- objective: big hand-drawn line under the Roblox top bar (centre), with a splatter behind it
+	objSplat = Grunge.splat(gui, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, 118), Size = UDim2.fromScale(0.46, 0.16), ImageColor3 = Color3.fromRGB(100, 8, 8), ImageTransparency = 0.35, Visible = false })
+	objective = Grunge.text(gui, { Text = "", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, 118), Size = UDim2.fromScale(0.5, 0.075), TextColor3 = Grunge.PAPER, Rotation = -1.5, Visible = false, ZIndex = 3 })
+	-- waypoint marker (on-screen label) and edge arrow (off-screen)
+	marker = Grunge.frame(gui, { AnchorPoint = Vector2.new(0.5, 1), Size = UDim2.fromOffset(170, 64), Visible = false })
+	markerText = Grunge.text(marker, { Text = "", Size = UDim2.fromScale(1, 0.55), TextColor3 = Color3.fromRGB(255, 210, 120) })
+	for _, rot in { 35, -35 } do
+		Grunge.frame(marker, { BackgroundTransparency = 0, BackgroundColor3 = Color3.fromRGB(255, 210, 120), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, rot > 0 and -7 or 7, 0.8, 0), Size = UDim2.fromOffset(20, 5), Rotation = rot })
+	end
+	arrow = Grunge.frame(gui, { AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(110, 110), Visible = false })
+	for _, rot in { 40, -40 } do
+		Grunge.frame(arrow, { BackgroundTransparency = 0, BackgroundColor3 = Color3.fromRGB(255, 210, 120), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 8, 0.5, rot > 0 and -17 or 17), Size = UDim2.fromOffset(62, 14), Rotation = rot })
+		Grunge.frame(arrow, { BackgroundTransparency = 0, BackgroundColor3 = Grunge.INK, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 10, 0.5, rot > 0 and -15 or 15), Size = UDim2.fromOffset(66, 18), Rotation = rot, ZIndex = 0 })
+	end
+	toast = Grunge.text(gui, { Text = "", Font = Grunge.TYPE, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 0.86, 0), Size = UDim2.fromScale(0.5, 0.045), Visible = false, ZIndex = 30 })
 	cashLabel = Grunge.text(gui, { Text = "$0", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -24, 0, 20), Size = UDim2.fromScale(0.14, 0.06), TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = Color3.fromRGB(150, 220, 110), Rotation = 2, Visible = false })
 
 	-- banner (intro / victory / shop)
@@ -118,7 +143,44 @@ end
 
 function HUD.setVisible(on: boolean) gui.Enabled = on end
 
+function HUD.toast(text: string, good: boolean?)
+	toast.Text = string.upper(text)
+	toast.TextColor3 = good == false and Color3.fromRGB(240, 80, 60) or (good and Color3.fromRGB(150, 220, 110) or Grunge.PAPER)
+	toast.Visible = true
+	local token = os.clock()
+	toast:SetAttribute("T", token)
+	task.delay(2.6, function() if toast:GetAttribute("T") == token then toast.Visible = false end end)
+end
+
+local cam = workspace.CurrentCamera
+local function updateWaypoint()
+	local wp = RS:GetAttribute("Waypoint")
+	if typeof(wp) ~= "Vector3" or not lp:GetAttribute("InMatch") then
+		marker.Visible = false; arrow.Visible = false
+		return
+	end
+	local hrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local dist = hrp and math.floor((hrp.Position - wp).Magnitude) or 0
+	local sp, onScreen = cam:WorldToViewportPoint(wp)
+	local vs = cam.ViewportSize
+	if onScreen and sp.Z > 0 then
+		marker.Visible = true; arrow.Visible = false
+		marker.Position = UDim2.fromOffset(sp.X, sp.Y)
+		markerText.Text = (RS:GetAttribute("WaypointLabel") or "") .. "  " .. dist .. "m"
+	else
+		marker.Visible = false; arrow.Visible = true
+		local dir = Vector2.new(sp.X - vs.X / 2, sp.Y - vs.Y / 2)
+		if sp.Z < 0 then dir = -dir end
+		if dir.Magnitude < 1 then dir = Vector2.new(0, 1) end
+		dir = dir.Unit
+		local edge = Vector2.new(vs.X / 2, vs.Y / 2) + dir * math.min(vs.X, vs.Y) * 0.4
+		arrow.Position = UDim2.fromOffset(edge.X, edge.Y)
+		arrow.Rotation = math.deg(math.atan2(dir.Y, dir.X))
+	end
+end
+
 function HUD.update(dt: number)
+	local inMatch = lp:GetAttribute("InMatch") == true
 	local ch = lp.Character
 	local hum = ch and ch:FindFirstChildOfClass("Humanoid")
 	if hum then health:set(hum.Health / math.max(1, hum.MaxHealth), dt) end
@@ -144,7 +206,9 @@ function HUD.update(dt: number)
 
 	local g = workspace:FindFirstChild("Ghost")
 	local roundState = RS:GetAttribute("RoundState")
-	if g and g:GetAttribute("MaxHP") and g:GetAttribute("State") ~= "Dead" then
+	if not inMatch then
+		ghostRoot.Visible = false
+	elseif g and g:GetAttribute("MaxHP") and g:GetAttribute("State") ~= "Dead" then
 		ghostRoot.Visible = true
 		ghostBar:set((g:GetAttribute("HP") or 0) / g:GetAttribute("MaxHP"), dt)
 	elseif g and g:GetAttribute("State") == "Dead" then
@@ -153,10 +217,26 @@ function HUD.update(dt: number)
 		ghostRoot.Visible = false
 	end
 	if comboLabel.Visible and t - comboShownAt > 1.6 then comboLabel.Visible = false; comboWord.Visible = false end
-	local obj = RS:GetAttribute("Objective") or ""
+	local obj = inMatch and (RS:GetAttribute("Objective") or "") or ""
+	if not inMatch then
+		local q = lp:GetAttribute("QueueRoom")
+		obj = q and "WAITING FOR PLAYERS..." or "STEP ON A ROOM PAD TO PLAY"
+	end
 	objective.Text = obj
 	objective.Visible = obj ~= ""
-	local showCash = roundState ~= "Fight" and roundState ~= "Intro"
+	objSplat.Visible = objective.Visible
+	if obj == "GO OUTSIDE" then
+		objective.TextColor3 = Color3.fromRGB(255, 200 + math.floor(math.sin(t * 6) * 40), 90)
+		objective.Rotation = -1.5 + math.sin(t * 4) * 1.5
+	else
+		objective.TextColor3 = Grunge.PAPER
+	end
+	barsRoot.Visible = inMatch
+	crosshair.Visible = inMatch
+	local u = Ultimates.byId[lp:GetAttribute("EquippedUlt") or "Rage"]
+	ultName.Text = u and ("ULT: " .. string.upper(u.name)) or ""
+	updateWaypoint()
+	local showCash = not inMatch or (roundState ~= "Fight" and roundState ~= "Intro")
 	cashLabel.Visible = showCash
 	cashLabel.Text = "$" .. tostring(lp:GetAttribute("Cash") or 0)
 end

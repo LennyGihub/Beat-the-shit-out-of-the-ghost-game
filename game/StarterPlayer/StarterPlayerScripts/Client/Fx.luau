@@ -12,6 +12,8 @@ local HUD = require(script.Parent.HUD)
 local VM = require(script.Parent.Viewmodel)
 local GA = require(script.Parent.GhostAnim)
 local Grunge = require(script.Parent.Grunge)
+local UltFx = require(script.Parent.UltFx)
+local Ultimates = require(RS.Shared.Ultimates)
 
 local Fx = {}
 local lp = Players.LocalPlayer
@@ -160,24 +162,49 @@ function Fx.handle(kind: string, ...)
 		Fx.shake(0.9)
 		setMusic(false)
 	elseif kind == "Ultimate" then
-		local pos, by = args[1], args[2]
+		local pos, by, ultId = args[1], args[2], args[3]
+		local u = Ultimates.byId[ultId or "Rage"]
+		local ucolor = u and u.color or Color3.fromRGB(255, 60, 20)
 		Sfx.at("Ultimate", pos, { Volume = 1.3 })
 		Sfx.at("PunchHeavy", pos, { PlaybackSpeed = 0.5, Volume = 1.3 })
 		local ring = Instance.new("Part")
-		ring.Shape = Enum.PartType.Cylinder; ring.Material = Enum.Material.Neon; ring.Color = Color3.fromRGB(255, 60, 20)
+		ring.Shape = Enum.PartType.Cylinder; ring.Material = Enum.Material.Neon; ring.Color = ucolor
 		ring.Anchored = true; ring.CanCollide = false; ring.CanQuery = false; ring.CanTouch = false
 		ring.Size = Vector3.new(0.6, 2, 2); ring.CFrame = CFrame.new(pos - Vector3.new(0, 2.6, 0)) * CFrame.Angles(0, 0, math.pi / 2)
 		ring.Transparency = 0.2; ring.Parent = workspace.Terrain
 		TweenService:Create(ring, TweenInfo.new(0.6, Enum.EasingStyle.Quad), { Size = Vector3.new(0.6, Config.Brutality.UltShockRadius * 2, Config.Brutality.UltShockRadius * 2), Transparency = 1 }):Play()
 		Debris:AddItem(ring, 0.7)
-		burst(pos, Color3.fromRGB(255, 90, 30), 60, 40, 1.2)
+		burst(pos, ucolor, 60, 40, 1.2)
 		if by == lp then
 			VM.slam()
 			Fx.shake(1)
 			Fx.kick(18)
-			HUD.flash(Color3.fromRGB(255, 60, 0), 0.6)
-			HUD.banner("UNLEASHED", "", 1.6)
+			HUD.flash(ucolor, 0.6)
+			HUD.banner(u and string.upper(u.name) or "UNLEASHED", "", 1.8)
 		end
+	elseif kind == "UltShock" then
+		UltFx.shock(args[1], args[2], args[3])
+	elseif kind == "UltStrike" then
+		UltFx.strike(args[1], args[2], args[3])
+	elseif kind == "UltFreeze" then
+		UltFx.freeze(args[1], args[2])
+	elseif kind == "TimeStop" then
+		UltFx.timeStop(args[1])
+	elseif kind == "TimeResume" then
+		UltFx.timeResume(args[1], args[2])
+	elseif kind == "OnePunch" then
+		UltFx.onePunch(args[1], args[2])
+	elseif kind == "BuyResult" then
+		local ok, name, at = args[1], args[2], args[3]
+		HUD.toast(ok and ("BOUGHT " .. name) or name, ok)
+		if ok then
+			Sfx.play("Cash")
+			if typeof(at) == "Vector3" then burst(at + Vector3.new(0, 1.5, 0), Color3.fromRGB(150, 220, 110), 24, 10, 0.5) end
+		end
+	elseif kind == "Toast" then
+		HUD.toast(args[1])
+	elseif kind == "BackInLobby" then
+		HUD.banner("BACK IN THE PARK", "", 2.5)
 	elseif kind == "Lift" then
 		Sfx.at("PunchLight", args[1], { PlaybackSpeed = 0.5, Volume = 0.6 })
 	elseif kind == "Throw" then
@@ -189,12 +216,40 @@ function Fx.handle(kind: string, ...)
 		HUD.banner("SHE IS IN THE HOUSE", "GHOST LV " .. tostring(args[1]), 4.5)
 		Sfx.play("GhostWhisper", { Volume = 1 })
 	elseif kind == "Victory" then
-		HUD.banner("GHOST DESTROYED", "+$" .. tostring(args[1]), 5)
+		HUD.banner("GHOST DESTROYED", "+$" .. tostring(args[1]) .. "   NOW GO OUTSIDE", 5)
 		Sfx.play("Cash")
 		setMusic(false)
 	elseif kind == "ShopReady" then
-		HUD.banner("SOMEONE SURVIVED THE CRASH", "TALK TO THE PILOT  [F]", 4)
+		HUD.banner("SOMEONE SURVIVED THE CRASH", "HIS STAND IS OPEN - CASH ONLY", 4)
 	end
+end
+
+local PRESETS = {
+	inside = { ClockTime = 19.1, Brightness = 1.4, Exposure = 0, Ambient = Color3.fromRGB(30, 27, 25), Outdoor = Color3.fromRGB(105, 110, 138),
+		AtmDensity = 0.12, AtmColor = Color3.fromRGB(58, 60, 78), AtmDecay = Color3.fromRGB(36, 36, 50), AtmHaze = 0.6, AtmGlare = 0,
+		Tint = Color3.fromRGB(255, 240, 226), Sat = -0.38, Contrast = 0.22 },
+	lobby = { ClockTime = 19.6, Brightness = 1.0, Exposure = -0.2, Ambient = Color3.fromRGB(35, 38, 30), Outdoor = Color3.fromRGB(90, 95, 80),
+		AtmDensity = 0.42, AtmColor = Color3.fromRGB(168, 166, 122), AtmDecay = Color3.fromRGB(96, 98, 70), AtmHaze = 2.4, AtmGlare = 0.8,
+		Tint = Color3.fromRGB(230, 238, 200), Sat = -0.25, Contrast = 0.2 },
+}
+PRESETS.yard = table.clone(PRESETS.inside)
+PRESETS.yard.Exposure = 0.6
+local currentZone = ""
+function Fx.applyZone(zone: string, dt: number)
+	local p = PRESETS[zone]
+	local a = zone == currentZone and math.min(1, dt * 2) or 1
+	currentZone = zone
+	local atm = Lighting:FindFirstChildOfClass("Atmosphere")
+	local cc = Lighting:FindFirstChild("PS2Grade") :: ColorCorrectionEffect?
+	Lighting.ClockTime = p.ClockTime
+	Lighting.Brightness = p.Brightness
+	Lighting.Ambient = p.Ambient
+	Lighting.OutdoorAmbient = p.Outdoor
+	Lighting.ExposureCompensation += (p.Exposure - Lighting.ExposureCompensation) * a
+	if atm then
+		atm.Density = p.AtmDensity; atm.Color = p.AtmColor; atm.Decay = p.AtmDecay; atm.Haze = p.AtmHaze; atm.Glare = p.AtmGlare
+	end
+	if cc then cc.TintColor = p.Tint; cc.Saturation = p.Sat; cc.Contrast = p.Contrast end
 end
 
 function Fx.init()
@@ -203,6 +258,7 @@ function Fx.init()
 	slashGui = Instance.new("ScreenGui"); slashGui.Name = "Slashes"; slashGui.IgnoreGuiInset = true; slashGui.ResetOnSpawn = false
 	slashGui.Parent = lp:WaitForChild("PlayerGui")
 	ambience = Sfx.loop("Ambience")
+	UltFx.init(Fx, HUD)
 	RunService:BindToRenderStep("FxShake", Enum.RenderPriority.Camera.Value + 1, function(dt)
 		trauma = math.max(0, trauma - dt * 1.6)
 		local s = trauma * trauma
@@ -213,12 +269,11 @@ function Fx.init()
 		VM.setShake(CFrame.new())
 		fovKick += (0 - fovKick) * math.min(1, dt * 8)
 		cam.FieldOfView = baseFov + fovKick
-		-- brighter exposure outside, dark PS2 interior inside
+		-- zone lighting: green park fog (lobby), dark PS2 interior (house), brighter yard outside
 		local pos = cam.CFrame.Position
-		local inside = pos.X > Config.House.Min.X and pos.X < Config.House.Max.X and pos.Z > Config.House.Min.Z and pos.Z < Config.House.Max.Z and pos.Y < 45
-		local want = inside and 0 or 1.0
-		Lighting.ExposureCompensation += (want - Lighting.ExposureCompensation) * math.min(1, dt * 2)
-		if ambience then ambience.Volume = inside and 0.45 or 0.15 end
+		local zone = pos.Z > 600 and "lobby" or ((pos.X > Config.House.Min.X and pos.X < Config.House.Max.X and pos.Z > Config.House.Min.Z and pos.Z < Config.House.Max.Z and pos.Y < 45) and "inside" or "yard")
+		Fx.applyZone(zone, dt)
+		if ambience then ambience.Volume = zone == "inside" and 0.45 or (zone == "lobby" and 0.35 or 0.15) end
 	end)
 end
 

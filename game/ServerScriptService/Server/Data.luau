@@ -7,7 +7,7 @@ local Data = {}
 local okStore, store = pcall(function() return DSS:GetDataStore("GhostBrawl_v1") end)
 local profiles = {} -- [Player] = { loaded = bool, data = table }
 
-local function fresh() return { Cash = 0, Owned = {}, GhostLevel = 1, Kills = 0 } end
+local function fresh() return { Cash = 0, Owned = {}, GhostLevel = 1, Kills = 0, Ults = { Rage = true }, Equipped = "Rage" } end
 
 local function publish(player)
 	local p = profiles[player]
@@ -17,6 +17,10 @@ local function publish(player)
 	local owned = {}
 	for id in p.data.Owned do table.insert(owned, id) end
 	player:SetAttribute("Owned", table.concat(owned, ","))
+	local ults = {}
+	for id in p.data.Ults do table.insert(ults, id) end
+	player:SetAttribute("OwnedUlts", table.concat(ults, ","))
+	player:SetAttribute("EquippedUlt", p.data.Equipped)
 	local ls = player:FindFirstChild("leaderstats")
 	if ls then
 		(ls :: any).Cash.Value = p.data.Cash;
@@ -41,6 +45,10 @@ function Data.load(player: Player)
 					prof.data.Cash = math.max(0, math.floor(tonumber(res.Cash) or 0))
 					prof.data.GhostLevel = math.max(1, math.floor(tonumber(res.GhostLevel) or 1))
 					prof.data.Kills = math.max(0, math.floor(tonumber(res.Kills) or 0))
+					if type(res.Ults) == "table" then
+						for id, v in res.Ults do if type(id) == "string" and v == true then prof.data.Ults[id] = true end end
+					end
+					if type(res.Equipped) == "string" and prof.data.Ults[res.Equipped] then prof.data.Equipped = res.Equipped end
 					if type(res.Owned) == "table" then
 						for id, v in res.Owned do if type(id) == "string" and v == true then prof.data.Owned[id] = true end end
 					end
@@ -59,7 +67,7 @@ end
 function Data.save(player: Player)
 	local prof = profiles[player]
 	if not prof or not prof.loaded or not okStore then return end
-	local snap = { Cash = prof.data.Cash, GhostLevel = prof.data.GhostLevel, Kills = prof.data.Kills, Owned = table.clone(prof.data.Owned) }
+	local snap = { Cash = prof.data.Cash, GhostLevel = prof.data.GhostLevel, Kills = prof.data.Kills, Owned = table.clone(prof.data.Owned), Ults = table.clone(prof.data.Ults), Equipped = prof.data.Equipped }
 	for i = 1, 3 do
 		local ok, err = pcall(function()
 			store:UpdateAsync("u_" .. player.UserId, function() return snap end)
@@ -91,6 +99,26 @@ end
 
 function Data.owns(player: Player, id: string): boolean
 	local d = Data.get(player); return d ~= nil and d.Owned[id] == true
+end
+
+function Data.ownsUlt(player: Player, id: string): boolean
+	local d = Data.get(player); return d ~= nil and d.Ults[id] == true
+end
+
+function Data.ownUlt(player: Player, id: string)
+	local d = Data.get(player); if not d then return end
+	d.Ults[id] = true; publish(player)
+end
+
+function Data.equipUlt(player: Player, id: string): boolean
+	local d = Data.get(player)
+	if not d or not d.Ults[id] then return false end
+	d.Equipped = id; publish(player)
+	return true
+end
+
+function Data.equipped(player: Player): string
+	local d = Data.get(player); return d and d.Equipped or "Rage"
 end
 
 function Data.winGhost(player: Player, level: number)
