@@ -5,10 +5,11 @@ local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Items = require(RS.Shared.Items)
 local ItemModels = require(RS.Shared.ItemModels)
+local SawAudio = require(script.Parent.SawAudio)
 
 local TP = {}
 local lp = Players.LocalPlayer
-local shown = {} :: { [Player]: { id: string, model: Model, swingT: number } }
+local shown = {} :: { [Player]: { id: string, model: Model, swingT: number, saw: ((boolean) -> ())? } }
 local folder: Folder
 
 local function selectedId(p: Player): string?
@@ -53,7 +54,7 @@ local function step()
 						local m = ItemModels.build(it.shape, it.color, it.glow, it.id)
 						m:ScaleTo(m:GetScale() * 0.85)
 						m.Parent = folder
-						s = { id = id, model = m, swingT = 0 }
+						s = { id = id, model = m, swingT = 0, saw = id == "Chainsaw" and SawAudio.attach(m) or nil }
 						shown[p] = s
 					end
 				end
@@ -63,6 +64,7 @@ local function step()
 					local arc = a < 1 and math.sin(a * math.pi) or 0
 					s.model:PivotTo(hand.CFrame * CFrame.new(0, -0.35, -0.1) * CFrame.Angles(math.rad(25) - arc * 1.6, 0, 0))
 					ItemModels.animate(s.model, a < 1 and 3.2 or 0.35)
+					if s.saw then s.saw(now - s.swingT < 0.25) end
 				end
 			end
 		end

@@ -40,8 +40,8 @@
    "file": "ReplicatedStorage/Shared/Sounds.luau",
    "instance": "game.ReplicatedStorage.Shared.Sounds",
    "class": "ModuleScript",
-   "bytes": 1163,
-   "sha1": "4e8165d756de1166bfeee0eb2e4d90bb61f03a31"
+   "bytes": 1544,
+   "sha1": "4d52ac02313d7e344cdeaa7530fe3c28fabe08af"
   },
   {
    "file": "ReplicatedStorage/Shared/Ultimates.luau",
@@ -166,8 +166,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/Fx.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.Fx",
    "class": "ModuleScript",
-   "bytes": 17771,
-   "sha1": "339802c0a9b97adbfad2c2f612aed06f81789e0a"
+   "bytes": 17988,
+   "sha1": "03de4f8ae5b0f4d39aa7d83ad98201d559343ce5"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/GhostAnim.luau",
@@ -194,8 +194,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/Hotbar.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.Hotbar",
    "class": "ModuleScript",
-   "bytes": 7872,
-   "sha1": "d17f597d85bf2229c55527b1c2f8d4fca7943355"
+   "bytes": 8016,
+   "sha1": "a7e488fad487976b72fe2ac9f0ebd7498a66a080"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/Input.luau",
@@ -233,6 +233,13 @@
    "sha1": "1acac2d10a41c16a0a52d0e672e1371b2ddfe721"
   },
   {
+   "file": "StarterPlayer/StarterPlayerScripts/Client/SawAudio.luau",
+   "instance": "game.StarterPlayer.StarterPlayerScripts.Client.SawAudio",
+   "class": "ModuleScript",
+   "bytes": 4778,
+   "sha1": "bb00d188a505833c386d4fc9754caa61b9cdb3a1"
+  },
+  {
    "file": "StarterPlayer/StarterPlayerScripts/Client/Sfx.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.Sfx",
    "class": "ModuleScript",
@@ -243,8 +250,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/ThirdPersonItems.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.ThirdPersonItems",
    "class": "ModuleScript",
-   "bytes": 2323,
-   "sha1": "bd8e676fdb0000ab232811ab7b483adcdbb805fc"
+   "bytes": 2503,
+   "sha1": "8a854d9636eda06931e958042cf5db333d1acf19"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/UltFx.luau",
@@ -271,8 +278,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/ClientMain.client.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.ClientMain",
    "class": "LocalScript",
-   "bytes": 3036,
-   "sha1": "b981904c8987e09cb962cddf583ae8c71d6b42a1"
+   "bytes": 3094,
+   "sha1": "71728e897b67d7bb1e402159d98a3dc8c6ed36c7"
   }
  ]
 }

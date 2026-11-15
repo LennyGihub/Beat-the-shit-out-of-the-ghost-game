@@ -8,6 +8,7 @@ local Lighting = game:GetService("Lighting")
 local Debris = game:GetService("Debris")
 local Config = require(RS.Shared.Config)
 local Sfx = require(script.Parent.Sfx)
+local SawAudio = require(script.Parent.SawAudio)
 local HUD = require(script.Parent.HUD)
 local VM = require(script.Parent.Viewmodel)
 local GA = require(script.Parent.GhostAnim)
@@ -267,13 +268,16 @@ function Fx.handle(kind: string, ...)
 		burst(args[1], Color3.fromRGB(150, 150, 150), 14, 10, 0.5)
 	elseif kind == "ItemSwing" then
 		local by, id, hit = args[1], args[2], args[3]
-		if by ~= lp and by and by.Character and by.Character:FindFirstChild("Head") then
+		if by ~= lp and id == "Chainsaw" then
+			-- their saw's own 3D engine loop covers it (ThirdPersonItems + SawAudio)
+		elseif by ~= lp and by and by.Character and by.Character:FindFirstChild("Head") then
 			Sfx.at("Whoosh", by.Character.Head.Position, { PlaybackSpeed = 0.8 })
 		elseif by == lp and hit then
 			-- the swing connected: hit-stop, a heavier shake for heavy weapons, sparks at the weapon's end
 			local it = Items.byId[id]
 			local heavy = it ~= nil and (it.knock or 0) >= 60
 			VM.impact(heavy)
+			if id == "Chainsaw" then SawAudio.hit() end
 			Fx.shake(heavy and 0.45 or 0.22)
 			Fx.kick(heavy and 6 or 3)
 			local tip = VM.itemTip()

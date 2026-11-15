@@ -8,6 +8,7 @@ local Items = require(RS.Shared.Items)
 local Grunge = require(script.Parent.Grunge)
 local VM = require(script.Parent.Viewmodel)
 local Sfx = require(script.Parent.Sfx)
+local SawAudio = require(script.Parent.SawAudio)
 local Remotes = RS:WaitForChild("Remotes")
 
 local Hotbar = {}
@@ -84,7 +85,9 @@ function Hotbar.primary(): boolean
 	if now - (lastUse[it.id] or 0) < cd then return true end
 	lastUse[it.id] = now
 	VM.use()
-	if it.kind == "melee" then
+	if it.id == "Chainsaw" then
+		SawAudio.used() -- engine revs instead of a whoosh per tick
+	elseif it.kind == "melee" then
 		Sfx.play("Whoosh", { PlaybackSpeed = (it.cd > 0.6 and 0.55 or 0.75) + math.random() * 0.25 })
 	elseif it.kind == "throw" or it.kind == "trap" then
 		Sfx.play("Whoosh", { PlaybackSpeed = 0.6 })

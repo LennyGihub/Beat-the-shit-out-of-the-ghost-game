@@ -20,4 +20,10 @@ return {
 	Crash = { ids = { 9113966908 }, volume = 1 },
 	Cash = { ids = { 1319346243 }, volume = 0.8 },
 	Click = { ids = { 88442833509532 }, volume = 0.6 },
+	-- chainsaw (SawAudio): pull-start on select, idle loop, rev-up on trigger, cutting loop, chain biting
+	SawStart = { ids = { 9113764695 }, volume = 0.8 },
+	SawIdle = { ids = { 126549071567267 }, volume = 0.45 },
+	SawRevUp = { ids = { 117323411492774 }, volume = 0.8 },
+	SawCut = { ids = { 131975342663188 }, volume = 0.75 },
+	SawHit = { ids = { 133850299035625 }, volume = 0.9 },
 }
