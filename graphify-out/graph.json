@@ -1,0 +1,11 @@
+{
+  "directed": false,
+  "multigraph": false,
+  "graph": {
+    "schema_version": 1,
+    "graphify_version": "0.9.109"
+  },
+  "nodes": [],
+  "links": [],
+  "hyperedges": []
+}

@@ -46,12 +46,9 @@ The user wants **the main conversation writes the game code itself**, as whole c
 
 ## graphify (only when it saves tokens)
 
-New game: the graph starts empty and fills on the first `tools/save_game.sh` (export from Studio). Until `graphify-out/graph.json` exists, just grep `game/` or use Studio search.
+The graph maps **only this game's own Luau scripts** in `game/` (exported from Studio). No docs, no tooling, nothing from other games. It starts empty (`graphify-out/graph.json` with 0 nodes) and fills on the first `tools/save_game.sh`, which exports Studio's scripts to `game/` and rebuilds the graph offline (AST only, no LLM: `GRAPHIFY_BACKEND=none graphify update .`). `graphify-out/.graphify_build.json` (`gitignore: false, code_only: true`) lets graphify read `game/` even though `.gitignore` lists it; keep that file. Never run the `/graphify` LLM/semantic extraction: it costs tokens.
 
-`graphify-out/graph.json` maps the Luau code in `game/` and the Markdown docs (headings, links), built offline with `graphify update .` (AST only, no LLM, no images). Never run the `/graphify` LLM/semantic extraction: it costs tokens.
-
-Use the graph only when it is cheaper than the alternative:
+While the graph is empty or small, just grep `game/` or use Studio search. Once it has real code, use it only when it is cheaper than the alternative:
 - Use `graphify query "<question>"` (capped at ~1000 tokens), `graphify path "<A>" "<B>"` or `graphify explain "<X>"` when you don't know where something lives, or when the answer spans several files or scripts over ~150 lines. Then read only the lines it points to.
 - Skip it when you already know the file and lines, the file is small (< ~150 lines), or a single exact `grep -n` will find it.
 - Don't read `graphify-out/GRAPH_REPORT.md` or `graph.json` directly (large); only for a full architecture review.
-- After re-exporting from Studio, `tools/export_studio.py` rebuilds the graph itself; after editing docs run `graphify update .`.

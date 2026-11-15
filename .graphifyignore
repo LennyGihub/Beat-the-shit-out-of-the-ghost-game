@@ -1,4 +1,6 @@
-# Map code + docs only: no images, video or audio, no tooling folders
+# Map only this game's own scripts (game/, exported from Studio): no docs, tooling or media
+*.md
+*.json
 *.png
 *.jpg
 *.jpeg
