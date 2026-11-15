@@ -113,7 +113,8 @@ for _, d in defs do
 	local shack = plant("Shed", x, z + (z > 0 and 11 or -11), face + math.pi, 1)
 	shack.Parent = r
 	-- sign board on two posts
-	for _, sx in { -4.2, 4.2 } do part(r, "SignPost", Vector3.new(0.5, 9, 0.5), base * CFrame.new(sx, 4.5, -9.5), T.trim) end
+	-- posts stand behind the board (they used to poke through the text)
+	for _, sx in { -4.6, 4.6 } do part(r, "SignPost", Vector3.new(0.5, 9, 0.5), base * CFrame.new(sx, 4.45, -9.0), T.trim) end
 	local sign = part(r, "Sign", Vector3.new(11, 4.4, 0.4), base * CFrame.new(0, 8.2, -9.5), st(M.WoodPlanks, nil, Color3.fromRGB(70, 56, 44)))
 	local sg = Instance.new("SurfaceGui"); sg.Name = "Gui"; sg.Face = Enum.NormalId.Front; sg.CanvasSize = Vector2.new(480, 180)
 	sg.LightInfluence = 0; sg.Brightness = 1.2; sg.Parent = sign
@@ -123,6 +124,7 @@ for _, d in defs do
 	end
 	lbl("Count", 0.04, 0.5, size .. " PLAYER" .. (size > 1 and "S" or ""), ACCENT[size])
 	lbl("Status", 0.56, 0.4, "0 / " .. size, Color3.fromRGB(220, 210, 180))
+	local back = sg:Clone(); back.Name = "GuiBack"; back.Face = Enum.NormalId.Back; back.Parent = sign -- readable from the pad
 	local lampG = part(r, "SignLamp", Vector3.new(0.8, 0.8, 0.8), base * CFrame.new(0, 10.6, -9.9), T.glow, { deco = true, color = LAMP })
 	light(lampG, 24, 0.8, LAMP)
 end

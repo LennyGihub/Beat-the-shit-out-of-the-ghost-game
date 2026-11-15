@@ -8,7 +8,8 @@ local RUST = st(M.CorrodedMetal, nil, Color3.fromRGB(110, 70, 48))
 local GLASS = st(M.Glass, nil, Color3.fromRGB(50, 66, 76))
 local PLANKS = st(M.WoodPlanks, "PS2_FloorPlanks2", Color3.fromRGB(110, 92, 74))
 local function slot(parent: BasePart, name: string, worldCF: CFrame)
-	local a = Instance.new("Attachment"); a.Name = name; a.WorldCFrame = worldCF; a.Parent = parent
+	local a = Instance.new("Attachment"); a.Name = name; a.Parent = parent; a.WorldCFrame = worldCF -- parent first, or the offset is applied twice
+	return a
 end
 local function wheels(m, xs, zs, d, y, s)
 	for _, x in xs do for _, z in zs do
@@ -19,7 +20,7 @@ end
 local function finish(m: Model, primary: BasePart)
 	for _, p in m:GetDescendants() do if p:IsA("BasePart") then p.Anchored = true end end
 	m.PrimaryPart = primary
-	m.WorldPivot = CFrame.new()
+	primary.PivotOffset = primary.CFrame:Inverse() -- pivot = model origin on the ground (WorldPivot alone left it on the floor part)
 	m.Parent = F
 end
 
@@ -42,9 +43,10 @@ wheels(van, { -3.1, 3.1 }, { -7, 5.5 }, 2.6, 1.3)
 -- shelves inside: a rack on the bulkhead and crates near the doors
 b(van, O, "Rack", 6.2, 0.3, 1.6, 0, 3.6, -2.0, PLANKS)
 b(van, O, "Crate", 6, 1.2, 2.2, 0, 2.4, 6.4, PLANKS)
-for i, x in { -2, 0, 2 } do
-	slot(floor, "Slot" .. i, CFrame.new(x, 3.0, 6.4))
-	slot(floor, "Slot" .. (i + 3), CFrame.new(x, 3.75, -2.0))
+-- slots 1-3 on the ground behind the open doors (Events levels them on the real ground), 4-6 on the crate
+for i, x in { -2.6, 0, 2.6 } do
+	slot(floor, "Slot" .. i, CFrame.new(x, 0, 13)):SetAttribute("Ground", true)
+	slot(floor, "Slot" .. (i + 3), CFrame.new(x, 3.0, 6.4))
 end
 local vl = b(van, O, "CargoLamp", 0.6, 0.4, 0.6, 0, 7.3, 3, T.glow, DECO)
 light(vl, 16, 1.2, Color3.fromRGB(255, 200, 140))

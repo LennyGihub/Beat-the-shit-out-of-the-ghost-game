@@ -15,3 +15,13 @@ Order: `mansion` (walls, floors, stairs, roof, porch) -> `lights` (Lighting + fi
 -> `grounds` (dark forest, yard walls/fence, railway; needs LobbyAssets.PineTree + DeadTreeA).
 Each script replaces what it built before.
 The PS2 textures are MaterialVariants in MaterialService.AssistantMaterials (made with Studio's generate_material).
+-> `maplib` + `maps/<id>.luau` (the 10 extra maps into ServerStorage.Maps.<id>; prepend `lib2 furn_lib maplib`:
+   `cat tools/build/lib2.luau tools/build/furn_lib.luau tools/build/maplib.luau tools/build/maps/hospital.luau`).
+   The Mansion itself becomes ServerStorage.Maps.Mansion at server start (MapLoader.init).
+-> `monster_extras` (weapons, glows, fire, particles on ServerStorage.Monsters.*, after the AI monsters are made).
+
+Monsters (ServerStorage.Monsters.<id>) and item meshes (ReplicatedStorage.ItemMeshes.<ItemId>) are AI-made in Studio:
+`generate_mesh` (T-pose prompt for monsters) -> `auto_setup_avatar` (Development) -> AnimationConstraints converted to
+Motor6Ds with the R15 joint names the GhostAnim code drives. Items: `generate_mesh` upright, pivot moved to the grip,
+rotated so the item points toward -Z.
+
