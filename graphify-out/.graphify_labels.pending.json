@@ -14,7 +14,8 @@
   "12": "Events.luau",
   "13": "Run.luau",
   "14": "Ultimates.luau",
-  "15": "EventFx.luau",
+  "15": "AdminPanel.luau",
   "16": "Monsters.luau",
-  "17": "Maps.luau"
+  "17": "Maps.luau",
+  "18": "Abilities.luau"
 }

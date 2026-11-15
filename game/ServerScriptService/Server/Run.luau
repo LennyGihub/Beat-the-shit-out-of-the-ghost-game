@@ -126,7 +126,7 @@ function Run.startFight()
 	end
 	-- ghost 1 is always the Woman, then a random monster by rarity (Studio hook: RS attribute DebugMonster = id)
 	local def = Monsters.pick(level, lastMonster, rng)
-	local forced = RunService:IsStudio() and RS:GetAttribute("DebugMonster")
+	local forced = RS:GetAttribute("AdminMonster") or (RunService:IsStudio() and RS:GetAttribute("DebugMonster")) -- admin panel / Studio hook
 	if type(forced) == "string" and Monsters.byId[forced] then def = Monsters.byId[forced] end
 	lastMonster = def.id
 	setState("Intro", def.title .. " IS COMING...")
@@ -192,7 +192,7 @@ local function onGhostDeath(g)
 	end
 end
 
-local function spawnEvent(trigger: Vector3)
+local function spawnEvent(trigger: Vector3, forceKind: string?)
 	setState("Event", "")
 	setWaypoint(nil)
 	for _, i in temp do if i.Name == "ExitBeacon" then i:Destroy() end end
@@ -202,6 +202,7 @@ local function spawnEvent(trigger: Vector3)
 	local kind = kinds[rng:NextInteger(1, #kinds)]
 	local forced = RunService:IsStudio() and RS:GetAttribute("DebugEventKind") -- Studio test hook
 	if type(forced) == "string" and table.find(Events.KINDS, forced) then kind = forced end
+	if forceKind and table.find(Events.KINDS, forceKind) then kind = forceKind end
 	lastKind = kind
 	event = Events.spawn(kind, trigger)
 	eventLeft = Config.EventLife
@@ -269,6 +270,11 @@ function Run.endMatch()
 	Inventory.clearWorld()
 	setWaypoint(nil)
 	setState("Idle", "")
+end
+
+-- admin panel: spawn an event outside right now
+function Run.adminEvent(kind: string)
+	task.spawn(spawnEvent, DOOR + Vector3.new(0, 0, 10), kind)
 end
 
 function Run.start()

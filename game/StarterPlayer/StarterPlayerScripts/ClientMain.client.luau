@@ -29,6 +29,7 @@ local Hotbar = require(Client.Hotbar)
 local MonsterFx = require(Client.MonsterFx)
 local RoomPickUI = require(Client.RoomPickUI)
 local ThirdPersonItems = require(Client.ThirdPersonItems)
+local AdminPanel = require(Client.AdminPanel)
 
 HUD.init()
 VM.init()
@@ -42,6 +43,8 @@ Hotbar.init()
 MonsterFx.init(Fx, HUD, require(Client.Sfx))
 RoomPickUI.init()
 ThirdPersonItems.init()
+-- admin panel (admins only): blocks punching while open; the panel frees the mouse itself
+AdminPanel.init(function(open) Input.setShopOpen(open) end)
 UltShop.init(function(open)
 	Input.setShopOpen(open)
 	shopOpen = open

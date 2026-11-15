@@ -91,7 +91,7 @@ end
 
 function Combat.damagePlayer(player: Player, amount: number, staminaDrain: number?)
 	local hum = alive(player)
-	if not hum or player:GetAttribute("Warded") then return end
+	if not hum or player:GetAttribute("Warded") or player:GetAttribute("AdminGod") then return end
 	local s = st(player)
 	if s.shield > 0 then
 		local absorbed = math.min(s.shield, amount)

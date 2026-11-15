@@ -62,6 +62,7 @@ local function step()
 					local a = math.clamp((now - s.swingT) / 0.3, 0, 1)
 					local arc = a < 1 and math.sin(a * math.pi) or 0
 					s.model:PivotTo(hand.CFrame * CFrame.new(0, -0.35, -0.1) * CFrame.Angles(math.rad(25) - arc * 1.6, 0, 0))
+					ItemModels.animate(s.model, a < 1 and 3.2 or 0.35)
 				end
 			end
 		end

@@ -23,6 +23,7 @@ local held: Model? = nil
 local heldItem: any = nil
 local heldOffset = CFrame.new()
 local heldLen = 2
+local leftGripLocal: CFrame? = nil -- where the left hand holds the item (part "LeftGrip"), relative to its pivot
 local style = "bat"
 local anim: { t0: number, dur: number, variant: number, hidden: boolean? }? = nil
 local variant = 1
@@ -32,6 +33,14 @@ local spraying = false
 local trail: Trail? = nil
 local A = CFrame.Angles
 local function C(x, y, z, rx, ry, rz) return CFrame.new(x, y, z) * A(rx or 0, ry or 0, rz or 0) end
+local STUDIO = RunService:IsStudio()
+-- per-style right-hand hold pose (replaces the default item guard); the chainsaw sits low on the right,
+-- angled toward the crosshair so its side, bar and chain show
+-- left fist on an item's LeftGrip: forearm comes from the lower left, not across the screen
+local LEFT_GRIP_ROT = A(0.4, -0.9, -0.6)
+local HOLD = {
+	saw = C(0.9, -1.2, -1.6, 0.7, 0.45, 1.3), -- on its side, top handle to the left, bar up toward the crosshair
+}
 
 -- weapon styles ------------------------------------------------------------------------------------
 local STYLE = {
@@ -58,7 +67,7 @@ local KEYS = {
 	slash = { { 0, C(0, 0, 0) }, { 0.2, C(0.7, 0.9, 0.2, 0.6, -0.4, -0.9) }, { 0.55, C(-0.9, -0.6, -1.3, -0.6, 0.7, 1.0) },
 		{ 1, C(0, 0, 0) } },
 	thrust = { { 0, C(0, 0, 0) }, { 0.3, C(0.1, 0.1, 0.6, 0.2, 0, 0) }, { 0.5, C(-0.25, 0.25, -2.0, -0.2, 0, 0) }, { 1, C(0, 0, 0) } },
-	saw = { { 0, C(0, -0.1, -0.5) }, { 0.5, C(0, -0.05, -0.65) }, { 1, C(0, -0.1, -0.5) } },
+	saw = { { 0, C(0, -0.1, -0.5) }, { 0.5, C(0, -0.02, -0.78, -0.1, 0, 0) }, { 1, C(0, -0.1, -0.5) } },
 	pistol = { { 0, C(0, 0, 0) }, { 0.15, C(0, 0.18, 0.45, 0.45, 0, 0) }, { 1, C(0, 0, 0) } },
 	shotgun = { { 0, C(0, 0, 0) }, { 0.1, C(0, 0.25, 0.6, 0.5, 0, 0) }, { 0.35, C(0, 0.05, 0.1, 0.1, 0, 0) }, { 1, C(0, 0, 0) } },
 	longgun = { { 0, C(0, 0, 0) }, { 0.12, C(0, 0.3, 0.75, 0.6, 0, 0) }, { 1, C(0, 0, 0) } },
@@ -164,6 +173,7 @@ function VM.setItem(it: any)
 	heldItem = it
 	anim = nil
 	trail = nil
+	leftGripLocal = nil
 	if held then held:Destroy(); held = nil end
 	if not it then return end
 	style = STYLE[it.id] or (it.kind == "throw" and "throw" or (it.kind == "spray" and "spray" or (it.kind == "gun" and "pistol" or "bat")))
@@ -174,8 +184,10 @@ function VM.setItem(it: any)
 	held = m
 	local _, size = m:GetBoundingBox()
 	heldLen = math.max(size.X, size.Y, size.Z)
+	local lg = m:FindFirstChild("LeftGrip", true) :: BasePart?
+	if lg then leftGripLocal = m:GetPivot():ToObjectSpace(lg.CFrame) end
 	if it.kind == "melee" then
-		heldOffset = style == "saw" and CFrame.new(0, 0.05, -0.1) or (CFrame.new(0, 0.1, 0) * A(math.rad(70), 0, 0) * CFrame.new(0, 0, 0.6))
+		heldOffset = style == "saw" and CFrame.new() or (CFrame.new(0, 0.1, 0) * A(math.rad(70), 0, 0) * CFrame.new(0, 0, 0.6))
 		addTrail(m)
 	elseif it.kind == "gun" or it.kind == "spray" then
 		heldOffset = CFrame.new(-0.05, 0.15, -0.1)
@@ -300,7 +312,16 @@ function VM.update(dt: number)
 		local a = arms[side]
 		local sx = side == "R" and 1 or -1
 		local guard = CFrame.new(sx * 0.62, -0.62 + (side == "L" and -0.04 or 0), -1.5) * A(0.22, sx * -0.14, sx * -0.25)
-		if side == "R" and held then guard = CFrame.new(0.5, -0.66, -1.35) * A(0.18, -0.1, -0.2) end
+		if side == "R" and held then
+			guard = HOLD[style] or (CFrame.new(0.5, -0.66, -1.35) * A(0.18, -0.1, -0.2))
+			if STUDIO then -- tuning hooks: player attributes DebugHold / DebugHeldOffset (CFrame)
+				local g, o = lp:GetAttribute("DebugHold"), lp:GetAttribute("DebugHeldOffset")
+				if typeof(g) == "CFrame" then guard = g end
+				if typeof(o) == "CFrame" then heldOffset = o end
+				local l = lp:GetAttribute("DebugLeftRot")
+				if typeof(l) == "CFrame" then LEFT_GRIP_ROT = l end
+			end
+		end
 		local carry = CFrame.new(sx * 0.7, -2.6, -1.2) * A(0.6, 0, sx * -0.15) -- arms drop out of view while lifting
 		local pose = guard:Lerp(carry, carryAlpha)
 		local fistCF = base * pose * punchOffset(side, now)
@@ -309,8 +330,10 @@ function VM.update(dt: number)
 			itemCF = fistCF * heldOffset
 			rightFist = fistCF
 		end
-		if side == "L" and twoHand and itemCF then
-			-- second hand further along the handle
+		if side == "L" and twoHand and itemCF and leftGripLocal then
+			-- the item says where the left hand goes (chainsaw top handle); forearm comes in from the left
+			fistCF = CFrame.new(((itemCF :: CFrame) * (leftGripLocal :: CFrame)).Position) * base.Rotation * LEFT_GRIP_ROT
+		elseif side == "L" and twoHand and itemCF then
 			-- second hand further along the handle, same angle as the right hand (forearm toward the camera)
 			local along = ((itemCF :: CFrame) * CFrame.new(0, -0.05, -math.min(heldLen * 0.3, 0.9))).Position
 			fistCF = CFrame.new(along) * (rightFist :: CFrame).Rotation * A(0, 0.15, 0.2)
@@ -327,6 +350,7 @@ function VM.update(dt: number)
 	end
 	if held and itemCF then
 		held:PivotTo(itemCF)
+		ItemModels.animate(held, anim and 3.2 or 0.35) -- chainsaw chain: races while cutting, crawls at idle
 		local hide = carryAlpha > 0.5 or (anim ~= nil and anim.hidden == true)
 		for _, p in held:GetDescendants() do if p:IsA("BasePart") then p.LocalTransparencyModifier = hide and 1 or 0 end end
 	end
