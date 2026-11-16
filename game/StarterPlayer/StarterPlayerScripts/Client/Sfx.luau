@@ -24,6 +24,7 @@ local VOICES = {
 	Woman = { Spawn = "GhostScream", WindUp = "GhostWail", Claw = "GhostScream", Hurt = "GhostHurt", Death = "GhostDeath" },
 	Demon = { Spawn = "DemonSpawn", WindUp = "DemonGrowl", Claw = "DemonGrowl", Hurt = "DemonHurt", Death = "DemonDeath" },
 	Pirate = { Spawn = "PirateSpawn", WindUp = "PirateSwing", Claw = "DemonHit", Hurt = "PirateHurt", Death = "PirateDeath" },
+	Animatronic = { Spawn = "AnimSpawn", WindUp = "AnimGrowl", Claw = "AnimGrowl", Hurt = "AnimHurt", Death = "AnimDeath" },
 	Goblin = { Spawn = "GoblinSpawn", WindUp = "GoblinGrowl", Claw = "GoblinCackle", Hurt = "GoblinHurt", Death = "GoblinDeath" },
 }
 local lastMonster = "Woman"
