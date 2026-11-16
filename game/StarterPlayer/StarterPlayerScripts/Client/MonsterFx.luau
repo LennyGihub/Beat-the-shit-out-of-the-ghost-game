@@ -67,7 +67,39 @@ local function release()
 end
 
 local blackoutCC: ColorCorrectionEffect? = nil
-local function blackout(on: boolean, t: number?)
+-- the Animatronic's blackout: every lamp in the house goes dark (lights off, glowing neon dulled), a music
+-- box plays while it hunts; all put back when it ends
+local dimmed = {} :: { [Instance]: any }
+local musicBox: Sound? = nil
+local function lightsOut(on: boolean)
+	if on then
+		local house = workspace:FindFirstChild("Mansion")
+		if not house then return end
+		for _, d in house:GetDescendants() do
+			if dimmed[d] == nil then
+				if d:IsA("Light") and d.Enabled then
+					dimmed[d] = true; d.Enabled = false
+				elseif d:IsA("BasePart") and d.Material == Enum.Material.Neon then
+					dimmed[d] = d.Color; d.Material = Enum.Material.SmoothPlastic; d.Color = d.Color:Lerp(Color3.new(0, 0, 0), 0.75)
+				end
+			end
+		end
+		Sfx.play("Breaker", { Volume = 1.2, PlaybackSpeed = 0.7 })
+		if musicBox then musicBox:Destroy() end
+		musicBox = Sfx.loop("MusicBox", { PlaybackSpeed = 0.85 })
+	else
+		for d, v in dimmed do
+			if d.Parent then
+				if d:IsA("Light") then (d :: Light).Enabled = true
+				else (d :: BasePart).Material = Enum.Material.Neon; (d :: BasePart).Color = v end
+			end
+		end
+		table.clear(dimmed)
+		if musicBox then musicBox:Destroy(); musicBox = nil end
+	end
+end
+
+local function blackout(on: boolean, t: number?, allLights: boolean?)
 	if not blackoutCC then
 		blackoutCC = Instance.new("ColorCorrectionEffect")
 		blackoutCC.Name = "Blackout"
@@ -76,11 +108,14 @@ local function blackout(on: boolean, t: number?)
 	local cc = blackoutCC :: ColorCorrectionEffect
 	if on then
 		Sfx.play("GhostWhisper", { Volume = 1.2, PlaybackSpeed = 0.6 })
-		HUD.banner("THE LIGHTS ARE OUT", "IT'S COMING FOR YOU", 2.5)
-		TweenService:Create(cc, TweenInfo.new(0.4), { Brightness = -0.32, Contrast = 0.5, Saturation = -0.8 }):Play()
+		HUD.banner("THE LIGHTS ARE OUT", allLights and "WATCH FOR ITS EYES" or "IT'S COMING FOR YOU", 2.5)
+		local dark = allLights and { Brightness = -0.42, Contrast = 0.6, Saturation = -0.85 } or { Brightness = -0.32, Contrast = 0.5, Saturation = -0.8 }
+		TweenService:Create(cc, TweenInfo.new(allLights and 0.15 or 0.4), dark):Play()
+		if allLights then lightsOut(true) end
 		task.delay((t or 5) + 0.2, function() blackout(false) end)
 	else
 		TweenService:Create(cc, TweenInfo.new(0.6), { Brightness = 0, Contrast = 0, Saturation = 0 }):Play()
+		lightsOut(false)
 	end
 end
 
@@ -213,7 +248,7 @@ function MonsterFx.handle(kind: string, ...)
 		Fx.kick(-14 * f)
 		if f > 0 then HUD.flash(Color3.fromRGB(200, 240, 255), 0.35 * f) end
 	elseif kind == "Blackout" then
-		blackout(true, a[1])
+		blackout(true, a[1], a[2])
 	elseif kind == "BlackoutEnd" then
 		blackout(false)
 	elseif kind == "GasThrow" then

@@ -87,6 +87,9 @@ local function pathPoint(g, goal: Vector3): Vector3
 	return goal
 end
 
+Ghost.pathPoint = pathPoint
+Ghost.blockWalls = blockWalls
+
 local function setState(g, s: string, dur: number?)
 	if g.state == "Ability" and s ~= "Ability" and g.ab then Abilities.interrupt(g) end
 	g.state = s

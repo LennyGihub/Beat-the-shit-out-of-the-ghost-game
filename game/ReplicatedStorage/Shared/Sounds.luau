@@ -58,4 +58,10 @@ return {
 	PirateHurt = { ids = { 101736510694103, 9126253838 }, volume = 0.9 },
 	PirateDeath = { ids = { 109913671094159 }, volume = 1 },
 	ShieldBlock = { ids = { 9119072660, 9119072674 }, volume = 1 },
+	AnimSpawn = { ids = { 9114583503 }, volume = 1 },
+	AnimGrowl = { ids = { 9125842589, 9125841223 }, volume = 1 },
+	AnimHurt = { ids = { 9116541944, 9118941667 }, volume = 0.9 },
+	AnimDeath = { ids = { 9125861915 }, volume = 1 },
+	MusicBox = { ids = { 9117043866 }, volume = 0.7 },
+	Breaker = { ids = { 9116617140 }, volume = 1 },
 }
