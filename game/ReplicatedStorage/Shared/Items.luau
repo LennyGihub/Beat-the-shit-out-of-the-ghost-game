@@ -79,6 +79,14 @@ local List: { Item } = {
 	I({ id = "BearTrap", name = "Bear Trap", rarity = 2, price = 210, kind = "trap", shape = "beartrap", color = C(90, 85, 80), desc = "Place it; she gets stuck 3 s.", uses = 2, stun = 3, dmg = 15 }),
 }
 
+-- tuning on top of the values above: way more reach and knockback for every item
+local RANGE_MULT = { melee = 1.7, gun = 1.5, spray = 1.6 }
+local KNOCK_MULT = 1.8
+for _, it in List do
+	if it.range and RANGE_MULT[it.kind] then it.range *= RANGE_MULT[it.kind] end
+	if it.knock and it.knock > 0 then it.knock *= KNOCK_MULT end
+end
+
 local byId: { [string]: Item } = {}
 for _, it in List do byId[it.id] = it end
 -- item sounds (names in Shared/Sounds): hit = plays when it connects, use = when you swing / fire,

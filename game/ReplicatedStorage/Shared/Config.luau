@@ -12,7 +12,7 @@ local Config = {
 		MaxComboScale = 5,
 		BaseKnock = 20, -- knockback speed of the first punch
 		KnockPerCombo = 8,
-		MaxKnock = 160,
+		MaxKnock = 280, -- items knock harder (Items KNOCK_MULT)
 	},
 	Stamina = { Max = 100, Regen = 26, RegenDelay = 0.7, ThrowCost = 12, SprintPerSecond = 14 },
 	Brutality = {

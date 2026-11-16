@@ -114,6 +114,8 @@ local function setSpray(on: boolean, it)
 		end
 		local pe = sprayEmitter :: ParticleEmitter
 		pe.Color = ColorSequence.new(it.particle or Color3.new(1, 1, 1))
+		local reach = it.range or 18 -- the spray visibly reaches as far as it hits
+		pe.Speed = NumberRange.new(reach * 1.7, reach * 2.5)
 		pe.LightEmission = it.id == "Flamethrower" and 1 or 0.3
 		pe.Enabled = true
 	elseif sprayEmitter then

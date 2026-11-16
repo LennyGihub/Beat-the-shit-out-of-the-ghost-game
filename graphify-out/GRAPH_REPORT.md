@@ -1,7 +1,7 @@
 # Graph Report - Beat-the-shit-out-of-the-ghost-game  (2026-11-16)
 
 ## Corpus Check
-- 41 files · ~58,234 words
+- 41 files · ~58,325 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 3 file(s) not represented in the graph (top: (none) 3)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `8333e41e`
+- Built from commit: `ebfcc643`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -47,12 +47,12 @@
   game/ServerScriptService/Server/Inventory.luau → game/ServerScriptService/Server/Ghost.luau
 - `Combat.refreshHealth()` --calls--> `alive()`  [INFERRED]
   game/ServerScriptService/Server/Combat.luau → game/ServerScriptService/Server/Inventory.luau
-- `Ghost.spawn()` --calls--> `Ragdoll.restoreWalls()`  [INFERRED]
-  game/ServerScriptService/Server/Ghost.luau → game/ServerScriptService/Server/Ragdoll.luau
-- `Ghost.hit()` --calls--> `Ragdoll.start()`  [INFERRED]
-  game/ServerScriptService/Server/Ghost.luau → game/ServerScriptService/Server/Ragdoll.luau
-- `Ghost.hit()` --calls--> `Ragdoll.kick()`  [INFERRED]
-  game/ServerScriptService/Server/Ghost.luau → game/ServerScriptService/Server/Ragdoll.luau
+- `Hotbar.primary()` --calls--> `SawAudio.used()`  [INFERRED]
+  game/StarterPlayer/StarterPlayerScripts/Client/Hotbar.luau → game/StarterPlayer/StarterPlayerScripts/Client/SawAudio.luau
+- `Hotbar.init()` --calls--> `Grunge.text()`  [INFERRED]
+  game/StarterPlayer/StarterPlayerScripts/Client/Hotbar.luau → game/StarterPlayer/StarterPlayerScripts/Client/Grunge.luau
+- `Combat.start()` --calls--> `onPlayer()`  [INFERRED]
+  game/ServerScriptService/Server/Combat.luau → game/ServerScriptService/Main.server.luau
 
 ## Import Cycles
 - None detected.

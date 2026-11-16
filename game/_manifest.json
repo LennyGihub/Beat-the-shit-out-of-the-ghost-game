@@ -5,8 +5,8 @@
    "file": "ReplicatedStorage/Shared/Config.luau",
    "instance": "game.ReplicatedStorage.Shared.Config",
    "class": "ModuleScript",
-   "bytes": 2147,
-   "sha1": "e2e6d1b141a4ca65f0eade100a8acc5d7168bd77"
+   "bytes": 2188,
+   "sha1": "d62f0ad1c35aa6a1151a524757b48521869fd521"
   },
   {
    "file": "ReplicatedStorage/Shared/ItemModels.luau",
@@ -19,8 +19,8 @@
    "file": "ReplicatedStorage/Shared/Items.luau",
    "instance": "game.ReplicatedStorage.Shared.Items",
    "class": "ModuleScript",
-   "bytes": 15250,
-   "sha1": "b30633b3a9efc0459fa5d77f99747745139d33e4"
+   "bytes": 15580,
+   "sha1": "9497f682b3f414283e25f23a7ea43d8b935aa6f6"
   },
   {
    "file": "ReplicatedStorage/Shared/Maps.luau",
@@ -201,8 +201,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/Hotbar.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.Hotbar",
    "class": "ModuleScript",
-   "bytes": 8145,
-   "sha1": "b493071e48a9c058e97c3ad4d151100fb1b3619f"
+   "bytes": 8278,
+   "sha1": "82546aeb31b87d69e4300d32c2a02f6d64fed2f3"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/Input.luau",
