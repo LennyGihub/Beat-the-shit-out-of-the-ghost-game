@@ -19,6 +19,8 @@ The PS2 textures are MaterialVariants in MaterialService.AssistantMaterials (mad
    `cat tools/build/lib2.luau tools/build/furn_lib.luau tools/build/maplib.luau tools/build/maps/hospital.luau`).
    The Mansion itself becomes ServerStorage.Maps.Mansion at server start (MapLoader.init).
 -> `monster_extras` (weapons, glows, fire, particles on ServerStorage.Monsters.*, after the AI monsters are made).
+-> `demon`, `animatronic` (hand-built part monsters: ServerStorage.Monsters.Demon / .Animatronic = The Party Bear;
+   standalone, no lib2 needed: `python3 tools/studio.py luau Edit tools/build/animatronic.luau`).
 
 Monsters (ServerStorage.Monsters.<id>) and item meshes (ReplicatedStorage.ItemMeshes.<ItemId>) are AI-made in Studio:
 `generate_mesh` (T-pose prompt for monsters) -> `auto_setup_avatar` (Development) -> AnimationConstraints converted to
