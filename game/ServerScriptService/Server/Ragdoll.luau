@@ -225,6 +225,42 @@ function Ragdoll.start(g, vel: Vector3)
 	end
 end
 
+-- a loose copy of a monster (the Burning Captain's little skeletons) goes limp and flies: the same floppy joints
+-- as the big ones, but nothing is kept to stand it back up and it never breaks a wall. The caller removes the model.
+function Ragdoll.toss(m: Model, vel: Vector3)
+	local root = m:FindFirstChild("HumanoidRootPart")
+	for _, d in m:GetDescendants() do
+		if d:IsA("Motor6D") then
+			local p0, p1 = d.Part0, d.Part1
+			if p0 and p1 then
+				local a0 = Instance.new("Attachment"); a0.CFrame = d.C0; a0.Parent = p0
+				local a1 = Instance.new("Attachment"); a1.CFrame = d.C1; a1.Parent = p1
+				local bs = Instance.new("BallSocketConstraint")
+				bs.Attachment0 = a0; bs.Attachment1 = a1
+				bs.LimitsEnabled = true; bs.UpperAngle = 85; bs.TwistLimitsEnabled = false
+				bs.Parent = p1
+			end
+			d.Enabled = false
+		end
+	end
+	local body = {} :: { BasePart }
+	for _, d in m:GetDescendants() do
+		if d:IsA("BasePart") then
+			d.Anchored = false; d.Massless = false
+			d.CanCollide = d ~= root
+			d.CollisionGroup = GROUP
+			table.insert(body, d)
+		end
+	end
+	local spin = Vector3.new(rng:NextNumber(-16, 16), rng:NextNumber(-10, 10), rng:NextNumber(-16, 16))
+	for _, p in body do
+		pcall(function() p:SetNetworkOwner(nil) end)
+		p.AssemblyLinearVelocity = vel + Vector3.new(rng:NextNumber(-4, 4), rng:NextNumber(-2, 4), rng:NextNumber(-4, 4))
+		p.AssemblyAngularVelocity = spin
+	end
+	freezeLater(body, "DebugFreezeBody")
+end
+
 -- hit her again while she is down: she flies again (juggle)
 function Ragdoll.kick(g, vel: Vector3)
 	if not g.rag then return end

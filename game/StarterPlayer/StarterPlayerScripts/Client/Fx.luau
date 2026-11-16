@@ -444,8 +444,9 @@ local PRESETS = {
 	inside = { ClockTime = 19.1, Brightness = 1.4, Exposure = 0, Ambient = Color3.fromRGB(30, 27, 25), Outdoor = Color3.fromRGB(105, 110, 138),
 		AtmDensity = 0.12, AtmColor = Color3.fromRGB(58, 60, 78), AtmDecay = Color3.fromRGB(36, 36, 50), AtmHaze = 0.6, AtmGlare = 0,
 		Tint = Color3.fromRGB(255, 240, 226), Sat = -0.38, Contrast = 0.22 },
-	-- the lobby: a forest clearing on a bright moonlit night (you can see the trees and cabins; lanterns add warmth)
-	lobby = { ClockTime = 21.5, Brightness = 2.2, Exposure = 0.3, Ambient = Color3.fromRGB(58, 64, 80), Outdoor = Color3.fromRGB(118, 132, 166),
+	-- the lobby: a forest clearing on a moonlit night (dark enough to feel like night, you still see the trees and
+	-- cabins; the lanterns add the warmth)
+	lobby = { ClockTime = 21.5, Brightness = 1.5, Exposure = -0.1, Ambient = Color3.fromRGB(42, 47, 60), Outdoor = Color3.fromRGB(86, 97, 124),
 		AtmDensity = 0.3, AtmColor = Color3.fromRGB(84, 98, 120), AtmDecay = Color3.fromRGB(36, 44, 58), AtmHaze = 1.4, AtmGlare = 0,
 		Tint = Color3.fromRGB(218, 228, 242), Sat = -0.18, Contrast = 0.14 },
 }

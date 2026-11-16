@@ -11,7 +11,7 @@ local Platform = require(script.Parent.Platform)
 local Settings = {}
 local lp = Players.LocalPlayer
 local changed = Instance.new("BindableEvent")
-Settings.changed = changed.Event -- (key: "sfx" | "music" | "binds")
+Settings.changed = changed.Event -- (key: "sfx" | "music" | "binds" | "hideKeys")
 
 -- rebindable keyboard actions, in the order the Settings panel lists them
 Settings.ACTIONS = {
@@ -27,7 +27,8 @@ Settings.ACTIONS = {
 Settings.DEFAULT_BINDS = { Punch = "MouseButton1", Block = "MouseButton2", Lift = "E", Ultimate = "Q", Sprint = "LeftShift", Drop = "X", Use = "F", Settings = "P" }
 local MUSIC = { FightMusic = true }
 
-local state = { sfx = 1, music = 1, binds = table.clone(Settings.DEFAULT_BINDS) }
+-- hideKeys = the small controls reminder (KeyHints) was hidden with H
+local state = { sfx = 1, music = 1, binds = table.clone(Settings.DEFAULT_BINDS), hideKeys = false }
 local dirty = false -- changed here and not loaded over since
 
 local function group(name: string): SoundGroup
@@ -97,6 +98,14 @@ function Settings.set(key: string, value: number)
 	save()
 end
 
+-- on / off settings ("hideKeys")
+function Settings.setFlag(key: string, on: boolean)
+	if key ~= "hideKeys" or (state :: any)[key] == on then return end
+	;(state :: any)[key] = on
+	changed:Fire(key)
+	save()
+end
+
 -- bind an action to a key / mouse button name; an action already on that key gets this action's old key
 function Settings.bind(action: string, inputName: string)
 	local old = state.binds[action]
@@ -128,8 +137,9 @@ local function load()
 	if type(s.binds) == "table" then
 		for a, k in s.binds do if Settings.DEFAULT_BINDS[a] and type(k) == "string" then state.binds[a] = k end end
 	end
+	state.hideKeys = s.hideKeys == true
 	apply()
-	changed:Fire("binds"); changed:Fire("sfx"); changed:Fire("music")
+	changed:Fire("binds"); changed:Fire("sfx"); changed:Fire("music"); changed:Fire("hideKeys")
 end
 
 function Settings.init()

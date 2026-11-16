@@ -370,15 +370,54 @@ function Evolved.step(g, G, dt: number, now: number, target: Player?, thrp: Base
 		if now < g.stateUntil then return end
 		g.model:SetAttribute("Vanish", false)
 		if thrp then
+			-- she and her doubles stand side by side IN FRONT of you, a good way off (P.ring), so you see at once
+			-- that there are several of her. A direction with a wall close by is skipped for the next free one.
 			local c = thrp.Position
 			local n = P.n + 1
-			local a0 = rng:NextNumber(0, math.pi * 2)
 			local real = rng:NextInteger(1, n)
+			-- measured from standing chest height, whatever the player is doing (knocked down, jumping)
+			local floor = workspace:Raycast(c, Vector3.new(0, -14, 0), g.rp)
+			if floor then c = Vector3.new(c.X, floor.Position.Y + 3, c.Z) end
 			local y = c.Y - 3 + g.hover
+			local lookV = thrp.CFrame.LookVector
+			if math.abs(lookV.Y) > 0.9 then lookV = g.hrp.Position - c end -- flat on the floor: where she was instead
+			local base = math.atan2(lookV.Z, lookV.X)
+			local gap = math.rad(P.spread or 26) -- between two of them, seen from the player
+			local minR = P.ring * 0.55
+			local spots = {} :: { { a: number, r: number } }
+			local function room(a: number): number
+				local hit = workspace:Raycast(c + Vector3.new(0, 1.5, 0), Vector3.new(math.cos(a), 0, math.sin(a)) * (P.ring + 2), g.rp)
+				return hit and hit.Distance - 2 or P.ring
+			end
+			local function take(off: number)
+				if #spots >= n then return end
+				for _, sp in spots do
+					local d = math.abs((base + off - sp.a + math.pi) % (math.pi * 2) - math.pi)
+					if d < gap * 0.95 then return end
+				end
+				local r = room(base + off)
+				if r >= minR then table.insert(spots, { a = base + off, r = r }) end
+			end
+			-- straight ahead first, then wider and wider on both sides (an even number: nobody dead centre)
+			local first = n % 2 == 0 and gap / 2 or 0
+			local k = 0
+			while #spots < n and first + k * gap / 2 <= math.pi do
+				local off = first + k * gap / 2
+				take(off)
+				if off > 0 then take(-off) end
+				k += 1
+			end
+			-- hemmed in by walls: the rest stand in a ring around you, as before
+			local a0 = rng:NextNumber(0, math.pi * 2)
+			for i = #spots + 1, n do table.insert(spots, { a = a0 + i / n * math.pi * 2, r = P.ring * 0.65 }) end
+			-- which one is real must not depend on where she stands
+			for i = #spots, 2, -1 do
+				local j = rng:NextInteger(1, i)
+				spots[i], spots[j] = spots[j], spots[i]
+			end
 			local pts = {}
-			for i = 1, n do
-				local a = a0 + i / n * math.pi * 2
-				local at = inHouse(G, Vector3.new(c.X + math.cos(a) * P.ring, y, c.Z + math.sin(a) * P.ring))
+			for i, sp in spots do
+				local at = inHouse(G, Vector3.new(c.X + math.cos(sp.a) * sp.r, y, c.Z + math.sin(sp.a) * sp.r))
 				if i == real then
 					g.model:PivotTo(CFrame.lookAt(at, Vector3.new(c.X, at.Y, c.Z)))
 					g.ao.CFrame = g.model:GetPivot().Rotation
@@ -387,29 +426,30 @@ function Evolved.step(g, G, dt: number, now: number, target: Player?, thrp: Base
 				end
 			end
 			local speed = (C.Speed + (g.level - 1) * C.SpeedPerLevel) * g.speedMult * g.furySpeed
-			Abilities.spawnClones(g, pts, P.t, P.dmg * g.dmgMult, speed)
+			-- they all stand there screaming for a moment (so do count them), then come at you together
+			Abilities.spawnClones(g, pts, P.t, P.dmg * g.dmgMult, speed, { delay = P.pause or 1 })
 			Remotes.Fx:FireAllClients("GhostScream", g.hrp.Position)
 			toastAll("ONLY ONE OF THEM IS REAL")
 		end
-		done(g, G, P, 0.5)
+		done(g, G, P, P.pause or 1)
 	elseif k == "army" then
 		if thrp then face(thrp.Position) end
 		if now < g.stateUntil then return end
-		-- the little skeletons land in a loose ring around the players
-		local pts = {}
-		local list = {}
-		for _, p in Players:GetPlayers() do
-			local hrp = p:GetAttribute("InMatch") and hrpOf(p)
-			if hrp then table.insert(list, hrp) end
-		end
-		if #list > 0 then
-			for i = 1, P.n do
-				local hrp = list[(i - 1) % #list + 1]
+		-- his crew jumps out of him one after the other, right where he stands, and runs at the players
+		local feetY = pos.Y - g.hover
+		for i = 1, P.n do
+			task.delay((i - 1) * 0.16, function()
+				if G.current ~= g or g.state == "Dead" or not g.model.Parent then return end
+				if g.state == "Ragdoll" or g.state == "Launched" then return end -- knocked flying meanwhile: the rest stay in
+				local here = g.hrp.Position
 				local a = rng:NextNumber(0, math.pi * 2)
-				local r = rng:NextNumber(8, 14)
-				table.insert(pts, inHouse(G, Vector3.new(hrp.Position.X + math.cos(a) * r, hrp.Position.Y - 3 + g.hover * P.size, hrp.Position.Z + math.sin(a) * r)))
-			end
-			Abilities.spawnClones(g, pts, P.t, P.dmg * g.dmgMult, P.speed, P.size)
+				local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+				local r = rng:NextNumber(2.2, 4)
+				local wall = workspace:Raycast(here, dir * (r + 1.5), g.rp)
+				if wall then r = math.max(0.5, wall.Distance - 1.5) end
+				local at = Vector3.new(here.X + dir.X * r, feetY + g.hover * P.size, here.Z + dir.Z * r)
+				Abilities.spawnClones(g, { at }, P.t, P.dmg * g.dmgMult, P.speed * rng:NextNumber(0.9, 1.12), { scale = P.size, crew = true })
+			end)
 		end
 		done(g, G, P, 0.5)
 	elseif k == "snap" then

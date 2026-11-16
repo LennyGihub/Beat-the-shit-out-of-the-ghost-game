@@ -78,7 +78,9 @@ end
 -- fields override the base monster's.
 local EVO: { [string]: { [string]: any } } = {
 	Woman = { title = "THE VIOLET WIDOW", color = C(170, 90, 230), scale = 1.1,
-		power = { kind = "doubles", cd = 13, n = 3, t = 14, dmg = 10, ring = 11 },
+		-- ring = how far from you she and her doubles appear, spread = degrees between two of them (all in front of you),
+		-- pause = seconds they stand there before they come
+		power = { kind = "doubles", cd = 13, n = 3, t = 14, dmg = 10, ring = 17, spread = 26, pause = 1 },
 		desc = "Purple and wrong. She splits into doubles: only one of them is real." },
 	Demon = { title = "THE DEMON LORD", color = C(150, 20, 16), scale = 1.3, reach = 1.3,
 		ability = { kind = "levitateThrow", cd = 6, range = 75, lift = 1.4, aim = 0.5, power = 160, dmg = 18, count = 3 },
@@ -87,7 +89,8 @@ local EVO: { [string]: { [string]: any } } = {
 		power = { kind = "armed", weapons = { "BaseballBat", "FryingPan", "Crowbar", "LeadPipe", "Shovel", "SpikedBat", "Machete", "FireAxe" } },
 		desc = "Fat, forest green, and already armed. He punches through the walls to get to you." },
 	Pirate = { title = "THE BURNING CAPTAIN", color = C(255, 90, 30), scale = 1.1,
-		power = { kind = "army", cd = 15, n = 5, t = 14, dmg = 6, size = 0.42, speed = 17 },
+		-- his crew jumps out of him and runs at you: one hit sends them flying, and they barely scratch (dmg)
+		power = { kind = "army", cd = 15, n = 5, t = 14, dmg = 3, size = 0.42, speed = 17 },
 		desc = "A skeleton on fire. He throws an army of little skeletons at you." },
 	Animatronic = { title = "THE GOLDEN BEAR", color = C(240, 200, 70), scale = 1.08,
 		power = { kind = "snap", cd = 9, min = 9, max = 70, wind = 0.75, dmg = 18, wall = 118, up = 105 },

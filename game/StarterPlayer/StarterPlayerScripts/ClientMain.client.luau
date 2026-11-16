@@ -39,6 +39,8 @@ local SawAudio = require(Client.SawAudio)
 local LobbyUI = require(Client.LobbyUI)
 local ReviveUI = require(Client.ReviveUI)
 local Spectate = require(Client.Spectate)
+local KeyHints = require(Client.KeyHints)
+local CrewAnim = require(Client.CrewAnim)
 
 Platform.init()
 Settings.init()
@@ -66,6 +68,8 @@ UltShop.init(function(open)
 end)
 ReviveUI.init()
 Spectate.init()
+KeyHints.init() -- the small controls reminder (H hides it)
+CrewAnim.init() -- the Burning Captain's little skeletons run
 -- lobby screen: PLAY (create / join lobbies) and SHOP buttons, friend booster
 QuestUI.init(function(open)
 	Input.setShopOpen(open)

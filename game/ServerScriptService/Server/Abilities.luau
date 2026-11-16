@@ -10,12 +10,17 @@ local Remotes = require(script.Parent.Remotes)
 local Sounds = require(game:GetService("ReplicatedStorage").Shared.Sounds)
 local Furniture = require(script.Parent.Furniture)
 local Loot = require(script.Parent.GoblinLoot) -- the Goblin's "steal"
+local Ragdoll = require(script.Parent.Ragdoll)
 
 local Abilities = {}
 local rng = Random.new()
 local clouds = {} :: { { pos: Vector3, r: number, dps: number, untilT: number, nextTick: number } }
 local marks = {} :: { { at: number, pts: { Vector3 }, r: number, dmg: number } }
-local clones = {} :: { { model: Model, untilT: number, speed: number, dmg: number, hover: number } }
+-- crew = one of the Burning Captain's little skeletons: it walks round the walls (nav), and a hit doesn't shatter
+-- it, it knocks it out (limp, flying, then it falls to bits)
+-- from = when it starts to move (the Widow's doubles stand still for a moment first, so you see them all)
+local clones = {} :: { { model: Model, untilT: number, from: number, speed: number, dmg: number, hover: number, crew: boolean?, nav: any } }
+local limp = {} :: { { model: Model, untilT: number } }
 -- players the Pirate's shield bash sent flying: hitting a wall hurts (once)
 local flyers = {} :: { [Player]: { untilT: number, dmg: number } }
 
@@ -251,7 +256,10 @@ end
 
 -- copies of the monster that walk at the players and burst when they touch one or get punched (mirror clones, the
 -- Violet Widow's doubles, the Burning Captain's little skeletons). scale = a smaller copy (its small parts are dropped).
-function Abilities.spawnClones(g, pts: { Vector3 }, t: number, dmg: number, speed: number, scale: number?)
+-- opts: scale = a smaller copy, crew = the Captain's little skeletons (see `clones` above), delay = seconds they
+-- stand still before they come.
+function Abilities.spawnClones(g, pts: { Vector3 }, t: number, dmg: number, speed: number, opts: { scale: number?, crew: boolean?, delay: number? }?)
+	local scale, crew, delay = opts and opts.scale, opts and opts.crew, opts and opts.delay or 0
 	local full = g.model:GetScale()
 	for _, at in pts do
 		local c = g.model:Clone()
@@ -268,18 +276,71 @@ function Abilities.spawnClones(g, pts: { Vector3 }, t: number, dmg: number, spee
 		end
 		local loot = c:FindFirstChild("Loot") if loot then loot:Destroy() end
 		c:SetAttribute("Clone", true)
+		if crew then c:SetAttribute("Crew", true) end
 		c:SetAttribute("HP", nil); c:SetAttribute("MaxHP", nil)
 		if scale then c:ScaleTo(full * scale) end
 		c:PivotTo(CFrame.new(at) * g.model:GetPivot().Rotation)
 		c.Parent = workspace
-		table.insert(clones, { model = c, untilT = os.clock() + t, speed = speed, dmg = dmg, hover = g.hover * (scale or 1) })
-		fx("CloneSpawn", at)
+		local hover = g.hover * (scale or 1)
+		local root = c:FindFirstChild("HumanoidRootPart")
+		if crew and root and root:IsA("BasePart") then
+			-- the crew runs (Client/CrewAnim): only the root stays anchored, the body hangs on its joints. A part
+			-- whose joint went with a dropped tiny part stays anchored, or it would fall out of the world.
+			for _, p in root:GetConnectedParts(true) do
+				if p ~= root then p.Anchored = false; p.Massless = true end
+			end
+		end
+		table.insert(clones, { model = c, untilT = os.clock() + t + delay, from = os.clock() + delay, speed = speed, dmg = dmg, hover = hover, crew = crew,
+			nav = (crew and root) and { hrp = root, hover = hover } or nil })
+		fx("CloneSpawn", at, crew and "bone" or nil)
 	end
 end
 function Abilities.cloneCount(): number return #clones end
 -- the Goblin King starts armed (and re-arms): Loot.arm
 Abilities.armGoblin = Loot.arm
 Abilities.finish = finish
+
+-- THE PARTY BEAR LOST YOU IN THE DARK (stuck behind a wall or under another floor, or too far to walk to you before
+-- the lights come back): instead of giving the hunt up he appears close by and keeps coming. Never on top of the
+-- player: 9-12 studs away, on the same floor, with nothing between them, and behind their back when there is room.
+local function stalkSpot(g, G, thrp: BasePart): Vector3?
+	local c = thrp.Position
+	local down = workspace:Raycast(c, Vector3.new(0, -12, 0), g.rp)
+	if not down then return nil end -- in the air / falling: not now
+	local look = flat(thrp.CFrame.LookVector)
+	for _, r in { 12, 9 } do
+		local best: Vector3?, bestScore = nil, -math.huge
+		for i = 0, 11 do
+			local ang = i * math.pi / 6 + rng:NextNumber(-0.2, 0.2)
+			local dir = Vector3.new(math.cos(ang), 0, math.sin(ang))
+			local at = c + dir * r
+			if not G.outside(at) and not workspace:Raycast(c, dir * (r + 3), g.rp) then
+				local floor = workspace:Raycast(at + Vector3.new(0, 1, 0), Vector3.new(0, -9, 0), g.rp)
+				if floor and math.abs(floor.Position.Y - down.Position.Y) < 2.5 then
+					local score = -look:Dot(dir) + rng:NextNumber(0, 0.5)
+					if score > bestScore then best, bestScore = Vector3.new(at.X, floor.Position.Y + g.hover, at.Z), score end
+				end
+			end
+		end
+		if best then return best end
+	end
+	return nil
+end
+
+local function stalkBlink(g, G, thrp: BasePart): boolean
+	local at = stalkSpot(g, G, thrp)
+	if not at then return false end
+	local from = g.hrp.Position
+	local cf = CFrame.lookAt(at, Vector3.new(thrp.Position.X, at.Y, thrp.Position.Z))
+	g.model:PivotTo(cf)
+	g.ao.CFrame = cf.Rotation
+	g.lv.VectorVelocity = Vector3.zero
+	g.hrp.AssemblyLinearVelocity = Vector3.zero
+	g.hrp.AssemblyAngularVelocity = Vector3.zero
+	g.path = nil
+	fx("StalkerBlink", from, at)
+	return true
+end
 
 -- runs while g.state == "Ability"
 function Abilities.step(g, G, dt: number, now: number, target: Player?, thrp: BasePart?, hoverY: number)
@@ -555,9 +616,54 @@ function Abilities.step(g, G, dt: number, now: number, target: Player?, thrp: Ba
 		-- in the dark she rushes the target; reaching them = a heavy strike from behind
 		if thrp and target then
 			local to = Vector3.new(thrp.Position.X - pos.X, 0, thrp.Position.Z - pos.Z)
-			local sp = (a.speed or 22) * (g.speedMult or 1)
+			local sp = (a.speed or 22) * (g.speedMult or 1) * (ab.rush or 1)
 			-- Studio test hook: ReplicatedStorage attribute DebugHuntHold = true makes the hunter stand still in the dark
 			if STUDIO and game:GetService("ReplicatedStorage"):GetAttribute("DebugHuntHold") then sp = 0 end
+			-- feet to feet: a player on another floor is not "reached" through the ceiling
+			local dy = math.abs((thrp.Position.Y - 3) - (pos.Y - g.hover))
+			if a.lightsOut and sp > 0 then
+				-- lost you? (see stalkSpot) Checked from 1.5 s into the hunt, at most twice per hunt.
+				ab.t0 = ab.t0 or now
+				if not ab.mark or now - ab.markT >= 1.2 then
+					ab.stuck = ab.mark ~= nil and (pos - ab.mark).Magnitude < 2.5 -- hardly moved since the last look
+					ab.mark, ab.markT = pos, now
+				end
+				local P = g.path
+				-- the way that is left (round the walls, down the stairs) against the time that is left
+				local walk = to.Magnitude
+				if P ~= nil and P.pts ~= nil and P.i ~= nil and P.pts[P.i] then
+					local at = pos
+					walk = 0
+					for i = P.i, #P.pts do
+						local wp = P.pts[i].Position
+						walk += Vector3.new(wp.X - at.X, 0, wp.Z - at.Z).Magnitude
+						at = wp
+					end
+				end
+				local tooFar = walk > sp * (ab.untilT - now) * 0.85
+				local away = to.Magnitude > 8 or dy > 7
+				if away and (ab.stuck or tooFar) and now - ab.t0 > 1.5 and now >= (ab.nextBlink or 0) and (ab.blinks or 0) < 2 then
+					ab.nextBlink = now + 0.5 -- no room near the player right now: look again in a moment
+					if stalkBlink(g, G, thrp) then
+						-- Studio test hook: why he blinked (model attribute BlinkWhy)
+						if STUDIO then g.model:SetAttribute("BlinkWhy", (ab.stuck and "stuck " or "") .. (tooFar and "tooFar" or "")) end
+						ab.blinks = (ab.blinks or 0) + 1
+						ab.nextBlink = now + 3.5
+						ab.mark, ab.stuck = nil, false
+						-- he growls where he stands for a moment (time to turn round, hit him or run), then the last
+						-- steps are quicker than his stalk (walking away doesn't save you, a sprint does)
+						ab.standUntil = now + 0.9
+						ab.rush = 1.3
+						-- time to cover those last steps: the dark holds a little longer
+						if ab.untilT - now < 4.5 then
+							ab.untilT = now + 4.5
+							fx("BlackoutExtend", 4.5)
+						end
+						return
+					end
+				end
+			end
+			if ab.standUntil and now < ab.standUntil then sp = 0 end
 			-- solid monsters (the Animatronic) walk around the walls; the Woman glides through them
 			local goal = (g.def.solid and G.pathPoint) and G.pathPoint(g, thrp.Position) or thrp.Position
 			local step = Vector3.new(goal.X - pos.X, 0, goal.Z - pos.Z)
@@ -565,7 +671,7 @@ function Abilities.step(g, G, dt: number, now: number, target: Player?, thrp: Ba
 			if g.def.solid and G.blockWalls then v = G.blockWalls(g, v) end
 			face(pos + (v.Magnitude > 0.5 and v or to))
 			g.lv.VectorVelocity = hover(g, hoverY, v)
-			if to.Magnitude < 5.5 and not warded(target) then
+			if to.Magnitude < 5.5 and dy < 7 and not warded(target) then
 				if a.lightsOut then
 					-- the Party Bear: it's suddenly right in your face (jumpscare on the victim's screen), then the hit
 					Remotes.Fx:FireClient(target, "AnimJumpscare", g.model)
@@ -621,11 +727,18 @@ function Abilities.step(g, G, dt: number, now: number, target: Player?, thrp: Ba
 end
 
 local function shatter(c)
-	fx("CloneShatter", c.model:GetPivot().Position)
+	fx("CloneShatter", c.model:GetPivot().Position, c.crew and "bone" or nil)
 	c.model:Destroy()
 end
 
+-- a little skeleton got hit: it goes limp and flies off like the big monsters do, then falls to bits
+local function knockOut(c, vel: Vector3)
+	Ragdoll.toss(c.model, vel)
+	table.insert(limp, { model = c.model, untilT = os.clock() + 1.7 })
+end
+
 -- lingering things: gas clouds, hellfire marks, mirror clones
+-- (Studio photo hook: RS attribute DebugFreezeGhost also holds the doubles and the crew where they are)
 function Abilities.tick(G, dt: number, now: number)
 	Loot.tick(G, dt, now)
 	-- shield-bashed players flying across the room: the first wall they hit hurts
@@ -691,10 +804,29 @@ function Abilities.tick(G, dt: number, now: number)
 			end
 		end
 	end
+	local hold = STUDIO and game:GetService("ReplicatedStorage"):GetAttribute("DebugFreezeGhost") == true
+	for i = #limp, 1, -1 do
+		local l = limp[i]
+		if not l.model.Parent then
+			table.remove(limp, i)
+		elseif hold then
+			l.untilT += dt
+		elseif now > l.untilT then
+			local torso = (l.model:FindFirstChild("UpperTorso") or l.model:FindFirstChild("HumanoidRootPart")) :: BasePart?
+			fx("CloneShatter", torso and torso.Position or l.model:GetPivot().Position, "bone")
+			l.model:Destroy()
+			table.remove(limp, i)
+		end
+	end
+	local boss = G.current
 	for i = #clones, 1, -1 do
 		local c = clones[i]
 		if not c.model.Parent then
 			table.remove(clones, i)
+		elseif hold then
+			c.untilT += dt
+		elseif now < c.from then
+			-- standing there for a moment before they come
 		elseif now > c.untilT then
 			shatter(c); table.remove(clones, i)
 		else
@@ -708,8 +840,25 @@ function Abilities.tick(G, dt: number, now: number)
 				local to = Vector3.new(best.Position.X - pos.X, 0, best.Position.Z - pos.Z)
 				local p = best.Parent and Players:GetPlayerFromCharacter(best.Parent)
 				if bestD < 3.8 and p and not warded(p) then
-					G.hitPlayer(p, nil, c.dmg, flat(to) * 35 + Vector3.new(0, 18, 0), "clone", true)
+					if c.crew then
+						G.hitPlayer(p, nil, c.dmg, flat(to) * 12 + Vector3.new(0, 6, 0), "clone", true) -- a nip, barely a shove
+					else
+						G.hitPlayer(p, nil, c.dmg, flat(to) * 35 + Vector3.new(0, 18, 0), "clone", true)
+					end
 					shatter(c); table.remove(clones, i)
+				elseif c.crew then
+					-- the crew runs on the floor and round the walls, like their Captain
+					local goal = best.Position
+					if c.nav and G.pathPoint then goal = G.pathPoint(c.nav, best.Position) end
+					local step = Vector3.new(goal.X - pos.X, 0, goal.Z - pos.Z)
+					local dir = step.Magnitude > 0.1 and step.Unit or flat(to)
+					local np = pos + dir * c.speed * dt
+					local y = best.Position.Y - 3 + c.hover
+					local floor = boss and workspace:Raycast(Vector3.new(np.X, pos.Y + 3, np.Z), Vector3.new(0, -40, 0), boss.rp)
+					if floor then y = floor.Position.Y + c.hover end
+					y = pos.Y + (y - pos.Y) * math.min(1, dt * 12)
+					np = Vector3.new(np.X, y, np.Z)
+					c.model:PivotTo(CFrame.lookAt(np, np + dir))
 				else
 					local np = pos + (to.Magnitude > 0.1 and to.Unit or Vector3.zero) * c.speed * dt
 					np = Vector3.new(np.X, best.Position.Y - 3 + c.hover + math.sin(now * 3 + i) * 0.3, np.Z)
@@ -720,18 +869,32 @@ function Abilities.tick(G, dt: number, now: number)
 	end
 end
 
--- a punch/swing that reaches a mirror clone shatters it (returns where)
-function Abilities.hitClone(from: Vector3, dir: Vector3, range: number): Vector3?
-	for i, c in clones do
+-- a punch/swing that reaches a mirror clone shatters it (returns where). The Captain's little skeletons are so
+-- weak that one swing sends every one of them in front of you flying, limp (charge 0..1 = a charged hit: further).
+function Abilities.hitClone(from: Vector3, dir: Vector3, range: number, charge: number?): Vector3?
+	local first: Vector3? = nil
+	local fdir = flat(dir)
+	for i = #clones, 1, -1 do
+		local c = clones[i]
 		local p = c.model:GetPivot().Position
 		local to = p - from
-		if to.Magnitude <= range + 1.5 and dir:Dot(to.Unit) >= 0.35 then
+		if c.crew then
+			-- they only come up to your knees: aimed on the flat, not at their height
+			local ft = Vector3.new(to.X, 0, to.Z)
+			if ft.Magnitude <= range + 1.5 and math.abs(to.Y) < 9 and (ft.Magnitude < 2 or fdir:Dot(ft.Unit) >= 0.2) then
+				table.remove(clones, i)
+				local k = math.clamp(charge or 0, 0, 1)
+				local side = ft.Magnitude > 0.5 and ft.Unit or fdir
+				knockOut(c, (fdir * 0.75 + side * 0.25).Unit * (62 + 40 * k) + Vector3.new(0, 26 + 12 * k, 0))
+				first = first or p
+			end
+		elseif not first and to.Magnitude <= range + 1.5 and dir:Dot(to.Unit) >= 0.35 then
 			shatter(c)
 			table.remove(clones, i)
 			return p
 		end
 	end
-	return nil
+	return first
 end
 
 function Abilities.clear()
@@ -739,6 +902,8 @@ function Abilities.clear()
 	flyers = {}
 	for _, c in clones do if c.model.Parent then c.model:Destroy() end end
 	clones = {}
+	for _, l in limp do if l.model.Parent then l.model:Destroy() end end
+	limp = {}
 	clouds = {}
 	marks = {}
 end

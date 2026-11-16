@@ -18,7 +18,7 @@ local BIND_ACTIONS = { Punch = true, Block = true, Lift = true, Ultimate = true,
 local MOUSE = { MouseButton1 = true, MouseButton2 = true, MouseButton3 = true }
 local function cleanSettings(s: any): { [string]: any }?
 	if type(s) ~= "table" then return nil end
-	local out = { sfx = 1, music = 1, binds = {} }
+	local out = { sfx = 1, music = 1, binds = {}, hideKeys = s.hideKeys == true } -- hideKeys: controls reminder hidden (H)
 	for _, k in { "sfx", "music" } do
 		local v = tonumber(s[k])
 		if v and v == v then out[k] = math.clamp(math.floor(v * 100 + 0.5) / 100, 0, 1) end

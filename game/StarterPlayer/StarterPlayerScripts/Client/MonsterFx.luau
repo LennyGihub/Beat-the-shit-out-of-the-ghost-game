@@ -14,7 +14,7 @@ local rng = Random.new()
 local KINDS = {
 	AbilityWind = true, AbilityHit = true, Grabbed = true, Released = true, Pounce = true, Wail = true,
 	Blackout = true, BlackoutEnd = true, GasThrow = true, GasCloud = true, Gassed = true,
-	HellMark = true, HellPillar = true, Charge = true, CloneSpawn = true, CloneShatter = true,
+	HellMark = true, HellPillar = true, Charge = true, CloneSpawn = true, CloneShatter = true, StalkerBlink = true, BlackoutExtend = true,
 	GoblinSteal = true, GoblinUse = true, GoblinDrop = true,
 	ShieldBlock = true, Slammed = true, AnimJumpscare = true,
 	RoarWind = true, Roar = true, LungeWind = true, Lunge = true, Enraged = true, CounterWind = true, FuryArmor = true, FurySmash = true, -- Fury
@@ -514,6 +514,40 @@ function MonsterFx.handle(kind: string, ...)
 		Sfx.at("Whoosh", pos, { PlaybackSpeed = 0.4, Volume = 2 })
 		Sfx.at("GhostScream", pos, { PlaybackSpeed = 0.5, Volume = 1.2 })
 		Fx.shake(0.3 * near(pos, 60))
+	elseif kind == "BlackoutExtend" then
+		-- the hunt goes on a little longer (the Party Bear found you again): the dark stays, no new banner
+		blackoutId += 1
+		local id = blackoutId
+		task.delay((a[1] or 4) + 0.2, function() if id == blackoutId then blackout(false) end end)
+	elseif kind == "StalkerBlink" then
+		-- the Party Bear lost you in the dark and is suddenly close by: a low growl from where he stands now
+		local from, to = a[1], a[2]
+		for _, pos in { from, to } do
+			emitter(pos, { Color = ColorSequence.new(Color3.fromRGB(14, 12, 12)), Size = NumberSequence.new(3, 6), Transparency = NumberSequence.new(0.5, 1),
+				Speed = NumberRange.new(1, 4), Lifetime = NumberRange.new(0.5, 0.9) }, 14, 1.5)
+		end
+		Sfx.at("AnimGrowl", to, { Volume = 1.3, PlaybackSpeed = 0.8 })
+		Sfx.at("Whoosh", to, { Volume = 0.7, PlaybackSpeed = 0.5 })
+	elseif kind == "CloneSpawn" and a[2] == "bone" then
+		-- one of the Burning Captain's crew jumps out of him
+		local pos = a[1]
+		emitter(pos, { Color = ColorSequence.new(Color3.fromRGB(255, 150, 50), Color3.fromRGB(120, 30, 0)), LightEmission = 0.8, Size = NumberSequence.new(1, 0),
+			Speed = NumberRange.new(5, 12), Lifetime = NumberRange.new(0.25, 0.55), Texture = "rbxasset://textures/particles/fire_main.dds" }, 16, 1.5)
+		Sfx.at("Bonk", pos, { PlaybackSpeed = 1.5 + rng:NextNumber(0, 0.4), Volume = 0.5 })
+	elseif kind == "CloneShatter" and a[2] == "bone" then
+		-- ...and falls to bits: a handful of bones
+		local pos = a[1]
+		for _ = 1, 7 do
+			local sh = part({ Size = Vector3.new(rng:NextNumber(0.15, 0.3), rng:NextNumber(0.5, 1.1), rng:NextNumber(0.15, 0.3)), Color = Color3.fromRGB(226, 214, 186),
+				Material = Enum.Material.SmoothPlastic, CFrame = CFrame.new(pos + Vector3.new(rng:NextNumber(-0.6, 0.6), rng:NextNumber(-0.4, 0.8), rng:NextNumber(-0.6, 0.6))) * CFrame.Angles(rng:NextNumber(0, 6), rng:NextNumber(0, 6), 0) })
+			sh.Anchored = false
+			sh.AssemblyLinearVelocity = Vector3.new(rng:NextNumber(-12, 12), rng:NextNumber(6, 18), rng:NextNumber(-12, 12))
+			sh.AssemblyAngularVelocity = Vector3.new(rng:NextNumber(-20, 20), rng:NextNumber(-20, 20), rng:NextNumber(-20, 20))
+			Debris:AddItem(sh, 1.4)
+		end
+		emitter(pos, { Color = ColorSequence.new(Color3.fromRGB(210, 200, 180)), Size = NumberSequence.new(1.2, 2.4), Transparency = NumberSequence.new(0.5, 1),
+			Speed = NumberRange.new(2, 6), Lifetime = NumberRange.new(0.3, 0.6) }, 8, 1.2)
+		Sfx.at("WoodBreak", pos, { PlaybackSpeed = 1.7 + rng:NextNumber(0, 0.3), Volume = 0.5 })
 	elseif kind == "CloneSpawn" then
 		local pos = a[1]
 		emitter(pos, { Color = ColorSequence.new(Color3.fromRGB(230, 230, 255)), LightEmission = 1, Size = NumberSequence.new(1.5, 0),

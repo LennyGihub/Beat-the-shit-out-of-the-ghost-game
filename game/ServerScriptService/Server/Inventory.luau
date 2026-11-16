@@ -180,7 +180,7 @@ local function useMelee(p: Player, n: number, it, dir: Vector3, charge: number)
 	if not Combat.useStamina(p, it.stamina * (1 + charge * Config.Charge.StaminaBonus)) then return end
 	consume(p, n)
 	local _, _, head = alive(p)
-	if head and Ghost.hitClone(head.Position, dir, it.range) then
+	if head and Ghost.hitClone(head.Position, dir, it.range, charge) then
 		Remotes.Fx:FireAllClients("ItemSwing", p, it.id, true)
 		return
 	end

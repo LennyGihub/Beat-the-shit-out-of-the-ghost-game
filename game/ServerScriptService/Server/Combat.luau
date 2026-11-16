@@ -357,7 +357,7 @@ local function onPunch(player: Player, look: any, rawCharge: any)
 	if not Combat.useStamina(player, P.StaminaCost * (1 + charge * CH.StaminaBonus)) then return end
 	s.lastPunch = now
 	local head = (player.Character :: Model):FindFirstChild("Head") :: BasePart?
-	local clonePos = Ghost.hitClone((head or hrp).Position, dir, P.Range)
+	local clonePos = Ghost.hitClone((head or hrp).Position, dir, P.Range, charge)
 	if clonePos then
 		Remotes.Fx:FireAllClients("Hit", clonePos, 1, 0, false, player)
 		sync(player, s, true)
