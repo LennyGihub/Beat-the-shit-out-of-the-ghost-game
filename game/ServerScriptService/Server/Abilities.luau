@@ -302,6 +302,8 @@ function Abilities.step(g, G, dt: number, now: number, target: Player?, thrp: Ba
 		local obj = ab.obj :: Model
 		if ab.phase ~= "throw" and (not obj or not obj.Parent or obj:GetAttribute("Broken")) then finish(g, G, 0.3); return end
 		local hold = g.hrp.CFrame * CFrame.new(1.5, 7.5, -3.5)
+		-- Studio photo hook: ReplicatedStorage attribute DebugHoldCast keeps him aiming with the object up
+		if ab.phase == "aim" and game:GetService("RunService"):IsStudio() and game.ReplicatedStorage:GetAttribute("DebugHoldCast") then ab.untilT = now + 0.5 end
 		if ab.phase == "lift" or ab.phase == "aim" then
 			local f = ab.phase == "lift" and math.clamp((now - ab.t0) / a.lift, 0, 1) or 1
 			local e = f * f * (3 - 2 * f)

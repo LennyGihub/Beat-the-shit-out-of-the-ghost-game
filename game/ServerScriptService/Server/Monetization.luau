@@ -6,21 +6,27 @@ local RS = game:GetService("ReplicatedStorage")
 local MarketplaceService = game:GetService("MarketplaceService")
 local Remotes = require(script.Parent.Remotes)
 local Run = require(script.Parent.Run)
+local Inventory = require(script.Parent.Inventory)
 
 local Monetization = {}
 local granted = {} :: { [string]: boolean } -- PurchaseId -> done (this server)
 
 local function id(attr: string): number return tonumber(RS:GetAttribute(attr)) or 0 end
 
+-- Game Passes: id attribute -> player attribute it unlocks
+local PASSES = { Money2PassId = "Money2", GlockPassId = "GlockPass" }
 local function checkPass(p: Player)
-	local pass = id("Money2PassId")
-	if pass <= 0 then return end
-	local ok, owns = pcall(function() return MarketplaceService:UserOwnsGamePassAsync(p.UserId, pass) end)
-	if ok and owns then p:SetAttribute("Money2", true) end
+	for attr, flag in PASSES do
+		local pass = id(attr)
+		if pass > 0 then
+			local ok, owns = pcall(function() return MarketplaceService:UserOwnsGamePassAsync(p.UserId, pass) end)
+			if ok and owns then p:SetAttribute(flag, true) end
+		end
+	end
 end
 
 function Monetization.start()
-	for _, a in { "Money2PassId", "ReviveProductId" } do
+	for _, a in { "Money2PassId", "ReviveProductId", "GlockPassId" } do
 		if RS:GetAttribute(a) == nil then RS:SetAttribute(a, 0) end
 	end
 	Players.PlayerAdded:Connect(function(p) task.spawn(checkPass, p) end)
@@ -29,6 +35,10 @@ function Monetization.start()
 		if bought and pass == id("Money2PassId") then
 			p:SetAttribute("Money2", true)
 			Remotes.Fx:FireClient(p, "Toast", "2X MONEY UNLOCKED - every run pays double")
+		elseif bought and pass == id("GlockPassId") then
+			p:SetAttribute("GlockPass", true)
+			if p:GetAttribute("InMatch") then Inventory.give(p, "Glock18") end
+			Remotes.Fx:FireClient(p, "Toast", "GLOCK 18 UNLOCKED - it is in your hotbar every run")
 		end
 	end)
 	MarketplaceService.ProcessReceipt = function(info)

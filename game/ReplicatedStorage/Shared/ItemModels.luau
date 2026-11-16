@@ -351,6 +351,31 @@ function B.pistol(m, c, _glow, id)
 	moving(m, ham, "kick", V(0, -0.06, 0.12))
 	mark(m, "Tip", at(0, flare and 0.32 or 0.33, flare and -1.55 or -1.75))
 end
+-- Glock 18: black polymer frame, steel slide that kicks back, fire selector, long extended mag
+function B.glock(m, c)
+	local poly = worn(c, 0.05)
+	p(m, V(0.28, 0.62, 0.36), at(0, -0.17, 0.08, -0.28, 0, 0), poly) -- grip
+	for i = 0, 2 do p(m, V(0.3, 0.05, 0.3), at(0, -0.02 - i * 0.16, 0.05 - i * 0.04, -0.28, 0, 0), BLACK) end -- grip texture
+	p(m, V(0.24, 1.25, 0.26), at(0, -0.85, 0.28, -0.28, 0, 0), Color3.fromRGB(28, 28, 30)) -- extended mag
+	p(m, V(0.28, 0.12, 0.3), at(0, -1.45, 0.45, -0.28, 0, 0), BLACK) -- base plate
+	p(m, V(0.27, 0.2, 1.05), at(0, 0.13, -0.33), poly) -- frame / dust cover
+	p(m, V(0.1, 0.18, 0.06), at(0, -0.07, -0.18), BLACK) -- trigger
+	p(m, V(0.12, 0.06, 0.42), at(0, -0.2, -0.22), poly) -- trigger guard
+	p(m, V(0.12, 0.2, 0.06), at(0, -0.12, -0.42), poly)
+	local slide = p(m, V(0.3, 0.26, 1.15), at(0, 0.36, -0.36), Color3.fromRGB(60, 60, 62), M.Metal)
+	moving(m, slide, "kick", V(0, 0, 0.22))
+	for i = 0, 3 do -- slide serrations
+		local s = p(m, V(0.31, 0.2, 0.04), at(0, 0.36, 0.12 - i * 0.07), BLACK)
+		moving(m, s, "kick", V(0, 0, 0.22))
+	end
+	local port = p(m, V(0.05, 0.12, 0.28), at(0.14, 0.4, -0.38), Color3.fromRGB(130, 110, 60), M.Metal) -- ejection port (brass)
+	moving(m, port, "kick", V(0, 0, 0.22))
+	p(m, V(0.12, 0.12, 0.06), at(0, 0.36, -0.95), BLACK) -- muzzle
+	p(m, V(0.06, 0.08, 0.06), at(0, 0.52, -0.85), Color3.fromRGB(230, 230, 230)) -- front sight dot
+	p(m, V(0.2, 0.08, 0.06), at(0, 0.52, 0.17), BLACK) -- rear sight
+	p(m, V(0.05, 0.08, 0.12), at(-0.15, 0.36, 0.08), Color3.fromRGB(200, 40, 30)) -- auto selector
+	mark(m, "Tip", at(0, 0.36, -1))
+end
 function B.nailgun(m, c)
 	local y = worn(c, 0.12)
 	p(m, V(0.3, 0.66, 0.36), at(0, -0.15, 0.02, -0.2, 0, 0), BLACK)

@@ -50,7 +50,7 @@ function Events.rollStock(n: number): { any }
 			if x <= 0 then rar = i; break end
 		end
 		local pool = {}
-		for _, it in Items.list do if it.rarity == rar and not picked[it.id] then table.insert(pool, it) end end
+		for _, it in Items.list do if it.rarity == rar and not picked[it.id] and not it.exclusive then table.insert(pool, it) end end
 		if #pool > 0 then
 			local it = pool[rng:NextInteger(1, #pool)]
 			picked[it.id] = true

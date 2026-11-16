@@ -70,6 +70,7 @@ function Run.addToMatch(p: Player)
 	p:SetAttribute("RunKills", 0)
 	stats[p] = { earned = 0, damage = 0, kills = 0, paid = false }
 	Inventory.clear(p)
+	if p:GetAttribute("GlockPass") then Inventory.give(p, "Glock18") end -- Robux pass: in every run
 	local sp = workspace:FindFirstChild("MatchSpawn")
 	if sp then p.RespawnLocation = sp :: SpawnLocation end
 end

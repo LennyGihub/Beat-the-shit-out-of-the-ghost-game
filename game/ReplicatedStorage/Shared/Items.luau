@@ -79,6 +79,10 @@ local List: { Item } = {
 	I({ id = "BearTrap", name = "Bear Trap", rarity = 2, price = 210, kind = "trap", shape = "beartrap", color = C(90, 85, 80), desc = "Place it; she gets stuck 3 s.", uses = 2, stun = 3, dmg = 15 }),
 }
 
+-- GLOCK 18 (Robux Game Pass, GlockPassId): never sold at the events; owners start every run with it. Full auto.
+table.insert(List, I({ id = "Glock18", name = "Glock 18", rarity = 5, price = 0, kind = "gun", shape = "glock", color = C(38, 38, 40),
+	desc = "Full auto. Yours in every run.", uses = 999, dmg = 4, knock = 6, cd = 0.07, range = 55, pellets = 1, spread = 0.025, exclusive = true }))
+
 -- tuning on top of the values above: way more reach and knockback for every item
 local RANGE_MULT = { melee = 1.7, gun = 1.5, spray = 1.6 }
 local KNOCK_MULT = 1.8
@@ -99,6 +103,7 @@ local SFX = {
 	NailGun = { use = "NailShot" },
 	SaltShotgun = { use = "ShotgunShot", after = "ShotgunPump" },
 	PotatoCannon = { use = "CannonShot", speed = 0.8 },
+	Glock18 = { use = "GlockShot" },
 }
 for id, s in SFX do if byId[id] then byId[id].sfx = s end end
 return { list = List, byId = byId, rarity = RARITY }

@@ -68,7 +68,7 @@ local function find(list: { any }, word: string?): any
 end
 
 local HELP = "cash <n> | runcash <n> | give <item> | clearitems | ult <id> | allults | allmaps | heal | brut | god | start [map] [diff] | "
-	.. "revive | money2 | next | killghost | bring | ragdoll [power] | monster <id|off> | event plane|van|train | leave | endrun"
+	.. "revive | money2 | glock | next | killghost | bring | ragdoll [power] | monster <id|off> | event plane|van|train | leave | endrun"
 
 local CMD: { [string]: (p: Player, a: string?, b: string?) -> (boolean, string) } = {}
 
@@ -131,6 +131,13 @@ end
 CMD.revive = function(p)
 	if Run.revive(p) then return true, "Revived" end
 	return false, "You are not dead in a run"
+end
+
+CMD.glock = function(p)
+	local on = not p:GetAttribute("GlockPass")
+	p:SetAttribute("GlockPass", on)
+	if on and p:GetAttribute("InMatch") then Inventory.give(p, "Glock18") end
+	return true, "Glock 18 pass " .. (on and "ON" or "OFF") .. " (this session)"
 end
 
 CMD.money2 = function(p)
@@ -269,6 +276,18 @@ function Admin.start()
 		local ok, msg = Admin.run(p, line)
 		print("[Admin] " .. p.Name .. " > " .. line .. " -> " .. msg)
 		return ok, msg
+	end
+	if RunService:IsStudio() then
+		-- Studio photo hooks (thumbnails): DebugGhostAt = CFrame puts the ghost there,
+		-- DebugKnock = Vector3 hits her that way (its length = knock power)
+		RS:GetAttributeChangedSignal("DebugGhostAt"):Connect(function()
+			local cf = RS:GetAttribute("DebugGhostAt")
+			if typeof(cf) == "CFrame" and Ghost.alive() then Ghost.current.model:PivotTo(cf) end
+		end)
+		RS:GetAttributeChangedSignal("DebugKnock"):Connect(function()
+			local v = RS:GetAttribute("DebugKnock")
+			if typeof(v) == "Vector3" and Ghost.alive() then Ghost.hit(nil, v.Unit, v.Magnitude, 1) end
+		end)
 	end
 	local function onPlayer(p: Player)
 		p:SetAttribute("IsAdmin", isFullAdmin(p))

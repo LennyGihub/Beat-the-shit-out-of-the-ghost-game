@@ -51,6 +51,7 @@ end
 
 local function adminPassId(): number return tonumber(RS:GetAttribute("AdminPassId")) or 0 end
 local function money2PassId(): number return tonumber(RS:GetAttribute("Money2PassId")) or 0 end
+local function glockPassId(): number return tonumber(RS:GetAttribute("GlockPassId")) or 0 end
 local prices = {} :: { [string]: number }
 
 local function refresh()
@@ -64,6 +65,14 @@ local function refresh()
 				r.btn.Text = "SOON"; r.btn.BackgroundColor3 = Color3.fromRGB(70, 64, 58)
 			else
 				r.btn.Text = "R$ " .. tostring(prices.money2 or "?"); r.btn.BackgroundColor3 = Color3.fromRGB(30, 120, 60)
+			end
+		elseif r.kind == "glock" then
+			if lp:GetAttribute("GlockPass") then
+				r.btn.Text = "OWNED"; r.btn.BackgroundColor3 = Color3.fromRGB(60, 110, 50)
+			elseif glockPassId() == 0 then
+				r.btn.Text = "SOON"; r.btn.BackgroundColor3 = Color3.fromRGB(70, 64, 58)
+			else
+				r.btn.Text = "R$ " .. tostring(prices.glock or "?"); r.btn.BackgroundColor3 = Color3.fromRGB(30, 120, 60)
 			end
 		elseif r.kind == "revive" then
 			r.btn.Text = "ON DEATH"; r.btn.BackgroundColor3 = Color3.fromRGB(70, 64, 58)
@@ -176,14 +185,21 @@ function Shop.init(toggle: (boolean) -> ())
 		if id == 0 then Shop.result(false, "2X money is not on sale yet") return end
 		MarketplaceService:PromptGamePassPurchase(lp, id)
 	end)
+	robuxRow(1992, "GLOCK 18", Color3.fromRGB(200, 200, 205), "Permanent: a full-auto Glock 18 in your hotbar at the start of every run. 999 rounds.", "glock", function()
+		if lp:GetAttribute("GlockPass") then return end
+		local id = glockPassId()
+		if id == 0 then Shop.result(false, "The Glock 18 is not on sale yet") return end
+		MarketplaceService:PromptGamePassPurchase(lp, id)
+	end)
 	robuxRow(1995, "REVIVE", Color3.fromRGB(230, 70, 60), "Died in a run? Come back right where you fell, full health, same run. Offered on the death screen.", "revive", function()
 		Shop.result(true, "Revives are offered when you die in a run")
 	end)
 	task.spawn(function()
-		local id = money2PassId()
-		if id > 0 then
-			local ok, info = pcall(function() return MarketplaceService:GetProductInfo(id, Enum.InfoType.GamePass) end)
-			if ok and info and info.PriceInRobux then prices.money2 = info.PriceInRobux; refresh() end
+		for key, id in { money2 = money2PassId(), glock = glockPassId() } do
+			if id > 0 then
+				local ok, info = pcall(function() return MarketplaceService:GetProductInfo(id, Enum.InfoType.GamePass) end)
+				if ok and info and info.PriceInRobux then prices[key] = info.PriceInRobux; refresh() end
+			end
 		end
 	end)
 	do
@@ -213,7 +229,7 @@ function Shop.init(toggle: (boolean) -> ())
 	statusText = Grunge.text(panel, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0.04, 0.92), Size = UDim2.fromScale(0.92, 0.045), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 10 })
 	local close = button(panel, "LEAVE", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(0.96, 0.095), Size = UDim2.fromScale(0.2, 0.052), ZIndex = 12, Rotation = 1.5, BackgroundColor3 = Color3.fromRGB(45, 40, 36), Modal = true })
 	close.MouseButton1Click:Connect(function() Sfx.play("Click"); Shop.close() end)
-	for _, a in { "Cash", "OwnedUlts", "EquippedUlt", "Owned", "IsAdmin", "Money2" } do lp:GetAttributeChangedSignal(a):Connect(refresh) end
+	for _, a in { "Cash", "OwnedUlts", "EquippedUlt", "Owned", "IsAdmin", "Money2", "GlockPass" } do lp:GetAttributeChangedSignal(a):Connect(refresh) end
 	-- Studio test hook: player attribute ShopTab = "robux" | "maps" | "all" opens the shop on that tab
 	if game:GetService("RunService"):IsStudio() then
 		lp:GetAttributeChangedSignal("ShopTab"):Connect(function()

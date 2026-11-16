@@ -90,14 +90,18 @@ end)
 
 -- Studio-only test hook: player attribute DebugCam = CFrame puts the camera there (nil = normal camera)
 if game:GetService("RunService"):IsStudio() then
-	lp:GetAttributeChangedSignal("DebugCam"):Connect(function()
-		local cam = workspace.CurrentCamera
+	-- held every frame (other tools may reset the camera type)
+	game:GetService("RunService"):BindToRenderStep("DebugCam", Enum.RenderPriority.Camera.Value + 1, function()
 		local cf = lp:GetAttribute("DebugCam")
 		if typeof(cf) == "CFrame" then
+			local cam = workspace.CurrentCamera
 			cam.CameraType = Enum.CameraType.Scriptable
 			cam.CFrame = cf
-		else
-			cam.CameraType = Enum.CameraType.Custom
+			-- DebugCamFP = true: first-person shot (the hands show), else a free camera (hands hidden)
+			cam.Focus = lp:GetAttribute("DebugCamFP") and cf or cf * CFrame.new(0, 0, -20)
 		end
+	end)
+	lp:GetAttributeChangedSignal("DebugCam"):Connect(function()
+		if typeof(lp:GetAttribute("DebugCam")) ~= "CFrame" then workspace.CurrentCamera.CameraType = Enum.CameraType.Custom end
 	end)
 end

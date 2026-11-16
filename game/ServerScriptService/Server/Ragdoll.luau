@@ -23,6 +23,32 @@ local broken = {} :: { { part: BasePart, parent: Instance } }
 local pieces = {} :: { BasePart } -- the cut-up walls around holes (removed on restore)
 local rng = Random.new()
 
+-- Studio-only photo hook (thumbnails): ReplicatedStorage attribute DebugFreeze = seconds. That long after a
+-- knock-out or a wall smash, the ghost and the flying rubble stop in mid-air; clearing the attribute lets them go.
+local RunService = game:GetService("RunService")
+local RS = game:GetService("ReplicatedStorage")
+local frozen = {} :: { BasePart }
+local function freezeLater(parts: { BasePart }, attr: string?)
+	local t = RunService:IsStudio() and RS:GetAttribute(attr or "DebugFreeze")
+	if type(t) ~= "number" then return end
+	task.delay(t, function()
+		for _, p in parts do
+			if p.Parent and not p.Anchored then
+				p.Anchored = true
+				table.insert(frozen, p)
+			end
+		end
+	end)
+end
+if RunService:IsStudio() then
+	RS:GetAttributeChangedSignal("DebugFreeze"):Connect(function()
+		if RS:GetAttribute("DebugFreeze") == nil then
+			for _, p in frozen do if p.Parent then p.Anchored = false end end
+			table.clear(frozen)
+		end
+	end)
+end
+
 local function structure(): Instance?
 	local m = workspace:FindFirstChild("Mansion")
 	return m and m:FindFirstChild("Structure")
@@ -42,6 +68,7 @@ end
 -- only the hole's volume flies off as chunks. Everything is put back by restoreWalls.
 local HOLE_W = 6
 local function chunks(cf: CFrame, size: Vector3, src: BasePart, push: Vector3)
+	local made = {} :: { BasePart }
 	local nx = math.clamp(math.round(size.X / 2), 1, 4)
 	local ny = math.clamp(math.round(size.Y / 2), 1, 5)
 	local nz = math.clamp(math.round(size.Z / 2), 1, 4)
@@ -60,9 +87,11 @@ local function chunks(cf: CFrame, size: Vector3, src: BasePart, push: Vector3)
 				c.AssemblyLinearVelocity = push * rng:NextNumber(20, 50) + Vector3.new(rng:NextNumber(-1, 1), rng:NextNumber(0, 1), rng:NextNumber(-1, 1)) * 18
 				c.AssemblyAngularVelocity = Vector3.new(rng:NextNumber(-8, 8), rng:NextNumber(-8, 8), rng:NextNumber(-8, 8))
 				Debris:AddItem(c, rng:NextNumber(6, 9))
+				table.insert(made, c)
 			end
 		end
 	end
+	freezeLater(made)
 end
 
 local function carve(p: BasePart, holeCF: CFrame, holeSize: Vector3, push: Vector3): boolean
@@ -182,6 +211,9 @@ function Ragdoll.start(g, vel: Vector3)
 	local hrp = g.hrp :: BasePart
 	g.rag.saved[hrp] = { hrp.CanCollide, hrp.Massless, hrp.CollisionGroup }
 	hrp.CanCollide = false; hrp.CollisionGroup = GROUP
+	local body = {} :: { BasePart }
+	for _, d in m:GetDescendants() do if d:IsA("BasePart") then table.insert(body, d) end end
+	freezeLater(body, "DebugFreezeBody")
 	-- launch every body part (they are separate assemblies now) + a silly spin
 	local spin = Vector3.new(rng:NextNumber(-14, 14), rng:NextNumber(-10, 10), rng:NextNumber(-14, 14))
 	for p in g.rag.saved do

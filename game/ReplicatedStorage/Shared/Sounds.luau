@@ -36,7 +36,9 @@ return {
 	ShotgunShot = { ids = { 113543931016554 }, volume = 1 },
 	ShotgunPump = { ids = { 113837896417526 }, volume = 0.8 },
 	CannonShot = { ids = { 75759053218900 }, volume = 1 },
-	Vacuum = { ids = { 109052160967104 }, volume = 0.55 }, -- leaf blower / shop vac loop
+	Vacuum = { ids = { 109052160967104 }, volume = 0.55 },
+	GlockShot = { ids = { 139943212269145 }, volume = 0.6 },
+	GlockEquip = { ids = { 3606135620 }, volume = 0.8 }, -- leaf blower / shop vac loop
 	FireLoop = { ids = { 9079463756 }, volume = 0.7 }, -- burning wood crackle
 	DemonRoar = { ids = { 136542763428450 }, volume = 1 },
 	DemonLaugh = { ids = { 6841094848 }, volume = 1 },
