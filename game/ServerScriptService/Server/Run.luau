@@ -135,17 +135,13 @@ function Run.startFight()
 	for _, p in list do Remotes.Fx:FireClient(p, "Intro", level, def.title, def.rarity) end
 	task.wait(5)
 	if #Run.matchPlayers() == 0 then busy = false; return end
-	local spawns = MapLoader.ghostSpawns()
-	local best, bestD = spawns[1], -1
-	for _, sp in spawns do
-		local d = math.huge
-		for _, p in Run.matchPlayers() do
-			local hrp = hrpOf(p)
-			if hrp then d = math.min(d, (hrp.Position - sp).Magnitude) end
-		end
-		if d > bestD and d < math.huge then best, bestD = sp, d end
+	-- a random spot in the house, never right next to a player
+	local players = {}
+	for _, p in Run.matchPlayers() do
+		local hrp = hrpOf(p)
+		if hrp then table.insert(players, hrp.Position) end
 	end
-	Ghost.spawn(level, best, def.id)
+	Ghost.spawn(level, MapLoader.randomGhostSpawn(players, 28), def.id)
 	setState("Fight", "")
 	busy = false
 end

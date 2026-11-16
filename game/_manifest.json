@@ -1,12 +1,12 @@
 {
- "place": "Beat the Woman ghost ! (placeId: 128775098237449)",
+ "place": "Jump The Ghost (placeId: 128775098237449)",
  "scripts": [
   {
    "file": "ReplicatedStorage/Shared/Config.luau",
    "instance": "game.ReplicatedStorage.Shared.Config",
    "class": "ModuleScript",
    "bytes": 2833,
-   "sha1": "018a41855826e470a4b28ccb8793e6f1787e9735"
+   "sha1": "0d5b1a5e1c5a16e4a417579b5c94db358aeb09c4"
   },
   {
    "file": "ReplicatedStorage/Shared/ItemModels.luau",
@@ -26,15 +26,15 @@
    "file": "ReplicatedStorage/Shared/Maps.luau",
    "instance": "game.ReplicatedStorage.Shared.Maps",
    "class": "ModuleScript",
-   "bytes": 4466,
-   "sha1": "3d4de8409834eae15f10bd31b5f65e249844448f"
+   "bytes": 4546,
+   "sha1": "3c0251ca4b43c1787864c2885b20275781973ead"
   },
   {
    "file": "ReplicatedStorage/Shared/Monsters.luau",
    "instance": "game.ReplicatedStorage.Shared.Monsters",
    "class": "ModuleScript",
-   "bytes": 4250,
-   "sha1": "eac1b59f4ce3fa93b34e02c4a734546b4eff5010"
+   "bytes": 4514,
+   "sha1": "491b8d7d07414985b0d9c762851f2357152137a5"
   },
   {
    "file": "ReplicatedStorage/Shared/Sounds.luau",
@@ -54,8 +54,8 @@
    "file": "ServerScriptService/Main.server.luau",
    "instance": "game.ServerScriptService.Main",
    "class": "Script",
-   "bytes": 3247,
-   "sha1": "9f58ecfeb6cdab8bb71b3d4256a6f9bbb5ef7ce5"
+   "bytes": 4441,
+   "sha1": "4b0b9d28d62b67391ecac33240373bedb7feff06"
   },
   {
    "file": "ServerScriptService/Server/Abilities.luau",
@@ -68,15 +68,15 @@
    "file": "ServerScriptService/Server/Admin.luau",
    "instance": "game.ServerScriptService.Server.Admin",
    "class": "ModuleScript",
-   "bytes": 12182,
-   "sha1": "3d2227c200c91c3f9b750e5695e50265297e8f20"
+   "bytes": 12357,
+   "sha1": "7dd4c15122b4a1942561ec941ffa729c061d6d2b"
   },
   {
    "file": "ServerScriptService/Server/Combat.luau",
    "instance": "game.ServerScriptService.Server.Combat",
    "class": "ModuleScript",
-   "bytes": 19781,
-   "sha1": "e3c2813d928d65c0e3c89d2580bd71007060d471"
+   "bytes": 19877,
+   "sha1": "9a278e480c577fee02ac453032134865df15cabb"
   },
   {
    "file": "ServerScriptService/Server/Data.luau",
@@ -89,8 +89,8 @@
    "file": "ServerScriptService/Server/Events.luau",
    "instance": "game.ServerScriptService.Server.Events",
    "class": "ModuleScript",
-   "bytes": 14425,
-   "sha1": "106745df159ad02f482f3811fb2b5d171f3a0050"
+   "bytes": 14743,
+   "sha1": "c1ff1b2a1c1f00abb2e5e994c5d66d07beb5ae67"
   },
   {
    "file": "ServerScriptService/Server/Fire.luau",
@@ -117,8 +117,8 @@
    "file": "ServerScriptService/Server/Ghost.luau",
    "instance": "game.ServerScriptService.Server.Ghost",
    "class": "ModuleScript",
-   "bytes": 26733,
-   "sha1": "1983398d68980d459a1f4d826c9f6fc8a249c565"
+   "bytes": 27018,
+   "sha1": "38cd5168e5296ea051c2fd964fc6e3990002e067"
   },
   {
    "file": "ServerScriptService/Server/GoblinLoot.luau",
@@ -131,8 +131,8 @@
    "file": "ServerScriptService/Server/Inventory.luau",
    "instance": "game.ServerScriptService.Server.Inventory",
    "class": "ModuleScript",
-   "bytes": 20572,
-   "sha1": "cc4977312908ddac2cf30722dd88b433b3983ce4"
+   "bytes": 20583,
+   "sha1": "01aa01a32c9d3c2b627b2df1e70b14c853a58ed3"
   },
   {
    "file": "ServerScriptService/Server/Lobby.luau",
@@ -145,8 +145,8 @@
    "file": "ServerScriptService/Server/MapLoader.luau",
    "instance": "game.ServerScriptService.Server.MapLoader",
    "class": "ModuleScript",
-   "bytes": 4462,
-   "sha1": "6e2c6cf78b03ddb8de3c5bbb82fddbb9aa068c9c"
+   "bytes": 6680,
+   "sha1": "7c4352e1cffaccf3e680c3f0c796486e027f30f3"
   },
   {
    "file": "ServerScriptService/Server/Monetization.luau",
@@ -173,8 +173,8 @@
    "file": "ServerScriptService/Server/Run.luau",
    "instance": "game.ServerScriptService.Server.Run",
    "class": "ModuleScript",
-   "bytes": 15648,
-   "sha1": "6c6e96193d065fd08cf16ae1c7e5584e9412ab35"
+   "bytes": 15561,
+   "sha1": "980984d2b0dffbfb61ff5b8e38192860dd0df56d"
   },
   {
    "file": "ServerScriptService/Server/UltRunner.luau",

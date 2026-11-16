@@ -114,6 +114,53 @@ function MapLoader.ghostSpawns(): { Vector3 }
 end
 
 -- where players stand when a fight starts
+-- a random spot anywhere in the house for the next monster: on a floor, under a roof, with room to stand (no
+-- wall or furniture), at least minDist from every player. Falls back to a random one of the map's spawn points
+-- (one far enough from the players if possible). Returns a point ~4.6 studs above the floor (Ghost.spawn
+-- puts walkers on the floor itself).
+local spawnRng = Random.new()
+function MapLoader.randomGhostSpawn(players: { Vector3 }, minDist: number): Vector3
+	local function farEnough(v: Vector3): boolean
+		for _, p in players do
+			if (p - v).Magnitude < minDist then return false end
+		end
+		return true
+	end
+	local live = workspace:FindFirstChild("Mansion")
+	local struct = live and live:FindFirstChild("Structure")
+	if live and struct then
+		local rp = RaycastParams.new()
+		rp.FilterType = Enum.RaycastFilterType.Include
+		rp.FilterDescendantsInstances = { struct }
+		local op = OverlapParams.new()
+		op.FilterType = Enum.RaycastFilterType.Include
+		op.FilterDescendantsInstances = { live }
+		for _ = 1, 40 do
+			-- the house footprint (x -80..80, z -60..60); from below the upper floor or from above it
+			local x, z = spawnRng:NextNumber(-74, 74), spawnRng:NextNumber(-54, 54)
+			local down = workspace:Raycast(Vector3.new(x, spawnRng:NextNumber() < 0.6 and 18 or 42, z), Vector3.new(0, -30, 0), rp)
+			-- floors only up to the upper storey (y 23): above 30 is the top of a tall hall's ceiling (the attic)
+			if down and down.Normal.Y > 0.9 and down.Position.Y < 30 then
+				local floorY = down.Position.Y
+				local at = Vector3.new(x, floorY + 4.6, z)
+				local roof = workspace:Raycast(Vector3.new(x, floorY + 3, z), Vector3.new(0, 40, 0), rp)
+				if roof and farEnough(at) then
+					local clear = true
+					for _, h in workspace:GetPartBoundsInBox(CFrame.new(x, floorY + 4.2, z), Vector3.new(5, 7, 5), op) do
+						if h.Position.Y + h.Size.Y / 2 > floorY + 0.6 and h.Transparency < 1 then clear = false; break end
+					end
+					if clear then return at end
+				end
+			end
+		end
+	end
+	local spots = MapLoader.ghostSpawns()
+	local ok = {}
+	for _, s in spots do if farEnough(s) then table.insert(ok, s) end end
+	if #ok == 0 then ok = spots end
+	return ok[spawnRng:NextInteger(1, #ok)]
+end
+
 function MapLoader.spawnInside(): Vector3
 	local live = workspace:FindFirstChild("Mansion")
 	local v = live and live:GetAttribute("SpawnInside")

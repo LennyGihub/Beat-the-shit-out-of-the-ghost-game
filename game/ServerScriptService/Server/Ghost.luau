@@ -343,14 +343,21 @@ local function stepLaunched(g, dt: number)
 end
 
 -- Called by combat for punches, throws and the ultimate shockwave.
-function Ghost.hit(by: Player?, dir: Vector3, knock: number, damage: number)
+-- obj = the hit is a thrown object (furniture, a thrown item): the monster's objTaken applies
+function Ghost.hit(by: Player?, dir: Vector3, knock: number, damage: number, obj: boolean?)
 	local g = Ghost.current
 	if not g or g.state == "Dead" or g.state == "Spawn" then return end
 	if g.model:GetAttribute("Vanish") then g.model:SetAttribute("Vanish", false) end
-	-- the Pirate's raised shield blocks hits from the front
+	if obj then damage *= (g.def :: any).objTaken or 1 end
+	-- the Pirate's raised shield blocks hits from the front: punches and swings almost fully, thrown objects by half
 	if Abilities.blocks and Abilities.blocks(g, dir) then
-		damage *= 0.2
-		knock = 0
+		if obj then
+			damage *= 0.5
+			knock *= 0.5
+		else
+			damage *= 0.2
+			knock = 0
+		end
 		Remotes.Fx:FireAllClients("ShieldBlock", g.hrp.Position + g.hrp.CFrame.LookVector * 2)
 	end
 	Ghost.damage(damage, by)

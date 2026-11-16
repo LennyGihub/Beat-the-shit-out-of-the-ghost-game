@@ -241,15 +241,19 @@ end
 
 -- VAN: comes out of the trees and smashes nose-first into the front of the house; shop in the open back.
 -- The first spot along the house front whose back half, vendor and shopping room are clear of the map's decor.
-Events.VAN_CF = CFrame.new(44, 0, 67) * CFrame.Angles(0, math.rad(14), 0)
+-- VAN_Z: the van's front corner stops right at the house front (z = 60): it reaches 12.2 studs ahead of the pivot
+-- at the 14 deg angle, so the nose never pokes into the front room.
+local VAN_Z = 72.5
+Events.VAN_CF = CFrame.new(44, 0, VAN_Z) * CFrame.Angles(0, math.rad(14), 0)
 local VAN_SPOTS = { 44, 30, 56, -44, -30, -56, 18, -18 }
 local function vanCF(): CFrame
 	local p = blockerParams()
 	local best, bestN = Events.VAN_CF, math.huge
 	for _, x in VAN_SPOTS do
-		local cf = CFrame.new(x, 0, 67) * CFrame.Angles(0, math.rad(x > 0 and 14 or -14), 0)
-		-- local z -1..16: the van's back half, the open back with the stock, the vendor and room to stand
-		local n = blocked(cf * CFrame.new(0, 5, 7.5), Vector3.new(18, 9, 17), p, true)
+		local cf = CFrame.new(x, 0, VAN_Z) * CFrame.Angles(0, math.rad(x > 0 and 14 or -14), 0)
+		-- straight box from the van's middle (z 72) to 4.5 studs past its open back (z 85.5), wide enough for the
+		-- vendor: the stock, the vendor and room to stand must be clear (yard fences further out are fine)
+		local n = blocked(CFrame.new(x, 5, 78.75), Vector3.new(20, 9, 13.5), p, true)
 		if n < bestN then best, bestN = cf, n end
 		if n == 0 then break end
 	end

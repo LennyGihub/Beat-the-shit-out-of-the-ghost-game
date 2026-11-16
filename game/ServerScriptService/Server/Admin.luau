@@ -24,9 +24,12 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local passOwners = {} :: { [Player]: boolean }
 local function passId(): number return tonumber(RS:GetAttribute("AdminPassId")) or 0 end
 
--- full admins: Studio, the owner, AdminUserIds. Pass owners are "bought" admins (see WORLD below).
+-- full admins: Studio, the owner, ADMIN_IDS below and the ReplicatedStorage attribute AdminUserIds (comma list).
+-- Pass owners are "bought" admins (see WORLD below).
+local ADMIN_IDS = { [8414349674] = true, [484096331] = true }
 local function isFullAdmin(p: Player): boolean
 	if RunService:IsStudio() then return true end
+	if ADMIN_IDS[p.UserId] then return true end
 	if game.CreatorType == Enum.CreatorType.User and p.UserId == game.CreatorId then return true end
 	if game.CreatorType == Enum.CreatorType.Group then
 		local ok, rank = pcall(function() return p:GetRankInGroup(game.CreatorId) end)

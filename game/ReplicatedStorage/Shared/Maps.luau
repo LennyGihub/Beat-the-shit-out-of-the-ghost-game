@@ -1,5 +1,6 @@
 --!strict
 -- The 12 maps (the Mansion is free, the rest are bought at the Hooded Dealer) and the 4 difficulties.
+-- Prices: one good run (8-10 kills on Normal, ~1800-2600 cash) unlocks the next map.
 -- Every map is a ServerStorage.Maps.<id> model built on the same footprint as the Mansion
 -- (house x -80..80, z -60..60, front door at z = 60 facing the yard), so the run, events and yard all fit.
 -- light = the "inside" lighting the client uses for that map (tint, ambient, colour grade).
@@ -14,27 +15,27 @@ end
 local List: { Map } = {
 	{ id = "Mansion", name = "The Mansion", price = 0, desc = "Where it all started. Two floors, a grand hall, a lot of furniture.", color = C(150, 120, 90),
 		light = light(C(255, 240, 226), C(30, 27, 25), -0.38, 0.22) },
-	{ id = "Hospital", name = "St. Agnes Hospital", price = 2500, desc = "Flickering wards, gurneys and a long white corridor.", color = C(150, 200, 180),
+	{ id = "Hospital", name = "St. Agnes Hospital", price = 1200, desc = "Flickering wards, gurneys and a long white corridor.", color = C(150, 200, 180),
 		light = light(C(225, 255, 235), C(30, 36, 34), -0.45, 0.25, 1.6) },
-	{ id = "School", name = "Blackwood High", price = 4000, desc = "Lockers, classrooms and a gym nobody left.", color = C(200, 170, 90),
+	{ id = "School", name = "Blackwood High", price = 1400, desc = "Lockers, classrooms and a gym nobody left.", color = C(200, 170, 90),
 		light = light(C(255, 236, 200), C(28, 26, 22), -0.35, 0.22, 1.2) },
-	{ id = "Church", name = "Chapel of Thorns", price = 6000, desc = "Pews, candles and a long nave to throw things down.", color = C(170, 120, 200),
+	{ id = "Church", name = "Chapel of Thorns", price = 1600, desc = "Pews, candles and a long nave to throw things down.", color = C(170, 120, 200),
 		light = light(C(255, 220, 190), C(40, 30, 32), -0.3, 0.28, 1.5) },
-	{ id = "Motel", name = "Last Stop Motel", price = 8000, desc = "A row of cheap rooms off a buzzing neon hallway.", color = C(230, 80, 120),
+	{ id = "Motel", name = "Last Stop Motel", price = 1800, desc = "A row of cheap rooms off a buzzing neon hallway.", color = C(230, 80, 120),
 		light = light(C(255, 210, 230), C(34, 22, 30), -0.2, 0.25) },
-	{ id = "Ship", name = "The Ghost Ship", price = 9500, desc = "A rotting galleon adrift at sea: the hold, the deck, the captain's cabin. Don't fall in.", color = C(60, 120, 160),
+	{ id = "Ship", name = "The Ghost Ship", price = 2000, desc = "A rotting galleon adrift at sea: the hold, the deck, the captain's cabin. Don't fall in.", color = C(60, 120, 160),
 		light = light(C(210, 228, 255), C(22, 30, 40), -0.3, 0.25, 1.3) },
-	{ id = "Farm", name = "Hollow Creek Farm", price = 11000, desc = "A farmhouse and its barn, hay everywhere.", color = C(190, 140, 70),
+	{ id = "Farm", name = "Hollow Creek Farm", price = 2200, desc = "A farmhouse and its barn, hay everywhere.", color = C(190, 140, 70),
 		light = light(C(255, 226, 180), C(34, 28, 20), -0.3, 0.22) },
-	{ id = "Asylum", name = "Ravenhill Asylum", price = 15000, desc = "Padded cells and iron beds. She was a patient here.", color = C(120, 160, 150),
+	{ id = "Asylum", name = "Ravenhill Asylum", price = 2400, desc = "Padded cells and iron beds. She was a patient here.", color = C(120, 160, 150),
 		light = light(C(215, 240, 230), C(24, 30, 30), -0.55, 0.3, 1.3) },
-	{ id = "Hotel", name = "Hotel Morrow", price = 20000, desc = "A red-carpet lobby, a ballroom and long hallways.", color = C(200, 60, 50),
+	{ id = "Hotel", name = "Hotel Morrow", price = 2600, desc = "A red-carpet lobby, a ballroom and long hallways.", color = C(200, 60, 50),
 		light = light(C(255, 214, 190), C(36, 24, 20), -0.25, 0.25) },
-	{ id = "Prison", name = "Cellblock 9", price = 26000, desc = "Two tiers of cells around a concrete yard.", color = C(140, 140, 150),
+	{ id = "Prison", name = "Cellblock 9", price = 2800, desc = "Two tiers of cells around a concrete yard.", color = C(140, 140, 150),
 		light = light(C(225, 230, 255), C(22, 24, 30), -0.5, 0.3, 1.2) },
-	{ id = "Factory", name = "Dollmaker's Factory", price = 33000, desc = "Workbenches, crates and a thousand doll heads.", color = C(220, 150, 160),
+	{ id = "Factory", name = "Dollmaker's Factory", price = 3000, desc = "Workbenches, crates and a thousand doll heads.", color = C(220, 150, 160),
 		light = light(C(255, 225, 215), C(32, 26, 26), -0.3, 0.25) },
-	{ id = "Funeral", name = "Greaves Funeral Home", price = 40000, desc = "Coffins, a viewing room and the morgue downstairs.", color = C(110, 90, 140),
+	{ id = "Funeral", name = "Greaves Funeral Home", price = 3200, desc = "Coffins, a viewing room and the morgue downstairs.", color = C(110, 90, 140),
 		light = light(C(230, 220, 255), C(24, 22, 30), -0.45, 0.3, 1.2) },
 }
 

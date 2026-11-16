@@ -4,6 +4,7 @@
 -- hp/speed/dmg/reward multiply the level-based values in Config.Ghost / Config.Reward.
 -- hover = root height above the floor (floaters ~4.6, walkers = their hip height).
 -- ability = what the Abilities module runs (cd = seconds between uses).
+-- objTaken = damage multiplier for thrown objects (furniture, thrown items); 1 if left out.
 export type Monster = {
 	id: string, name: string, title: string, rarity: number, template: string, color: Color3,
 	hp: number, speed: number, dmg: number, reward: number, hover: number, walker: boolean, scale: number,
@@ -24,11 +25,13 @@ local List: { Monster } = {
 		hp = 1, speed = 1, dmg = 1, reward = 1, hover = 4.6, walker = false, scale = 1,
 		ability = { kind = "scare", cd = 18 }, desc = "Vanishes and screams in your face." }),
 	m({ id = "Demon", name = "The Red Demon", title = "THE RED DEMON", rarity = 1, template = "Demon", color = C(200, 40, 30),
-		hp = 1.4, speed = 0.95, dmg = 1.3, reward = 1.5, hover = 0, walker = true, scale = 1, solid = true, -- solid: no walking through walls
+		hp = 1.15, speed = 0.95, dmg = 1.3, reward = 1.5, hover = 0, walker = true, scale = 1, solid = true, -- solid: no walking through walls
+		objTaken = 1.25, -- furniture and thrown items hurt him more
 		ability = { kind = "levitateThrow", cd = 6.5, range = 70, lift = 1.3, aim = 0.45, power = 150, dmg = 22 },
 		desc = "Lifts the furniture with his mind and hurls it at you." }),
 	m({ id = "Pirate", name = "The Pirate", title = "THE PIRATE", rarity = 1, template = "Pirate", color = C(226, 214, 186),
-		hp = 1.35, speed = 1.05, dmg = 1.2, reward = 1.5, hover = 0, walker = true, scale = 1, solid = true,
+		hp = 1.1, speed = 1.05, dmg = 1.2, reward = 1.5, hover = 0, walker = true, scale = 1, solid = true,
+		objTaken = 1.25, -- furniture and thrown items hurt him more (his shield only halves them, see Ghost.hit)
 		-- shield bash: braces (shield up, blocks hits from the front), then rushes you and sends you flying into the walls
 		ability = { kind = "shieldBash", cd = 5.5, min = 7, max = 45, brace = 0.7, speed = 72, power = 135, dmg = 14, wallDmg = 16 },
 		desc = "A skeleton with a cutlass and a shield. His shield bash throws you into the walls; his raised shield blocks hits." }),

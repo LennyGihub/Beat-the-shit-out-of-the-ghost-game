@@ -195,7 +195,8 @@ end
 
 -- a landed hit: combo, ultimate buffs, knockback, brutality, effects. Returns the damage dealt.
 -- charge (0..1, already validated) = a charged attack: more damage and knockback
-function Combat.registerHit(player: Player, dir: Vector3, hitPos: Vector3, baseDmg: number, baseKnock: number, knockPerCombo: number?, comboStep: number?, charge: number?): number
+-- obj = a thrown item hit (Ghost.hit applies the monster's objTaken)
+function Combat.registerHit(player: Player, dir: Vector3, hitPos: Vector3, baseDmg: number, baseKnock: number, knockPerCombo: number?, comboStep: number?, charge: number?, obj: boolean?): number
 	local s = st(player)
 	local now = os.clock()
 	local step = comboStep or 1
@@ -221,7 +222,7 @@ function Combat.registerHit(player: Player, dir: Vector3, hitPos: Vector3, baseD
 		dmg *= 1 + c * CH.DamageBonus
 		knock *= 1 + c * CH.KnockBonus
 	end
-	Ghost.hit(player, dir, knock, dmg)
+	Ghost.hit(player, dir, knock, dmg, obj)
 	local ls = (buff(s, "lifesteal") :: number?) or 0
 	if ls > 0 then heal(player, dmg * ls) end
 	local burn = buff(s, "burnOnHit")
@@ -403,7 +404,7 @@ local function checkThrown()
 					knockMul = isUlt and 1.5 or 1
 				end
 				local vel = prim.AssemblyLinearVelocity
-				Ghost.hit(by, vel, math.min(60 + w * 14, 170) * knockMul, dmg)
+				Ghost.hit(by, vel, math.min(60 + w * 14, 170) * knockMul, dmg, true)
 				if s and not isUlt then s.brut = math.min(BR.Max, s.brut + BR.ThrowHit * Combat.stat(by, "brutality")) end
 				Remotes.Fx:FireAllClients("Hit", prim.Position, math.max(s and s.combo or 0, 4), dmg, isUlt, by)
 				Furniture.smash(m, vel, 120)

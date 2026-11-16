@@ -19,5 +19,13 @@
   "17": "Maps.luau",
   "18": "Input.luau",
   "19": "Settings.luau",
-  "20": "GoblinLoot.luau"
+  "20": "GoblinLoot.luau",
+  "21": "Abilities.luau",
+  "22": "Admin.luau",
+  "23": "Combat.luau",
+  "24": "Run.startFight",
+  "25": "MapLoader.luau",
+  "26": "SawAudio.luau",
+  "27": "onPlayer",
+  "28": "Friends.luau"
 }
