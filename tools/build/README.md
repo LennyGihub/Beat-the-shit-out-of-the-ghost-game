@@ -24,6 +24,11 @@ The PS2 textures are MaterialVariants in MaterialService.AssistantMaterials (mad
    each queue room's AI shed with a hand-built log cabin, and brightens the clearing (fill lights, lamp posts, ground).
    The lobby's Lighting preset itself is PRESETS.lobby in Client/Fx.luau.
 -> `maps/furnish.luau` (prepend `lib2 furn_lib maplib`: extra furniture + detail in every map but the Mansion/Factory).
+-> `maps/detail.luau` (LAST, on every map incl. the Mansion; prepend a `local TARGET = "<MapId>"` line + `lib2 furn_lib`):
+   the detail + fun pass: baseboards / crown trim and themed things on every inside wall (they break with the wall),
+   ceiling beams, floor clutter, facade details (downpipes, chimneys or roof vents, ivy or rust, wall lamps), extra
+   throwable props and 5 red EXPLOSIVE BARRELS per map (Furniture attribute Explosive; Config.Barrel, UltRunner.barrel).
+   Everything it makes has the attribute Detail = true and is replaced when it is re-run.
 -> `demon`, `animatronic`, `titan` (hand-built part monsters: ServerStorage.Monsters.Demon / .Animatronic = The Party Bear / .Titan = The Flayed Giant;
    standalone, no lib2 needed: `python3 tools/studio.py luau Edit tools/build/animatronic.luau`).
 
