@@ -8,6 +8,7 @@ local Players = game:GetService("Players")
 local Remotes = require(script.Parent.Remotes)
 local Sounds = require(game:GetService("ReplicatedStorage").Shared.Sounds)
 local Furniture = require(script.Parent.Furniture)
+local Loot = require(script.Parent.GoblinLoot) -- the Goblin's "steal"
 
 local Abilities = {}
 local rng = Random.new()
@@ -73,6 +74,7 @@ function Abilities.interrupt(g)
 		Remotes.Fx:FireClient(g.ab.victim, "Released")
 	end
 	if g.ab.kind == "blackout" then fx("BlackoutEnd") end
+	if g.ab.kind == "steal" then Remotes.Fx:FireAllClients("GoblinUse", g.model, "", "stop", 0) end
 	if g.ab.kind == "levitateThrow" and g.ab.obj then Abilities.dropLevitated(g.ab) end
 	g.ab = nil
 	g.model:SetAttribute("Ability", "")
@@ -105,7 +107,9 @@ function Abilities.try(g, G, now: number, target: Player?, thrp: BasePart?, dist
 	if a.kind == "scare" or not target or not thrp then return false end
 	if now < (g.nextAbility or 0) then return false end
 	local k = a.kind
-	if k == "grabThrow" then
+	if k == "steal" then
+		return Loot.try(g, G, now, a, target, thrp, dist)
+	elseif k == "grabThrow" then
 		if dist > a.range or warded(target) then return false end
 		start(g, G, "wind", 0.55, { victim = target })
 		fx("AbilityWind", g.hrp.Position, k)
@@ -233,6 +237,7 @@ function Abilities.step(g, G, dt: number, now: number, target: Player?, thrp: Ba
 	local a = g.def.ability
 	local pos = g.hrp.Position
 	local k = ab.kind
+	if k == "steal" then return Loot.step(g, G, dt, now, target, thrp, hoverY) end
 	local function face(p: Vector3)
 		local f = Vector3.new(p.X, pos.Y, p.Z)
 		if (f - pos).Magnitude > 0.1 then g.ao.CFrame = CFrame.lookAt(pos, f).Rotation end
@@ -414,6 +419,7 @@ end
 
 -- lingering things: gas clouds, hellfire marks, mirror clones
 function Abilities.tick(G, dt: number, now: number)
+	Loot.tick(G, dt, now)
 	for i = #clouds, 1, -1 do
 		local c = clouds[i]
 		if now > c.untilT then
@@ -489,10 +495,19 @@ function Abilities.hitClone(from: Vector3, dir: Vector3, range: number): Vector3
 end
 
 function Abilities.clear()
+	Loot.clear()
 	for _, c in clones do if c.model.Parent then c.model:Destroy() end end
 	clones = {}
 	clouds = {}
 	marks = {}
 end
+
+-- the Goblin gives back a stolen item (knocked out, killed, despawned)
+Abilities.dropLoot = Loot.drop
+
+Loot.init({
+	setPhase = setPhase, start = start, finish = finish, hover = hover, flat = flat, warded = warded,
+	hrpOf = hrpOf, matchPlayers = matchPlayers, fx = fx,
+})
 
 return Abilities

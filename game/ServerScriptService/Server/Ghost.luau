@@ -12,6 +12,7 @@ local Abilities = require(script.Parent.Abilities)
 local Ragdoll = require(script.Parent.Ragdoll)
 local Fire = require(script.Parent.Fire)
 local Monsters = require(RS.Shared.Monsters)
+local MapLoader = require(script.Parent.MapLoader)
 local C = Config.Ghost
 
 local Ghost = {}
@@ -175,6 +176,7 @@ end
 
 function Ghost.despawn()
 	local g = Ghost.current
+	if g and g.loot then Abilities.dropLoot(g, Ghost) end
 	if g and g.model then g.model:Destroy() end
 	Ghost.current = nil
 	Abilities.clear()
@@ -204,6 +206,7 @@ local function pickTarget(g): (Player?, BasePart?)
 end
 
 local function die(g)
+	if g.loot then Abilities.dropLoot(g, Ghost) end
 	setState(g, "Dead")
 	Abilities.clear()
 	g.model:SetAttribute("Shadow", false)
@@ -339,6 +342,7 @@ function Ghost.hit(by: Player?, dir: Vector3, knock: number, damage: number)
 		return
 	end
 	if knock >= Ragdoll.MIN_KNOCK then
+		if g.loot then Abilities.dropLoot(g, Ghost) end -- the Goblin lets go of what he stole
 		g.model:SetAttribute("Vanish", false)
 		setState(g, "Ragdoll", 4.5)
 		Ragdoll.start(g, ragVel)
@@ -403,6 +407,41 @@ local function claw(g, target: Player?, thrp: BasePart?)
 	end
 end
 
+-- knocked out of the house (through a window or the front door, under the floor, into an outside wall):
+-- teleported back in at the closest monster spawn point
+local OUT_MARGIN = 1.5
+local function outside(p: Vector3): boolean
+	local H = Config.House
+	return p.X < H.Min.X - OUT_MARGIN or p.X > H.Max.X + OUT_MARGIN or p.Z < H.Min.Z - OUT_MARGIN or p.Z > H.Max.Z + OUT_MARGIN
+		or p.Y < H.Min.Y - 10 or p.Y > H.Max.Y + 10
+end
+
+local function bringBack(g)
+	if g.state == "Ragdoll" then Ragdoll.stop(g) end
+	g.launch = nil
+	local from = g.hrp.Position
+	local best, bestD = nil, math.huge
+	for _, sp in MapLoader.ghostSpawns() do
+		local d = (sp - from).Magnitude
+		if d < bestD then best, bestD = sp, d end
+	end
+	local sp = best or MapLoader.spawnInside()
+	local at = Vector3.new(sp.X, floorBelow(sp, g.rp) + g.hover, sp.Z)
+	local look = Vector3.new(-sp.X, 0, -sp.Z) -- facing the middle of the house
+	look = look.Magnitude > 0.1 and look.Unit or Vector3.new(0, 0, -1)
+	g.model:PivotTo(CFrame.lookAt(at, at + look))
+	g.ao.CFrame = CFrame.lookAt(Vector3.zero, look)
+	g.vel = Vector3.zero
+	g.lv.VectorVelocity = Vector3.zero
+	g.hrp.AssemblyLinearVelocity = Vector3.zero
+	g.hrp.AssemblyAngularVelocity = Vector3.zero
+	g.path = nil
+	Remotes.Fx:FireAllClients("GhostVanish", from)
+	Remotes.Fx:FireAllClients("GhostVanish", at)
+	setState(g, "Recover", 0.8)
+end
+Ghost.outside = outside
+
 function Ghost.step(dt: number)
 	local g = Ghost.current
 	if not g or not g.model.Parent then return end
@@ -434,6 +473,10 @@ function Ghost.step(dt: number)
 		Remotes.Fx:FireAllClients("TimeResume", g.hrp.Position, stored)
 		Ghost.damage(stored, nil)
 		if not Ghost.alive() then return end
+	end
+	do
+		local body = (s == "Ragdoll" and g.model:FindFirstChild("UpperTorso") or g.hrp) :: BasePart
+		if outside(body.Position) then bringBack(g); return end
 	end
 	local target, thrp = pickTarget(g)
 	g.target = target

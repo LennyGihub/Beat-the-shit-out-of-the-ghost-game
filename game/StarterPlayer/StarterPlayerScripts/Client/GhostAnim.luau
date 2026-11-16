@@ -53,6 +53,43 @@ local function abilityPose(ab: string, phase: string, t: number, since: number):
 	local s = math.sin
 	local p = {}
 	local a = math.min(1, since / 0.35)
+	if ab == "steal" then -- the Goblin: snatch an item, cackle, then use it
+		if phase == "reach" then
+			p.Root = A(0.15 * a, 0, 0); p.Waist = A(0.35 * a, 0, 0); p.Neck = A(-0.35 * a, 0, 0)
+			p.RightShoulder = A(1.55 * a, 0, -0.2); p.RightElbow = A(0.15, 0, 0); p.RightWrist = A(-0.3 * a, 0, 0)
+			p.LeftShoulder = A(1.3 * a, 0, 0.25); p.LeftElbow = A(0.3, 0, 0)
+		elseif phase == "laugh" then
+			p.Root = A(-0.12, 0, 0); p.Waist = A(-0.25 + s(t * 28) * 0.06, 0, 0); p.Neck = A(-0.55 + s(t * 30) * 0.15, 0, s(t * 17) * 0.1)
+			p.RightShoulder = A(2.6, 0, -0.45); p.RightElbow = A(0.3, 0, 0)
+			p.LeftShoulder = A(0.4, 0, 0.6); p.LeftElbow = A(1.3, 0, 0)
+		elseif phase == "swingWind" then
+			p.Waist = A(-0.2 * a, -0.45 * a, 0); p.Neck = A(0.1, 0.3 * a, 0)
+			p.RightShoulder = A(2.9 * a, 0, -0.35 * a); p.RightElbow = A(0.9 * a, 0, 0); p.RightWrist = A(0.3 * a, 0, 0)
+			p.LeftShoulder = A(0.7 * a, 0, 0.4); p.LeftElbow = A(0.5, 0, 0)
+		elseif phase == "swing" then
+			p.Root = A(0.2, 0, 0); p.Waist = A(0.4, 0.55, 0); p.Neck = A(-0.2, -0.3, 0)
+			p.RightShoulder = A(0.35, 0, 0.6); p.RightElbow = A(0.1, 0, 0); p.RightWrist = A(-0.3, 0, 0)
+			p.LeftShoulder = A(-0.3, 0, -0.3)
+		elseif phase == "aim" or phase == "fire" then
+			local kick = phase == "fire" and math.abs(s(t * 48)) * 0.18 or 0
+			p.Neck = A(-0.1, 0, 0); p.Waist = A(0.05, 0, 0)
+			p.RightShoulder = A(1.57 * a + kick, 0, 0); p.RightElbow = A(-kick * 0.5, 0, 0); p.RightWrist = A(0, 0, 0)
+			p.LeftShoulder = A(1.35 * a, 0, 0.55 * a); p.LeftElbow = A(0.4, 0, 0)
+		elseif phase == "throwWind" then
+			p.Waist = A(-0.3 * a, -0.35 * a, 0)
+			p.RightShoulder = A(2.9 * a, 0, 0.25 * a); p.RightElbow = A(1.0 * a, 0, 0)
+			p.LeftShoulder = A(1.0 * a, 0, 0.3)
+		elseif phase == "throw" then
+			p.Root = A(0.2, 0, 0); p.Waist = A(0.35, 0.4, 0)
+			p.RightShoulder = A(1.0, 0, 0.1); p.RightElbow = A(0.1, 0, 0)
+			p.LeftShoulder = A(-0.3, 0, -0.3)
+		elseif phase == "spray" then
+			p.Waist = A(0.1, s(t * 2.5) * 0.25, 0)
+			p.RightShoulder = A(1.5 + s(t * 35) * 0.04, 0, 0); p.RightElbow = A(0, 0, 0)
+			p.LeftShoulder = A(1.3, 0, 0.5); p.LeftElbow = A(0.5, 0, 0)
+		end
+		return p
+	end
 	if ab == "levitateThrow" then
 		if phase == "lift" or phase == "aim" then -- right hand raised, fingers spread, controlling the object
 			local shake = phase == "aim" and s(t * 40) * 0.05 or 0
@@ -194,6 +231,12 @@ local function target(state: string, t: number, sinceState: number): { [string]:
 		elseif g:GetAttribute("MonsterId") == "Butcher" or g:GetAttribute("MonsterId") == "HollowKing" or g:GetAttribute("MonsterId") == "Demon" then
 			p.Waist = (p.Waist or CFrame.new()) * A(0.25, 0, 0) -- hunched
 			p.Neck = A(-0.2, 0, s(t * 1.3) * 0.08)
+		elseif g:GetAttribute("MonsterId") == "Goblin" then
+			p.Waist = (p.Waist or CFrame.new()) * A(0.3, 0, 0) -- hunched, sneaky
+			p.Neck = A(-0.35, s(t * 1.7) * 0.25, s(t * 2.3) * 0.08) -- looking around for something to steal
+			if (g:GetAttribute("Loot") or "") ~= "" then -- holding a stolen item out in front
+				p.RightShoulder = A(0.75 + s(t * 6) * 0.08, 0, -0.1); p.RightElbow = A(0.5, 0, 0)
+			end
 		end
 	else -- Chase / Spawn / Vanish: dangling float with twitches
 		if t > twitch.t then

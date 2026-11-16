@@ -65,6 +65,53 @@ function Inventory.give(p: Player, id: string): boolean
 	return false
 end
 
+-- the Goblin: can he steal something from p? (never the game-pass Glock)
+local function stealable(s): boolean
+	local it = s and Items.byId[s.id]
+	return it ~= nil and not it.exclusive
+end
+function Inventory.has(p: Player): boolean
+	local i = get(p)
+	for n = 1, SLOTS do if stealable(i.slots[n]) then return true end end
+	return false
+end
+
+-- he snatches the item in your hands (else a random one): returns its id and uses left
+function Inventory.take(p: Player): (string?, number?)
+	local i = get(p)
+	local pick = (i.sel > 0 and stealable(i.slots[i.sel])) and i.sel or nil
+	if not pick then
+		local c = {}
+		for n = 1, SLOTS do if stealable(i.slots[n]) then table.insert(c, n) end end
+		if #c == 0 then return nil, nil end
+		pick = c[rng:NextInteger(1, #c)]
+	end
+	local s = i.slots[pick]
+	i.slots[pick] = nil
+	if i.sel == pick then i.sel = 0 end
+	publish(p)
+	return s.id, s.uses
+end
+
+-- an item comes back with `uses` left (stacks on the same item). false = no free slot
+function Inventory.giveUses(p: Player, id: string, uses: number): boolean
+	if not Items.byId[id] or uses <= 0 then return false end
+	local i = get(p)
+	for n = 1, SLOTS do
+		local s = i.slots[n]
+		if s and s.id == id then s.uses += uses; publish(p); return true end
+	end
+	for n = 1, SLOTS do
+		if not i.slots[n] then
+			i.slots[n] = { id = id, uses = uses }
+			if i.sel == 0 then i.sel = n end
+			publish(p)
+			return true
+		end
+	end
+	return false
+end
+
 local function consume(p: Player, n: number, amount: number?)
 	local i = get(p)
 	local s = i.slots[n]
@@ -454,6 +501,9 @@ function Inventory.clearWorld()
 end
 
 function Inventory.start()
+	Ghost.hasItem = Inventory.has
+	Ghost.takeItem = Inventory.take
+	Ghost.giveItem = Inventory.giveUses
 	Remotes.Use.OnServerEvent:Connect(onUse)
 	Remotes.Select.OnServerEvent:Connect(function(p, n)
 		if type(n) ~= "number" then return end
