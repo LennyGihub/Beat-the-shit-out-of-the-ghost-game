@@ -14,6 +14,7 @@ local Fire = require(script.Parent.Fire)
 local Monsters = require(RS.Shared.Monsters)
 local MapLoader = require(script.Parent.MapLoader)
 local Fury = require(script.Parent.Fury)
+local Evolved = require(script.Parent.Evolved)
 local C = Config.Ghost
 
 local Ghost = {}
@@ -93,6 +94,7 @@ Ghost.blockWalls = blockWalls
 
 local function setState(g, s: string, dur: number?)
 	if g.state == "Ability" and s ~= "Ability" and g.ab then Abilities.interrupt(g) end
+	if g.state == "Evo" and s ~= "Evo" and g.evo then Evolved.interrupt(g) end -- an evolved power cut short
 	if (g.state == "Roar" or g.state == "Lunge") and s ~= g.state then -- a fury move cut short
 		g.fury = nil
 		g.model:SetAttribute("FuryPhase", "")
@@ -115,13 +117,29 @@ local function template(def): Model
 	return (t or SS:WaitForChild("GhostTemplate")) :: Model
 end
 
-function Ghost.spawn(level: number, pos: Vector3, monsterId: string?)
+-- how many players are in the run (the monster is scaled to them)
+local function teamSize(): number
+	local n = 0
+	for _, p in Players:GetPlayers() do
+		if p:GetAttribute("InMatch") then n += 1 end
+	end
+	-- Studio test hook: ReplicatedStorage attribute DebugTeamSize = n
+	local dbg = game:GetService("RunService"):IsStudio() and RS:GetAttribute("DebugTeamSize")
+	if type(dbg) == "number" then n = dbg end
+	return math.max(1, n)
+end
+
+-- evoTier = nil for a normal monster, 1.. for an EVOLVED one (1 = the first of the run, kept beatable)
+function Ghost.spawn(level: number, pos: Vector3, monsterId: string?, evoTier: number?)
 	Ghost.despawn()
 	Ragdoll.restoreWalls() -- walls she smashed through last time are back
 	Fire.clear() -- and the fires are out
 	local def = Monsters.byId[monsterId or "Woman"] or Monsters.byId.Woman
+	if evoTier then def = Monsters.evolved(def.id, evoTier) end
 	local m = template(def):Clone()
 	m.Name = "Ghost"
+	if (def :: any).evolved then Evolved.dress(m, def) end
+	if def.scale ~= 1 then m:ScaleTo(def.scale) end
 	local hrp = m:WaitForChild("HumanoidRootPart") :: BasePart
 	-- an auto-rigged monster keeps its Humanoid for the joints, but must not walk/fall by itself
 	local hum = m:FindFirstChildOfClass("Humanoid")
@@ -156,7 +174,10 @@ function Ghost.spawn(level: number, pos: Vector3, monsterId: string?)
 	ao.Attachment0 = att; ao.Mode = Enum.OrientationAlignmentMode.OneAttachment
 	ao.MaxTorque = math.huge; ao.Responsiveness = 30; ao.Parent = hrp
 	m:PivotTo(CFrame.new(pos))
-	local maxHp = math.floor((C.BaseHP + (level - 1) * C.HPPerLevel) * def.hp * Ghost.diff.hp)
+	-- more players = a stronger, faster monster (Config.Scaling)
+	local SC = Config.Scaling
+	local extra = teamSize() - 1
+	local maxHp = math.floor((C.BaseHP + (level - 1) * C.HPPerLevel) * def.hp * Ghost.diff.hp * (1 + extra * SC.HpPerPlayer))
 	m:SetAttribute("HP", maxHp)
 	m:SetAttribute("MaxHP", maxHp)
 	m:SetAttribute("Level", level)
@@ -165,6 +186,8 @@ function Ghost.spawn(level: number, pos: Vector3, monsterId: string?)
 	m:SetAttribute("Rarity", def.rarity)
 	m:SetAttribute("Walker", def.walker)
 	m:SetAttribute("Ability", "")
+	m:SetAttribute("Evolved", (def :: any).evolved == true)
+	m:SetAttribute("TeamSize", extra + 1)
 	-- the whole monster reaches each client in one go (with streaming on, its parts could otherwise arrive
 	-- after the model and its animation would have nothing to drive)
 	m.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
@@ -177,10 +200,14 @@ function Ghost.spawn(level: number, pos: Vector3, monsterId: string?)
 		damageBy = {} :: { [Player]: number }, target = nil :: Player?, rp = structParams(),
 		frozenUntil = 0, slowMult = 1, slowUntil = 0, vulnMult = 1, vulnUntil = 0, burns = {}, ts = nil :: any, launch = nil :: any, fire = nil :: { Instance }?,
 		def = def, hover = hover, bob = def.walker and 0 or 0.35, ab = nil :: any, nextAbility = os.clock() + 5,
-		speedMult = def.speed * Ghost.diff.speed, dmgMult = def.dmg * Ghost.diff.dmg,
+		speedMult = def.speed * Ghost.diff.speed * (1 + extra * SC.SpeedPerPlayer),
+		dmgMult = def.dmg * Ghost.diff.dmg * (1 + extra * SC.DmgPerPlayer),
+		evolved = (def :: any).evolved == true, evo = nil :: any, nextPower = os.clock() + 6,
+		cdBase = ((def :: any).atk or 1) * math.max(0.6, 1 - extra * SC.CooldownPerPlayer),
 	}
 	Ghost.current = g
 	Fury.init(g)
+	if g.evolved then Evolved.onSpawn(g, Ghost) end
 	setState(g, "Spawn", 2.2)
 	Remotes.Fx:FireAllClients("GhostSpawn", pos, def.id)
 	return g
@@ -251,7 +278,7 @@ function Ghost.freeze(t: number)
 	local g = Ghost.current
 	if not g or g.state == "Dead" then return end
 	g.frozenUntil = math.max(g.frozenUntil, os.clock() + t)
-	if g.state == "WindUp" or g.state == "Swipe" or g.state == "Vanish" or g.state == "Scare" or g.state == "Ability" or g.state == "Roar" or g.state == "Lunge" then
+	if g.state == "WindUp" or g.state == "Swipe" or g.state == "Vanish" or g.state == "Scare" or g.state == "Ability" or g.state == "Roar" or g.state == "Lunge" or g.state == "Evo" then
 		g.model:SetAttribute("Vanish", false)
 		g.fury = nil
 		g.model:SetAttribute("FuryPhase", "")
@@ -455,7 +482,7 @@ local function claw(g, target: Player?, thrp: BasePart?)
 	local to = thrp.Position - g.hrp.Position
 	if to.Magnitude <= C.SwipeReach * ((g.def :: any).reach or 1) then
 		-- enraged: a smash punch that launches you through the inside walls
-		if g.enraged and g.comboLeft == 0 and Ghost.hitPlayer then
+		if Fury.smashes(g) and g.comboLeft == 0 and Ghost.hitPlayer then
 			Fury.smashPunch(g, Ghost, target, thrp)
 			return
 		end
@@ -542,6 +569,11 @@ function Ghost.step(dt: number)
 	end
 	Abilities.tick(Ghost, dt, now)
 	Fury.tick(g)
+	-- Studio photo hook: ReplicatedStorage attribute DebugFreezeGhost = true holds the monster still
+	if game:GetService("RunService"):IsStudio() and RS:GetAttribute("DebugFreezeGhost") then
+		g.lv.VectorVelocity = Vector3.zero
+		return
+	end
 	-- burning (damage over time) + its fire
 	for i = #g.burns, 1, -1 do
 		local b = g.burns[i]
@@ -642,6 +674,7 @@ function Ghost.step(dt: number)
 		if phase < 0.12 and dist > 14 then speed *= 0.1 elseif phase < 0.3 and dist > 14 then speed *= 1.8 end
 		moveToward(g.def.solid and pathPoint(g, thrp.Position) or thrp.Position, speed)
 		if Fury.roarCheck(g, Ghost, now, target) then return end
+		if g.evolved and Evolved.chase(g, Ghost, now, target, thrp, dist) then return end
 		if now >= g.slowUntil and Abilities.try(g, Ghost, now, target, thrp, dist) then return end
 		if dist < C.AttackRange * ((g.def :: any).reach or 1) and now > g.nextAttack and not Fury.inGrace(target) then
 			g.comboLeft = Fury.comboCount(g)
@@ -699,6 +732,8 @@ function Ghost.step(dt: number)
 		end
 	elseif s == "Ability" then
 		Abilities.step(g, Ghost, dt, now, target, thrp, hoverY)
+	elseif s == "Evo" then
+		Evolved.step(g, Ghost, dt, now, target, thrp, hoverY)
 	elseif s == "Roar" then
 		Fury.stepRoar(g, Ghost, now, thrp, hoverY)
 	elseif s == "Lunge" then

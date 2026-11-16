@@ -370,8 +370,16 @@ function Fx.handle(kind: string, ...)
 		-- args: ghost number, monster title, rarity
 		local rar = args[3] or 0
 		local tag = rar == 3 and "LEGENDARY - " or (rar == 2 and "RARE - " or "")
-		HUD.banner(args[2] or "SHE IS IN THE HOUSE", tag .. "GHOST " .. tostring(args[1]), 4)
-		Sfx.play("GhostWhisper", { Volume = 1 })
+		if args[4] then
+			-- an EVOLVED monster (every 3rd ghost)
+			HUD.banner(args[2] or "SOMETHING WORSE", "EVOLVED MONSTER - GHOST " .. tostring(args[1]), 5)
+			Sfx.play("GhostWhisper", { Volume = 1.2, PlaybackSpeed = 0.6 })
+			Sfx.play("Ultimate", { Volume = 0.6, PlaybackSpeed = 0.5 })
+			Fx.shake(0.5)
+		else
+			HUD.banner(args[2] or "SHE IS IN THE HOUSE", tag .. "GHOST " .. tostring(args[1]), 4)
+			Sfx.play("GhostWhisper", { Volume = 1 })
+		end
 	elseif kind == "Victory" then
 		HUD.banner("GHOST DESTROYED", "+$" .. tostring(args[1]) .. " RUN CASH", 4)
 		Sfx.play("Cash")
@@ -387,10 +395,10 @@ local PRESETS = {
 	inside = { ClockTime = 19.1, Brightness = 1.4, Exposure = 0, Ambient = Color3.fromRGB(30, 27, 25), Outdoor = Color3.fromRGB(105, 110, 138),
 		AtmDensity = 0.12, AtmColor = Color3.fromRGB(58, 60, 78), AtmDecay = Color3.fromRGB(36, 36, 50), AtmHaze = 0.6, AtmGlare = 0,
 		Tint = Color3.fromRGB(255, 240, 226), Sat = -0.38, Contrast = 0.22 },
-	-- the lobby: a dark forest at night (cold blue fog, lanterns and glowing mushrooms do the lighting)
-	lobby = { ClockTime = 21.5, Brightness = 1.0, Exposure = 0, Ambient = Color3.fromRGB(36, 40, 46), Outdoor = Color3.fromRGB(78, 88, 108),
-		AtmDensity = 0.5, AtmColor = Color3.fromRGB(46, 54, 62), AtmDecay = Color3.fromRGB(16, 20, 24), AtmHaze = 2.2, AtmGlare = 0,
-		Tint = Color3.fromRGB(205, 220, 235), Sat = -0.3, Contrast = 0.24 },
+	-- the lobby: a forest clearing on a bright moonlit night (you can see the trees and cabins; lanterns add warmth)
+	lobby = { ClockTime = 21.5, Brightness = 2.2, Exposure = 0.3, Ambient = Color3.fromRGB(58, 64, 80), Outdoor = Color3.fromRGB(118, 132, 166),
+		AtmDensity = 0.3, AtmColor = Color3.fromRGB(84, 98, 120), AtmDecay = Color3.fromRGB(36, 44, 58), AtmHaze = 1.4, AtmGlare = 0,
+		Tint = Color3.fromRGB(218, 228, 242), Sat = -0.18, Contrast = 0.14 },
 }
 PRESETS.yard = table.clone(PRESETS.inside)
 PRESETS.yard.Exposure = 0.35

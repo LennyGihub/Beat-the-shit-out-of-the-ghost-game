@@ -157,6 +157,16 @@ local function grab(g, G, victim: Player, id: string, uses: number)
 	attach(g, it)
 end
 
+-- the Goblin King pulls a weapon of his own out of his sack (no owner: nothing to give back)
+function Loot.arm(g, id: string, uses: number?)
+	local it = Items.byId[id]
+	if not it or g.loot then return end
+	g.loot = { id = id, it = it, uses = uses or 12, owner = nil, nextUse = os.clock() + 1.5 }
+	g.model:SetAttribute("Loot", id)
+	attach(g, it)
+	for _, p in H.matchPlayers() do toast(p, "THE GOBLIN KING PULLS OUT A " .. upper(it.name)) end
+end
+
 -- one use of the stolen item; at 0 it breaks
 local function spend(g, n: number?)
 	local L = g.loot

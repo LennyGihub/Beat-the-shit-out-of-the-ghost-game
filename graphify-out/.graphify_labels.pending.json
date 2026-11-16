@@ -1,5 +1,5 @@
 {
-  "0": "Ghost.luau",
+  "0": "Furniture.smash",
   "1": "UltFx.luau",
   "2": "ItemModels.luau",
   "3": "ClientMain.client.luau",
@@ -20,6 +20,13 @@
   "18": "Input.luau",
   "19": "HUD.luau",
   "20": "GoblinLoot.luau",
-  "21": "RoomPickUI.luau",
+  "21": "Evolved.luau",
+  "22": "Abilities.luau",
+  "23": "Ghost.luau",
+  "24": "Combat.luau",
+  "25": "Ragdoll.luau",
+  "26": "Ghost.spawn",
+  "27": "Fury.luau",
+  "28": "ShopArt.luau",
   "33": "Shared/Quests.luau"
 }

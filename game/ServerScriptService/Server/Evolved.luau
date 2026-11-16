@@ -1,0 +1,481 @@
+--!strict
+-- EVOLVED monsters (every 3rd ghost, Shared/Monsters.evolved): the same monster, dressed up and with one extra power.
+--   Evolved.dress(model, def)   right after the template is cloned (before it is scaled): colours, bones, sceptre...
+--   Evolved.onSpawn(g, G)       once it exists (the Goblin King arms himself)
+--   Evolved.chase(g, G, ...)    every frame in Chase: maybe start the power (returns true when it took over)
+--   Evolved.step(g, G, ...)     while g.state == "Evo"
+--   Evolved.interrupt(g)        the power was cut short (knocked back, frozen)
+-- Powers (def.power.kind): doubles (Violet Widow), army (Burning Captain), snap (Golden Bear), eat (Bone Giant),
+-- armed (Goblin King). The Demon Lord's is his own ability with count = 3 (Abilities levitateThrow).
+local Players = game:GetService("Players")
+local RS = game:GetService("ReplicatedStorage")
+local Config = require(RS.Shared.Config)
+local Remotes = require(script.Parent.Remotes)
+local Abilities = require(script.Parent.Abilities)
+local Furniture = require(script.Parent.Furniture)
+local Ragdoll = require(script.Parent.Ragdoll)
+local Fire = require(script.Parent.Fire)
+local Fury = require(script.Parent.Fury)
+
+local Evolved = {}
+local rng = Random.new()
+local C = Config.Ghost
+
+-- dressing -------------------------------------------------------------------
+local function rgb(r: number, g: number, b: number): Color3 return Color3.fromRGB(r, g, b) end
+local function close(a: Color3, b: Color3): boolean
+	return math.abs(a.R - b.R) + math.abs(a.G - b.G) + math.abs(a.B - b.B) < 0.035
+end
+-- swap colours: { from, to, material? }
+local function recolor(m: Model, map: { { any } })
+	for _, d in m:GetDescendants() do
+		if d:IsA("BasePart") then
+			for _, e in map do
+				if close(d.Color, e[1]) then
+					d.Color = e[2]
+					if e[3] then d.Material = e[3] end
+					break
+				end
+			end
+		end
+	end
+end
+local function named(m: Model, names: { string }): { BasePart }
+	local set = {}
+	for _, n in names do set[n] = true end
+	local out = {}
+	for _, d in m:GetDescendants() do
+		if d:IsA("BasePart") and set[d.Name] then table.insert(out, d) end
+	end
+	return out
+end
+local function paint(m: Model, names: { string }, color: Color3, mat: Enum.Material?, transparency: number?)
+	for _, p in named(m, names) do
+		p.Color = color
+		if mat then p.Material = mat end
+		if transparency then p.Transparency = transparency end
+	end
+end
+local function grow(m: Model, names: { string }, sx: number, sy: number, sz: number)
+	for _, p in named(m, names) do p.Size = Vector3.new(p.Size.X * sx, p.Size.Y * sy, p.Size.Z * sz) end
+end
+-- a new decoration part welded to a body part (rel = its place in the body part's space)
+local function add(on: BasePart, name: string, size: Vector3, rel: CFrame, color: Color3, mat: Enum.Material?, shape: Enum.PartType?): Part
+	local p = Instance.new("Part")
+	p.Name = name; p.Size = size; p.Color = color; p.Material = mat or Enum.Material.SmoothPlastic
+	if shape then p.Shape = shape end
+	p.TopSurface = Enum.SurfaceType.Smooth; p.BottomSurface = Enum.SurfaceType.Smooth
+	p.Anchored = false; p.CanCollide = false; p.CanTouch = false; p.CanQuery = false; p.Massless = true; p.CastShadow = false
+	p.CFrame = on.CFrame * rel
+	local w = Instance.new("WeldConstraint"); w.Part0 = on; w.Part1 = p; w.Parent = p
+	p.Parent = on.Parent
+	return p
+end
+local function glow(p: BasePart, color: Color3, range: number, brightness: number)
+	local l = Instance.new("PointLight"); l.Color = color; l.Range = range; l.Brightness = brightness; l.Shadows = false; l.Parent = p
+end
+local function tint(m: Model, color: Color3)
+	for _, d in m:GetDescendants() do
+		if d:IsA("PointLight") then d.Color = color
+		elseif d:IsA("ParticleEmitter") then d.Color = ColorSequence.new(color) end
+	end
+end
+local function body(m: Model, n: string): BasePart? return m:FindFirstChild(n) :: BasePart? end
+
+local BONE = rgb(206, 192, 166)
+local DRESS: { [string]: (m: Model) -> () } = {}
+
+-- the Violet Widow: purple skin, dark violet dress, glowing claws and eyes
+DRESS.Woman = function(m)
+	recolor(m, {
+		{ rgb(150, 172, 176), rgb(150, 96, 200) }, { rgb(138, 160, 160), rgb(66, 36, 104) },
+		{ rgb(200, 214, 210), rgb(255, 120, 255), Enum.Material.Neon }, { rgb(70, 20, 22), rgb(130, 30, 150) },
+	})
+	for _, s in named(m, { "EyeSocket" }) do
+		add(s, "EvoEye", Vector3.new(s.Size.X * 0.5, s.Size.Y * 0.5, 0.08), CFrame.new(0, 0, -s.Size.Z / 2 - 0.02), rgb(230, 120, 255), Enum.Material.Neon)
+	end
+	tint(m, rgb(190, 110, 255))
+	local torso = body(m, "UpperTorso")
+	if torso then glow(torso, rgb(170, 80, 255), 16, 1.2) end
+end
+
+-- the Demon Lord: darker, far more muscle, bigger horns, a sceptre in his right hand
+DRESS.Demon = function(m)
+	recolor(m, { { rgb(176, 34, 26), rgb(128, 18, 14) }, { rgb(204, 58, 42), rgb(176, 30, 20) }, { rgb(128, 22, 18), rgb(84, 10, 10) } })
+	grow(m, { "Bicep", "ShoulderCap", "Forearm", "Thigh", "Shin" }, 1.45, 1.05, 1.45)
+	grow(m, { "Pec", "Ab", "Traps" }, 1.15, 1.1, 1.7)
+	grow(m, { "Horn1", "Horn2", "Horn3", "Horn4" }, 1.35, 1.35, 1.35)
+	paint(m, { "Eye" }, rgb(255, 210, 60), Enum.Material.Neon)
+	local hand = body(m, "RightHand")
+	if hand then
+		local GOLD, DARK = rgb(196, 150, 50), rgb(26, 16, 14)
+		local staff = add(hand, "Sceptre", Vector3.new(0.6, 11.5, 0.6), CFrame.new(0, 1.6, -0.6), rgb(84, 54, 30), Enum.Material.Wood)
+		add(staff, "SceptreBand", Vector3.new(0.7, 0.35, 0.7), CFrame.new(0, 4.6, 0), GOLD, Enum.Material.Metal)
+		add(staff, "SceptreBand", Vector3.new(0.7, 0.35, 0.7), CFrame.new(0, -1.6, 0), GOLD, Enum.Material.Metal)
+		add(staff, "SceptreFoot", Vector3.new(0.6, 0.6, 0.6), CFrame.new(0, -5.8, 0) * CFrame.Angles(0, 0, math.pi / 4), GOLD, Enum.Material.Metal)
+		for i = 0, 3 do -- four claws holding the orb
+			local a = i * math.pi / 2
+			add(staff, "SceptreClaw", Vector3.new(0.25, 1.7, 0.25), CFrame.new(math.cos(a) * 0.55, 6.3, math.sin(a) * 0.55) * CFrame.Angles(math.sin(a) * 0.35, 0, -math.cos(a) * 0.35), GOLD, Enum.Material.Metal)
+		end
+		local orb = add(staff, "SceptreOrb", Vector3.new(1.6, 1.6, 1.6), CFrame.new(0, 6.6, 0), rgb(255, 60, 30), Enum.Material.Neon, Enum.PartType.Ball)
+		glow(orb, rgb(255, 70, 30), 18, 2)
+	end
+end
+
+-- the Goblin King: fat, forest green, a little crown
+DRESS.Goblin = function(m)
+	recolor(m, {
+		{ rgb(104, 178, 58), rgb(34, 92, 44) }, { rgb(78, 140, 42), rgb(22, 66, 32) }, { rgb(132, 204, 78), rgb(54, 122, 62) },
+		{ rgb(96, 166, 52), rgb(30, 84, 40) }, { rgb(40, 70, 25), rgb(14, 40, 20) },
+	})
+	grow(m, { "UpperTorso", "LowerTorso", "Chest" }, 1.4, 1, 1.5)
+	grow(m, { "Belly" }, 1.7, 1.25, 2.0)
+	grow(m, { "Belt", "Cheek", "Jaw" }, 1.4, 1.1, 1.4)
+	grow(m, { "LeftUpperArm", "RightUpperArm", "LeftUpperLeg", "RightUpperLeg", "Shoulder" }, 1.3, 1, 1.3)
+	local head = body(m, "Head")
+	if head then
+		local GOLD = rgb(250, 196, 52)
+		local top = head.Size.Y / 2
+		local r = math.min(head.Size.X, head.Size.Z) * 0.42
+		add(head, "CrownBand", Vector3.new(r * 2.1, 0.35, r * 2.1), CFrame.new(0, top + 0.5, 0), GOLD, Enum.Material.Metal)
+		for i = 0, 5 do
+			local a = i * math.pi / 3
+			add(head, "CrownSpike", Vector3.new(0.35, 0.9, 0.35), CFrame.new(math.cos(a) * r, top + 1.05, math.sin(a) * r), GOLD, Enum.Material.Metal)
+		end
+		add(head, "CrownGem", Vector3.new(0.4, 0.4, 0.2), CFrame.new(0, top + 0.5, -r - 0.08), rgb(220, 30, 40), Enum.Material.Neon)
+	end
+end
+
+-- the Burning Captain: red-hot bones, glowing ribs and blade, on fire
+DRESS.Pirate = function(m)
+	recolor(m, {
+		{ rgb(226, 214, 186), rgb(196, 48, 26) }, { rgb(184, 168, 136), rgb(130, 26, 16) }, { rgb(240, 234, 214), rgb(255, 190, 120) },
+		{ rgb(40, 112, 180), rgb(24, 20, 20) }, { rgb(30, 86, 144), rgb(60, 14, 10) }, { rgb(96, 84, 70), rgb(40, 26, 22) },
+	})
+	paint(m, { "Rib", "Sternum", "Spine" }, rgb(255, 110, 30), Enum.Material.Neon)
+	paint(m, { "Eye" }, rgb(255, 220, 80), Enum.Material.Neon)
+	paint(m, { "Blade", "Edge", "Tip" }, rgb(255, 140, 40), Enum.Material.Neon)
+	tint(m, rgb(255, 120, 40))
+	local torso, head = body(m, "UpperTorso"), body(m, "Head")
+	if torso then
+		Fire.flames(torso, 1.2)
+		glow(torso, rgb(255, 110, 40), 20, 1.6)
+	end
+	if head then Fire.flames(head, 0.6) end
+	for _, b in named(m, { "Tip" }) do Fire.flames(b, 0.4) end
+end
+
+-- the Golden Bear: gold suit, black top hat, empty black eyes with white pinpoints
+DRESS.Animatronic = function(m)
+	recolor(m, {
+		{ rgb(128, 76, 36), rgb(210, 166, 44) }, { rgb(96, 56, 26), rgb(160, 120, 28) }, { rgb(186, 128, 70), rgb(244, 216, 124) },
+		{ rgb(104, 66, 40), rgb(150, 112, 30) }, { rgb(160, 28, 34), rgb(16, 14, 18) }, { rgb(226, 182, 48), rgb(90, 30, 130) },
+	})
+	paint(m, { "Eye", "Shine" }, rgb(6, 6, 8))
+	paint(m, { "Iris" }, rgb(255, 255, 255), Enum.Material.Neon)
+	paint(m, { "Pupil" }, rgb(255, 255, 255), Enum.Material.Neon)
+	grow(m, { "Iris" }, 0.45, 0.45, 1)
+	for _, d in m:GetDescendants() do
+		if d:IsA("BasePart") and (close(d.Color, rgb(210, 166, 44)) or close(d.Color, rgb(244, 216, 124))) then d.Reflectance = 0.12 end
+	end
+	tint(m, rgb(255, 220, 110))
+end
+
+-- the Bone Giant: skull face, bare forearms, shins, hands and feet, an open rib cage and spine, pelvis showing
+DRESS.Titan = function(m)
+	local DARK, FLESH = rgb(44, 12, 10), rgb(128, 34, 26)
+	recolor(m, { { rgb(190, 78, 60), FLESH }, { rgb(158, 52, 40), rgb(104, 28, 22) }, { rgb(112, 32, 26), rgb(74, 20, 16) } })
+	-- skull
+	paint(m, { "Head", "HeadRound", "Skull", "SkullRound", "Chin", "ChinRound", "BrowRidge", "Gums" }, BONE)
+	paint(m, { "Cheek" }, DARK)
+	-- forearms, hands, shins, feet: bone, thinner; the muscle over them is gone
+	paint(m, { "Forearm", "ForearmRound", "Calf", "CalfRound" }, DARK, nil, 1)
+	local limbs = { "LeftLowerArm", "LeftLowerArmRound", "RightLowerArm", "RightLowerArmRound", "LeftLowerLeg", "LeftLowerLegRound", "RightLowerLeg", "RightLowerLegRound" }
+	paint(m, limbs, BONE)
+	grow(m, limbs, 0.6, 1, 0.6)
+	paint(m, { "LeftHand", "LeftHandRound", "RightHand", "RightHandRound", "Finger", "Thumb", "LeftFoot", "LeftFootRound", "RightFoot", "RightFootRound", "Toe" }, BONE)
+	-- hips and belly: the pelvis shows, the belly is an empty cavity behind the ribs
+	paint(m, { "Hips", "HipsRound" }, BONE)
+	paint(m, { "Ab", "AbRound", "Oblique", "Linea" }, DARK, nil, 1)
+	paint(m, { "LowerTorso", "LowerTorsoRound" }, DARK)
+	grow(m, { "LowerTorso", "LowerTorsoRound" }, 0.6, 1, 0.6)
+	local ut, lt = body(m, "UpperTorso"), body(m, "LowerTorso")
+	if ut then
+		local w, h, d = ut.Size.X, ut.Size.Y, ut.Size.Z
+		-- rib cage: bars across the front, down each side, and a sternum
+		for i = 0, 4 do
+			local y = h * 0.28 - i * h * 0.2
+			local rw = w * (1.04 - i * 0.05)
+			add(ut, "EvoRib", Vector3.new(rw, 0.3, 0.32), CFrame.new(0, y, -d / 2 - 0.22) * CFrame.Angles(0, 0, 0), BONE)
+			for _, sx in { -1, 1 } do
+				add(ut, "EvoRib", Vector3.new(0.32, 0.3, d * 1.05), CFrame.new(sx * rw / 2, y - 0.1, -0.05) * CFrame.Angles(0.12, 0, 0), BONE)
+			end
+		end
+		add(ut, "EvoSternum", Vector3.new(0.6, h * 0.95, 0.36), CFrame.new(0, -h * 0.08, -d / 2 - 0.34), BONE)
+		-- spine down the back, into the hips
+		for i = 0, 7 do
+			add(ut, "EvoVertebra", Vector3.new(0.75, 0.5, 0.7), CFrame.new(0, h * 0.45 - i * h * 0.24, d / 2 + 0.2), BONE)
+		end
+		for _, sx in { -1, 1 } do -- shoulder blades
+			add(ut, "EvoBlade", Vector3.new(w * 0.3, h * 0.42, 0.3), CFrame.new(sx * w * 0.24, h * 0.18, d / 2 + 0.18) * CFrame.Angles(0, 0, sx * 0.25), BONE)
+		end
+	end
+	if lt then
+		add(lt, "EvoSpine", Vector3.new(0.7, lt.Size.Y * 1.15, 0.7), CFrame.new(0, 0, 0), BONE)
+	end
+	-- a bone showing through each upper arm and thigh
+	for _, n in { "LeftUpperArm", "RightUpperArm", "LeftUpperLeg", "RightUpperLeg" } do
+		local p = body(m, n)
+		if p then
+			local sx = string.find(n, "Left") and -1 or 1
+			add(p, "EvoBone", Vector3.new(0.45, p.Size.Y * 0.9, 0.45), CFrame.new(sx * (p.Size.X / 2 + 0.05), 0, -p.Size.Z * 0.2), BONE)
+		end
+	end
+end
+
+function Evolved.dress(m: Model, def: any)
+	local f = DRESS[def.id]
+	if f then
+		local ok, err = pcall(f, m)
+		if not ok then warn("[Evolved] dress " .. tostring(def.id) .. ": " .. tostring(err)) end
+	end
+end
+
+-- powers ---------------------------------------------------------------------
+local function hrpOf(p: Player?): BasePart?
+	local ch = p and p.Character
+	local hum = ch and ch:FindFirstChildOfClass("Humanoid")
+	if not hum or hum.Health <= 0 then return nil end
+	return ch and ch:FindFirstChild("HumanoidRootPart") :: BasePart?
+end
+local function flat(v: Vector3): Vector3
+	local f = Vector3.new(v.X, 0, v.Z)
+	return f.Magnitude > 0.01 and f.Unit or Vector3.new(0, 0, -1)
+end
+local function cd(g, P): number return (P.cd or 10) * g.cdMult * rng:NextNumber(0.9, 1.15) end
+local function toastAll(msg: string)
+	for _, p in Players:GetPlayers() do
+		if p:GetAttribute("InMatch") then Remotes.Fx:FireClient(p, "Toast", msg) end
+	end
+end
+local function begin(g, G, kind: string, dur: number, data: { [string]: any }?)
+	local e = data or {}
+	e.kind = kind
+	g.evo = e
+	G.setState(g, "Evo", dur)
+	g.model:SetAttribute("EvoPower", kind)
+end
+local function done(g, G, P, recover: number?)
+	g.evo = nil
+	g.model:SetAttribute("EvoPower", "")
+	g.nextPower = os.clock() + cd(g, P)
+	g.nextAttack = math.max(g.nextAttack, os.clock() + 0.6)
+	G.setState(g, "Recover", recover or 0.4)
+end
+-- a point kept inside the house
+local function inHouse(G, p: Vector3): Vector3
+	local B = G.houseBounds()
+	return Vector3.new(math.clamp(p.X, B.min.X + 4, B.max.X - 4), p.Y, math.clamp(p.Z, B.min.Z + 4, B.max.Z - 4))
+end
+
+function Evolved.onSpawn(g, G)
+	g.evo = nil
+	g.nextPower = os.clock() + 6
+	local P = g.def.power
+	if P and P.kind == "armed" then
+		task.delay(2.4, function()
+			if G.current == g and g.state ~= "Dead" then Abilities.armGoblin(g, P.weapons[rng:NextInteger(1, #P.weapons)]) end
+		end)
+	end
+end
+
+-- the power was cut short: let go of what it held
+function Evolved.interrupt(g)
+	local e = g.evo
+	g.evo = nil
+	if g.model then
+		g.model:SetAttribute("EvoPower", "")
+		if e and e.kind == "doubles" then g.model:SetAttribute("Vanish", false) end
+	end
+	if e and e.obj then Abilities.ungrip(e.obj) end
+	g.nextPower = os.clock() + 4
+end
+
+function Evolved.chase(g, G, now: number, target: Player?, thrp: BasePart?, dist: number): boolean
+	local P = g.def.power
+	if not P or not target or not thrp or now < (g.nextPower or 0) or now < g.slowUntil then return false end
+	local k = P.kind
+	if k == "armed" then
+		-- lost his weapon: after a while he pulls another one out of the sack
+		if not g.loot then Abilities.armGoblin(g, P.weapons[rng:NextInteger(1, #P.weapons)]) end
+		g.nextPower = now + 16
+		return false
+	elseif k == "doubles" then
+		if dist > 70 or Abilities.cloneCount() > 0 or target:GetAttribute("Warded") then return false end
+		g.model:SetAttribute("Vanish", true)
+		Remotes.Fx:FireAllClients("GhostVanish", g.hrp.Position)
+		begin(g, G, k, 0.8)
+		return true
+	elseif k == "army" then
+		if dist > 80 or Abilities.cloneCount() > 0 then return false end
+		begin(g, G, k, 0.8)
+		Remotes.Fx:FireAllClients("AbilityWind", g.hrp.Position, "army")
+		toastAll("THE CAPTAIN THROWS HIS CREW AT YOU - PUNCH THEM APART!")
+		return true
+	elseif k == "snap" then
+		if dist < P.min or dist > P.max or target:GetAttribute("Warded") or Fury.inGrace(target) then return false end
+		begin(g, G, k, P.wind * (g.enraged and 0.85 or 1), { victim = target })
+		Remotes.Fx:FireAllClients("SnapWind", g.model, P.wind)
+		return true
+	elseif k == "eat" then
+		if g.hp > g.maxHp * P.below then return false end
+		local list = Furniture.nearest(g.hrp.Position, P.range, 1)
+		if #list > 0 then
+			local obj = list[1]
+			Abilities.grip(obj, Color3.fromRGB(120, 255, 120))
+			begin(g, G, k, P.t, { obj = obj, from = obj:GetPivot(), t0 = now })
+			Remotes.Fx:FireAllClients("TitanEat", g.model, "furniture")
+			return true
+		end
+		-- nothing to eat near him: a bite out of the closest inside wall
+		for i = 0, 7 do
+			local a = i * math.pi / 4
+			local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+			local r = workspace:Raycast(g.hrp.Position + Vector3.new(0, 2, 0), dir * 13, g.rp)
+			if r and r.Normal.Y < 0.6 then
+				begin(g, G, k, P.t * 0.8, { wall = r.Position, dir = dir })
+				Remotes.Fx:FireAllClients("TitanEat", g.model, "wall")
+				return true
+			end
+		end
+		g.nextPower = now + 3
+		return false
+	end
+	return false
+end
+
+function Evolved.step(g, G, dt: number, now: number, target: Player?, thrp: BasePart?, hoverY: number)
+	local e, P = g.evo, g.def.power
+	if not e or not P then G.setState(g, "Chase"); return end
+	local pos = g.hrp.Position
+	local hoverV = Vector3.new(0, (hoverY - pos.Y) * 4, 0)
+	local function face(tp: Vector3)
+		local f = Vector3.new(tp.X, pos.Y, tp.Z)
+		if (f - pos).Magnitude > 0.1 then g.ao.CFrame = CFrame.lookAt(pos, f).Rotation end
+	end
+	g.lv.VectorVelocity = hoverV
+	local k = e.kind
+	if k == "doubles" then
+		-- gone for a moment, then she and her doubles stand in a ring around you: which one is real?
+		if now < g.stateUntil then return end
+		g.model:SetAttribute("Vanish", false)
+		if thrp then
+			local c = thrp.Position
+			local n = P.n + 1
+			local a0 = rng:NextNumber(0, math.pi * 2)
+			local real = rng:NextInteger(1, n)
+			local y = c.Y - 3 + g.hover
+			local pts = {}
+			for i = 1, n do
+				local a = a0 + i / n * math.pi * 2
+				local at = inHouse(G, Vector3.new(c.X + math.cos(a) * P.ring, y, c.Z + math.sin(a) * P.ring))
+				if i == real then
+					g.model:PivotTo(CFrame.lookAt(at, Vector3.new(c.X, at.Y, c.Z)))
+					g.ao.CFrame = g.model:GetPivot().Rotation
+				else
+					table.insert(pts, at)
+				end
+			end
+			local speed = (C.Speed + (g.level - 1) * C.SpeedPerLevel) * g.speedMult * g.furySpeed
+			Abilities.spawnClones(g, pts, P.t, P.dmg * g.dmgMult, speed)
+			Remotes.Fx:FireAllClients("GhostScream", g.hrp.Position)
+			toastAll("ONLY ONE OF THEM IS REAL")
+		end
+		done(g, G, P, 0.5)
+	elseif k == "army" then
+		if thrp then face(thrp.Position) end
+		if now < g.stateUntil then return end
+		-- the little skeletons land in a loose ring around the players
+		local pts = {}
+		local list = {}
+		for _, p in Players:GetPlayers() do
+			local hrp = p:GetAttribute("InMatch") and hrpOf(p)
+			if hrp then table.insert(list, hrp) end
+		end
+		if #list > 0 then
+			for i = 1, P.n do
+				local hrp = list[(i - 1) % #list + 1]
+				local a = rng:NextNumber(0, math.pi * 2)
+				local r = rng:NextNumber(8, 14)
+				table.insert(pts, inHouse(G, Vector3.new(hrp.Position.X + math.cos(a) * r, hrp.Position.Y - 3 + g.hover * P.size, hrp.Position.Z + math.sin(a) * r)))
+			end
+			Abilities.spawnClones(g, pts, P.t, P.dmg * g.dmgMult, P.speed, P.size)
+		end
+		done(g, G, P, 0.5)
+	elseif k == "snap" then
+		local victim = e.victim :: Player
+		local vh = hrpOf(victim)
+		if vh then face(vh.Position) end
+		if now < g.stateUntil then return end
+		-- he needs to see you: behind a wall the snap does nothing
+		local head = (g.model:FindFirstChild("Head") or g.hrp) :: BasePart
+		local hit = false
+		if vh and not victim:GetAttribute("Warded") then
+			local to = vh.Position - head.Position
+			local r = workspace:Raycast(head.Position, to, g.rp)
+			if not r or (r.Position - head.Position).Magnitude > to.Magnitude - 2.5 then
+				hit = true
+				local dmg = P.dmg * g.dmgMult * (1 + (g.level - 1) * 0.06)
+				if rng:NextNumber() < 0.5 then
+					-- into the wall behind you (and through the inside ones)
+					Remotes.Fx:FireAllClients("Snap", g.model, vh.Position, "wall")
+					Fury.launch(g, G, victim, flat(vh.Position - pos) * P.wall + Vector3.new(0, 26, 0), dmg, 1.5, "snap")
+				else
+					-- straight up into the ceiling
+					Remotes.Fx:FireAllClients("Snap", g.model, vh.Position, "up")
+					Fury.downed(victim, 1.6)
+					G.hitPlayer(victim, nil, dmg, Vector3.new(rng:NextNumber(-6, 6), P.up, rng:NextNumber(-6, 6)), "snap", true, 1.6)
+				end
+			end
+		end
+		if not hit then Remotes.Fx:FireAllClients("Snap", g.model, nil, "miss") end
+		done(g, G, P, 0.6)
+	elseif k == "eat" then
+		local head = (g.model:FindFirstChild("Head") or g.hrp) :: BasePart
+		if e.obj then
+			local obj = e.obj :: Model
+			if not obj.Parent or obj:GetAttribute("Broken") then e.obj = nil; done(g, G, P, 0.3); return end
+			-- the furniture floats to his mouth
+			local mouth = head.Position + g.hrp.CFrame.LookVector * 3.5
+			local f = math.clamp((now - e.t0) / (P.t * 0.75), 0, 1)
+			obj:PivotTo(CFrame.new(e.from.Position:Lerp(mouth, f * f)) * e.from.Rotation * CFrame.Angles(f * 2, f * 3, 0))
+			face(obj:GetPivot().Position)
+			if now < g.stateUntil then return end
+			Abilities.ungrip(obj)
+			e.obj = nil
+			Furniture.smash(obj, Vector3.new(0, 30, 0), 70)
+			local heal = g.maxHp * P.heal
+			g.hp = math.min(g.maxHp, g.hp + heal)
+			g.model:SetAttribute("HP", g.hp)
+			Remotes.Fx:FireAllClients("TitanHeal", g.model, heal)
+			done(g, G, P, 0.5)
+		else
+			-- walks into the wall and bites a piece out of it
+			face(e.wall)
+			g.lv.VectorVelocity = e.dir * 6 + hoverV
+			if now < g.stateUntil then return end
+			if Ragdoll.breakWalls(e.wall + Vector3.new(0, 2, 0), e.dir * 40, 8, 7) > 0 then
+				Remotes.Fx:FireAllClients("WallSmash", e.wall, 80)
+				local heal = g.maxHp * P.wallHeal
+				g.hp = math.min(g.maxHp, g.hp + heal)
+				g.model:SetAttribute("HP", g.hp)
+				Remotes.Fx:FireAllClients("TitanHeal", g.model, heal)
+			end
+			done(g, G, P, 0.5)
+		end
+	else
+		done(g, G, P)
+	end
+end
+
+return Evolved

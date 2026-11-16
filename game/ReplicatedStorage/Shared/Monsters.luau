@@ -72,4 +72,66 @@ local function pick(wave: number, last: string?, rng: Random): Monster
 	return pool[rng:NextInteger(1, #pool)]
 end
 
-return { list = List, byId = byId, rarity = RARITY, pick = pick }
+-- EVOLVED monsters: every 3rd ghost is an evolved variant of one of the monsters above (same id, same voice and
+-- animations; Server/Evolved.luau dresses the model and runs the extra power). Twice the health, faster, and every
+-- swipe launches you through the walls. title = its name; power = the extra ability (Evolved.luau); the other
+-- fields override the base monster's.
+local EVO: { [string]: { [string]: any } } = {
+	Woman = { title = "THE VIOLET WIDOW", color = C(170, 90, 230), scale = 1.1,
+		power = { kind = "doubles", cd = 13, n = 3, t = 14, dmg = 10, ring = 11 },
+		desc = "Purple and wrong. She splits into doubles: only one of them is real." },
+	Demon = { title = "THE DEMON LORD", color = C(150, 20, 16), scale = 1.3, reach = 1.3,
+		ability = { kind = "levitateThrow", cd = 6, range = 75, lift = 1.4, aim = 0.5, power = 160, dmg = 18, count = 3 },
+		desc = "Bigger, with a sceptre. He lifts several pieces of furniture at once and throws them all." },
+	Goblin = { title = "THE GOBLIN KING", color = C(34, 92, 44), scale = 1.15, solid = false, wallBreaker = true,
+		power = { kind = "armed", weapons = { "BaseballBat", "FryingPan", "Crowbar", "LeadPipe", "Shovel", "SpikedBat", "Machete", "FireAxe" } },
+		desc = "Fat, forest green, and already armed. He punches through the walls to get to you." },
+	Pirate = { title = "THE BURNING CAPTAIN", color = C(255, 90, 30), scale = 1.1,
+		power = { kind = "army", cd = 15, n = 5, t = 14, dmg = 6, size = 0.42, speed = 17 },
+		desc = "A skeleton on fire. He throws an army of little skeletons at you." },
+	Animatronic = { title = "THE GOLDEN BEAR", color = C(240, 200, 70), scale = 1.08,
+		power = { kind = "snap", cd = 9, min = 9, max = 70, wind = 0.75, dmg = 18, wall = 118, up = 105 },
+		desc = "Golden. He snaps his fingers and you fly into the wall or up into the ceiling: break his line of sight." },
+	Titan = { title = "THE BONE GIANT", color = C(226, 214, 190), scale = 1.08,
+		power = { kind = "eat", cd = 10, below = 0.85, range = 17, t = 1.5, heal = 0.07, wallHeal = 0.04 },
+		desc = "More bone than flesh. He eats the furniture and the walls to heal: hit him while he chews." },
+}
+-- tier 1 = the first evolved monster of a run (kept beatable), then they ramp up
+local EVO_TIER = {
+	{ hp = 2, speed = 1.1, dmg = 1.0, atk = 0.85, smash = 1.2 },
+	{ hp = 2, speed = 1.16, dmg = 1.15, atk = 0.75, smash = 1.3 },
+	{ hp = 2.2, speed = 1.22, dmg = 1.3, atk = 0.68, smash = 1.4 },
+}
+local evoCache: { [string]: Monster } = {}
+local function evolved(id: string, tier: number): Monster
+	local t = math.clamp(tier, 1, #EVO_TIER)
+	local key = id .. t
+	if evoCache[key] then return evoCache[key] end
+	local base = byId[id] or byId.Woman
+	local e = EVO[base.id]
+	local T = EVO_TIER[t]
+	local d = table.clone(base) :: any
+	for k, v in e do if k ~= "power" then d[k] = v end end
+	d.name = e.title
+	d.evolved = true
+	d.tier = t
+	d.power = e.power
+	d.hp = base.hp * T.hp
+	d.speed = base.speed * T.speed
+	d.dmg = base.dmg * T.dmg
+	d.atk = T.atk -- attack / ability cooldown multiplier
+	d.smash = T.smash -- how much harder its punch launches you
+	d.reward = base.reward * 2
+	d.rarity = 3
+	evoCache[key] = d
+	return d
+end
+-- every 3rd ghost is evolved
+local function isEvolvedWave(wave: number): boolean return wave >= 3 and wave % 3 == 0 end
+local function pickEvolved(last: string?, rng: Random): string
+	local pool = {}
+	for _, d in List do if d.id ~= last then table.insert(pool, d.id) end end
+	return pool[rng:NextInteger(1, #pool)]
+end
+
+return { list = List, byId = byId, rarity = RARITY, pick = pick, evolved = evolved, isEvolvedWave = isEvolvedWave, pickEvolved = pickEvolved, evo = EVO }

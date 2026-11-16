@@ -71,7 +71,7 @@ local function find(list: { any }, word: string?): any
 end
 
 local HELP = "cash <n> | runcash <n> | give <item> | clearitems | ult <id> | allults | allmaps | heal | brut | god | start [map] [diff] | "
-	.. "revive | money2 | glock | next | killghost | bring | ragdoll [power] | monster <id|off> | event plane|van|train | leave | endrun"
+	.. "revive | money2 | glock | next | killghost | bring | ragdoll [power] | monster <id|off> | evolved on|off|<tier> | event plane|van|train | leave | endrun"
 
 local CMD: { [string]: (p: Player, a: string?, b: string?) -> (boolean, string) } = {}
 
@@ -202,6 +202,20 @@ CMD.ragdoll = function(p, a)
 	return true, "BONK! She is flying"
 end
 
+-- evolved on | off | <tier 1-3>: every ghost is an EVOLVED monster (combine with 'monster <id>')
+CMD.evolved = function(_p, a)
+	if a == "off" then
+		RS:SetAttribute("AdminEvolved", nil)
+		return true, "Evolved monsters only every 3rd ghost again"
+	end
+	RS:SetAttribute("AdminEvolved", tonumber(a) or true)
+	if Run.running() then
+		Ghost.despawn()
+		task.spawn(Run.startFight)
+		return true, "An evolved monster is coming now (and every ghost until 'evolved off')"
+	end
+	return true, "Every ghost will be evolved (start a run)"
+end
 CMD.monster = function(_p, a)
 	if a == "off" or a == "random" then
 		RS:SetAttribute("AdminMonster", nil)

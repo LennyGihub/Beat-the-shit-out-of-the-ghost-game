@@ -18,6 +18,7 @@ local KINDS = {
 	GoblinSteal = true, GoblinUse = true, GoblinDrop = true,
 	ShieldBlock = true, Slammed = true, AnimJumpscare = true,
 	RoarWind = true, Roar = true, LungeWind = true, Lunge = true, Enraged = true, CounterWind = true, FuryArmor = true, FurySmash = true, -- Fury
+	SnapWind = true, Snap = true, TitanEat = true, TitanHeal = true, -- evolved monsters
 }
 local Items = require(game:GetService("ReplicatedStorage").Shared.Items)
 local GOBLIN = Color3.fromRGB(130, 230, 70)
@@ -274,6 +275,52 @@ function MonsterFx.handle(kind: string, ...)
 			Lifetime = NumberRange.new(0.2, 0.35), Texture = "rbxasset://textures/particles/sparkles_main.dds" }, 26, 1)
 		Sfx.at(Sfx.voice("WindUp"), pos, { PlaybackSpeed = 1.4, Volume = 1.3 })
 		if near(pos, 25) > 0 then HUD.toast("IT'S HITTING BACK - BLOCK OR CHARGE A HIT!", false) end
+	elseif kind == "SnapWind" then
+		-- the Golden Bear raises his hand: gold light gathers on it
+		local model = a[1]
+		local hand = typeof(model) == "Instance" and (model:FindFirstChild("RightHand") or model:FindFirstChild("HumanoidRootPart")) :: BasePart?
+		if hand then
+			emitter(hand.Position, { Color = ColorSequence.new(GOLD), LightEmission = 1, Size = NumberSequence.new(1.6, 0), Speed = NumberRange.new(-14, -8),
+				Shape = Enum.ParticleEmitterShape.Sphere, ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface, Lifetime = NumberRange.new(0.4, 0.6),
+				Texture = "rbxasset://textures/particles/sparkles_main.dds" }, 40, 1.5)
+			Sfx.at(Sfx.voice("WindUp"), hand.Position, { PlaybackSpeed = 0.8, Volume = 1.3 })
+		end
+		HUD.toast("HE'S GOING TO SNAP HIS FINGERS - GET BEHIND A WALL OR BLOCK!", false)
+	elseif kind == "Snap" then
+		local model, pos, mode = a[1], a[2], a[3]
+		local hand = typeof(model) == "Instance" and (model:FindFirstChild("RightHand") or model:FindFirstChild("HumanoidRootPart")) :: BasePart?
+		if hand then
+			Sfx.at("Breaker", hand.Position, { PlaybackSpeed = 1.9, Volume = 2.2 })
+			emitter(hand.Position, { Color = ColorSequence.new(GOLD), LightEmission = 1, Size = NumberSequence.new(0.8, 0), Speed = NumberRange.new(18, 30),
+				Lifetime = NumberRange.new(0.15, 0.3), Texture = "rbxasset://textures/particles/sparkles_main.dds" }, 24, 0.8)
+		end
+		if mode == "miss" then
+			HUD.toast("THE SNAP MISSED - HE COULDN'T SEE YOU", true)
+		elseif typeof(pos) == "Vector3" then
+			emitter(pos, { Color = ColorSequence.new(GOLD), LightEmission = 1, Size = NumberSequence.new(2.2, 0), Speed = NumberRange.new(20, 40),
+				Lifetime = NumberRange.new(0.2, 0.45), Texture = "rbxasset://textures/particles/sparkles_main.dds" }, 40, 1)
+			Sfx.at("PunchHeavy", pos, { PlaybackSpeed = 0.5, Volume = 1.6 })
+			Fx.shake(0.6 * near(pos, 50))
+		end
+	elseif kind == "TitanEat" then
+		local model, what = a[1], a[2]
+		local head = typeof(model) == "Instance" and (model:FindFirstChild("Head") or model:FindFirstChild("HumanoidRootPart")) :: BasePart?
+		if head then
+			Sfx.at(Sfx.voice("WindUp"), head.Position, { PlaybackSpeed = 0.7, Volume = 1.4 })
+			Sfx.at("WoodBreak", head.Position, { PlaybackSpeed = 0.6, Volume = 1.2 })
+		end
+		HUD.toast(what == "wall" and "HE'S EATING THE WALL TO HEAL - HIT HIM!" or "HE'S EATING THE FURNITURE TO HEAL - HIT HIM!", false)
+	elseif kind == "TitanHeal" then
+		local model, amount = a[1], a[2]
+		local torso = typeof(model) == "Instance" and (model:FindFirstChild("UpperTorso") or model:FindFirstChild("HumanoidRootPart")) :: BasePart?
+		if torso then
+			emitter(torso.Position, { Color = ColorSequence.new(Color3.fromRGB(120, 255, 120)), LightEmission = 1, Size = NumberSequence.new(1.8, 0),
+				Speed = NumberRange.new(4, 10), Acceleration = Vector3.new(0, 12, 0), Lifetime = NumberRange.new(0.6, 1.1),
+				Texture = "rbxasset://textures/particles/sparkles_main.dds" }, 50, 2)
+			Sfx.at("Crash", torso.Position, { PlaybackSpeed = 0.6, Volume = 1.2 })
+			Sfx.at("Ultimate", torso.Position, { PlaybackSpeed = 0.7, Volume = 0.8 })
+		end
+		HUD.toast("HE HEALED +" .. tostring(math.floor(tonumber(amount) or 0)), false)
 	elseif kind == "FurySmash" then
 		-- the enraged smash punch: a huge crack, red burst, everyone near feels it
 		local pos = a[1]

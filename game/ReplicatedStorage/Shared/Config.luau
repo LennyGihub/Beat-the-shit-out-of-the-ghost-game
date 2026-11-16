@@ -98,6 +98,8 @@ local Config = {
 		RegenPause = 6, -- no health regen for this long after a monster hits you (StarterCharacterScripts.Health)
 		BurstCap = 0.4, BurstWindow = 3,
 	},
+	-- more players = a stronger monster: each extra player adds this much (2 players = x1.55 health, 4 = x2.65)
+	Scaling = { HpPerPlayer = 0.55, DmgPerPlayer = 0.1, SpeedPerPlayer = 0.05, CooldownPerPlayer = 0.06 },
 	-- Robux cash packs (Developer Products): attr = the ReplicatedStorage attribute holding the product id
 	-- (0 = not set up yet: the shop shows SOON). A good run pays ~1800-2600 cash, maps cost 1200-3200.
 	CashPacks = {

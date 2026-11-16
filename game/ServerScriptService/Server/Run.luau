@@ -30,6 +30,7 @@ local event = nil :: any
 local eventLeft = 0
 local lastKind = ""
 local lastMonster = ""
+local lastEvolved = ""
 local busy = false
 local breakUntil = 0
 local stats = {} :: { [Player]: { earned: number, damage: number, kills: number, paid: boolean, revives: number? } }
@@ -131,11 +132,21 @@ function Run.startFight()
 	end
 	-- ghost 1 is always the Woman, then a random monster by rarity (Studio hook: RS attribute DebugMonster = id)
 	local def = Monsters.pick(level, lastMonster, rng)
+	-- every 3rd ghost is an EVOLVED variant of one of the monsters (tier 1 = the first one of the run, kept beatable)
+	local evoTier: number? = nil
+	if Monsters.isEvolvedWave(level) then
+		evoTier = level // 3
+		def = Monsters.byId[Monsters.pickEvolved(lastEvolved, rng)]
+	end
 	local forced = RS:GetAttribute("AdminMonster") or (RunService:IsStudio() and RS:GetAttribute("DebugMonster")) -- admin panel / Studio hook
 	if type(forced) == "string" and Monsters.byId[forced] then def = Monsters.byId[forced] end
+	local forcedEvo = RS:GetAttribute("AdminEvolved") or (RunService:IsStudio() and RS:GetAttribute("DebugEvolved")) -- admin 'evolved on'
+	if forcedEvo then evoTier = type(forcedEvo) == "number" and forcedEvo or math.max(1, level // 3) end
 	lastMonster = def.id
-	setState("Intro", def.title .. " IS COMING...")
-	for _, p in list do Remotes.Fx:FireClient(p, "Intro", level, def.title, def.rarity) end
+	if evoTier then lastEvolved = def.id end
+	local shown = evoTier and Monsters.evolved(def.id, evoTier) or def
+	setState("Intro", shown.title .. " IS COMING...")
+	for _, p in list do Remotes.Fx:FireClient(p, "Intro", level, shown.title, shown.rarity, evoTier ~= nil) end
 	task.wait(5)
 	if #Run.matchPlayers() == 0 then busy = false; return end
 	-- a random spot in the house, never right next to a player
@@ -144,7 +155,7 @@ function Run.startFight()
 		local hrp = hrpOf(p)
 		if hrp then table.insert(players, hrp.Position) end
 	end
-	Ghost.spawn(level, MapLoader.randomGhostSpawn(players, 28), def.id)
+	Ghost.spawn(level, MapLoader.randomGhostSpawn(players, 28), def.id, evoTier)
 	setState("Fight", "")
 	busy = false
 end
@@ -405,6 +416,7 @@ end
 function Run.beginMatch(list: { Player }, mapId: string?, diffId: string?)
 	Run.configure(mapId, diffId)
 	kills, level, eventLeft, lastKind, lastMonster = 0, 1, 0, "", ""
+	lastEvolved = ""
 	if event then Events.despawn(event); event = nil end
 	for _, p in list do
 		Run.addToMatch(p)

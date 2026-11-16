@@ -80,7 +80,8 @@ function Fury.init(g)
 	g.nextLunge = os.clock() + rng:NextNumber(F.LungeCd[1], F.LungeCd[2])
 	g.enraged = false
 	g.furySpeed = 1
-	g.cdMult = 1
+	g.cdBase = g.cdBase or 1 -- evolved monsters and bigger teams: shorter cooldowns from the start (Ghost.spawn)
+	g.cdMult = g.cdBase
 	g.roarQueued = false
 	g.fury = nil
 end
@@ -133,7 +134,7 @@ function Fury.checkEnrage(g)
 	if g.enraged or g.hp <= 0 or g.hp > g.maxHp * F.EnrageAt then return end
 	g.enraged = true
 	g.furySpeed = F.EnrageSpeed
-	g.cdMult = F.EnrageCooldown
+	g.cdMult = g.cdBase * F.EnrageCooldown
 	g.roarQueued = true
 	g.model:SetAttribute("Enraged", true)
 	Remotes.Fx:FireAllClients("Enraged", g.model, g.def.title)
@@ -269,15 +270,25 @@ local function smashAhead(g, from: Vector3, vel: Vector3, dist: number): boolean
 	end
 	return false
 end
+-- send a player flying at vel: the inside walls on the way break (the smash punch, the Golden Bear's snap)
+function Fury.launch(g, G, p: Player, vel: Vector3, dmg: number, ragT: number, label: string)
+	local hrp = hrpOf(p)
+	if not hrp then return end
+	smashAhead(g, hrp.Position, vel, F.SmashReach) -- the first wall breaks right away (the flight runs on their client)
+	flying[p] = os.clock() + ragT + 0.4
+	Fury.downed(p, ragT)
+	G.hitPlayer(p, nil, dmg, vel, label, true, ragT)
+end
 function Fury.smashPunch(g, G, p: Player, thrp: BasePart)
 	local dir = flat(thrp.Position - g.hrp.Position)
-	local vel = dir * F.SmashSpeed + Vector3.new(0, F.SmashUp, 0)
-	smashAhead(g, thrp.Position, vel, F.SmashReach) -- the first wall breaks right away (the flight runs on their client)
-	flying[p] = os.clock() + F.SmashTime + 0.4
-	Fury.downed(p, F.SmashTime)
+	-- evolved monsters punch harder (def.smash), and harder still once enraged
+	local k = ((g.def :: any).smash or 1) * ((g.evolved and g.enraged) and 1.15 or 1)
+	local vel = dir * math.min(F.SmashSpeed * k, 190) + Vector3.new(0, F.SmashUp, 0)
 	Remotes.Fx:FireAllClients("FurySmash", thrp.Position, dir)
-	G.hitPlayer(p, nil, swipeDamage(g) * F.SmashDamage, vel, "smash", true, F.SmashTime)
+	Fury.launch(g, G, p, vel, swipeDamage(g) * F.SmashDamage, F.SmashTime, "smash")
 end
+-- does its swipe launch you through the walls? (enraged, or an evolved monster)
+function Fury.smashes(g): boolean return g.enraged == true or g.evolved == true end
 -- every frame: walls further along a launched player's path break too
 function Fury.tick(g)
 	local now = os.clock()
@@ -293,7 +304,7 @@ end
 
 -- the swipe chain: how many follow-up swipes a fresh attack gets
 function Fury.comboCount(g): number
-	return (g.enraged and F.EnragedCombo or F.Combo) - 1
+	return (Fury.smashes(g) and F.EnragedCombo or F.Combo) - 1
 end
 
 -- wind-up length of the next swipe (follow-ups are quicker)

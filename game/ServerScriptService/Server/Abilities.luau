@@ -88,9 +88,8 @@ function Abilities.interrupt(g)
 	g.nextAbility = os.clock() + g.def.ability.cd * 0.6 * (g.cdMult or 1)
 end
 
--- let go of a levitated object (thrown, or the spell was interrupted): it falls normally again
-function Abilities.dropLevitated(ab)
-	local obj = ab.obj :: Model?
+-- let go of one levitated / gripped object: it falls normally again
+local function ungrip(obj: Model?)
 	if not obj or not obj.Parent then return end
 	local hl = obj:FindFirstChild("DemonGrip") if hl then hl:Destroy() end
 	local prim = obj.PrimaryPart
@@ -101,6 +100,36 @@ function Abilities.dropLevitated(ab)
 	obj:SetAttribute("CarriedBy", nil)
 	for _, p in obj:GetDescendants() do
 		if p:IsA("BasePart") then p.CanCollide = true; p.CanTouch = true; p.CollisionGroup = "Default" end
+	end
+end
+-- take a piece of furniture with the mind (nobody can grab it, it passes through everything while it floats)
+local function grip(obj: Model, color: Color3?)
+	local prim = obj.PrimaryPart :: BasePart
+	obj:SetAttribute("CarriedBy", -1)
+	for _, p in obj:GetDescendants() do
+		if p:IsA("BasePart") then p.CanCollide = false; p.CanTouch = false; p.CollisionGroup = "Carried" end
+	end
+	prim.Anchored = true
+	local col = color or Color3.fromRGB(255, 40, 20)
+	local hl = Instance.new("Highlight")
+	hl.Name = "DemonGrip"; hl.FillColor = col; hl.FillTransparency = 0.6
+	hl.OutlineColor = col:Lerp(Color3.new(1, 1, 1), 0.2); hl.Parent = obj
+	local aura = Instance.new("ParticleEmitter")
+	aura.Name = "DemonAura"; aura.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	aura.Color = ColorSequence.new(col); aura.LightEmission = 1; aura.Rate = 30
+	aura.Size = NumberSequence.new(0.5, 0); aura.Lifetime = NumberRange.new(0.5, 1); aura.Speed = NumberRange.new(1, 3)
+	aura.SpreadAngle = Vector2.new(180, 180); aura.Parent = prim
+end
+Abilities.grip = grip
+Abilities.ungrip = ungrip
+-- the spell was interrupted (or is over): everything still floating drops
+function Abilities.dropLevitated(ab)
+	if ab.objs then
+		for _, o in ab.objs do
+			if not o.thrown then ungrip(o.obj) end
+		end
+	else
+		ungrip(ab.obj)
 	end
 end
 
@@ -129,32 +158,22 @@ function Abilities.try(g, G, now: number, target: Player?, thrp: BasePart?, dist
 		fx("AbilityWind", g.hrp.Position, k)
 	elseif k == "levitateThrow" then
 		if dist > (a.range or 70) then return false end
-		local list = Furniture.nearest(g.hrp.Position, 40, 1)
+		-- a.count pieces at once (the evolved Demon Lord lifts several)
+		local list = Furniture.nearest(g.hrp.Position, 40, a.count or 1)
 		if #list == 0 then g.nextAbility = now + 2; return false end
-		local obj = list[1]
-		local prim = obj.PrimaryPart :: BasePart
-		-- he takes it with his mind: nobody can grab it, it passes through everything while it floats
-		obj:SetAttribute("CarriedBy", -1)
-		for _, p in obj:GetDescendants() do
-			if p:IsA("BasePart") then p.CanCollide = false; p.CanTouch = false; p.CollisionGroup = "Carried" end
+		local objs = {}
+		for i, obj in list do
+			grip(obj)
+			table.insert(objs, { obj = obj, from = obj:GetPivot(), spin = rng:NextNumber(-2, 2), slot = i, thrown = false })
 		end
-		prim.Anchored = true
-		local hl = Instance.new("Highlight")
-		hl.Name = "DemonGrip"; hl.FillColor = Color3.fromRGB(255, 40, 20); hl.FillTransparency = 0.6
-		hl.OutlineColor = Color3.fromRGB(255, 90, 40); hl.Parent = obj
-		local aura = Instance.new("ParticleEmitter")
-		aura.Name = "DemonAura"; aura.Texture = "rbxasset://textures/particles/sparkles_main.dds"
-		aura.Color = ColorSequence.new(Color3.fromRGB(255, 60, 30)); aura.LightEmission = 1; aura.Rate = 30
-		aura.Size = NumberSequence.new(0.5, 0); aura.Lifetime = NumberRange.new(0.5, 1); aura.Speed = NumberRange.new(1, 3)
-		aura.SpreadAngle = Vector2.new(180, 180); aura.Parent = prim
 		local function snd(name: string, parent: Instance, vol: number?)
 			local s = Instance.new("Sound"); s.SoundId = "rbxassetid://" .. Sounds[name].ids[1]; s.Volume = vol or Sounds[name].volume
 			s.RollOffMinDistance = 10; s.RollOffMaxDistance = 140; s.Parent = parent; s:Play()
 			game:GetService("Debris"):AddItem(s, 6)
 		end
-		snd("Telekinesis", prim)
+		snd("Telekinesis", list[1].PrimaryPart :: BasePart)
 		snd("DemonLaugh", g.model:FindFirstChild("Head") or g.hrp)
-		start(g, G, "lift", a.lift or 1.3, { obj = obj, from = obj:GetPivot(), t0 = now, spin = rng:NextNumber(-2, 2), snd = snd })
+		start(g, G, "lift", a.lift or 1.3, { obj = list[1], objs = objs, t0 = now, snd = snd })
 	elseif k == "furnitureStorm" then
 		if dist > 70 then return false end
 		local list = Furniture.nearest(g.hrp.Position, 45, a.count)
@@ -213,22 +232,12 @@ function Abilities.try(g, G, now: number, target: Player?, thrp: BasePart?, dist
 		fx("AbilityWind", g.hrp.Position, k)
 		task.delay(0.5, function()
 			if not g.model.Parent or g.state == "Dead" then return end
+			local pts = {}
 			for i = 1, a.n do
 				local ang = (i / a.n) * math.pi * 2 + rng:NextNumber(-0.3, 0.3)
-				local at = g.hrp.Position + Vector3.new(math.cos(ang) * 9, 0, math.sin(ang) * 9)
-				local c = g.model:Clone()
-				c.Name = "GhostClone"
-				for _, d in c:GetDescendants() do
-					if d:IsA("Constraint") or d:IsA("Script") or d:IsA("LocalScript") or d:IsA("Humanoid") then d:Destroy()
-					elseif d:IsA("BasePart") then d.Anchored = true; d.CanQuery = false; d.CanTouch = false; d.CanCollide = false end
-				end
-				c:SetAttribute("Clone", true)
-				c:SetAttribute("HP", nil); c:SetAttribute("MaxHP", nil)
-				c:PivotTo(CFrame.new(at) * g.model:GetPivot().Rotation)
-				c.Parent = workspace
-				table.insert(clones, { model = c, untilT = os.clock() + a.t, speed = 14 * (g.speedMult or 1), dmg = a.dmg * dmgScale(g), hover = g.hover })
-				fx("CloneSpawn", at)
+				table.insert(pts, g.hrp.Position + Vector3.new(math.cos(ang) * 9, 0, math.sin(ang) * 9))
 			end
+			Abilities.spawnClones(g, pts, a.t, a.dmg * dmgScale(g), 14 * (g.speedMult or 1))
 		end)
 	else
 		return false
@@ -239,6 +248,38 @@ end
 local function hover(g, hoverY: number, v: Vector3): Vector3
 	return Vector3.new(v.X, (hoverY - g.hrp.Position.Y) * 4, v.Z)
 end
+
+-- copies of the monster that walk at the players and burst when they touch one or get punched (mirror clones, the
+-- Violet Widow's doubles, the Burning Captain's little skeletons). scale = a smaller copy (its small parts are dropped).
+function Abilities.spawnClones(g, pts: { Vector3 }, t: number, dmg: number, speed: number, scale: number?)
+	local full = g.model:GetScale()
+	for _, at in pts do
+		local c = g.model:Clone()
+		c.Name = "GhostClone"
+		for _, d in c:GetDescendants() do
+			if d:IsA("Constraint") or d:IsA("Script") or d:IsA("LocalScript") or d:IsA("Humanoid") or d:IsA("Highlight") then d:Destroy()
+			elseif d:IsA("BasePart") then
+				if scale and math.max(d.Size.X, d.Size.Y, d.Size.Z) < 0.75 * full then
+					d:Destroy() -- a little copy: no teeth, fingers and other tiny parts
+				else
+					d.Anchored = true; d.CanQuery = false; d.CanTouch = false; d.CanCollide = false
+				end
+			end
+		end
+		local loot = c:FindFirstChild("Loot") if loot then loot:Destroy() end
+		c:SetAttribute("Clone", true)
+		c:SetAttribute("HP", nil); c:SetAttribute("MaxHP", nil)
+		if scale then c:ScaleTo(full * scale) end
+		c:PivotTo(CFrame.new(at) * g.model:GetPivot().Rotation)
+		c.Parent = workspace
+		table.insert(clones, { model = c, untilT = os.clock() + t, speed = speed, dmg = dmg, hover = g.hover * (scale or 1) })
+		fx("CloneSpawn", at)
+	end
+end
+function Abilities.cloneCount(): number return #clones end
+-- the Goblin King starts armed (and re-arms): Loot.arm
+Abilities.armGoblin = Loot.arm
+Abilities.finish = finish
 
 -- runs while g.state == "Ability"
 function Abilities.step(g, G, dt: number, now: number, target: Player?, thrp: BasePart?, hoverY: number)
@@ -394,32 +435,55 @@ function Abilities.step(g, G, dt: number, now: number, target: Player?, thrp: Ba
 		g.lv.VectorVelocity = hover(g, hoverY, Vector3.zero)
 		if thrp then face(thrp.Position) end
 		local ab = g.ab
-		local obj = ab.obj :: Model
-		if ab.phase ~= "throw" and (not obj or not obj.Parent or obj:GetAttribute("Broken")) then finish(g, G, 0.3); return end
-		local hold = g.hrp.CFrame * CFrame.new(1.5, 7.5, -3.5)
+		local objs = ab.objs
+		local n = #objs
+		-- pieces that broke or vanished are out
+		local live = 0
+		for _, o in objs do
+			if not o.thrown and (not o.obj.Parent or o.obj:GetAttribute("Broken")) then o.thrown = true end
+			if not o.thrown then live += 1 end
+		end
+		if ab.phase ~= "throw" and live == 0 then finish(g, G, 0.3); return end
 		-- Studio photo hook: ReplicatedStorage attribute DebugHoldCast keeps him aiming with the object up
 		if ab.phase == "aim" and game:GetService("RunService"):IsStudio() and game.ReplicatedStorage:GetAttribute("DebugHoldCast") then ab.untilT = now + 0.5 end
-		if ab.phase == "lift" or ab.phase == "aim" then
-			local f = ab.phase == "lift" and math.clamp((now - ab.t0) / a.lift, 0, 1) or 1
-			local e = f * f * (3 - 2 * f)
-			local pos = ab.from.Position:Lerp(hold.Position, e) + Vector3.new(0, math.sin(now * 5) * 0.35, 0)
-			local shake = ab.phase == "aim" and Vector3.new(rng:NextNumber(-0.2, 0.2), rng:NextNumber(-0.2, 0.2), rng:NextNumber(-0.2, 0.2)) or Vector3.zero
-			obj:PivotTo(CFrame.new(pos + shake) * ab.from.Rotation * CFrame.Angles(0, (now - ab.t0) * ab.spin, math.sin(now * 2) * 0.25))
-			if ab.phase == "lift" and now >= ab.untilT then setPhase(g, "aim", a.aim or 0.45)
-			elseif ab.phase == "aim" and now >= ab.untilT then
-				setPhase(g, "throw", 0.5)
-				ab.snd("DemonRoar", g.model:FindFirstChild("Head") or g.hrp)
-				Abilities.dropLevitated(ab)
-				local hrp = hrpOf(target)
-				if hrp then
-					Furniture.flingAt(obj, hrp.Position + Vector3.new(0, 1, 0), nil, a.power or 150)
-					local info = Furniture.thrown[obj]
-					if info then info.monster = (a.dmg or 20) * dmgScale(g) end
-				end
-				ab.obj = nil
+		-- every piece still held floats over his raised hand (several: fanned out above him)
+		local f = ab.phase == "lift" and math.clamp((now - ab.t0) / a.lift, 0, 1) or 1
+		local e = f * f * (3 - 2 * f)
+		for _, o in objs do
+			if not o.thrown then
+				local off = n == 1 and CFrame.new(1.5, 7.5, -3.5) or CFrame.new((o.slot - (n + 1) / 2) * 6.5, 9 + (o.slot % 2) * 2.5, -3)
+				local hold = (g.hrp.CFrame * off).Position
+				local p = o.from.Position:Lerp(hold, e) + Vector3.new(0, math.sin(now * 5 + o.slot) * 0.35, 0)
+				local shake = ab.phase ~= "lift" and Vector3.new(rng:NextNumber(-0.2, 0.2), rng:NextNumber(-0.2, 0.2), rng:NextNumber(-0.2, 0.2)) or Vector3.zero
+				o.obj:PivotTo(CFrame.new(p + shake) * o.from.Rotation * CFrame.Angles(0, (now - ab.t0) * o.spin, math.sin(now * 2) * 0.25))
 			end
-		elseif ab.phase == "throw" and now >= ab.untilT then
-			finish(g, G, 0.4)
+		end
+		if ab.phase == "lift" and now >= ab.untilT then
+			setPhase(g, "aim", a.aim or 0.45)
+		elseif ab.phase == "aim" and now >= ab.untilT then
+			-- thrown one after the other (0.3 s apart), each at where its target stands at that moment
+			setPhase(g, "throw", 0.5 + 0.3 * (n - 1))
+			ab.snd("DemonRoar", g.model:FindFirstChild("Head") or g.hrp)
+			ab.nextThrow = now
+		end
+		if ab.phase == "throw" then
+			if live > 0 and now >= (ab.nextThrow or 0) then
+				ab.nextThrow = now + 0.3
+				for _, o in objs do
+					if not o.thrown then
+						o.thrown = true
+						ungrip(o.obj)
+						local hrp = hrpOf(target)
+						if hrp then
+							Furniture.flingAt(o.obj, hrp.Position + Vector3.new(0, 1, 0), nil, a.power or 150)
+							local info = Furniture.thrown[o.obj]
+							if info then info.monster = (a.dmg or 20) * dmgScale(g) end
+						end
+						break
+					end
+				end
+			end
+			if now >= ab.untilT then finish(g, G, 0.4) end
 		end
 	elseif k == "shieldBash" then
 		-- brace (shield up, shuffling toward you) -> rush in a straight line -> recover
