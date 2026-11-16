@@ -268,8 +268,9 @@ end
 function AP.init(toggled: (open: boolean) -> ())
 	onToggle = toggled
 	task.spawn(function()
-		while lp:GetAttribute("IsAdmin") == nil do lp:GetAttributeChangedSignal("IsAdmin"):Wait() end
-		if lp:GetAttribute("IsAdmin") == true then build() end
+		-- built as soon as the player is an admin (also when the pass is bought during the game)
+		while lp:GetAttribute("IsAdmin") ~= true do lp:GetAttributeChangedSignal("IsAdmin"):Wait() end
+		build()
 	end)
 end
 

@@ -17,6 +17,7 @@ local Events = require(script.Parent.Events)
 local Monsters = require(RS.Shared.Monsters)
 local Maps = require(RS.Shared.Maps)
 local MapLoader = require(script.Parent.MapLoader)
+local Friends = require(script.Parent.Friends)
 
 local Run = {}
 Run.mode = "Lobby" -- "Lobby" (public / Studio) or "Match" (reserved server)
@@ -88,7 +89,7 @@ function Run.payout(p: Player, reason: string): number
 	st.paid = true
 	local g = Ghost.current
 	if g and g.damageBy[p] then st.damage += g.damageBy[p]; g.damageBy[p] = 0 end
-	local cash = math.floor(st.earned + st.damage / Config.Payout.DamageDiv * diff.reward)
+	local cash = math.floor((st.earned + st.damage / Config.Payout.DamageDiv * diff.reward) * Friends.mult(p)) -- friend booster
 	Data.addCash(p, cash)
 	task.spawn(Data.save, p)
 	Remotes.Fx:FireClient(p, "RunOver", reason, cash, st.kills)
@@ -168,9 +169,10 @@ local function onGhostDeath(g)
 			g.damageBy[p] = 0
 			p:SetAttribute("RunKills", st.kills)
 		end
-		p:SetAttribute("RunCash", (p:GetAttribute("RunCash") or 0) + reward)
+		local r = math.floor(reward * Friends.mult(p)) -- friend booster
+		p:SetAttribute("RunCash", (p:GetAttribute("RunCash") or 0) + r)
 		Data.winGhost(p, g.level)
-		Remotes.Fx:FireClient(p, "Victory", reward)
+		Remotes.Fx:FireClient(p, "Victory", r)
 	end
 	-- a new event is due after the first kill and every EventLife kills after that
 	if event then eventLeft -= 1 end

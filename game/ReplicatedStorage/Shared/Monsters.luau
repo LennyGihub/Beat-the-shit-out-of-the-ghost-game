@@ -24,7 +24,7 @@ local List: { Monster } = {
 		hp = 1, speed = 1, dmg = 1, reward = 1, hover = 4.6, walker = false, scale = 1,
 		ability = { kind = "scare", cd = 18 }, desc = "Vanishes and screams in your face." }),
 	m({ id = "Demon", name = "The Red Demon", title = "THE RED DEMON", rarity = 1, template = "Demon", color = C(200, 40, 30),
-		hp = 1.4, speed = 0.95, dmg = 1.3, reward = 1.5, hover = 0, walker = true, scale = 1,
+		hp = 1.4, speed = 0.95, dmg = 1.3, reward = 1.5, hover = 0, walker = true, scale = 1, solid = true, -- solid: no walking through walls
 		ability = { kind = "levitateThrow", cd = 6.5, range = 70, lift = 1.3, aim = 0.45, power = 150, dmg = 22 },
 		desc = "Lifts the furniture with his mind and hurls it at you." }),
 }

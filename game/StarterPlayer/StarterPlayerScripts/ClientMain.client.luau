@@ -31,6 +31,7 @@ local RoomPickUI = require(Client.RoomPickUI)
 local ThirdPersonItems = require(Client.ThirdPersonItems)
 local AdminPanel = require(Client.AdminPanel)
 local SawAudio = require(Client.SawAudio)
+local LobbyUI = require(Client.LobbyUI)
 
 HUD.init()
 VM.init()
@@ -52,6 +53,8 @@ UltShop.init(function(open)
 	shopOpen = open
 	camMode()
 end)
+-- lobby screen: PLAY (create / join lobbies) and SHOP buttons, friend booster
+LobbyUI.init(function() UltShop.open() end, function(open) Input.setShopOpen(open) end)
 
 Remotes.Fx.OnClientEvent:Connect(function(kind: string, ...)
 	if kind == "OpenUltShop" then

@@ -141,6 +141,71 @@ local function tick()
 	end
 end
 
+-- PLAY-button lobbies (parties): a host creates one (map, difficulty, 1-4 players), others join from the list,
+-- the host presses START. Published to every client as the ReplicatedStorage attribute "Parties" (JSON).
+local HttpService = game:GetService("HttpService")
+local parties = {} :: { [string]: any }
+local function publish()
+	local list = {}
+	for id, pt in parties do
+		local names = {}
+		for _, m in pt.members do table.insert(names, m.DisplayName) end
+		table.insert(list, { id = id, host = pt.host.DisplayName, hostId = pt.host.UserId, map = pt.map, diff = pt.diff, size = pt.size, names = names })
+	end
+	table.sort(list, function(a, b) return a.id < b.id end)
+	RS:SetAttribute("Parties", HttpService:JSONEncode(list))
+end
+local function partyOf(p: Player): any
+	local id = p:GetAttribute("PartyId")
+	return id and parties[id] or nil
+end
+local function leaveParty(p: Player)
+	local pt = partyOf(p)
+	p:SetAttribute("PartyId", nil)
+	if not pt then return end
+	local i = table.find(pt.members, p)
+	if i then table.remove(pt.members, i) end
+	if #pt.members == 0 then
+		parties[pt.id] = nil
+	elseif pt.host == p then
+		pt.host = pt.members[1] -- the next player leads
+	end
+	publish()
+end
+local function onParty(p: Player, action: any, a: any, b: any, c: any)
+	if type(action) ~= "string" or p:GetAttribute("InMatch") then return end
+	if action == "create" then
+		if type(a) ~= "string" or type(b) ~= "string" or type(c) ~= "number" then return end
+		local m, d = Maps.byId[a], Maps.diffById[b]
+		if not m or not d then return end
+		if not Data.ownsMap(p, m.id) then Remotes.Fx:FireClient(p, "Toast", "Buy " .. m.name .. " at the dealer first"); return end
+		leaveParty(p)
+		local id = tostring(p.UserId)
+		parties[id] = { id = id, host = p, members = { p }, map = m.id, diff = d.id, size = math.clamp(math.floor(c), 1, 4), map_ = m }
+		p:SetAttribute("PartyId", id)
+		publish()
+	elseif action == "join" then
+		local pt = type(a) == "string" and parties[a] or nil
+		if not pt then Remotes.Fx:FireClient(p, "Toast", "That lobby is gone"); return end
+		if #pt.members >= pt.size then Remotes.Fx:FireClient(p, "Toast", "That lobby is full"); return end
+		leaveParty(p)
+		table.insert(pt.members, p)
+		p:SetAttribute("PartyId", pt.id)
+		publish()
+	elseif action == "leave" then
+		leaveParty(p)
+	elseif action == "start" then
+		local pt = partyOf(p)
+		if not pt or pt.host ~= p then return end
+		local members = {}
+		for _, m in pt.members do if m.Parent and not m:GetAttribute("InMatch") then table.insert(members, m) end end
+		for _, m in pt.members do m:SetAttribute("PartyId", nil) end
+		parties[pt.id] = nil
+		publish()
+		launch({ map = pt.map, diff = pt.diff, size = #members, name = "Party" }, members)
+	end
+end
+
 function Lobby.returnPlayer(p: Player)
 	if Run.mode == "Match" then
 		Data.save(p)
@@ -200,6 +265,9 @@ function Lobby.start()
 		pp.Triggered:Connect(function(p) Remotes.Fx:FireClient(p, "OpenUltShop") end)
 	end
 	Remotes.BuyUlt.OnServerEvent:Connect(onBuyUlt)
+	Remotes.Party.OnServerEvent:Connect(onParty)
+	Players.PlayerRemoving:Connect(leaveParty)
+	publish()
 	-- the room leader changes the map / difficulty (must own the map)
 	Remotes.RoomPick.OnServerEvent:Connect(function(p, roomName, mapId, diffId)
 		if type(roomName) ~= "string" or type(mapId) ~= "string" or type(diffId) ~= "string" then return end

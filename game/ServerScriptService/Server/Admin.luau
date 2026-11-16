@@ -15,11 +15,17 @@ local Combat = require(script.Parent.Combat)
 local Inventory = require(script.Parent.Inventory)
 local Ghost = require(script.Parent.Ghost)
 local Run = require(script.Parent.Run)
-require(script.Parent.Remotes) -- creates the Remotes folder
+local Remotes = require(script.Parent.Remotes) -- creates the Remotes folder
 
 local Admin = {}
 
-local function isAdmin(p: Player): boolean
+-- the admin panel can be bought: Game Pass id in the ReplicatedStorage attribute AdminPassId (0 = not set up)
+local MarketplaceService = game:GetService("MarketplaceService")
+local passOwners = {} :: { [Player]: boolean }
+local function passId(): number return tonumber(RS:GetAttribute("AdminPassId")) or 0 end
+
+-- full admins: Studio, the owner, AdminUserIds. Pass owners are "bought" admins (see WORLD below).
+local function isFullAdmin(p: Player): boolean
 	if RunService:IsStudio() then return true end
 	if game.CreatorType == Enum.CreatorType.User and p.UserId == game.CreatorId then return true end
 	if game.CreatorType == Enum.CreatorType.Group then
@@ -32,6 +38,12 @@ local function isAdmin(p: Player): boolean
 	end
 	return false
 end
+local function isAdmin(p: Player): boolean
+	return isFullAdmin(p) or passOwners[p] == true
+end
+
+-- commands that change the game for everyone: a bought admin can only use them while playing alone
+local WORLD = { start = true, next = true, killghost = true, monster = true, event = true, endrun = true, bring = true, ragdoll = true }
 
 -- 500, 25k, 2m, 1b
 local function num(s: string?): number?
@@ -214,6 +226,12 @@ function Admin.run(p: Player, line: string): (boolean, string)
 	c = ALIAS[c] or c
 	local f = CMD[c]
 	if not f then return false, "Unknown command '" .. c .. "'. " .. HELP end
+	if WORLD[c] and not isFullAdmin(p) then
+		if c == "start" then return false, "Use the PLAY button to start a run" end
+		local others = 0
+		for _, q in Run.matchPlayers() do if q ~= p then others += 1 end end
+		if others > 0 or not p:GetAttribute("InMatch") then return false, "That one only works when you play alone" end
+	end
 	local ok, a, b = pcall(f, p, words[2], words[3])
 	if not ok then
 		warn("[Admin] " .. tostring(a))
@@ -241,10 +259,27 @@ function Admin.start()
 		print("[Admin] " .. p.Name .. " > " .. line .. " -> " .. msg)
 		return ok, msg
 	end
-	local function onPlayer(p: Player) p:SetAttribute("IsAdmin", isAdmin(p)) end
+	local function onPlayer(p: Player)
+		p:SetAttribute("IsAdmin", isFullAdmin(p))
+		task.spawn(function()
+			local id = passId()
+			if id > 0 then
+				local ok, owns = pcall(function() return MarketplaceService:UserOwnsGamePassAsync(p.UserId, id) end)
+				if ok and owns then passOwners[p] = true; p:SetAttribute("IsAdmin", true) end
+			end
+		end)
+	end
+	-- bought in game: the panel appears right away
+	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(p, id, bought)
+		if bought and id == passId() then
+			passOwners[p] = true
+			p:SetAttribute("IsAdmin", true)
+			Remotes.Fx:FireClient(p, "Toast", "ADMIN PANEL UNLOCKED - press F2")
+		end
+	end)
 	Players.PlayerAdded:Connect(onPlayer)
 	for _, p in Players:GetPlayers() do onPlayer(p) end
-	Players.PlayerRemoving:Connect(function(p) last[p] = nil end)
+	Players.PlayerRemoving:Connect(function(p) last[p] = nil; passOwners[p] = nil end)
 end
 
 return Admin

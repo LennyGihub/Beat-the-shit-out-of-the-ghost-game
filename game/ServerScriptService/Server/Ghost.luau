@@ -2,6 +2,7 @@
 -- Floats/walks through walls toward the nearest player, claws, uses its special ability (Abilities.luau),
 -- gets knocked flying. Knockback is scripted: it stops at walls (wall slam) and smashes furniture on the way.
 local Players = game:GetService("Players")
+local PathfindingService = game:GetService("PathfindingService")
 local SS = game:GetService("ServerStorage")
 local RS = game:GetService("ReplicatedStorage")
 local Config = require(RS.Shared.Config)
@@ -35,6 +36,54 @@ end
 local function floorBelow(pos: Vector3, rp: RaycastParams): number
 	local r = workspace:Raycast(pos + Vector3.new(0, 2, 0), Vector3.new(0, -60, 0), rp)
 	return r and r.Position.Y or (pos.Y - C.HoverHeight)
+end
+
+-- knocked into an inside wall this fast, a monster smashes through it (slower: it bounces off, so you can pin it)
+local BREAK_SPEED = 50
+
+-- solid monsters (the Demon) cannot walk through walls: the part of their motion that goes into a wall is removed
+local function blockWalls(g, v: Vector3): Vector3
+	local hv = Vector3.new(v.X, 0, v.Z)
+	if hv.Magnitude < 0.1 then return v end
+	for _, h in { -1.5, 1.5 } do
+		local r = workspace:Raycast(g.hrp.Position + Vector3.new(0, h, 0), hv.Unit * 3, g.rp)
+		if r and r.Normal.Y < 0.6 then
+			local n = Vector3.new(r.Normal.X, 0, r.Normal.Z)
+			if n.Magnitude > 0.01 then
+				n = n.Unit
+				local d = hv:Dot(n)
+				if d < 0 then hv -= n * d end
+			end
+		end
+	end
+	return Vector3.new(hv.X, v.Y, hv.Z)
+end
+
+-- ...and they walk around walls: the next point of a path to `goal` (recomputed in the background)
+local function pathPoint(g, goal: Vector3): Vector3
+	local now = os.clock()
+	local P = g.path
+	if not P then P = { t = 0, goal = goal, busy = false }; g.path = P end
+	if not P.busy and (now - P.t > 0.7 or (P.goal - goal).Magnitude > 6) then
+		P.busy = true
+		task.spawn(function()
+			local path = PathfindingService:CreatePath({ AgentRadius = 2.2, AgentHeight = 9, AgentCanJump = false, WaypointSpacing = 4 })
+			local feet = g.hrp.Position - Vector3.new(0, g.hover - 0.5, 0)
+			local ok = pcall(function() path:ComputeAsync(feet, goal) end)
+			P.busy = false; P.t = os.clock(); P.goal = goal
+			if ok and path.Status == Enum.PathStatus.Success then P.pts = path:GetWaypoints(); P.i = 2 else P.pts = nil end
+		end)
+	end
+	if P.pts and P.i and P.pts[P.i] then
+		local here = Vector3.new(g.hrp.Position.X, 0, g.hrp.Position.Z)
+		local wp = P.pts[P.i].Position
+		while P.pts[P.i + 1] and (Vector3.new(wp.X, 0, wp.Z) - here).Magnitude < 2.5 do
+			P.i += 1
+			wp = P.pts[P.i].Position
+		end
+		return wp
+	end
+	return goal
 end
 
 local function setState(g, s: string, dur: number?)
@@ -312,7 +361,12 @@ local function stepKnocked(g, dt: number, now: number)
 	local speed = g.vel.Magnitude
 	if step.Magnitude > 0.001 then
 		local r = workspace:Raycast(pos, step.Unit * (step.Magnitude + 2.2), g.rp)
-		if r and r.Normal.Y < 0.6 then
+		if r and r.Normal.Y < 0.6 and speed > BREAK_SPEED and Ragdoll.breakWalls(r.Position, g.vel) > 0 then
+			-- hit hard enough: straight through the (inside) wall
+			Remotes.Fx:FireAllClients("WallSmash", r.Position, speed)
+			Ghost.damage(speed * C.WallSlamFactor, nil)
+			g.vel *= 0.8
+		elseif r and r.Normal.Y < 0.6 then
 			if speed > 24 then
 				Ghost.damage(speed * C.WallSlamFactor, nil)
 				Remotes.Fx:FireAllClients("WallSlam", r.Position, speed)
@@ -409,7 +463,7 @@ function Ghost.step(dt: number)
 		g.model:SetAttribute("Frozen", false)
 	end
 
-	local floorY = floorBelow(thrp and thrp.Position or pos, g.rp)
+	local floorY = floorBelow((thrp and not g.def.solid) and thrp.Position or pos, g.rp)
 	local hoverY = floorY + g.hover + math.sin(now * 2.1) * g.bob
 	local function face(tp: Vector3)
 		local flat = Vector3.new(tp.X, pos.Y, tp.Z)
@@ -418,6 +472,7 @@ function Ghost.step(dt: number)
 	local function moveToward(tp: Vector3, speed: number)
 		local to = Vector3.new(tp.X - pos.X, 0, tp.Z - pos.Z)
 		local v = to.Magnitude > 0.5 and to.Unit * speed or Vector3.zero
+		if g.def.solid then v = blockWalls(g, v) end
 		g.lv.VectorVelocity = v + Vector3.new(0, (hoverY - pos.Y) * 4, 0)
 	end
 
@@ -439,7 +494,7 @@ function Ghost.step(dt: number)
 		-- creepy rhythm: she sometimes freezes for a moment, then lunges
 		local phase = (now * 0.6) % 1
 		if phase < 0.12 and dist > 14 then speed *= 0.1 elseif phase < 0.3 and dist > 14 then speed *= 1.8 end
-		moveToward(thrp.Position, speed)
+		moveToward(g.def.solid and pathPoint(g, thrp.Position) or thrp.Position, speed)
 		if now >= g.slowUntil and Abilities.try(g, Ghost, now, target, thrp, dist) then return end
 		if dist < C.AttackRange and now > g.nextAttack then
 			setState(g, "WindUp", C.WindUp)

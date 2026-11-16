@@ -23,6 +23,7 @@ local Lobby = require(Server.Lobby)
 local UltRunner = require(Server.UltRunner)
 local MapLoader = require(Server.MapLoader)
 local Admin = require(Server.Admin)
+local Friends = require(Server.Friends)
 
 local isMatchServer = game.PrivateServerId ~= "" and game.PrivateServerOwnerId == 0
 Run.mode = isMatchServer and "Match" or "Lobby"
@@ -37,6 +38,7 @@ Inventory.start()
 Run.start()
 Lobby.start()
 Admin.start()
+Friends.start()
 
 local expected = 1
 local firstJoin = nil :: number?

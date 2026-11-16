@@ -1,4 +1,4 @@
--- Lobby shop (grunge) at the Hooded Dealer: 50 ultimates by rarity (buy with cash, equip one) + a MAPS tab.
+-- Lobby shop (grunge) at the Hooded Dealer: 50 ultimates by rarity (buy with cash, equip one) + MAPS + ROBUX tabs.
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -17,7 +17,10 @@ local cashText: TextLabel
 local statusText: TextLabel
 local rows = {} :: { [string]: { btn: TextButton, row: Frame } }
 local mapRows = {} :: { [string]: { btn: TextButton, row: Frame } }
-local filter = 0 -- 0 = all ultimates, 1..5 = a rarity, -1 = maps
+local filter = 0 -- 0 = all ultimates, 1..5 = a rarity, -1 = maps, -2 = robux
+local MarketplaceService = game:GetService("MarketplaceService")
+local robuxRows = {} :: { { btn: TextButton, row: Frame, kind: string } }
+local passPrice: number? = nil
 local onToggle: ((boolean) -> ())? = nil
 
 local function button(parent: Instance, text: string, props: { [string]: any }): TextButton
@@ -46,8 +49,22 @@ local function ownedMaps(): { [string]: boolean }
 	return o
 end
 
+local function adminPassId(): number return tonumber(RS:GetAttribute("AdminPassId")) or 0 end
+
 local function refresh()
 	if not gui then return end
+	for _, r in robuxRows do
+		r.row.Visible = filter == -2
+		if r.kind == "admin" then
+			if lp:GetAttribute("IsAdmin") then
+				r.btn.Text = "OWNED"; r.btn.BackgroundColor3 = Color3.fromRGB(60, 110, 50)
+			elseif adminPassId() == 0 then
+				r.btn.Text = "SOON"; r.btn.BackgroundColor3 = Color3.fromRGB(70, 64, 58)
+			else
+				r.btn.Text = "R$ " .. tostring(passPrice or 4999); r.btn.BackgroundColor3 = Color3.fromRGB(30, 120, 60)
+			end
+		end
+	end
 	cashText.Text = "$" .. tostring(lp:GetAttribute("Cash") or 0)
 	local om = ownedMaps()
 	for _, m in Maps.list do
@@ -90,11 +107,13 @@ function Shop.init(toggle: (boolean) -> ())
 	local names = { "ALL" }
 	for _, r in Items.rarity do table.insert(names, r.name) end
 	table.insert(names, "MAPS")
+	table.insert(names, "ROBUX")
 	for i, n in names do
-		local isMaps = n == "MAPS"
-		local col = i == 1 and Color3.fromRGB(60, 50, 44) or (isMaps and Color3.fromRGB(40, 70, 90) or Items.rarity[i - 1].color:Lerp(Color3.new(0, 0, 0), 0.45))
-		local b = button(tabs, n, { Size = UDim2.fromScale(1 / 7 - 0.01, 1), BackgroundColor3 = col, ZIndex = 11, LayoutOrder = i })
-		b.MouseButton1Click:Connect(function() Sfx.play("Click"); filter = isMaps and -1 or i - 1; refresh() end)
+		local isMaps, isRobux = n == "MAPS", n == "ROBUX"
+		local col = i == 1 and Color3.fromRGB(60, 50, 44) or (isMaps and Color3.fromRGB(40, 70, 90))
+			or (isRobux and Color3.fromRGB(30, 110, 55)) or Items.rarity[i - 1].color:Lerp(Color3.new(0, 0, 0), 0.45)
+		local b = button(tabs, n, { Size = UDim2.fromScale(1 / 8 - 0.01, 1), BackgroundColor3 = col, ZIndex = 11, LayoutOrder = i })
+		b.MouseButton1Click:Connect(function() Sfx.play("Click"); filter = isRobux and -2 or (isMaps and -1 or i - 1); refresh() end)
 	end
 	local list = Instance.new("ScrollingFrame")
 	list.BackgroundTransparency = 1; list.BorderSizePixel = 0; list.Position = UDim2.fromScale(0.04, 0.225); list.Size = UDim2.fromScale(0.92, 0.68)
@@ -129,10 +148,43 @@ function Shop.init(toggle: (boolean) -> ())
 		end)
 		mapRows[m.id] = { btn = btn, row = row }
 	end
+	-- ROBUX: the admin panel (Game Pass, id in the ReplicatedStorage attribute AdminPassId)
+	do
+		local row = Grunge.frame(list, { Size = UDim2.new(1, -12, 0, 96), BackgroundTransparency = 0.45, BackgroundColor3 = Color3.fromRGB(10, 8, 7), ZIndex = 10, LayoutOrder = 2000, Visible = false })
+		Grunge.frame(row, { BackgroundTransparency = 0, BackgroundColor3 = Color3.fromRGB(40, 200, 90), Size = UDim2.new(0, 8, 1, 0), ZIndex = 11 })
+		Grunge.text(row, { Text = "ADMIN PANEL", Font = Grunge.HORROR, Position = UDim2.new(0, 18, 0.04, 0), Size = UDim2.new(0.5, 0, 0.42, 0), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(120, 230, 120), ZIndex = 11 })
+		Grunge.text(row, { Text = "Every cheat in the game, forever: cash, all 50 items, every ultimate and map, god mode. Solo runs: spawn monsters, events and more. Opens with F2.",
+			Font = Grunge.TYPE, Position = UDim2.new(0, 18, 0.5, 0), Size = UDim2.new(0.72, 0, 0.44, 0), TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true, TextColor3 = Color3.fromRGB(190, 180, 160), ZIndex = 11 })
+		local btn = button(row, "", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0), Size = UDim2.new(0.2, 0, 0.55, 0), ZIndex = 12 })
+		btn.MouseButton1Click:Connect(function()
+			Sfx.play("Click")
+			if lp:GetAttribute("IsAdmin") then return end
+			local id = adminPassId()
+			if id == 0 then Shop.result(false, "The admin panel is not on sale yet") return end
+			MarketplaceService:PromptGamePassPurchase(lp, id)
+		end)
+		table.insert(robuxRows, { btn = btn, row = row, kind = "admin" })
+		-- live price from Roblox
+		task.spawn(function()
+			local id = adminPassId()
+			if id > 0 then
+				local ok, info = pcall(function() return MarketplaceService:GetProductInfo(id, Enum.InfoType.GamePass) end)
+				if ok and info and info.PriceInRobux then passPrice = info.PriceInRobux; refresh() end
+			end
+		end)
+	end
 	statusText = Grunge.text(panel, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0.04, 0.92), Size = UDim2.fromScale(0.92, 0.045), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 10 })
 	local close = button(panel, "LEAVE", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(0.96, 0.095), Size = UDim2.fromScale(0.2, 0.052), ZIndex = 12, Rotation = 1.5, BackgroundColor3 = Color3.fromRGB(45, 40, 36), Modal = true })
 	close.MouseButton1Click:Connect(function() Sfx.play("Click"); Shop.close() end)
-	for _, a in { "Cash", "OwnedUlts", "EquippedUlt", "Owned" } do lp:GetAttributeChangedSignal(a):Connect(refresh) end
+	for _, a in { "Cash", "OwnedUlts", "EquippedUlt", "Owned", "IsAdmin" } do lp:GetAttributeChangedSignal(a):Connect(refresh) end
+	-- Studio test hook: player attribute ShopTab = "robux" | "maps" | "all" opens the shop on that tab
+	if game:GetService("RunService"):IsStudio() then
+		lp:GetAttributeChangedSignal("ShopTab"):Connect(function()
+			local t = lp:GetAttribute("ShopTab")
+			if t == "robux" then filter = -2 elseif t == "maps" then filter = -1 elseif t == "all" then filter = 0 else return end
+			Shop.open()
+		end)
+	end
 end
 
 function Shop.open()

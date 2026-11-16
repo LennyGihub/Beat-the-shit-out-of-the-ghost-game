@@ -225,7 +225,7 @@ function HUD.update(dt: number)
 	local obj = inMatch and (RS:GetAttribute("Objective") or "") or ""
 	if not inMatch then
 		local q = lp:GetAttribute("QueueRoom")
-		obj = q and "WAITING FOR PLAYERS..." or "STEP ON A ROOM PAD TO PLAY"
+		obj = q and "WAITING FOR PLAYERS..." or (lp:GetAttribute("PartyId") and "IN A LOBBY - THE HOST PRESSES START" or "PRESS PLAY OR STEP ON A ROOM PAD")
 	end
 	objective.Text = obj
 	objective.Visible = obj ~= ""
