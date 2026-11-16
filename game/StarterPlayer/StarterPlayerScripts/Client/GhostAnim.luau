@@ -55,7 +55,7 @@ local function abilityPose(ab: string, phase: string, t: number, since: number):
 	local a = math.min(1, since / 0.35)
 	if ab == "steal" then -- the Goblin: snatch an item, cackle, then use it
 		if phase == "reach" then
-			p.Root = A(0.15 * a, 0, 0); p.Waist = A(0.35 * a, 0, 0); p.Neck = A(-0.35 * a, 0, 0)
+			p.Root = A(0.15 * a, 0, 0) * CFrame.new(0, -0.4 * a, -1.0 * a); p.Waist = A(0.35 * a, 0, 0); p.Neck = A(-0.35 * a, 0, 0)
 			p.RightShoulder = A(1.55 * a, 0, -0.2); p.RightElbow = A(0.15, 0, 0); p.RightWrist = A(-0.3 * a, 0, 0)
 			p.LeftShoulder = A(1.3 * a, 0, 0.25); p.LeftElbow = A(0.3, 0, 0)
 		elseif phase == "laugh" then
@@ -67,8 +67,9 @@ local function abilityPose(ab: string, phase: string, t: number, since: number):
 			p.RightShoulder = A(2.9 * a, 0, -0.35 * a); p.RightElbow = A(0.9 * a, 0, 0); p.RightWrist = A(0.3 * a, 0, 0)
 			p.LeftShoulder = A(0.7 * a, 0, 0.4); p.LeftElbow = A(0.5, 0, 0)
 		elseif phase == "swing" then
-			p.Root = A(0.2, 0, 0); p.Waist = A(0.4, 0.55, 0); p.Neck = A(-0.2, -0.3, 0)
+			p.Root = A(0.25, 0, 0) * CFrame.new(0, -0.5, -1.2); p.Waist = A(0.45, 0.6, 0); p.Neck = A(-0.2, -0.3, 0)
 			p.RightShoulder = A(0.35, 0, 0.6); p.RightElbow = A(0.1, 0, 0); p.RightWrist = A(-0.3, 0, 0)
+			p.LeftHip = A(0.7, 0, 0); p.RightHip = A(-0.5, 0, 0); p.LeftKnee = A(-0.6, 0, 0)
 			p.LeftShoulder = A(-0.3, 0, -0.3)
 		elseif phase == "aim" or phase == "fire" then
 			local kick = phase == "fire" and math.abs(s(t * 48)) * 0.18 or 0
@@ -80,8 +81,9 @@ local function abilityPose(ab: string, phase: string, t: number, since: number):
 			p.RightShoulder = A(2.9 * a, 0, 0.25 * a); p.RightElbow = A(1.0 * a, 0, 0)
 			p.LeftShoulder = A(1.0 * a, 0, 0.3)
 		elseif phase == "throw" then
-			p.Root = A(0.2, 0, 0); p.Waist = A(0.35, 0.4, 0)
+			p.Root = A(0.2, 0, 0) * CFrame.new(0, -0.3, -0.9); p.Waist = A(0.35, 0.5, 0)
 			p.RightShoulder = A(1.0, 0, 0.1); p.RightElbow = A(0.1, 0, 0)
+			p.LeftHip = A(0.6, 0, 0); p.RightHip = A(-0.45, 0, 0)
 			p.LeftShoulder = A(-0.3, 0, -0.3)
 		elseif phase == "spray" then
 			p.Waist = A(0.1, s(t * 2.5) * 0.25, 0)
@@ -172,12 +174,54 @@ local function walkPose(p: { [string]: CFrame }, t: number, speed: number)
 	p.Waist = A(0.05, -s(ph) * 0.12 * k, 0)
 end
 
+-- the Goblin's own claw attacks (WindUp -> Swipe), a different one each time:
+-- 1 right haymaker, 2 left haymaker, 3 two-fisted overhead slam. Every hit lunges at you.
+local gobVariant = 1
+local function goblinClaw(state: string, t: number, since: number): { [string]: CFrame }
+	local p = {}
+	local a = math.min(1, since / 0.4)
+	local s = math.sin
+	if gobVariant == 3 then
+		if state == "WindUp" then
+			p.Root = A(-0.3 * a, 0, 0); p.Waist = A(-0.4 * a, 0, 0); p.Neck = A(-0.25, 0, s(t * 30) * 0.05)
+			p.RightShoulder = A(3.0 * a, 0, -0.3 * a); p.LeftShoulder = A(3.0 * a, 0, 0.3 * a)
+			p.RightElbow = A(0.7 * a, 0, 0); p.LeftElbow = A(0.7 * a, 0, 0)
+			p.RightHip = A(0.15, 0, 0.15); p.LeftHip = A(0.15, 0, -0.15); p.RightKnee = A(-0.3, 0, 0); p.LeftKnee = A(-0.3, 0, 0)
+		else -- slam: crouch down, both fists to the floor
+			p.Root = A(0.55, 0, 0) * CFrame.new(0, -1.3, -1.1); p.Waist = A(0.6, 0, 0); p.Neck = A(-0.5, 0, 0)
+			p.RightShoulder = A(0.9, 0, -0.25); p.LeftShoulder = A(0.9, 0, 0.25)
+			p.RightElbow = A(0.15, 0, 0); p.LeftElbow = A(0.15, 0, 0)
+			p.RightHip = A(1.0, 0, 0.2); p.LeftHip = A(1.0, 0, -0.2); p.RightKnee = A(-1.3, 0, 0); p.LeftKnee = A(-1.3, 0, 0)
+			p.RightAnkle = A(0.35, 0, 0); p.LeftAnkle = A(0.35, 0, 0)
+		end
+		return p
+	end
+	-- haymaker (k = 1 right hand, -1 left hand: the left one is the mirror image)
+	local k = gobVariant == 1 and 1 or -1
+	local R, L = k == 1 and "Right" or "Left", k == 1 and "Left" or "Right"
+	if state == "WindUp" then -- cock the fist back, torso twisted away, other hand up as a guard
+		p.Root = A(-0.1 * a, 0, 0); p.Waist = A(-0.15 * a, -0.75 * a * k, 0); p.Neck = A(0.1, 0.5 * a * k, 0)
+		p[R .. "Shoulder"] = A(1.3 * a, 0, 1.25 * a * k); p[R .. "Elbow"] = A(1.6 * a, 0, 0); p[R .. "Wrist"] = A(0.3, 0, 0)
+		p[L .. "Shoulder"] = A(1.15 * a, 0, -0.35 * k); p[L .. "Elbow"] = A(1.3, 0, 0)
+		p[R .. "Hip"] = A(-0.35, 0, 0.1 * k); p[L .. "Hip"] = A(0.35, 0, -0.1 * k); p[L .. "Knee"] = A(-0.4, 0, 0)
+	else -- swing it across with a lunge
+		p.Root = A(0.25, 0, 0) * CFrame.new(0, -0.4, -1.3); p.Waist = A(0.25, 0.85 * k, 0); p.Neck = A(-0.2, -0.55 * k, 0)
+		p[R .. "Shoulder"] = A(1.6, 0, -0.75 * k); p[R .. "Elbow"] = A(0.1, 0, 0); p[R .. "Wrist"] = A(-0.2, 0, 0)
+		p[L .. "Shoulder"] = A(-0.45, 0, -0.4 * k); p[L .. "Elbow"] = A(0.6, 0, 0)
+		p[L .. "Hip"] = A(0.75, 0, 0); p[R .. "Hip"] = A(-0.55, 0, 0); p[L .. "Knee"] = A(-0.6, 0, 0); p[R .. "Knee"] = A(-0.2, 0, 0)
+	end
+	return p
+end
+
 local function target(state: string, t: number, sinceState: number): { [string]: CFrame }
 	local s = math.sin
 	local p = {}
 	local g = current :: Model
 	if state == "Ability" then
 		return abilityPose(g:GetAttribute("Ability") or "", g:GetAttribute("AbilityPhase") or "", t, sinceState)
+	end
+	if (state == "WindUp" or state == "Swipe") and g:GetAttribute("MonsterId") == "Goblin" then
+		return goblinClaw(state, t, sinceState)
 	end
 	if state == "WindUp" then
 		local a = math.min(1, sinceState / 0.45)
@@ -266,7 +310,10 @@ function GA.update(dt: number)
 	if not current or not current.Parent then return end
 	local t = os.clock()
 	local state = current:GetAttribute("State") or "Chase"
-	if state ~= stateSeen then stateSeen = state; stateT = t end
+	if state ~= stateSeen then
+		stateSeen = state; stateT = t
+		if state == "WindUp" then gobVariant = gobVariant % 3 + 1 end
+	end
 	local frozen = current:GetAttribute("Frozen") == true
 	if highlight then
 		if frozen then

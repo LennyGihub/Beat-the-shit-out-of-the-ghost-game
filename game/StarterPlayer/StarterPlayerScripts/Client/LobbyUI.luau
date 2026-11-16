@@ -8,6 +8,7 @@ local HttpService = game:GetService("HttpService")
 local TweenService = game:GetService("TweenService")
 local Maps = require(RS.Shared.Maps)
 local Grunge = require(script.Parent.Grunge)
+local Platform = require(script.Parent.Platform)
 local Sfx = require(script.Parent.Sfx)
 local Remotes = RS:WaitForChild("Remotes")
 
@@ -178,6 +179,10 @@ local function setOpen(open: boolean)
 	if onToggle then onToggle(open) end
 end
 
+function LobbyUI.togglePlay()
+	if panel and not lp:GetAttribute("InMatch") then setOpen(not panel.Visible) end
+end
+
 local function refreshVisible()
 	local inMatch = lp:GetAttribute("InMatch") == true
 	side.Visible = not inMatch
@@ -214,6 +219,11 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> ())
 		if panel.Visible then setOpen(false) end
 		if openShop then openShop() end
 	end)
+	-- controller: D-pad up opens PLAY (the stick keeps moving the character)
+	local padTag = Grunge.text(side, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0, 0.78), Size = UDim2.fromScale(1.3, 0.08), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(255, 200, 120), Rotation = -2 })
+	local function padHint() padTag.Text = Platform.mode() == "gamepad" and "D-PAD UP: PLAY   D-PAD LEFT: SETTINGS" or "" end
+	padHint()
+	Platform.changed:Connect(padHint)
 	boostTag = Grunge.text(side, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0, 0.66), Size = UDim2.fromScale(1.3, 0.1), TextXAlignment = Enum.TextXAlignment.Left, Rotation = -2 })
 
 	-- PLAY panel
@@ -224,6 +234,7 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> ())
 	Grunge.text(panel, { Text = "PLAY", Font = Grunge.HORROR, Position = UDim2.fromScale(0.04, 0.02), Size = UDim2.fromScale(0.3, 0.1), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(255, 110, 60), ZIndex = 10 })
 	local close = button(panel, "CLOSE", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(0.96, 0.035), Size = UDim2.fromScale(0.16, 0.065), BackgroundColor3 = DARK, ZIndex = 12, Modal = true })
 	close.Activated:Connect(function() Sfx.play("Click"); setOpen(false) end)
+	Platform.menu(panel, function() setOpen(false) end)
 
 	-- left half: create a lobby
 	createPage = Grunge.frame(panel, { Position = UDim2.fromScale(0.04, 0.14), Size = UDim2.fromScale(0.46, 0.82), ZIndex = 10 })

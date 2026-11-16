@@ -104,14 +104,15 @@ function MonsterFx.handle(kind: string, ...)
 		emitter(pos, { Color = ColorSequence.new(col), LightEmission = 1, Size = NumberSequence.new(2, 0), Speed = NumberRange.new(-14, -8),
 			Shape = Enum.ParticleEmitterShape.Sphere, ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface, Lifetime = NumberRange.new(0.4, 0.6),
 			Texture = "rbxasset://textures/particles/sparkles_main.dds" }, 40, 1.5)
-		Sfx.at(k == "wail" and "GhostWail" or "GhostHurt", pos, { PlaybackSpeed = k == "wail" and 0.8 or 0.6, Volume = 1.2 })
+		local own = Sfx.voice("WindUp")
+		Sfx.at(k == "wail" and "GhostWail" or (own == "GhostWail" and "GhostHurt" or own), pos, { PlaybackSpeed = k == "wail" and 0.8 or (own == "GhostWail" and 0.6 or 1), Volume = 1.2 })
 		Fx.shake(0.15 * near(pos, 60))
 	elseif kind == "GoblinSteal" then
 		-- the Goblin snatches an item: green + gold burst, a cackle
 		local pos, victim = a[1], a[2]
 		emitter(pos, { Color = ColorSequence.new(GOBLIN, GOLD), LightEmission = 1, Size = NumberSequence.new(1.2, 0), Speed = NumberRange.new(8, 20),
 			Lifetime = NumberRange.new(0.4, 0.8), SpreadAngle = Vector2.new(180, 180), Texture = "rbxasset://textures/particles/sparkles_main.dds" }, 50, 1.5)
-		Sfx.at("DemonLaugh", pos, { PlaybackSpeed = 1.75, Volume = 1.3 })
+		Sfx.at("GoblinCackle", pos, { Volume = 1.3 })
 		Sfx.at("Whoosh", pos, { PlaybackSpeed = 1.3 })
 		if victim == lp then
 			HUD.flash(Color3.fromRGB(60, 150, 30), 0.45)

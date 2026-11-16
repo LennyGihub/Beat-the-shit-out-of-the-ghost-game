@@ -16,6 +16,9 @@ lp:GetAttributeChangedSignal("InMatch"):Connect(camMode)
 workspace.CurrentCamera.FieldOfView = 74
 local Remotes = RS:WaitForChild("Remotes")
 
+local Platform = require(Client.Platform)
+local Settings = require(Client.Settings)
+local SettingsUI = require(Client.SettingsUI)
 local HUD = require(Client.HUD)
 local VM = require(Client.Viewmodel)
 local GA = require(Client.GhostAnim)
@@ -34,10 +37,14 @@ local SawAudio = require(Client.SawAudio)
 local LobbyUI = require(Client.LobbyUI)
 local ReviveUI = require(Client.ReviveUI)
 
+Platform.init()
+Settings.init()
 HUD.init()
 VM.init()
 GA.init()
 Fx.init()
+-- settings window (volumes, keybinds): blocks punching while open, its CLOSE button frees the mouse
+SettingsUI.init(function(open) Input.setShopOpen(open) end)
 Input.init()
 PlaneFx.init(Fx)
 EventFx.init(Fx)
@@ -57,6 +64,7 @@ end)
 ReviveUI.init()
 -- lobby screen: PLAY (create / join lobbies) and SHOP buttons, friend booster
 LobbyUI.init(function() UltShop.open() end, function(open) Input.setShopOpen(open) end)
+Input.openPlay = LobbyUI.togglePlay
 
 Remotes.Fx.OnClientEvent:Connect(function(kind: string, ...)
 	if kind == "OpenUltShop" then

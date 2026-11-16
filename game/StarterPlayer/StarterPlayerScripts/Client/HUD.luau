@@ -6,6 +6,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Config = require(RS.Shared.Config)
 local Grunge = require(script.Parent.Grunge)
+local Platform = require(script.Parent.Platform)
 local Ultimates = require(RS.Shared.Ultimates)
 
 local HUD = {}
@@ -52,6 +53,17 @@ function HUD.init()
 		Text = "PRESS Q", AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(0, -6, 0.86, 0), Size = UDim2.fromScale(0.34, 0.2),
 		TextColor3 = Color3.fromRGB(255, 120, 40), Rotation = -6, Visible = false, ZIndex = 8,
 	})
+
+	-- phones: the bars go top-left, out of the way of the thumb buttons (TouchControls)
+	local function layoutBars()
+		if Platform.mode() == "touch" then
+			br.AnchorPoint = Vector2.new(0, 0); br.Position = UDim2.new(0, 16, 0.2, 0); br.Size = UDim2.fromScale(0.28, 0.24)
+		else
+			br.AnchorPoint = Vector2.new(1, 1); br.Position = UDim2.new(1, -24, 1, -24); br.Size = UDim2.fromScale(0.36, 0.3)
+		end
+	end
+	layoutBars()
+	Platform.changed:Connect(layoutBars)
 
 	ultName = Grunge.text(br, { Text = "", Font = Grunge.TYPE, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -4, 1.0, 0), Size = UDim2.fromScale(0.9, 0.11), TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = Color3.fromRGB(255, 150, 80), ZIndex = 8 })
 
@@ -202,7 +214,8 @@ function HUD.update(dt: number)
 	else
 		brut:color(Color3.fromRGB(230, 96, 20))
 	end
-	ultLabel.Visible = full
+	ultLabel.Visible = full and Platform.mode() ~= "touch" -- phones: the ULT button lights up instead
+	if full then ultLabel.Text = "PRESS " .. string.sub(Platform.label("Ultimate"), 2, -2) end
 	if full then ultLabel.Rotation = -6 + math.sin(t * 10) * 3 end
 
 	local g = workspace:FindFirstChild("Ghost")

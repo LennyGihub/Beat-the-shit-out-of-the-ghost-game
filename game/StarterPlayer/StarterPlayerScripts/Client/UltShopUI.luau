@@ -6,6 +6,8 @@ local Ultimates = require(RS.Shared.Ultimates)
 local Items = require(RS.Shared.Items)
 local Maps = require(RS.Shared.Maps)
 local Grunge = require(script.Parent.Grunge)
+local Platform = require(script.Parent.Platform)
+local registered = false
 local Sfx = require(script.Parent.Sfx)
 local Remotes = RS:WaitForChild("Remotes")
 
@@ -241,6 +243,7 @@ function Shop.init(toggle: (boolean) -> ())
 end
 
 function Shop.open()
+	if not registered then registered = true; Platform.menu(panel, Shop.close) end
 	refresh()
 	gui.Enabled = true
 	local s = panel:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")

@@ -1,5 +1,6 @@
--- Controls: click = punch (or throw while carrying), E = lift / throw furniture, Q = ultimate, Shift = sprint.
--- Mobile gets on-screen buttons through ContextActionService.
+-- Controls: click = punch (or throw while carrying), E = lift / throw furniture, Q = ultimate, Shift = sprint, X = drop,
+-- P = settings (keyboard keys are rebindable in Settings). Controller: R2 / L2 / Y / L3, L1-R1 items, D-pad down drop,
+-- D-pad left settings, D-pad up PLAY in the lobby. Phones: TouchControls buttons.
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local UIS = game:GetService("UserInputService")
@@ -12,8 +13,13 @@ local VM = require(script.Parent.Viewmodel)
 local HUD = require(script.Parent.HUD)
 local Sfx = require(script.Parent.Sfx)
 local Hotbar = require(script.Parent.Hotbar)
+local Platform = require(script.Parent.Platform)
+local Settings = require(script.Parent.Settings)
+local SettingsUI = require(script.Parent.SettingsUI)
+local TouchControls = require(script.Parent.TouchControls)
 
 local Input = {}
+Input.openPlay = nil :: (() -> ())? -- set by ClientMain (lobby PLAY window)
 local lp = Players.LocalPlayer
 local cam = workspace.CurrentCamera
 local lastPunch = 0
@@ -101,42 +107,107 @@ local function setSprint(on: boolean)
 	Remotes.Sprint:FireServer(on)
 end
 
-function Input.init()
-	CAS:BindAction("Punch", function(_, st, input)
-		if input and input.UserInputType == Enum.UserInputType.Touch then Hotbar.touchHold = st == Enum.UserInputState.Begin end
-		if st == Enum.UserInputState.Begin then punch() end
+-- the hint under the crosshair, in the player's controls
+local function liftHint(name: string?): string?
+	local m = Platform.mode()
+	if lp:GetAttribute("Carrying") then
+		if m == "touch" then return "TAP THROW" end
+		if m == "gamepad" then return "[R2 / L2]  THROW IT" end
+		return "[" .. Settings.keyName("Punch") .. " / " .. Settings.keyName("Lift") .. "]  THROW IT"
+	end
+	if not name then return nil end
+	if m == "touch" then return "TAP LIFT:  " .. name end
+	return Platform.label("Lift") .. "  LIFT " .. name
+end
+
+local ACTIONS = { "Punch", "Grab", "Ultimate", "Sprint", "Drop", "Settings", "SwapPrev", "SwapNext", "Play" }
+local triggerHeld = false -- the hit button / key / trigger is held down (keep hitting, keep spraying)
+
+local function setHeld(on: boolean)
+	triggerHeld = on
+	Hotbar.touchHold = on
+end
+
+-- (re)bind every action: keyboard keys from Settings, fixed controller buttons
+local function bindAll()
+	for _, a in ACTIONS do CAS:UnbindAction(a) end
+	CAS:BindAction("Punch", function(_, st)
+		if st == Enum.UserInputState.Begin then setHeld(true); punch()
+		elseif st == Enum.UserInputState.End or st == Enum.UserInputState.Cancel then setHeld(false) end
 		return Enum.ContextActionResult.Pass
-	end, true, Enum.UserInputType.MouseButton1, Enum.KeyCode.ButtonR2)
+	end, false, Settings.input("Punch"), Enum.KeyCode.ButtonR2)
 	CAS:BindAction("Grab", function(_, st)
 		if st == Enum.UserInputState.Begin then grab() end
 		return Enum.ContextActionResult.Pass
-	end, true, Enum.KeyCode.E, Enum.KeyCode.ButtonX)
+	end, false, Settings.input("Lift"), Enum.KeyCode.ButtonL2)
 	CAS:BindAction("Ultimate", function(_, st)
 		if st == Enum.UserInputState.Begin then ult() end
 		return Enum.ContextActionResult.Pass
-	end, true, Enum.KeyCode.Q, Enum.KeyCode.ButtonY)
+	end, false, Settings.input("Ultimate"), Enum.KeyCode.ButtonY)
 	CAS:BindAction("Sprint", function(_, st)
 		setSprint(st == Enum.UserInputState.Begin)
 		return Enum.ContextActionResult.Pass
-	end, false, Enum.KeyCode.LeftShift, Enum.KeyCode.ButtonL3)
-	CAS:SetTitle("Punch", "HIT"); CAS:SetTitle("Grab", "LIFT"); CAS:SetTitle("Ultimate", "ULT")
-	CAS:SetPosition("Punch", UDim2.new(1, -140, 1, -150))
-	CAS:SetPosition("Grab", UDim2.new(1, -220, 1, -110))
-	CAS:SetPosition("Ultimate", UDim2.new(1, -150, 1, -230))
-	-- hold mouse button to keep punching
+	end, false, Settings.input("Sprint"), Enum.KeyCode.ButtonL3)
+	CAS:BindAction("Drop", function(_, st)
+		if st == Enum.UserInputState.Begin and lp:GetAttribute("InMatch") and not shopOpen then Hotbar.drop() end
+		return Enum.ContextActionResult.Pass
+	end, false, Settings.input("Drop"), Enum.KeyCode.DPadDown)
+	CAS:BindAction("Settings", function(_, st)
+		if st == Enum.UserInputState.Begin and not UIS:GetFocusedTextBox() then SettingsUI.toggle() end
+		return Enum.ContextActionResult.Pass
+	end, false, Settings.input("Settings"), Enum.KeyCode.DPadLeft)
+	CAS:BindAction("SwapPrev", function(_, st)
+		if st == Enum.UserInputState.Begin and lp:GetAttribute("InMatch") and not shopOpen then Hotbar.cycle(-1) end
+		return Enum.ContextActionResult.Pass
+	end, false, Enum.KeyCode.ButtonL1)
+	CAS:BindAction("SwapNext", function(_, st)
+		if st == Enum.UserInputState.Begin and lp:GetAttribute("InMatch") and not shopOpen then Hotbar.cycle(1) end
+		return Enum.ContextActionResult.Pass
+	end, false, Enum.KeyCode.ButtonR1)
+	CAS:BindAction("Play", function(_, st)
+		if st == Enum.UserInputState.Begin and not lp:GetAttribute("InMatch") and Input.openPlay then Input.openPlay() end
+		return Enum.ContextActionResult.Pass
+	end, false, Enum.KeyCode.DPadUp)
+end
+
+-- ProximityPrompts that use F (shops, dealer, lobby doors) follow the INTERACT keybind
+local function promptKey(pp: ProximityPrompt)
+	local orig = pp:GetAttribute("OrigKey")
+	if not orig then
+		orig = pp.KeyboardKeyCode.Name
+		pp:SetAttribute("OrigKey", orig)
+	end
+	if orig == "F" then
+		local k = Settings.input("Use")
+		if typeof(k) == "EnumItem" and k.EnumType == Enum.KeyCode then pp.KeyboardKeyCode = k :: Enum.KeyCode end
+	end
+end
+local function allPrompts()
+	for _, d in workspace:GetDescendants() do if d:IsA("ProximityPrompt") then promptKey(d) end end
+end
+
+function Input.init()
+	bindAll()
+	Settings.changed:Connect(function(k) if k == "binds" then bindAll(); allPrompts() end end)
+	allPrompts()
+	workspace.DescendantAdded:Connect(function(d) if d:IsA("ProximityPrompt") then promptKey(d) end end)
+	TouchControls.init({
+		punch = function(down: boolean) setHeld(down); if down then punch() end end,
+		lift = grab, ult = ult, sprint = setSprint,
+		drop = function() if lp:GetAttribute("InMatch") then Hotbar.drop() end end,
+	})
+	-- hold to keep hitting (mouse, key, trigger or the HIT button)
 	RunService.Heartbeat:Connect(function()
-		if UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) and not lp:GetAttribute("Carrying") and not shopOpen and UIS.MouseBehavior == Enum.MouseBehavior.LockCenter then
+		if shopOpen then setHeld(false) end
+		local mouseLocked = UIS.MouseBehavior == Enum.MouseBehavior.LockCenter or Platform.mode() ~= "keyboard"
+		if triggerHeld and lp:GetAttribute("InMatch") and not lp:GetAttribute("Carrying") and not shopOpen and mouseLocked then
 			punch()
 		end
 		local now = os.clock()
 		if now - lastHint < 0.15 then return end
 		lastHint = now
-		if lp:GetAttribute("Carrying") then
-			HUD.hint("[CLICK / E]  THROW IT")
-		else
-			local m = not shopOpen and aimedFurniture()
-			HUD.hint(m and ("[E]  LIFT " .. string.upper(m:GetAttribute("Kind") or m.Name)) or nil)
-		end
+		local m = not shopOpen and not lp:GetAttribute("Carrying") and aimedFurniture()
+		HUD.hint(liftHint(m and string.upper(m:GetAttribute("Kind") or m.Name) or nil))
 	end)
 end
 
