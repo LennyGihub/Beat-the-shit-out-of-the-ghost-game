@@ -5,6 +5,7 @@ local RS = game:GetService("ReplicatedStorage")
 local SS = game:GetService("ServerStorage")
 local Items = require(RS.Shared.Items)
 local ItemModels = require(RS.Shared.ItemModels)
+local Config = require(RS.Shared.Config)
 local Remotes = require(script.Parent.Remotes)
 
 local Events = {}
@@ -218,8 +219,8 @@ end
 
 local function plane(ev, trigger: Vector3)
 	local land = planeLand(trigger)
-	fx("PlaneCrash", land, trigger)
-	task.wait(4.2)
+	fx("PlaneCrash", land, trigger, planeCF(land, trigger)) -- the cinematic ends in the wreck's exact pose
+	task.wait(Config.eventTime("PlaneTime"))
 	local w = (RS:FindFirstChild("PlaneModel") :: Model):Clone()
 	w.Name = "PlaneWreck"
 	w:PivotTo(planeCF(land, trigger))
@@ -262,14 +263,15 @@ end
 local function van(ev)
 	local VAN_CF = vanCF()
 	fx("VanCrash", VAN_CF)
-	task.wait(2.7)
+	task.wait(Config.eventTime("VanTime"))
+	fx("VanImpact", (VAN_CF * CFrame.new(0, 3, -8)).Position)
+	task.wait(Config.eventTime("VanSettle")) -- it bounces off the wall and settles (client), then the real wreck takes over
 	local v = (models():FindFirstChild("Van") :: Model):Clone()
 	v:PivotTo(VAN_CF * CFrame.Angles(math.rad(-4), 0, math.rad(3)))
 	anchorAll(v)
 	burn(v:FindFirstChild("Hood", true) :: BasePart?, 6)
 	v.Parent = workspace
 	table.insert(ev.models, v)
-	fx("VanImpact", (VAN_CF * CFrame.new(0, 3, -8)).Position)
 	task.wait(1)
 	stock(v, ev.stock)
 	vendor(VAN_CF * CFrame.new(6.5, 0, 9) * CFrame.Angles(0, math.rad(60), 0), "\"lost the brakes... bought a lot of junk though. wanna see?\"", ev)
@@ -277,20 +279,22 @@ local function van(ev)
 	ev.label = "VAN SHOP"
 end
 
--- TRAIN: races along the tracks, jumps the rails; the second wagon is the shop (side door toward the house)
+-- TRAIN: races along the tracks from the right (toward -X), the locomotive in front; it jumps the rails and rolls
+-- onto its side, the wagons jackknife behind it; the second wagon is the shop (side door toward the house)
 -- cars are built along Z (front = -Z); the tracks run along +X at z = 150, so yaw -90 deg puts them on the rails.
 -- The shop wagon's open side is its local -X, which then faces the house.
 local ONRAILS = CFrame.Angles(0, -math.pi / 2, 0)
 Events.TRAIN_Z = 150
 Events.TRAIN_CF = {
-	loco = CFrame.new(-38, 0, 152) * ONRAILS * CFrame.Angles(0, math.rad(-12), 0) * CFrame.new(0, 2.6, 0) * CFrame.Angles(0, 0, math.rad(80)),
+	-- the locomotive leads, so it faces -X (the extra half turn); it lies on its side, nose swung toward the house
+	loco = CFrame.new(-38, 0, 152) * ONRAILS * CFrame.Angles(0, math.pi + math.rad(-12), 0) * CFrame.new(0, 2.6, 0) * CFrame.Angles(0, 0, math.rad(-80)),
 	w1 = CFrame.new(-10, 0, 147) * ONRAILS * CFrame.Angles(0, math.rad(26), math.rad(-5)),
 	w2 = CFrame.new(18, 0, 148) * ONRAILS * CFrame.Angles(0, math.rad(-5), 0),
 }
 local function train(ev)
 	local T = Events.TRAIN_CF
 	fx("TrainCrash", T.loco, T.w1, T.w2)
-	task.wait(4)
+	task.wait(Config.eventTime("TrainTime"))
 	local f = models()
 	local loco = (f:FindFirstChild("TrainLoco") :: Model):Clone(); loco:PivotTo(T.loco)
 	local w1 = (f:FindFirstChild("TrainWagon") :: Model):Clone(); w1:PivotTo(T.w1)

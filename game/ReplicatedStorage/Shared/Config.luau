@@ -110,6 +110,9 @@ local Config = {
 	},
 	Reward = { Base = 200, PerLevel = 120 }, -- RUN cash per ghost (spent on items, lost after the run)
 	Payout = { PerKill = 55, PerLevel = 22, DamageDiv = 30 }, -- real cash paid when you die or leave the run (x difficulty reward)
+	-- event cinematics (Client EventFx / PlaneFx play them, Server Events waits for them): seconds until the crash
+	Events = { PlaneTime = 5, VanTime = 3.2, VanSettle = 0.6, TrainTime = 4.6 },
+	-- (read them with Config.eventTime(name): in Studio the ReplicatedStorage attribute DebugEventSlow = n plays them n times slower)
 	BreakTime = 40, -- seconds between ghosts (or start early at the front door)
 	EventLife = 3, -- an event's shop stays for the next 3 ghosts
 	Yard = { Min = Vector3.new(-95, -5, 60), Max = Vector3.new(95, 80, 165) },
@@ -117,4 +120,8 @@ local Config = {
 	OutsideZ = 64, -- crossing this (out the front porch) counts as outside
 	House = { Min = Vector3.new(-80, -5, -60), Max = Vector3.new(80, 80, 60) },
 }
+function Config.eventTime(name: string): number
+	local slow = game:GetService("RunService"):IsStudio() and game:GetService("ReplicatedStorage"):GetAttribute("DebugEventSlow")
+	return (Config.Events :: any)[name] * (type(slow) == "number" and slow or 1)
+end
 return Config

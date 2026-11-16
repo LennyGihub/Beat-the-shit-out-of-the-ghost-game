@@ -406,6 +406,14 @@ PRESETS.yard.AtmDensity = 0.42
 PRESETS.yard.AtmColor = Color3.fromRGB(26, 28, 32)
 PRESETS.yard.AtmDecay = Color3.fromRGB(14, 14, 18)
 PRESETS.yard.AtmHaze = 1.3
+-- the yard during an event cinematic (CineKit sets Fx.cine): moonlit and clear enough to watch the crash
+PRESETS.cine = table.clone(PRESETS.yard)
+PRESETS.cine.Exposure = 1.05
+PRESETS.cine.Brightness = 2.2
+PRESETS.cine.Outdoor = Color3.fromRGB(150, 160, 192)
+PRESETS.cine.AtmDensity = 0.24
+PRESETS.cine.AtmColor = Color3.fromRGB(44, 50, 64)
+PRESETS.cine.AtmHaze = 1.0
 local currentZone = ""
 local Maps = require(RS.Shared.Maps)
 function Fx.applyZone(zone: string, dt: number)
@@ -475,10 +483,11 @@ function Fx.init()
 		cam.CFrame = cam.CFrame * off
 		VM.setShake(CFrame.new())
 		fovKick += (0 - fovKick) * math.min(1, dt * 8)
-		cam.FieldOfView = baseFov + fovKick
+		cam.FieldOfView = (Fx.cineFov or baseFov) + fovKick -- CineKit zooms with Fx.cineFov
 		-- zone lighting: green park fog (lobby), dark PS2 interior (house), brighter yard outside
 		local pos = cam.CFrame.Position
 		local zone = pos.Z > 600 and "lobby" or ((pos.X > Config.House.Min.X and pos.X < Config.House.Max.X and pos.Z > Config.House.Min.Z and pos.Z < Config.House.Max.Z and pos.Y < 45) and "inside" or "yard")
+		if Fx.cine and zone == "yard" then zone = "cine" end
 		Fx.applyZone(zone, dt)
 		if ambience then ambience.Volume = zone == "inside" and 0.45 or (zone == "lobby" and 0.35 or 0.15) end
 	end)
