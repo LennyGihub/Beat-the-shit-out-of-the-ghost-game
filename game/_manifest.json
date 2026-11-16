@@ -131,8 +131,8 @@
    "file": "ServerScriptService/Server/Ragdoll.luau",
    "instance": "game.ServerScriptService.Server.Ragdoll",
    "class": "ModuleScript",
-   "bytes": 11211,
-   "sha1": "e6ece862e393a8811109f48e94b2302ec30413bb"
+   "bytes": 11571,
+   "sha1": "dde8990af838360b838069a0fa54fb89fbc367bf"
   },
   {
    "file": "ServerScriptService/Server/Remotes.luau",

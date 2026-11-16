@@ -117,17 +117,29 @@ end
 function Ragdoll.breakWalls(pos: Vector3, vel: Vector3): number
 	local st = structure()
 	if not st then return 0 end
-	local op = OverlapParams.new()
-	op.FilterType = Enum.RaycastFilterType.Include
-	op.FilterDescendantsInstances = { st }
 	-- from well below her (down to the floor) to a bit above her
 	local bottom, top = pos.Y - 12, pos.Y + 3.5
 	local holeCF = CFrame.new(pos.X, (bottom + top) / 2, pos.Z)
 	local holeSize = Vector3.new(HOLE_W, top - bottom, HOLE_W)
 	local push = vel.Magnitude > 1 and vel.Unit or Vector3.zero
+	local hmin, hmax = holeCF.Position - holeSize / 2, holeCF.Position + holeSize / 2
+	-- every interior part whose box overlaps the hole (not a spatial query: the wainscot and rails have
+	-- CanQuery off, so queries would miss them and leave the bottom of the wall standing)
+	local hits = {}
+	for _, p in st:GetDescendants() do
+		if p:IsA("BasePart") then
+			local half = p.CFrame:VectorToWorldSpace(p.Size / 2)
+			half = Vector3.new(math.abs(half.X), math.abs(half.Y), math.abs(half.Z))
+			local c = p.Position
+			if c.X - half.X < hmax.X and c.X + half.X > hmin.X and c.Y - half.Y < hmax.Y and c.Y + half.Y > hmin.Y
+				and c.Z - half.Z < hmax.Z and c.Z + half.Z > hmin.Z and breakable(p, st) then
+				table.insert(hits, p)
+			end
+		end
+	end
 	local n = 0
-	for _, p in workspace:GetPartBoundsInBox(holeCF, holeSize, op) do
-		if p.Parent and breakable(p, st) and carve(p, holeCF, holeSize, push) then n += 1 end
+	for _, p in hits do
+		if p.Parent and carve(p, holeCF, holeSize, push) then n += 1 end
 	end
 	return n
 end
@@ -194,20 +206,14 @@ function Ragdoll.step(g, dt: number, onWall: (pos: Vector3, speed: number) -> ()
 	local v = torso.AssemblyLinearVelocity
 	local speed = v.Magnitude
 	local now = os.clock()
-	-- smash walls in front of her before she touches them, so she flies right through
-	if speed > 18 and now - r.lastBreak > 0.05 then
-		local rp = RaycastParams.new()
-		rp.FilterType = Enum.RaycastFilterType.Include
-		local st = structure()
-		rp.FilterDescendantsInstances = { st or workspace.Terrain }
-		local hit = workspace:Raycast(torso.Position, v.Unit * (speed * dt * 3 + 4), rp)
-		if hit and hit.Normal.Y < 0.6 and st and breakable(hit.Instance :: BasePart, st) then
-			r.lastBreak = now
-			if Ragdoll.breakWalls(hit.Position, v) > 0 then
-				onWall(hit.Position, speed)
-				-- she keeps most of her speed through the hole
-				for p in r.saved do (p :: BasePart).AssemblyLinearVelocity *= 0.85 end
-			end
+	-- smash the inside walls right in front of her before she touches them, so she flies through
+	-- (a box test, not a raycast: rays skip the wainscot and rails, which have CanQuery off)
+	if speed > 14 and now - r.lastBreak > 0.05 then
+		r.lastBreak = now
+		local ahead = torso.Position + v.Unit * math.clamp(speed * dt * 2 + 1.5, 1.5, 4)
+		if Ragdoll.breakWalls(ahead, v) > 0 then
+			onWall(ahead, speed)
+			for p in r.saved do (p :: BasePart).AssemblyLinearVelocity *= 0.88 end -- she keeps flying through the hole
 		end
 	end
 	r.still = speed < 5 and r.still + dt or 0
