@@ -20,10 +20,6 @@
   "18": "Input.luau",
   "19": "HUD.luau",
   "20": "GoblinLoot.luau",
-  "21": "Combat.luau",
-  "22": "Furniture.smash",
-  "23": "Abilities.luau",
-  "24": "Fire.luau",
-  "25": "Ragdoll.luau",
+  "21": "RoomPickUI.luau",
   "33": "Shared/Quests.luau"
 }

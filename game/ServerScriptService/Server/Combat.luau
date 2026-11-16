@@ -12,6 +12,7 @@ local Furniture = require(script.Parent.Furniture)
 local Ghost = require(script.Parent.Ghost)
 local Quests = require(script.Parent.Quests)
 local Ragdoll = require(script.Parent.Ragdoll)
+local Fury = require(script.Parent.Fury)
 local P, ST, BR, CA = Config.Punch, Config.Stamina, Config.Brutality, Config.Carry
 
 local Combat = {}
@@ -144,6 +145,7 @@ end
 local function knockDown(player: Player, from: Vector3?)
 	local _, hrp = alive(player)
 	if not hrp then return end
+	Fury.downed(player, KD.Time) -- no claws on a player who is down
 	local src = from or (Ghost.current and Ghost.current.hrp and Ghost.current.hrp.Position) or (hrp.Position - hrp.CFrame.LookVector)
 	local away = Vector3.new(hrp.Position.X - src.X, 0, hrp.Position.Z - src.Z)
 	away = away.Magnitude > 0.1 and away.Unit or -hrp.CFrame.LookVector
@@ -164,6 +166,8 @@ function Combat.damagePlayer(player: Player, amount: number, staminaDrain: numbe
 	end
 	if player:GetAttribute("Warded") or player:GetAttribute("AdminGod") then return end
 	if blowFromMonster and knockdownHit(player, s) then knockDown(player, from) end
+	-- a monster can't take more than a set share of your health in a few seconds (Config.Fury.BurstCap)
+	if from ~= Vector3.zero then amount = Fury.cap(player, amount, hum.MaxHealth) end
 	if s.shield > 0 then
 		local absorbed = math.min(s.shield, amount)
 		s.shield -= absorbed
@@ -300,7 +304,7 @@ function Combat.registerHit(player: Player, dir: Vector3, hitPos: Vector3, baseD
 		dmg *= 1 + c * CH.DamageBonus
 		knock *= 1 + c * CH.KnockBonus
 	end
-	Ghost.hit(player, dir, knock, dmg, obj)
+	Ghost.hit(player, dir, knock, dmg, obj, c >= 0.6)
 	local ls = (buff(s, "lifesteal") :: number?) or 0
 	if ls > 0 then heal(player, dmg * ls) end
 	local burn = buff(s, "burnOnHit")
@@ -436,7 +440,12 @@ function Combat.hitPlayer(victim: Player, by: Player?, dmg: number, vel: Vector3
 	end
 	local vs = st(victim)
 	local mult = guard(victim, vs, dmg, byHrp and byHrp.Position or nil)
-	Combat.damagePlayer(victim, dmg * mult, nil, Vector3.zero)
+	local amount = dmg * mult
+	if not by and not victim:GetAttribute("Warded") and not victim:GetAttribute("AdminGod") then
+		amount = Fury.cap(victim, amount, hum.MaxHealth) -- monster blows: burst cap
+		Fury.downed(victim, ragT or (raw and 1.2 or 0.9)) -- thrown: a moment before the next claw
+	end
+	Combat.damagePlayer(victim, amount, nil, Vector3.zero)
 	if mult < 1 then vel *= Config.Block.Knock end
 	-- a monster's ability blow counts toward the knockdown (it already throws you; the 2nd one keeps you down longer)
 	if not by and mult >= 1 and knockdownHit(victim, vs) then ragT = math.max(ragT or 0, KD.Time) end

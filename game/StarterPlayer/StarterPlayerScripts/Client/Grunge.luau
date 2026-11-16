@@ -158,6 +158,43 @@ function Grunge.bar(parent: Instance, o: { size: UDim2, pos: UDim2, anchor: Vect
 	return obj
 end
 
+-- a painted brush stroke, always full (the HUD bars' look) for buttons and chips. Recolour with Grunge.paint.
+function Grunge.brush(parent: Instance, props: { [string]: any }, color: Color3, seed: number?, slices: number?, outline: boolean?): Frame
+	local f = frame(parent, props)
+	local z = props.ZIndex or 1
+	local paint = frame(f, { Name = "Paint", Size = UDim2.fromScale(1, 1), ZIndex = z })
+	stroke(paint, slices or 14, color, seed or 1, 0.8, z)
+	if outline ~= false then sketch(f, (seed or 1) + 5, z + 1) end
+	return f
+end
+function Grunge.paint(f: Instance, color: Color3)
+	local paint = f:FindFirstChild("Paint")
+	if not paint then return end
+	for i, s in paint:GetChildren() do
+		if s:IsA("Frame") then s.BackgroundColor3 = color:Lerp(Color3.new(0, 0, 0), (i * 7 % 10) / 55) end
+	end
+end
+-- a big painted slab (a panel background): overlapping horizontal brush rows, sketchy outline, a blood splat behind
+function Grunge.slab(parent: Instance, props: { [string]: any }, color: Color3, seed: number?, rows: number?): Frame
+	local p = frame(parent, props)
+	local z = props.ZIndex or 1
+	local rng = Random.new(seed or 5)
+	Grunge.splat(p, {
+		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(rng:NextNumber(0.3, 0.7), rng:NextNumber(0.3, 0.7)), Size = UDim2.fromScale(1.25, 1.4),
+		ImageColor3 = Color3.fromRGB(80, 10, 10), ImageTransparency = 0.45, ZIndex = z, Rotation = rng:NextNumber(-20, 20),
+	})
+	local n = rows or 6
+	for r = 0, n - 1 do
+		local row = frame(p, { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.fromScale(rng:NextNumber(-0.006, 0.006), (r + 0.5) / n), Size = UDim2.fromScale(1, 1.45 / n), ZIndex = z })
+		stroke(row, 36, color, (seed or 5) * 13 + r, 0.86, z)
+	end
+	local sc = Instance.new("ImageLabel")
+	sc.BackgroundTransparency = 1; sc.Image = Grunge.SCRATCH; sc.ImageTransparency = 0.85; sc.Size = UDim2.fromScale(1, 1)
+	sc.ScaleType = Enum.ScaleType.Crop; sc.ZIndex = z; sc.Parent = p
+	sketch(p, (seed or 5) + 1, z + 1)
+	return p
+end
+
 -- grunge panel (for the shop): dark paper with sketchy border and a splatter
 function Grunge.panel(parent: Instance, props: { [string]: any }, seed: number?): Frame
 	local p = frame(parent, props)

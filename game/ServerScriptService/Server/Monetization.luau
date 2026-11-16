@@ -76,8 +76,7 @@ function Monetization.start()
 	Remotes.Revive.OnServerEvent:Connect(function(p, what)
 		if what == "prompt" then Run.extendRevive(p, 30) -- more time while the purchase dialog is open
 		elseif what == "lobby" then Run.giveUp(p)
-		elseif what == "watch" then Run.watch(p)
-		elseif what == "cash" then Run.reviveWithCash(p) end
+		elseif what == "watch" then Run.watch(p) end
 	end)
 end
 

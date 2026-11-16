@@ -17,6 +17,7 @@ local KINDS = {
 	HellMark = true, HellPillar = true, Charge = true, CloneSpawn = true, CloneShatter = true,
 	GoblinSteal = true, GoblinUse = true, GoblinDrop = true,
 	ShieldBlock = true, Slammed = true, AnimJumpscare = true,
+	RoarWind = true, Roar = true, LungeWind = true, Lunge = true, Enraged = true, CounterWind = true, FuryArmor = true, FurySmash = true, -- Fury
 }
 local Items = require(game:GetService("ReplicatedStorage").Shared.Items)
 local GOBLIN = Color3.fromRGB(130, 230, 70)
@@ -213,9 +214,90 @@ local function gassed()
 	Fx.shake(0.12)
 end
 
+local FURY = Color3.fromRGB(255, 45, 25)
+-- an enraged monster: red glow + embers for the rest of its life
+local function enrage(model: Instance?)
+	if not model or not model:IsA("Model") or model:FindFirstChild("FuryGlow") then return end
+	local hl = Instance.new("Highlight")
+	hl.Name = "FuryGlow"; hl.FillColor = FURY; hl.FillTransparency = 0.8; hl.OutlineColor = Color3.fromRGB(255, 90, 40)
+	hl.OutlineTransparency = 0.2; hl.DepthMode = Enum.HighlightDepthMode.Occluded; hl.Parent = model
+	local root = model:FindFirstChild("UpperTorso") or model:FindFirstChild("HumanoidRootPart")
+	if root then
+		local pe = Instance.new("ParticleEmitter")
+		pe.Name = "FuryEmbers"; pe.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+		pe.Color = ColorSequence.new(FURY, Color3.fromRGB(255, 160, 60)); pe.LightEmission = 1
+		pe.Size = NumberSequence.new(0.5, 0); pe.Speed = NumberRange.new(2, 5); pe.Lifetime = NumberRange.new(0.6, 1.1)
+		pe.Rate = 18; pe.Acceleration = Vector3.new(0, 6, 0); pe.SpreadAngle = Vector2.new(180, 180); pe.Parent = root
+	end
+end
+
 function MonsterFx.handle(kind: string, ...)
 	local a = { ... }
-	if kind == "AbilityWind" then
+	if kind == "RoarWind" then
+		-- about to roar: red light sucked in, a deep growl. A charged hit now cancels it.
+		local pos = a[1]
+		emitter(pos, { Color = ColorSequence.new(FURY), LightEmission = 1, Size = NumberSequence.new(2.6, 0), Speed = NumberRange.new(-22, -12),
+			Shape = Enum.ParticleEmitterShape.Sphere, ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface, Lifetime = NumberRange.new(0.5, 0.65),
+			Texture = "rbxasset://textures/particles/sparkles_main.dds" }, 70, 1.5)
+		local ring = disc(pos - Vector3.new(0, 2.8, 0), 17, FURY, 0.75)
+		TweenService:Create(ring, TweenInfo.new(0.65, Enum.EasingStyle.Linear), { Transparency = 0.45 }):Play()
+		Debris:AddItem(ring, 0.7)
+		Sfx.at(Sfx.voice("WindUp"), pos, { PlaybackSpeed = 0.6, Volume = 1.6 })
+		local f = near(pos, 40)
+		Fx.shake(0.25 * f)
+		if f > 0 then HUD.toast("IT'S ABOUT TO ROAR - BACK OFF OR CHARGE A HIT!", false) end
+	elseif kind == "Roar" then
+		local pos, r = a[1], a[2]
+		Sfx.at(Sfx.voice("Spawn"), pos, { PlaybackSpeed = 0.75, Volume = 2 })
+		Sfx.at("PunchHeavy", pos, { PlaybackSpeed = 0.45, Volume = 1.6 })
+		local ring = part({ Shape = Enum.PartType.Cylinder, Color = FURY, Transparency = 0.2,
+			Size = Vector3.new(0.5, 4, 4), CFrame = CFrame.new(pos - Vector3.new(0, 2.8, 0)) * CFrame.Angles(0, 0, math.pi / 2) })
+		TweenService:Create(ring, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.new(0.5, r * 2.2, r * 2.2), Transparency = 1 }):Play()
+		Debris:AddItem(ring, 0.5)
+		emitter(pos - Vector3.new(0, 2.5, 0), { Color = ColorSequence.new(Color3.fromRGB(120, 100, 90)), Size = NumberSequence.new(3, 6),
+			Transparency = NumberSequence.new(0.4, 1), Speed = NumberRange.new(30, 45), Lifetime = NumberRange.new(0.5, 0.9),
+			SpreadAngle = Vector2.new(180, 10), Drag = 4 }, 40, 1.5)
+		local f = near(pos, r + 25)
+		Fx.shake(1.0 * f + 0.1)
+		Fx.kick(-16 * f)
+		if f > 0 then HUD.flash(FURY, 0.4 * f) end
+	elseif kind == "LungeWind" then
+		local pos = a[1]
+		emitter(pos, { Color = ColorSequence.new(Color3.fromRGB(255, 120, 40)), LightEmission = 1, Size = NumberSequence.new(1.6, 0), Speed = NumberRange.new(-12, -6),
+			Shape = Enum.ParticleEmitterShape.Sphere, ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface, Lifetime = NumberRange.new(0.35, 0.5),
+			Texture = "rbxasset://textures/particles/sparkles_main.dds" }, 30, 1.2)
+		Sfx.at(Sfx.voice("WindUp"), pos, { PlaybackSpeed = 1.25, Volume = 1.2 })
+	elseif kind == "CounterWind" then
+		-- it swipes back through your punches: a red flash on it and a snarl (block or back off)
+		local pos = a[1]
+		emitter(pos, { Color = ColorSequence.new(FURY), LightEmission = 1, Size = NumberSequence.new(1.4, 0), Speed = NumberRange.new(8, 16),
+			Lifetime = NumberRange.new(0.2, 0.35), Texture = "rbxasset://textures/particles/sparkles_main.dds" }, 26, 1)
+		Sfx.at(Sfx.voice("WindUp"), pos, { PlaybackSpeed = 1.4, Volume = 1.3 })
+		if near(pos, 25) > 0 then HUD.toast("IT'S HITTING BACK - BLOCK OR CHARGE A HIT!", false) end
+	elseif kind == "FurySmash" then
+		-- the enraged smash punch: a huge crack, red burst, everyone near feels it
+		local pos = a[1]
+		Sfx.at("PunchHeavy", pos, { PlaybackSpeed = 0.4, Volume = 2 })
+		Sfx.at("Crash", pos, { PlaybackSpeed = 0.8, Volume = 1.2 })
+		emitter(pos, { Color = ColorSequence.new(FURY, Color3.fromRGB(255, 200, 120)), LightEmission = 1, Size = NumberSequence.new(1.8, 0),
+			Speed = NumberRange.new(25, 45), Lifetime = NumberRange.new(0.2, 0.4), Texture = "rbxasset://textures/particles/sparkles_main.dds" }, 40, 1)
+		local f = near(pos, 50)
+		Fx.shake(0.9 * f)
+		Fx.kick(-12 * f)
+	elseif kind == "FuryArmor" then
+		-- a punch that didn't stagger it: a dull clank of sparks
+		emitter(a[1], { Color = ColorSequence.new(Color3.fromRGB(255, 120, 60)), LightEmission = 1, Size = NumberSequence.new(0.5, 0),
+			Speed = NumberRange.new(10, 20), Lifetime = NumberRange.new(0.1, 0.25), SpreadAngle = Vector2.new(60, 60),
+			Texture = "rbxasset://textures/particles/sparkles_main.dds" }, 10, 0.5)
+	elseif kind == "Lunge" then
+		Sfx.at("Whoosh", a[1], { PlaybackSpeed = 0.7, Volume = 1.4 })
+	elseif kind == "Enraged" then
+		local model, title = a[1], a[2]
+		enrage(model)
+		HUD.banner(tostring(title or "IT") .. " IS ENRAGED", "FASTER - HITS HARDER - ROARS MORE", 3)
+		Sfx.play(Sfx.voice("Spawn"), { PlaybackSpeed = 0.7, Volume = 1.4 })
+		Fx.shake(0.5)
+	elseif kind == "AbilityWind" then
 		local pos, k = a[1], a[2]
 		local col = k == "wail" and Color3.fromRGB(160, 230, 240) or (k == "charge" and Color3.fromRGB(220, 220, 240) or (k == "steal" and GOBLIN or Color3.fromRGB(255, 70, 40)))
 		emitter(pos, { Color = ColorSequence.new(col), LightEmission = 1, Size = NumberSequence.new(2, 0), Speed = NumberRange.new(-14, -8),

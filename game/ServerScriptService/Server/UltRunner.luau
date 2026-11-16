@@ -25,7 +25,7 @@ local function shock(player: Player, center: Vector3, r: number, d: number, k: n
 	end
 	local gp = ghostPos()
 	if gp and (gp - center).Magnitude < r then
-		Ghost.hit(player, gp - center, k, d * Combat.stat(player, "damage"))
+		Ghost.hit(player, gp - center, k, d * Combat.stat(player, "damage"), nil, true)
 	end
 end
 
@@ -60,7 +60,7 @@ local function strike(player: Player, a, color: Color3)
 				if a.style == "lightning" then
 					Ghost.damage(d, player)
 				else
-					Ghost.hit(player, now - pos + Vector3.new(0, 0, 0.01), a.style == "nuke" and 220 or 50, d)
+					Ghost.hit(player, now - pos + Vector3.new(0, 0, 0.01), a.style == "nuke" and 220 or 50, d, nil, true)
 				end
 			end
 			for _, f in Furniture.near(pos, radius) do

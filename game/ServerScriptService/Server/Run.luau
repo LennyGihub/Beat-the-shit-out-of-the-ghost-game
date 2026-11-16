@@ -262,17 +262,11 @@ end)
 -- Returns how long Main should wait before respawning the character (spectators are respawned here, not by Main).
 local REVIVE_WINDOW = 30
 local NO_PRODUCT_WINDOW = 6
--- a revive can always be paid with cash: run cash first, then saved cash. $150, doubling for every revive in the run.
-local REVIVE_CASH = 150
+-- revives are Robux only (the REVIVE Developer Product, ReplicatedStorage attribute ReviveProductId)
 local pending = {} :: { [Player]: { untilT: number, at: CFrame, team: boolean, extended: boolean? } }
 local function reviveOn(): boolean
-	return true -- the cash revive is always there (the REVIVE Robux product too once it is set up)
+	return (tonumber(RS:GetAttribute("ReviveProductId")) or 0) > 0
 end
-local function reviveCost(p: Player): number
-	local st = stats[p]
-	return REVIVE_CASH * 2 ^ ((st and st.revives) or 0)
-end
-Run.reviveCost = reviveCost
 local function aliveIn(p: Player): boolean
 	if p:GetAttribute("Spectating") or leaving[p] or not p.Parent then return false end
 	local hum = p.Character and p.Character:FindFirstChildOfClass("Humanoid")
@@ -328,7 +322,6 @@ function Run.onDied(p: Player): number
 	local at = hrp and hrp.CFrame or CFrame.new(MapLoader.spawnInside())
 	local team = aliveCount(p) > 0
 	pending[p] = { untilT = os.clock() + REVIVE_WINDOW, at = at, team = team }
-	p:SetAttribute("ReviveCost", reviveCost(p))
 	-- a revive bought earlier is used right away
 	local spare = p:GetAttribute("SpareRevives") or 0
 	if spare > 0 then
@@ -377,24 +370,6 @@ function Run.watch(p: Player)
 		p:SetAttribute("ReviveUntil", nil)
 	end
 end
--- REVIVE $ on the death screen: paid with run cash, else saved cash
-function Run.reviveWithCash(p: Player): boolean
-	if not pending[p] then return false end
-	local cost = reviveCost(p)
-	local runCash = p:GetAttribute("RunCash") or 0
-	if runCash >= cost then
-		p:SetAttribute("RunCash", runCash - cost)
-	elseif not Data.spend(p, cost) then
-		Remotes.Fx:FireClient(p, "Toast", "NOT ENOUGH CASH TO REVIVE ($" .. cost .. ")")
-		return false
-	end
-	if not Run.revive(p) then return false end
-	local st = stats[p]
-	if st then st.revives = (st.revives or 0) + 1 end
-	p:SetAttribute("ReviveCost", reviveCost(p))
-	return true
-end
-
 -- the player paid (or used the admin panel): back on their feet where they fell, full health, same run
 function Run.revive(p: Player): boolean
 	local pd = pending[p]

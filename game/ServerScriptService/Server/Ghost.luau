@@ -13,6 +13,7 @@ local Ragdoll = require(script.Parent.Ragdoll)
 local Fire = require(script.Parent.Fire)
 local Monsters = require(RS.Shared.Monsters)
 local MapLoader = require(script.Parent.MapLoader)
+local Fury = require(script.Parent.Fury)
 local C = Config.Ghost
 
 local Ghost = {}
@@ -92,6 +93,10 @@ Ghost.blockWalls = blockWalls
 
 local function setState(g, s: string, dur: number?)
 	if g.state == "Ability" and s ~= "Ability" and g.ab then Abilities.interrupt(g) end
+	if (g.state == "Roar" or g.state == "Lunge") and s ~= g.state then -- a fury move cut short
+		g.fury = nil
+		g.model:SetAttribute("FuryPhase", "")
+	end
 	g.state = s
 	g.stateStart = os.clock()
 	g.stateUntil = os.clock() + (dur or 0)
@@ -175,6 +180,7 @@ function Ghost.spawn(level: number, pos: Vector3, monsterId: string?)
 		speedMult = def.speed * Ghost.diff.speed, dmgMult = def.dmg * Ghost.diff.dmg,
 	}
 	Ghost.current = g
+	Fury.init(g)
 	setState(g, "Spawn", 2.2)
 	Remotes.Fx:FireAllClients("GhostSpawn", pos, def.id)
 	return g
@@ -204,7 +210,7 @@ local function pickTarget(g): (Player?, BasePart?)
 			local B = Ghost.houseBounds()
 			local inside = pos.X > B.min.X and pos.X < B.max.X and pos.Z > B.min.Z and pos.Z < B.max.Z
 			if inside then
-				local d = (pos - g.hrp.Position).Magnitude
+				local d = (pos - g.hrp.Position).Magnitude + (Fury.inGrace(p) and 40 or 0) -- leave a downed player be
 				if d < bestD then best, bestD, bestHrp = p, d, hrp end
 			end
 		end
@@ -237,7 +243,7 @@ function Ghost.damage(amount: number, by: Player?)
 	if os.clock() < g.vulnUntil then amount *= g.vulnMult end
 	g.hp = math.max(0, g.hp - amount)
 	g.model:SetAttribute("HP", g.hp)
-	if g.hp <= 0 then die(g) end
+	if g.hp <= 0 then die(g) else Fury.checkEnrage(g) end
 end
 
 -- ultimate effects -------------------------------------------------------
@@ -245,8 +251,10 @@ function Ghost.freeze(t: number)
 	local g = Ghost.current
 	if not g or g.state == "Dead" then return end
 	g.frozenUntil = math.max(g.frozenUntil, os.clock() + t)
-	if g.state == "WindUp" or g.state == "Swipe" or g.state == "Vanish" or g.state == "Scare" or g.state == "Ability" then
+	if g.state == "WindUp" or g.state == "Swipe" or g.state == "Vanish" or g.state == "Scare" or g.state == "Ability" or g.state == "Roar" or g.state == "Lunge" then
 		g.model:SetAttribute("Vanish", false)
+		g.fury = nil
+		g.model:SetAttribute("FuryPhase", "")
 		setState(g, "Chase")
 	end
 	g.model:SetAttribute("Frozen", true)
@@ -344,7 +352,8 @@ end
 
 -- Called by combat for punches, throws and the ultimate shockwave.
 -- obj = the hit is a thrown object (furniture, a thrown item): the monster's objTaken applies
-function Ghost.hit(by: Player?, dir: Vector3, knock: number, damage: number, obj: boolean?)
+-- power = a charged hit (breaks the Fury armour: roar, counter-swipe)
+function Ghost.hit(by: Player?, dir: Vector3, knock: number, damage: number, obj: boolean?, power: boolean?)
 	local g = Ghost.current
 	if not g or g.state == "Dead" or g.state == "Spawn" then return end
 	if g.model:GetAttribute("Vanish") then g.model:SetAttribute("Vanish", false) end
@@ -368,6 +377,13 @@ function Ghost.hit(by: Player?, dir: Vector3, knock: number, damage: number, obj
 	end
 	if knock <= 0 then return end
 	if g.state == "Dead" then return end
+	Fury.onHit(g, knock, knock >= Ragdoll.MIN_KNOCK and g.state ~= "Ragdoll")
+	-- roaring, or swiping back after a beating: plain hits and combos still hurt but don't stagger it.
+	-- A charged hit or a really heavy blow (Config.Fury.ArmorBreakKnock) still sends it flying.
+	if Fury.armored(g) and not power and knock < Config.Fury.ArmorBreakKnock then
+		Remotes.Fx:FireAllClients("FuryArmor", g.hrp.Position)
+		return
+	end
 	if g.ts and os.clock() < g.ts.untilT then return end -- frozen in time: no knockback
 	if g.state == "Launched" then return end
 	local flat = Vector3.new(dir.X, 0, dir.Z)
@@ -389,7 +405,8 @@ function Ghost.hit(by: Player?, dir: Vector3, knock: number, damage: number, obj
 	end
 	g.vel = flat * knock + Vector3.new(0, math.min(knock * 0.15, 18), 0)
 	setState(g, "Knocked", 0.18)
-	g.nextAttack = math.max(g.nextAttack, os.clock() + 0.9)
+	-- a small hit only delays its next swipe a little; once beaten up enough (Fury pressure) not at all
+	if Fury.pressure(g) < Config.Fury.ArmorPressure then g.nextAttack = math.max(g.nextAttack, os.clock() + 0.35) end
 end
 
 local function stepKnocked(g, dt: number, now: number)
@@ -434,10 +451,15 @@ local function warded(p: Player?): boolean
 end
 
 local function claw(g, target: Player?, thrp: BasePart?)
-	if not target or not thrp or warded(target) then return end
+	if not target or not thrp or warded(target) or Fury.inGrace(target) then return end
 	local to = thrp.Position - g.hrp.Position
 	if to.Magnitude <= C.SwipeReach * ((g.def :: any).reach or 1) then
-		local dmg = (C.SwipeDamage + (g.level - 1) * C.SwipeDamagePerLevel) * g.dmgMult
+		-- enraged: a smash punch that launches you through the inside walls
+		if g.enraged and g.comboLeft == 0 and Ghost.hitPlayer then
+			Fury.smashPunch(g, Ghost, target, thrp)
+			return
+		end
+		local dmg = Fury.swipeDamage(g)
 		if Ghost.damagePlayer then Ghost.damagePlayer(target, dmg) end
 		local flat = Vector3.new(to.X, 0, to.Z)
 		Remotes.Fx:FireClient(target, "Clawed", flat.Magnitude > 0.01 and flat.Unit or Vector3.zero)
@@ -519,6 +541,7 @@ function Ghost.step(dt: number)
 		return
 	end
 	Abilities.tick(Ghost, dt, now)
+	Fury.tick(g)
 	-- burning (damage over time) + its fire
 	for i = #g.burns, 1, -1 do
 		local b = g.burns[i]
@@ -560,11 +583,16 @@ function Ghost.step(dt: number)
 		end
 		if done and Ghost.alive() then
 			Ragdoll.stop(g)
+			Fury.wake(g)
 			setState(g, "Recover", 0.9)
 		end
 		return
 	end
 	if s == "Launched" then return stepLaunched(g, dt) end
+	-- Fury: a long beating doesn't stunlock it: it roars or swipes back straight out of a stagger
+	if (s == "Knocked" or s == "Recover") and now >= g.frozenUntil then
+		if Fury.roarCheck(g, Ghost, now, target) or Fury.counterCheck(g, Ghost, now, target, thrp) then return end
+	end
 	if s == "Knocked" then return stepKnocked(g, dt, now) end
 	if now < g.frozenUntil then
 		g.lv.VectorVelocity = Vector3.zero
@@ -608,19 +636,23 @@ function Ghost.step(dt: number)
 		end
 		face(thrp.Position)
 		local dist = (Vector3.new(thrp.Position.X, 0, thrp.Position.Z) - Vector3.new(pos.X, 0, pos.Z)).Magnitude
-		local speed = (C.Speed + (g.level - 1) * C.SpeedPerLevel) * g.speedMult * (now < g.slowUntil and g.slowMult or 1)
+		local speed = (C.Speed + (g.level - 1) * C.SpeedPerLevel) * g.speedMult * g.furySpeed * (now < g.slowUntil and g.slowMult or 1)
 		-- creepy rhythm: she sometimes freezes for a moment, then lunges
 		local phase = (now * 0.6) % 1
 		if phase < 0.12 and dist > 14 then speed *= 0.1 elseif phase < 0.3 and dist > 14 then speed *= 1.8 end
 		moveToward(g.def.solid and pathPoint(g, thrp.Position) or thrp.Position, speed)
+		if Fury.roarCheck(g, Ghost, now, target) then return end
 		if now >= g.slowUntil and Abilities.try(g, Ghost, now, target, thrp, dist) then return end
-		if dist < C.AttackRange * ((g.def :: any).reach or 1) and now > g.nextAttack then
-			setState(g, "WindUp", C.WindUp)
+		if dist < C.AttackRange * ((g.def :: any).reach or 1) and now > g.nextAttack and not Fury.inGrace(target) then
+			g.comboLeft = Fury.comboCount(g)
+			setState(g, "WindUp", Fury.windUp(g, false))
 			Remotes.Fx:FireAllClients("GhostWindUp", pos)
 		elseif g.def.ability.kind == "scare" and now > g.nextScare and dist > 12 and not warded(target) then
 			setState(g, "Vanish", 1.4)
 			g.model:SetAttribute("Vanish", true)
 			Remotes.Fx:FireAllClients("GhostVanish", pos)
+		elseif Fury.lungeCheck(g, Ghost, now, target, thrp, dist) then
+			return
 		end
 	elseif s == "WindUp" then
 		if thrp then face(thrp.Position); moveToward(thrp.Position, 4) end
@@ -631,8 +663,18 @@ function Ghost.step(dt: number)
 	elseif s == "Swipe" then
 		g.lv.VectorVelocity = Vector3.new(0, (hoverY - pos.Y) * 4, 0)
 		if now > g.stateUntil then
-			g.nextAttack = now + C.AttackCooldown
-			setState(g, "Chase")
+			-- chain: a quicker follow-up swipe while you are still in reach
+			local reach = C.AttackRange * ((g.def :: any).reach or 1) * 1.4
+			if g.comboLeft > 0 and target and thrp and not Fury.inGrace(target)
+				and (thrp.Position - pos).Magnitude < reach then
+				g.comboLeft -= 1
+				setState(g, "WindUp", Fury.windUp(g, true))
+				Remotes.Fx:FireAllClients("GhostWindUp", pos)
+			else
+				g.comboLeft = 0
+				g.nextAttack = now + C.AttackCooldown * g.cdMult
+				setState(g, "Chase")
+			end
 		end
 	elseif s == "Vanish" then
 		if thrp then moveToward(thrp.Position, 22) end
@@ -653,10 +695,14 @@ function Ghost.step(dt: number)
 				g.model:SetAttribute("Vanish", false)
 				setState(g, "Chase")
 			end
-			g.nextScare = now + rng:NextNumber(C.ScareMin, C.ScareMax)
+			g.nextScare = now + rng:NextNumber(C.ScareMin, C.ScareMax) * g.cdMult
 		end
 	elseif s == "Ability" then
 		Abilities.step(g, Ghost, dt, now, target, thrp, hoverY)
+	elseif s == "Roar" then
+		Fury.stepRoar(g, Ghost, now, thrp, hoverY)
+	elseif s == "Lunge" then
+		Fury.stepLunge(g, Ghost, dt, now, thrp, hoverY)
 	elseif s == "Scare" then
 		g.lv.VectorVelocity = Vector3.zero
 		if now > g.stateUntil then

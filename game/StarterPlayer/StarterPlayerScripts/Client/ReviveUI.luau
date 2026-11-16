@@ -21,7 +21,6 @@ local btn: TextButton
 local price: number? = nil
 local team = false
 local lobbyBtn: TextButton
-local cashBtn: TextButton
 
 local function productId(): number return tonumber(RS:GetAttribute("ReviveProductId")) or 0 end
 
@@ -38,30 +37,18 @@ function ReviveUI.init()
 	btn = Instance.new("TextButton")
 	btn.AutoButtonColor = true; btn.BorderSizePixel = 0; btn.BackgroundColor3 = Color3.fromRGB(30, 120, 60)
 	btn.Font = Grunge.FONT; btn.TextScaled = true; btn.TextColor3 = Grunge.PAPER; btn.TextStrokeTransparency = 0.3; btn.Text = "REVIVE"
-	btn.Position = UDim2.fromScale(0.03, 0.56); btn.Size = UDim2.fromScale(0.31, 0.3); btn.ZIndex = 12; btn.Rotation = 1; btn.Modal = true
+	btn.Position = UDim2.fromScale(0.06, 0.56); btn.Size = UDim2.fromScale(0.5, 0.3); btn.ZIndex = 12; btn.Rotation = 1; btn.Modal = true
 	btn.Parent = panel
 	Platform.menu(panel, nil) -- a controller lands on REVIVE
 	-- or give up: back to the lobby now (paid out like a normal death)
 	local lobby = Instance.new("TextButton")
 	lobby.AutoButtonColor = true; lobby.BorderSizePixel = 0; lobby.BackgroundColor3 = Color3.fromRGB(45, 40, 36)
 	lobby.Font = Grunge.FONT; lobby.TextScaled = true; lobby.TextColor3 = Grunge.PAPER; lobby.TextStrokeTransparency = 0.3; lobby.Text = "GO TO LOBBY"
-	lobby.Position = UDim2.fromScale(0.69, 0.6); lobby.Size = UDim2.fromScale(0.28, 0.22); lobby.ZIndex = 12; lobby.Rotation = -1
+	lobby.Position = UDim2.fromScale(0.62, 0.6); lobby.Size = UDim2.fromScale(0.32, 0.22); lobby.ZIndex = 12; lobby.Rotation = -1
 	lobby.Parent = panel
 	local ls = Instance.new("UIStroke"); ls.Color = Grunge.INK; ls.Thickness = 4; ls.ApplyStrokeMode = Enum.ApplyStrokeMode.Border; ls.Parent = lobby
 	local lpd = Instance.new("UIPadding"); lpd.PaddingTop = UDim.new(0.16, 0); lpd.PaddingBottom = UDim.new(0.16, 0); lpd.Parent = lobby
 	lobbyBtn = lobby
-	-- REVIVE with cash (run cash first, then saved cash): always on offer
-	cashBtn = Instance.new("TextButton")
-	cashBtn.AutoButtonColor = true; cashBtn.BorderSizePixel = 0; cashBtn.BackgroundColor3 = Color3.fromRGB(150, 110, 20)
-	cashBtn.Font = Grunge.FONT; cashBtn.TextScaled = true; cashBtn.TextColor3 = Grunge.PAPER; cashBtn.TextStrokeTransparency = 0.3; cashBtn.Text = "REVIVE $"
-	cashBtn.Position = UDim2.fromScale(0.36, 0.56); cashBtn.Size = UDim2.fromScale(0.31, 0.3); cashBtn.ZIndex = 12; cashBtn.Rotation = -0.5
-	cashBtn.Parent = panel
-	local cst = Instance.new("UIStroke"); cst.Color = Grunge.INK; cst.Thickness = 4; cst.ApplyStrokeMode = Enum.ApplyStrokeMode.Border; cst.Parent = cashBtn
-	local cpd = Instance.new("UIPadding"); cpd.PaddingTop = UDim.new(0.12, 0); cpd.PaddingBottom = UDim.new(0.12, 0); cpd.Parent = cashBtn
-	cashBtn.Activated:Connect(function()
-		Sfx.play("Cash")
-		Remotes.Revive:FireServer("cash")
-	end)
 	lobby.Activated:Connect(function()
 		Sfx.play("Click")
 		gui.Enabled = false
@@ -92,11 +79,10 @@ function ReviveUI.init()
 		local untilT = lp:GetAttribute("ReviveUntil")
 		if type(untilT) ~= "number" then gui.Enabled = false; return end
 		local left = math.max(0, math.ceil(untilT - workspace:GetServerTimeNow()))
-		cashBtn.Text = "REVIVE $" .. tostring(lp:GetAttribute("ReviveCost") or 150)
 		if team then
-			timer.Text = "REVIVE NOW (" .. left .. ") OR WATCH YOUR TEAM - BACK FREE NEXT WAVE"
+			timer.Text = btn.Visible and ("REVIVE NOW (" .. left .. ") OR WATCH YOUR TEAM - BACK FREE NEXT WAVE") or "WATCH YOUR TEAM - BACK FREE NEXT WAVE"
 		else
-			timer.Text = "THE RUN ENDS IN " .. left .. " - COME BACK WHERE YOU FELL?"
+			timer.Text = btn.Visible and ("THE RUN ENDS IN " .. left .. " - COME BACK WHERE YOU FELL?") or ("THE RUN ENDS IN " .. left)
 		end
 	end)
 end
@@ -108,10 +94,9 @@ function ReviveUI.handle(kind: string, ...)
 		local id = productId()
 		btn.Text = id > 0 and ("REVIVE  R$ " .. tostring(price or "?")) or (lp:GetAttribute("IsAdmin") and "REVIVE (ADMIN)" or "REVIVE - SOON")
 		btn.Visible = id > 0 or lp:GetAttribute("IsAdmin") == true
-		-- without the Robux button the cash revive takes its place
-		cashBtn.Position = btn.Visible and UDim2.fromScale(0.36, 0.56) or UDim2.fromScale(0.08, 0.56)
-		cashBtn.Size = btn.Visible and UDim2.fromScale(0.31, 0.3) or UDim2.fromScale(0.5, 0.3)
 		lobbyBtn.Text = team and "WATCH" or "GO TO LOBBY"
+		lobbyBtn.Position = btn.Visible and UDim2.fromScale(0.62, 0.6) or UDim2.fromScale(0.3, 0.58)
+		lobbyBtn.Size = btn.Visible and UDim2.fromScale(0.32, 0.22) or UDim2.fromScale(0.4, 0.26)
 		gui.Enabled = true
 		local s = panel:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
 		s.Parent = panel; s.Scale = 0.6

@@ -65,7 +65,7 @@ local function finish(g, G, recover: number?)
 	g.ab = nil
 	g.model:SetAttribute("Ability", "")
 	g.model:SetAttribute("AbilityPhase", "")
-	g.nextAbility = os.clock() + g.def.ability.cd * rng:NextNumber(0.85, 1.2)
+	g.nextAbility = os.clock() + g.def.ability.cd * rng:NextNumber(0.85, 1.2) * (g.cdMult or 1) -- enraged: more often
 	g.nextAttack = math.max(g.nextAttack, os.clock() + 0.8)
 	G.setState(g, "Recover", recover or 0.5)
 end
@@ -85,7 +85,7 @@ function Abilities.interrupt(g)
 	g.ab = nil
 	g.model:SetAttribute("Ability", "")
 	g.model:SetAttribute("AbilityPhase", "")
-	g.nextAbility = os.clock() + g.def.ability.cd * 0.6
+	g.nextAbility = os.clock() + g.def.ability.cd * 0.6 * (g.cdMult or 1)
 end
 
 -- let go of a levitated object (thrown, or the spell was interrupted): it falls normally again

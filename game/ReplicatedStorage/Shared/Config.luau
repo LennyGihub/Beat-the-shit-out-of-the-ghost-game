@@ -59,9 +59,9 @@ local Config = {
 		AttackRange = 8,
 		WindUp = 0.6,
 		SwipeReach = 11,
-		SwipeDamage = 12,
-		SwipeDamagePerLevel = 2.5,
-		AttackCooldown = 1.4,
+		SwipeDamage = 16,
+		SwipeDamagePerLevel = 3,
+		AttackCooldown = 1.1,
 		ScareMin = 14,
 		ScareMax = 24,
 		ScareDamage = 8,
@@ -69,6 +69,34 @@ local Config = {
 		HoverHeight = 4.6, -- root height above the floor
 		FurnitureHitDamagePerWeight = 4,
 		WallSlamFactor = 0.12,
+	},
+	-- FURY (Server/Fury.luau): every monster fights back. Pressure from your hits -> a telegraphed ROAR that throws
+	-- you away; LUNGE from mid range; swipe COMBOS; ENRAGED below half HP. Fairness: Grace seconds of no melee after
+	-- a monster throws you, and at most BurstCap of your max health lost to a monster within BurstWindow seconds.
+	Fury = {
+		PressureMax = 8, -- counted hits (drains PressureDecay per second) before it roars
+		EnragedPressureMax = 6,
+		PressureDecay = 0.6,
+		ArmorPressure = 3, -- from this much pressure it swipes back through your punches (armoured wind-up; block it!)
+		ArmorBreakKnock = 140, -- the armour (roar, swipe-back) only breaks to a charged hit or a blow this heavy
+		KnockoutPressure = 3, -- a hit that knocks it out counts this much
+		HitSpacing = 0.12, -- rapid-fire hits closer than this don't count
+		WakeRoar = 5, -- getting up from a knock-out with this much pressure left: it roars
+		RoarWind = 0.65, -- telegraph; small hits don't stop it, a knock-out hit does
+		RoarRadius = 17,
+		RoarDamage = 0.6, -- x its swipe damage
+		RoarPush = 62,
+		RoarRag = 0.9,
+		LungeMin = 12, LungeMax = 36, LungeCd = { 5, 7.5 },
+		LungeWind = 0.5, LungeSpeed = 78, LungeTime = 0.45, LungeHitR = 6,
+		LungeDamage = 1.15, -- x its swipe damage
+		Combo = 2, EnragedCombo = 1, ComboWindUp = 0.32,
+		-- enraged: every swipe is a SMASH PUNCH that launches you through the inside walls
+		SmashSpeed = 115, SmashUp = 30, SmashTime = 1.6, SmashDamage = 1.25, SmashReach = 45,
+		EnrageAt = 0.5, EnrageSpeed = 1.2, EnrageCooldown = 0.7,
+		Grace = 1.3,
+		RegenPause = 6, -- no health regen for this long after a monster hits you (StarterCharacterScripts.Health)
+		BurstCap = 0.4, BurstWindow = 3,
 	},
 	-- Robux cash packs (Developer Products): attr = the ReplicatedStorage attribute holding the product id
 	-- (0 = not set up yet: the shop shows SOON). A good run pays ~1800-2600 cash, maps cost 1200-3200.

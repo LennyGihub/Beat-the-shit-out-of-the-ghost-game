@@ -40,19 +40,57 @@ local sizeBtns = {} :: { [number]: TextButton }
 local openShop: (() -> ())? = nil
 local onToggle: ((boolean) -> ())? = nil
 
-local RED = Color3.fromRGB(120, 24, 20)
-local DARK = Color3.fromRGB(45, 40, 36)
-local GREEN = Color3.fromRGB(60, 110, 50)
+-- the fight HUD's palette: health red, stamina mustard, brutality orange, cash green, ink
+local RED = Color3.fromRGB(150, 18, 20)
+local DARK = Color3.fromRGB(38, 31, 27)
+local GREEN = Color3.fromRGB(62, 118, 40)
+local LOCKED = Color3.fromRGB(22, 18, 16)
+local PURPLE = Color3.fromRGB(80, 40, 100)
+local ACCENT = Color3.fromRGB(255, 150, 80) -- the HUD's ult-name orange
+local seedN = 100
 
+-- a brush-stroke button (like the HUD bars). setText / paint below change it; b:GetAttribute("Label") = its text
 local function button(parent: Instance, text: string, props: { [string]: any }): TextButton
+	seedN += 1
+	local z = props.ZIndex or 1
+	local col = props.BackgroundColor3 or RED
+	local font = props.Font or Grunge.FONT
+	local tcol = props.TextColor3 or Grunge.PAPER
+	props.BackgroundColor3 = nil; props.Font = nil; props.TextColor3 = nil
 	local b = Instance.new("TextButton")
-	b.AutoButtonColor = true; b.BorderSizePixel = 0; b.BackgroundColor3 = RED
-	b.Font = Grunge.FONT; b.Text = text; b.TextScaled = true; b.TextColor3 = Grunge.PAPER; b.TextStrokeTransparency = 0.3
+	b.AutoButtonColor = false; b.BorderSizePixel = 0; b.BackgroundTransparency = 1; b.Text = ""
 	for k, v in props do (b :: any)[k] = v end
 	b.Parent = parent
-	local pad = Instance.new("UIPadding"); pad.PaddingTop = UDim.new(0.14, 0); pad.PaddingBottom = UDim.new(0.14, 0); pad.Parent = b
-	local st = Instance.new("UIStroke"); st.Color = Grunge.INK; st.Thickness = 3; st.ApplyStrokeMode = Enum.ApplyStrokeMode.Border; st.Parent = b
+	Grunge.brush(b, { Name = "Brush", Size = UDim2.fromScale(1, 1), ZIndex = z }, col, seedN, 12)
+	local lbl = Grunge.text(b, { Name = "Label", Text = text, Font = font, TextColor3 = tcol, AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.9, 0.62), ZIndex = z + 3, Rotation = (seedN % 3 - 1) * 0.8 })
+	b:SetAttribute("Label", text)
+	local sc = Instance.new("UIScale"); sc.Parent = b
+	b.MouseEnter:Connect(function() TweenService:Create(sc, TweenInfo.new(0.12, Enum.EasingStyle.Back), { Scale = 1.06 }):Play() end)
+	b.MouseLeave:Connect(function() TweenService:Create(sc, TweenInfo.new(0.12), { Scale = 1 }):Play() end)
+	b.MouseButton1Down:Connect(function() sc.Scale = 0.94 end)
+	b.MouseButton1Up:Connect(function() sc.Scale = 1.06 end)
 	return b
+end
+local function setText(b: TextButton, text: string)
+	(b:FindFirstChild("Label") :: TextLabel).Text = text
+	b:SetAttribute("Label", text)
+end
+local function setTextColor(b: TextButton, c: Color3, transp: number?)
+	local l = b:FindFirstChild("Label") :: TextLabel
+	l.TextColor3 = c; l.TextTransparency = transp or 0
+end
+local function paint(b: TextButton, c: Color3)
+	local br = b:FindFirstChild("Brush")
+	if br then Grunge.paint(br, c) end
+end
+
+-- a section heading like the HUD's bar labels (marker font, slightly tilted) with a short red brush under it
+local function heading(parent: Instance, text: string, x: number, y: number, w: number, z: number)
+	Grunge.text(parent, { Text = text, Position = UDim2.fromScale(x, y), Size = UDim2.fromScale(w, 0.05), TextXAlignment = Enum.TextXAlignment.Left,
+		Rotation = -1.5, ZIndex = z + 1 })
+	seedN += 1
+	Grunge.brush(parent, { Position = UDim2.fromScale(x, y + 0.047), Size = UDim2.fromScale(w * 0.45, 0.012), ZIndex = z }, RED, seedN, 10, false)
 end
 
 local function ownedMaps(): { [string]: boolean }
@@ -69,39 +107,47 @@ local function parties(): { any }
 	return ok and list or {}
 end
 
--- big splatter button for the left column
-local function bigButton(text: string, color: Color3, y: number, rot: number, onClick: () -> (), h: number?): TextButton
-	local holder = Grunge.frame(side, { Position = UDim2.fromScale(0, y), Size = UDim2.fromScale(1, h or 0.26) })
-	-- a rough painted slab: dark ink shadow, the colour on top, a lighter scratch, ink outline
-	Grunge.frame(holder, { BackgroundTransparency = 0, BackgroundColor3 = Grunge.INK, Size = UDim2.fromScale(1, 1), Position = UDim2.fromScale(0.03, 0.08), Rotation = rot })
-	local slab = Grunge.frame(holder, { BackgroundTransparency = 0, BackgroundColor3 = color, Size = UDim2.fromScale(1, 1), Rotation = rot, ZIndex = 2 })
-	local g = Instance.new("UIGradient")
-	g.Color = ColorSequence.new(color:Lerp(Color3.new(1, 1, 1), 0.12), color:Lerp(Color3.new(0, 0, 0), 0.35)); g.Rotation = 90; g.Parent = slab
-	local st = Instance.new("UIStroke"); st.Color = Grunge.INK; st.Thickness = 4; st.Parent = slab
-	Grunge.frame(slab, { BackgroundTransparency = 0.75, BackgroundColor3 = Grunge.PAPER, Size = UDim2.fromScale(0.85, 0.06), Position = UDim2.fromScale(0.06, 0.1), Rotation = -1, ZIndex = 3 })
-	Grunge.splat(holder, { Size = UDim2.fromScale(0.5, 0.9), Position = UDim2.fromScale(0.65, -0.25), ImageColor3 = color:Lerp(Color3.new(0, 0, 0), 0.3), ImageTransparency = 0.2, Rotation = rot * 5, ZIndex = 1 })
+-- left-column button: a full HUD bar (brush stroke, blood splat, pen sketch) with a big marker word and a small line
+local function bigButton(text: string, sub: string, color: Color3, y: number, rot: number, onClick: () -> (), h: number?): TextButton
+	seedN += 7
+	local holder = Grunge.frame(side, { Position = UDim2.fromScale(0, y), Size = UDim2.fromScale(1, h or 0.2) })
+	local bar = Grunge.bar(holder, { size = UDim2.fromScale(1, 0.78), pos = UDim2.fromScale(0, 0.18), color = color, rot = rot, seed = seedN, slices = 26 })
+	local word = Grunge.text(holder, { Text = text, Position = UDim2.fromScale(0.05, 0.12), Size = UDim2.fromScale(0.62, 0.82), TextXAlignment = Enum.TextXAlignment.Left,
+		Rotation = rot - 2, ZIndex = 8 })
+	Grunge.text(holder, { Text = sub, Font = Grunge.TYPE, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.fromScale(0.95, 0.6), Size = UDim2.fromScale(0.42, 0.26),
+		TextXAlignment = Enum.TextXAlignment.Right, Rotation = rot, ZIndex = 8, TextTransparency = 0.1 })
 	local b = Instance.new("TextButton")
-	b.BackgroundTransparency = 1; b.Size = UDim2.fromScale(1, 1); b.Text = ""; b.ZIndex = 4
+	b.BackgroundTransparency = 1; b.Size = UDim2.fromScale(1, 1); b.Text = ""; b.ZIndex = 9
 	b.Parent = holder
-	Grunge.text(b, { Text = text, Font = Grunge.HORROR, Size = UDim2.fromScale(0.9, 0.8), Position = UDim2.fromScale(0.05, 0.1), Rotation = rot, TextColor3 = Grunge.PAPER, ZIndex = 5 })
 	local scale = Instance.new("UIScale"); scale.Parent = holder
-	b.MouseEnter:Connect(function() TweenService:Create(scale, TweenInfo.new(0.15, Enum.EasingStyle.Back), { Scale = 1.08 }):Play() end)
-	b.MouseLeave:Connect(function() TweenService:Create(scale, TweenInfo.new(0.15), { Scale = 1 }):Play() end)
+	b.MouseEnter:Connect(function()
+		TweenService:Create(scale, TweenInfo.new(0.15, Enum.EasingStyle.Back), { Scale = 1.07 }):Play()
+		TweenService:Create(word, TweenInfo.new(0.15), { TextColor3 = Color3.new(1, 1, 1), Rotation = rot - 4 }):Play()
+	end)
+	b.MouseLeave:Connect(function()
+		TweenService:Create(scale, TweenInfo.new(0.15), { Scale = 1 }):Play()
+		TweenService:Create(word, TweenInfo.new(0.15), { TextColor3 = Grunge.PAPER, Rotation = rot - 2 }):Play()
+	end)
 	b.Activated:Connect(function() Sfx.play("Click"); onClick() end)
+	local _ = bar
 	return b
 end
 
 local function refreshPicks()
 	local om = ownedMaps()
 	for id, b in mapBtns do
-		b.BackgroundColor3 = id == pickMap and RED or (om[id] and DARK or Color3.fromRGB(25, 22, 20))
-		b.TextTransparency = om[id] and 0 or 0.6
+		paint(b, id == pickMap and RED or (om[id] and DARK or LOCKED))
+		setTextColor(b, Grunge.PAPER, om[id] and 0 or 0.6)
 	end
-	for id, b in diffBtns do b.BackgroundColor3 = id == pickDiff and RED or DARK end
-	for n, b in sizeBtns do b.BackgroundColor3 = n == pickSize and RED or DARK end
+	for id, b in diffBtns do
+		local d = Maps.diffById[id]
+		paint(b, id == pickDiff and d.color:Lerp(Color3.new(0, 0, 0), 0.5) or DARK)
+		setTextColor(b, id == pickDiff and Grunge.PAPER or d.color)
+	end
+	for n, b in sizeBtns do paint(b, n == pickSize and RED or DARK) end
 	if privBtn then
-		privBtn.Text = pickPrivate and "PRIVATE" or "PUBLIC"
-		privBtn.BackgroundColor3 = pickPrivate and Color3.fromRGB(70, 40, 90) or DARK
+		setText(privBtn, pickPrivate and "PRIVATE" or "PUBLIC")
+		paint(privBtn, pickPrivate and PURPLE or DARK)
 	end
 end
 
@@ -118,16 +164,16 @@ local function refreshList()
 		local invited = table.find(pt.invited or {}, lp.UserId) ~= nil
 		if pt.private and pt.id ~= myId and not invited then continue end
 		shown += 1
-		local row = Grunge.frame(listFrame, { Size = UDim2.new(1, -10, 0, 58), BackgroundTransparency = 0.5, BackgroundColor3 = Color3.fromRGB(10, 8, 7), LayoutOrder = i })
+		local row = Grunge.brush(listFrame, { Size = UDim2.new(1, -10, 0, 58), LayoutOrder = i, ZIndex = 10 }, Color3.fromRGB(30, 24, 21), 300 + i, 22)
 		local m = Maps.byId[pt.map]
 		local d = Maps.diffById[pt.diff]
-		Grunge.frame(row, { BackgroundTransparency = 0, BackgroundColor3 = m and m.color or RED, Size = UDim2.new(0, 6, 1, 0) })
-		Grunge.text(row, { Text = string.upper(pt.host) .. "'S LOBBY" .. (pt.private and "  [PRIVATE]" or ""), Position = UDim2.new(0, 14, 0.05, 0), Size = UDim2.new(0.62, 0, 0.5, 0), TextXAlignment = Enum.TextXAlignment.Left })
+		Grunge.frame(row, { BackgroundTransparency = 0, BackgroundColor3 = m and m.color or RED, Position = UDim2.new(0, 4, 0.12, 0), Size = UDim2.new(0, 5, 0.76, 0), Rotation = 2, ZIndex = 12 })
+		Grunge.text(row, { Text = string.upper(pt.host) .. "'S LOBBY" .. (pt.private and "  [PRIVATE]" or ""), Position = UDim2.new(0, 14, 0.05, 0), Size = UDim2.new(0.62, 0, 0.5, 0), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 12 })
 		Grunge.text(row, { Text = string.upper((m and m.name or pt.map) .. " - " .. (d and d.name or pt.diff)) .. "   " .. #pt.names .. "/" .. pt.size,
-			Font = Grunge.TYPE, Position = UDim2.new(0, 14, 0.56, 0), Size = UDim2.new(0.62, 0, 0.36, 0), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = d and d.color or Grunge.PAPER })
+			Font = Grunge.TYPE, Position = UDim2.new(0, 14, 0.56, 0), Size = UDim2.new(0.62, 0, 0.36, 0), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = d and d.color or Grunge.PAPER, ZIndex = 12 })
 		local full = #pt.names >= pt.size
 		local b = button(row, pt.id == myId and "YOURS" or (full and "FULL" or (invited and "JOIN!" or "JOIN")), { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -6, 0.5, 0), Size = UDim2.new(0.26, 0, 0.72, 0),
-			BackgroundColor3 = (pt.id == myId or full) and DARK or GREEN })
+			BackgroundColor3 = (pt.id == myId or full) and DARK or GREEN, ZIndex = 13 })
 		b.Activated:Connect(function()
 			if pt.id ~= myId and not full then Sfx.play("Click"); Remotes.Party:FireServer("join", pt.id) end
 		end)
@@ -142,8 +188,8 @@ local function refreshList()
 		local host = myParty.hostId == lp.UserId
 		startBtn.Visible = host
 		minePriv.Visible = host
-		minePriv.Text = myParty.private and "PRIVATE" or "PUBLIC"
-		minePriv.BackgroundColor3 = myParty.private and Color3.fromRGB(70, 40, 90) or DARK
+		setText(minePriv, myParty.private and "PRIVATE" or "PUBLIC")
+		paint(minePriv, myParty.private and PURPLE or DARK)
 		-- invite list: everyone in the server who is not in this lobby and not fighting
 		for _, c in inviteList:GetChildren() do if c:IsA("Frame") then c:Destroy() end end
 		inviteList.Visible = host
@@ -152,7 +198,7 @@ local function refreshList()
 			for _, other in Players:GetPlayers() do
 				if other ~= lp and not other:GetAttribute("InMatch") and other:GetAttribute("PartyId") ~= myParty.id then
 					n += 1
-					local row = Grunge.frame(inviteList, { Size = UDim2.new(1, -8, 0, 40), BackgroundTransparency = 0.5, BackgroundColor3 = Color3.fromRGB(10, 8, 7), LayoutOrder = n, ZIndex = 11 })
+					local row = Grunge.brush(inviteList, { Size = UDim2.new(1, -8, 0, 40), LayoutOrder = n, ZIndex = 11 }, Color3.fromRGB(30, 24, 21), 400 + n, 16, false)
 					Grunge.text(row, { Text = other.DisplayName, Font = Grunge.TYPE, Position = UDim2.new(0, 8, 0.15, 0), Size = UDim2.new(0.6, 0, 0.7, 0), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 12 })
 					local sent = table.find(myParty.invited or {}, other.UserId) ~= nil
 					local ib = button(row, sent and "SENT" or "INVITE", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -4, 0.5, 0), Size = UDim2.new(0.34, 0, 0.8, 0),
@@ -213,24 +259,24 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	gui.Parent = lp:WaitForChild("PlayerGui")
 
-	-- left column: PLAY / SHOP
-	side = Grunge.frame(gui, { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 28, 0.5, 0), Size = UDim2.fromScale(0.17, 0.42) })
-	local sar = Instance.new("UIAspectRatioConstraint"); sar.AspectRatio = 0.85; sar.Parent = side
-	bigButton("PLAY", Color3.fromRGB(150, 20, 18), 0, -4, function() setOpen(not panel.Visible) end, 0.24)
-	bigButton("SHOP", Color3.fromRGB(170, 120, 24), 0.28, 3, function()
+	-- left column: PLAY / SHOP / QUESTS, drawn like the fight HUD's bars (health red, stamina mustard, brutality orange)
+	side = Grunge.frame(gui, { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 28, 0.5, 0), Size = UDim2.fromScale(0.2, 0.42) })
+	local sar = Instance.new("UIAspectRatioConstraint"); sar.AspectRatio = 1.05; sar.Parent = side
+	bigButton("PLAY", "FIND A FIGHT", Color3.fromRGB(150, 18, 20), 0, -1.2, function() setOpen(not panel.Visible) end, 0.24)
+	bigButton("SHOP", "ULTS - MAPS", Color3.fromRGB(176, 150, 40), 0.27, 0.8, function()
 		if panel.Visible then setOpen(false) end
 		if openShop then openShop() end
 	end, 0.24)
-	local questBtn = bigButton("QUESTS", Color3.fromRGB(40, 90, 120), 0.56, -2, function()
+	local questBtn = bigButton("QUESTS", "DAILY CASH", Color3.fromRGB(210, 86, 18), 0.54, -0.6, function()
 		if panel.Visible then setOpen(false) end
 		if questOpener then questOpener() end
 	end, 0.24)
 	-- red badge: quests ready to claim
-	local badge = Grunge.frame(questBtn.Parent :: Instance, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.97, 0.12), Size = UDim2.fromScale(0.2, 0.42), BackgroundTransparency = 0, BackgroundColor3 = Color3.fromRGB(200, 30, 24), ZIndex = 8, Visible = false })
+	local badge = Grunge.frame(questBtn.Parent :: Instance, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.98, 0.2), Size = UDim2.fromScale(0.2, 0.46), BackgroundTransparency = 0, BackgroundColor3 = Color3.fromRGB(200, 30, 24), ZIndex = 10, Visible = false })
 	local bc = Instance.new("UICorner"); bc.CornerRadius = UDim.new(0.5, 0); bc.Parent = badge
 	local bst = Instance.new("UIStroke"); bst.Color = Grunge.INK; bst.Thickness = 3; bst.Parent = badge
 	local bar = Instance.new("UIAspectRatioConstraint"); bar.AspectRatio = 1; bar.Parent = badge
-	local badgeText = Grunge.text(badge, { Text = "", Size = UDim2.fromScale(1, 1), TextColor3 = Grunge.PAPER, ZIndex = 9 })
+	local badgeText = Grunge.text(badge, { Text = "", Size = UDim2.fromScale(1, 1), TextColor3 = Grunge.PAPER, ZIndex = 11 })
 	local function refreshBadge()
 		local n = questCount and questCount() or 0
 		badge.Visible = n > 0
@@ -239,30 +285,28 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 	if questChanged then questChanged:Connect(refreshBadge) end
 	refreshBadge()
 	-- controller: D-pad up opens PLAY (the stick keeps moving the character)
-	local padTag = Grunge.text(side, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0, 0.95), Size = UDim2.fromScale(1.3, 0.08), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(255, 200, 120), Rotation = -2 })
+	local padTag = Grunge.text(side, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0, 0.92), Size = UDim2.fromScale(1.1, 0.07), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = ACCENT, Rotation = -1 })
 	local function padHint() padTag.Text = Platform.mode() == "gamepad" and "D-PAD UP: PLAY   D-PAD LEFT: SETTINGS" or "" end
 	padHint()
 	Platform.changed:Connect(padHint)
-	boostTag = Grunge.text(side, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0, 0.84), Size = UDim2.fromScale(1.3, 0.1), TextXAlignment = Enum.TextXAlignment.Left, Rotation = -2 })
+	boostTag = Grunge.text(side, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0.02, 0.81), Size = UDim2.fromScale(1.1, 0.08), TextXAlignment = Enum.TextXAlignment.Left, Rotation = -1 })
 
-	-- PLAY panel
-	panel = Grunge.panel(gui, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.55, 0.52), Size = UDim2.fromScale(0.62, 0.8), Rotation = 0, Visible = false }, 33)
+	-- PLAY panel: a painted ink slab over a blood splat, the title over a red brush (like the ghost name over its bar)
+	panel = Grunge.slab(gui, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.55, 0.52), Size = UDim2.fromScale(0.62, 0.8), Visible = false, ZIndex = 8 }, Color3.fromRGB(21, 17, 15), 33, 6)
 	local par = Instance.new("UIAspectRatioConstraint"); par.AspectRatio = 1.45; par.Parent = panel
-	-- solid backing so the HUD text behind does not show through
-	Grunge.frame(panel, { BackgroundTransparency = 0.04, BackgroundColor3 = Color3.fromRGB(20, 16, 14), Size = UDim2.fromScale(0.97, 0.95), Position = UDim2.fromScale(0.015, 0.025), ZIndex = 9 })
-	Grunge.text(panel, { Text = "PLAY", Font = Grunge.HORROR, Position = UDim2.fromScale(0.04, 0.02), Size = UDim2.fromScale(0.3, 0.1), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(255, 110, 60), ZIndex = 10 })
-	local close = button(panel, "CLOSE", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(0.96, 0.035), Size = UDim2.fromScale(0.16, 0.065), BackgroundColor3 = DARK, ZIndex = 12, Modal = true })
+	Grunge.text(panel, { Text = "FIND A FIGHT", Font = Grunge.HORROR, Position = UDim2.fromScale(0.04, 0.025), Size = UDim2.fromScale(0.5, 0.095), TextXAlignment = Enum.TextXAlignment.Left,
+		Rotation = -1, ZIndex = 11 })
+	local titleBar = Grunge.bar(panel, { size = UDim2.fromScale(0.42, 0.028), pos = UDim2.fromScale(0.04, 0.115), color = RED, rot = 0.4, seed = 51, slices = 30 })
+	titleBar.root.ZIndex = 10
+	local close = button(panel, "CLOSE", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(0.96, 0.035), Size = UDim2.fromScale(0.15, 0.07), BackgroundColor3 = DARK, ZIndex = 12, Modal = true, Rotation = 1.5 })
 	close.Activated:Connect(function() Sfx.play("Click"); setOpen(false) end)
 	Platform.menu(panel, function() setOpen(false) end)
 
 	-- left half: create a lobby
 	createPage = Grunge.frame(panel, { Position = UDim2.fromScale(0.04, 0.14), Size = UDim2.fromScale(0.46, 0.82), ZIndex = 10 })
-	local function heading(parent: Instance, text: string, y: number)
-		Grunge.text(parent, { Text = text, Font = Grunge.TYPE, Position = UDim2.fromScale(0, y), Size = UDim2.fromScale(1, 0.055), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(220, 90, 60), ZIndex = 11 })
-	end
-	heading(createPage, "CREATE A LOBBY - MAP", 0)
-	local mg = Grunge.frame(createPage, { Position = UDim2.fromScale(0, 0.065), Size = UDim2.fromScale(1, 0.48), ZIndex = 11 })
-	local grid = Instance.new("UIGridLayout"); grid.CellSize = UDim2.fromScale(0.32, 0.165); grid.CellPadding = UDim2.fromScale(0.015, 0.02); grid.SortOrder = Enum.SortOrder.LayoutOrder; grid.Parent = mg
+	heading(createPage, "PICK A HOUSE", 0, 0, 1, 11)
+	local mg = Grunge.frame(createPage, { Position = UDim2.fromScale(0, 0.08), Size = UDim2.fromScale(1, 0.48), ZIndex = 11 })
+	local grid = Instance.new("UIGridLayout"); grid.CellSize = UDim2.fromScale(0.32, 0.17); grid.CellPadding = UDim2.fromScale(0.015, 0.02); grid.SortOrder = Enum.SortOrder.LayoutOrder; grid.Parent = mg
 	for i, m in Maps.list do
 		local b = button(mg, string.upper(m.name), { LayoutOrder = i, ZIndex = 12, Font = Grunge.TYPE })
 		b.Activated:Connect(function()
@@ -271,7 +315,7 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 		end)
 		mapBtns[m.id] = b
 	end
-	heading(createPage, "DIFFICULTY", 0.57)
+	heading(createPage, "DIFFICULTY", 0, 0.57, 1, 11)
 	local dg = Grunge.frame(createPage, { Position = UDim2.fromScale(0, 0.635), Size = UDim2.fromScale(1, 0.09), ZIndex = 11 })
 	local dl = Instance.new("UIListLayout"); dl.FillDirection = Enum.FillDirection.Horizontal; dl.Padding = UDim.new(0.015, 0); dl.SortOrder = Enum.SortOrder.LayoutOrder; dl.Parent = dg
 	for i, d in Maps.difficulties do
@@ -279,7 +323,7 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 		b.Activated:Connect(function() Sfx.play("Click"); pickDiff = d.id; refreshPicks() end)
 		diffBtns[d.id] = b
 	end
-	heading(createPage, "PLAYERS", 0.75)
+	heading(createPage, "PLAYERS", 0, 0.75, 0.55, 11)
 	local sg = Grunge.frame(createPage, { Position = UDim2.fromScale(0, 0.815), Size = UDim2.fromScale(0.55, 0.09), ZIndex = 11 })
 	local sl = Instance.new("UIListLayout"); sl.FillDirection = Enum.FillDirection.Horizontal; sl.Padding = UDim.new(0.03, 0); sl.SortOrder = Enum.SortOrder.LayoutOrder; sl.Parent = sg
 	for n = 1, 4 do
@@ -289,19 +333,19 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 	end
 	privBtn = button(createPage, "PUBLIC", { Position = UDim2.fromScale(0.6, 0.745), Size = UDim2.fromScale(0.4, 0.075), BackgroundColor3 = DARK, ZIndex = 12 })
 	privBtn.Activated:Connect(function() Sfx.play("Click"); pickPrivate = not pickPrivate; refreshPicks() end)
-	local create = button(createPage, "CREATE", { Position = UDim2.fromScale(0.6, 0.84), Size = UDim2.fromScale(0.4, 0.12), BackgroundColor3 = GREEN, ZIndex = 12, Rotation = -1.5 })
+	local create = button(createPage, "CREATE", { Position = UDim2.fromScale(0.58, 0.84), Size = UDim2.fromScale(0.42, 0.13), BackgroundColor3 = GREEN, ZIndex = 12, Rotation = -1.5 })
 	create.Activated:Connect(function() Sfx.play("Click"); Remotes.Party:FireServer("create", pickMap, pickDiff, pickSize, pickPrivate) end)
 
 	-- left half when you are in a lobby: your lobby
 	mine = Grunge.frame(panel, { Position = UDim2.fromScale(0.04, 0.14), Size = UDim2.fromScale(0.46, 0.82), ZIndex = 10, Visible = false })
-	heading(mine, "YOUR LOBBY", 0)
+	heading(mine, "YOUR LOBBY", 0, 0, 0.66, 11)
 	mineInfo = Grunge.text(mine, { Text = "", Position = UDim2.fromScale(0, 0.07), Size = UDim2.fromScale(1, 0.09), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 11 })
 	minePriv = button(mine, "PUBLIC", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 0), Size = UDim2.fromScale(0.32, 0.07), BackgroundColor3 = DARK, ZIndex = 12 })
 	minePriv.Activated:Connect(function()
 		Sfx.play("Click")
-		Remotes.Party:FireServer("privacy", minePriv.Text == "PUBLIC")
+		Remotes.Party:FireServer("privacy", minePriv:GetAttribute("Label") == "PUBLIC")
 	end)
-	heading(mine, "INVITE PLAYERS", 0.42)
+	heading(mine, "INVITE PLAYERS", 0, 0.42, 1, 11)
 	inviteList = Instance.new("ScrollingFrame")
 	inviteList.BackgroundTransparency = 1; inviteList.BorderSizePixel = 0; inviteList.Position = UDim2.fromScale(0, 0.48); inviteList.Size = UDim2.fromScale(1, 0.2)
 	inviteList.ScrollBarThickness = 5; inviteList.AutomaticCanvasSize = Enum.AutomaticSize.Y; inviteList.CanvasSize = UDim2.new(); inviteList.ZIndex = 11; inviteList.Parent = mine
@@ -313,16 +357,16 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 	leave.Activated:Connect(function() Sfx.play("Click"); Remotes.Party:FireServer("leave") end)
 
 	-- right half: open lobbies
-	Grunge.text(panel, { Text = "OPEN LOBBIES", Font = Grunge.TYPE, Position = UDim2.fromScale(0.53, 0.14), Size = UDim2.fromScale(0.43, 0.045), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(220, 90, 60), ZIndex = 11 })
+	heading(panel, "OPEN LOBBIES", 0.53, 0.14, 0.43, 11)
 	listFrame = Instance.new("ScrollingFrame")
 	listFrame.BackgroundTransparency = 1; listFrame.BorderSizePixel = 0; listFrame.Position = UDim2.fromScale(0.53, 0.2); listFrame.Size = UDim2.fromScale(0.43, 0.66)
 	listFrame.ScrollBarThickness = 6; listFrame.ScrollBarImageColor3 = Color3.fromRGB(150, 30, 26); listFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
 	listFrame.CanvasSize = UDim2.new(); listFrame.ZIndex = 10; listFrame.Parent = panel
 	local ll = Instance.new("UIListLayout"); ll.Padding = UDim.new(0, 6); ll.SortOrder = Enum.SortOrder.LayoutOrder; ll.Parent = listFrame
-	status = Grunge.text(panel, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0.53, 0.88), Size = UDim2.fromScale(0.43, 0.05), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(190, 180, 160), ZIndex = 11 })
+	status = Grunge.text(panel, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0.53, 0.88), Size = UDim2.fromScale(0.43, 0.05), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = ACCENT, ZIndex = 11 })
 
 	-- invite popup (top centre): "X invited you" with JOIN / NO
-	invitePop = Grunge.panel(gui, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.12), Size = UDim2.fromScale(0.34, 0.15), Rotation = -1, Visible = false }, 51)
+	invitePop = Grunge.slab(gui, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.12), Size = UDim2.fromScale(0.34, 0.15), Rotation = -1, Visible = false, ZIndex = 8 }, Color3.fromRGB(21, 17, 15), 51, 3)
 	local ipr = Instance.new("UIAspectRatioConstraint"); ipr.AspectRatio = 4.2; ipr.Parent = invitePop
 	invitePopText = Grunge.text(invitePop, { Text = "", Position = UDim2.fromScale(0.05, 0.1), Size = UDim2.fromScale(0.9, 0.38), ZIndex = 10 })
 	local ij = button(invitePop, "JOIN", { Position = UDim2.fromScale(0.12, 0.55), Size = UDim2.fromScale(0.36, 0.34), BackgroundColor3 = GREEN, ZIndex = 12 })

@@ -422,6 +422,9 @@ function GA.update(dt: number)
 	if not current or not current.Parent then return end
 	local t = os.clock()
 	local state = current:GetAttribute("State") or "Chase"
+	-- Fury moves reuse the attack poses: roar / lunge crouch = wind-up, lunge dash = swipe
+	if state == "Roar" then state = "WindUp"
+	elseif state == "Lunge" then state = current:GetAttribute("FuryPhase") == "dash" and "Swipe" or "WindUp" end
 	local ph = current:GetAttribute("AbilityPhase") or ""
 	if ph ~= phaseSeen then phaseSeen = ph; phaseT = t end
 	if state ~= stateSeen then
