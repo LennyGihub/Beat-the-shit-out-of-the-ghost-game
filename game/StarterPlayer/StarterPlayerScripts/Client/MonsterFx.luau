@@ -16,7 +16,7 @@ local KINDS = {
 	Blackout = true, BlackoutEnd = true, GasThrow = true, GasCloud = true, Gassed = true,
 	HellMark = true, HellPillar = true, Charge = true, CloneSpawn = true, CloneShatter = true,
 	GoblinSteal = true, GoblinUse = true, GoblinDrop = true,
-	ShieldBlock = true, Slammed = true,
+	ShieldBlock = true, Slammed = true, AnimJumpscare = true,
 }
 local Items = require(game:GetService("ReplicatedStorage").Shared.Items)
 local GOBLIN = Color3.fromRGB(130, 230, 70)
@@ -66,8 +66,96 @@ local function release()
 	if hum then hum.PlatformStand = false end
 end
 
+-- the Party Bear's jumpscare: its face rushes at the screen out of the dark (a clone of the monster in a
+-- ViewportFrame, eyes lit), with a scream, a white flash and a hard shake
+local function jumpscare(model: any)
+	Sfx.play("Jumpscare", { Volume = 1.6 })
+	Fx.shake(1.1)
+	if typeof(model) ~= "Instance" or not model:IsA("Model") then HUD.flash(Color3.new(1, 1, 1), 0.6); return end
+	local ok, clone = pcall(function() return (model :: Model):Clone() end)
+	if not ok or not clone then return end
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "Jumpscare"; gui.IgnoreGuiInset = true; gui.DisplayOrder = 60; gui.ResetOnSpawn = false
+	local vp = Instance.new("ViewportFrame")
+	vp.Size = UDim2.fromScale(1, 1); vp.BackgroundColor3 = Color3.new(0, 0, 0); vp.BorderSizePixel = 0
+	vp.Ambient = Color3.fromRGB(70, 60, 55); vp.LightColor = Color3.fromRGB(150, 160, 190); vp.LightDirection = Vector3.new(0.3, -0.4, 1)
+	vp.Parent = gui
+	for _, d in clone:GetDescendants() do
+		if d:IsA("BasePart") then
+			d.Anchored = true; d.LocalTransparencyModifier = 0
+			if d:GetAttribute("DarkNeon") then d.Material = Enum.Material.Neon end
+		elseif d:IsA("Constraint") or d:IsA("LuaSourceContainer") or d:IsA("Attachment") then
+			d:Destroy()
+		end
+	end
+	clone:PivotTo(CFrame.new())
+	clone.Parent = vp
+	local head = clone:FindFirstChild("Head") :: BasePart?
+	local focus = head and (head.CFrame * Vector3.new(0, 0.1, 0)) or Vector3.new(0, 5, 0)
+	if head then
+		-- the jaw drops wide open (jaw + its teeth turn about a hinge under the snout)
+		local hinge = head.CFrame * CFrame.new(0, -0.85, -0.45)
+		local turn = hinge * CFrame.Angles(-0.6, 0, 0) * hinge:Inverse()
+		for _, d in clone:GetDescendants() do
+			if d:IsA("BasePart") and (d.Name == "Jaw" or d.Name == "JawRound" or d.Name == "Tooth" or d.Name == "MouthInside") then
+				d.CFrame = turn * d.CFrame
+			end
+		end
+	end
+	local cam = Instance.new("Camera"); cam.FieldOfView = 60; cam.Parent = vp
+	vp.CurrentCamera = cam
+	gui.Parent = lp:WaitForChild("PlayerGui")
+	local t0 = os.clock()
+	local conn
+	conn = RunService.RenderStepped:Connect(function()
+		local t = os.clock() - t0
+		local k = math.min(1, t / 0.18)
+		local dist = 10 - 5.2 * (1 - (1 - k) ^ 3) -- lunges from 10 studs to 4.8 (face filling the screen) in a split second
+		local jit = Vector3.new(rng:NextNumber(-1, 1), rng:NextNumber(-1, 1), 0) * (0.08 + 0.1 * (1 - k))
+		cam.CFrame = CFrame.lookAt(focus + Vector3.new(0, -0.3, -dist) + jit, focus) * CFrame.Angles(0, 0, math.sin(t * 40) * 0.04)
+		if lp:GetAttribute("DebugJumpscareHold") then t0 = os.clock() - 0.5; return end
+		if t > 0.85 then
+			vp.ImageTransparency = math.min(1, (t - 0.85) / 0.25); vp.BackgroundTransparency = vp.ImageTransparency
+		end
+		if t > 1.1 then conn:Disconnect(); gui:Destroy() end
+	end)
+	task.delay(0.85, function() HUD.flash(Color3.new(1, 1, 1), 0.5) end)
+end
+
 local blackoutCC: ColorCorrectionEffect? = nil
-local function blackout(on: boolean, t: number?)
+-- the Animatronic's blackout: every lamp in the house goes dark (lights off, glowing neon dulled), a music
+-- box plays while it hunts; all put back when it ends
+local dimmed = {} :: { [Instance]: any }
+local musicBox: Sound? = nil
+local function lightsOut(on: boolean)
+	if on then
+		local house = workspace:FindFirstChild("Mansion")
+		if not house then return end
+		for _, d in house:GetDescendants() do
+			if dimmed[d] == nil then
+				if d:IsA("Light") and d.Enabled then
+					dimmed[d] = true; d.Enabled = false
+				elseif d:IsA("BasePart") and d.Material == Enum.Material.Neon then
+					dimmed[d] = d.Color; d.Material = Enum.Material.SmoothPlastic; d.Color = d.Color:Lerp(Color3.new(0, 0, 0), 0.75)
+				end
+			end
+		end
+		Sfx.play("Breaker", { Volume = 1.2, PlaybackSpeed = 0.7 })
+		if musicBox then musicBox:Destroy() end
+		musicBox = Sfx.loop("MusicBox", { PlaybackSpeed = 0.85 })
+	else
+		for d, v in dimmed do
+			if d.Parent then
+				if d:IsA("Light") then (d :: Light).Enabled = true
+				else (d :: BasePart).Material = Enum.Material.Neon; (d :: BasePart).Color = v end
+			end
+		end
+		table.clear(dimmed)
+		if musicBox then musicBox:Destroy(); musicBox = nil end
+	end
+end
+
+local function blackout(on: boolean, t: number?, allLights: boolean?)
 	if not blackoutCC then
 		blackoutCC = Instance.new("ColorCorrectionEffect")
 		blackoutCC.Name = "Blackout"
@@ -76,11 +164,14 @@ local function blackout(on: boolean, t: number?)
 	local cc = blackoutCC :: ColorCorrectionEffect
 	if on then
 		Sfx.play("GhostWhisper", { Volume = 1.2, PlaybackSpeed = 0.6 })
-		HUD.banner("THE LIGHTS ARE OUT", "IT'S COMING FOR YOU", 2.5)
-		TweenService:Create(cc, TweenInfo.new(0.4), { Brightness = -0.32, Contrast = 0.5, Saturation = -0.8 }):Play()
+		HUD.banner("THE LIGHTS ARE OUT", allLights and "WATCH FOR ITS EYES" or "IT'S COMING FOR YOU", 2.5)
+		local dark = allLights and { Brightness = -0.42, Contrast = 0.6, Saturation = -0.85 } or { Brightness = -0.32, Contrast = 0.5, Saturation = -0.8 }
+		TweenService:Create(cc, TweenInfo.new(allLights and 0.15 or 0.4), dark):Play()
+		if allLights then lightsOut(true) end
 		task.delay((t or 5) + 0.2, function() blackout(false) end)
 	else
 		TweenService:Create(cc, TweenInfo.new(0.6), { Brightness = 0, Contrast = 0, Saturation = 0 }):Play()
+		lightsOut(false)
 	end
 end
 
@@ -213,7 +304,9 @@ function MonsterFx.handle(kind: string, ...)
 		Fx.kick(-14 * f)
 		if f > 0 then HUD.flash(Color3.fromRGB(200, 240, 255), 0.35 * f) end
 	elseif kind == "Blackout" then
-		blackout(true, a[1])
+		blackout(true, a[1], a[2])
+	elseif kind == "AnimJumpscare" then
+		jumpscare(a[1])
 	elseif kind == "BlackoutEnd" then
 		blackout(false)
 	elseif kind == "GasThrow" then
@@ -289,6 +382,13 @@ MonsterFx.release = release
 
 function MonsterFx.init(fx, hud, sfx)
 	Fx, HUD, Sfx = fx, hud, sfx
+	if RunService:IsStudio() then
+		-- Studio test hook: player attribute DebugJumpscare = true plays the Party Bear jumpscare with the current
+		-- monster (DebugJumpscareHold = true keeps the last frame on screen until it is cleared)
+		lp:GetAttributeChangedSignal("DebugJumpscare"):Connect(function()
+			if lp:GetAttribute("DebugJumpscare") then jumpscare(workspace:FindFirstChild("Ghost")) end
+		end)
+	end
 end
 
 return MonsterFx

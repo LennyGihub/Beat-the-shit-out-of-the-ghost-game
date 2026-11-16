@@ -21,5 +21,9 @@
   "19": "Input.luau",
   "20": "GoblinLoot.luau",
   "21": "Settings.luau",
-  "22": "SawAudio.luau"
+  "22": "SawAudio.luau",
+  "23": "Platform.luau",
+  "24": "Fx.luau",
+  "25": "GhostAnim.luau",
+  "26": "HUD.luau"
 }

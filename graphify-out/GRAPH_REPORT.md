@@ -1,17 +1,17 @@
 # Graph Report - Beat-the-shit-out-of-the-ghost-game  (2026-11-16)
 
 ## Corpus Check
-- 51 files · ~81,469 words
+- 51 files · ~82,748 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 3 file(s) not represented in the graph (top: (none) 3)
 
 ## Summary
-- 613 nodes · 1667 edges · 23 communities (16 shown, 7 thin omitted)
-- Extraction: 85% EXTRACTED · 15% INFERRED · 0% AMBIGUOUS · INFERRED: 258 edges (avg confidence: 0.85)
+- 614 nodes · 1672 edges · 27 communities (19 shown, 8 thin omitted)
+- Extraction: 84% EXTRACTED · 16% INFERRED · 0% AMBIGUOUS · INFERRED: 260 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `5a2d9041`
+- Built from commit: `27840fac`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -19,7 +19,6 @@
 - Ghost.luau
 - UltFx.luau
 - ItemModels.luau
-- ClientMain.client.luau
 - Data.luau
 - Viewmodel.luau
 - Inventory.luau
@@ -32,6 +31,10 @@
 - GoblinLoot.luau
 - Settings.luau
 - SawAudio.luau
+- Platform.luau
+- Fx.luau
+- GhostAnim.luau
+- HUD.luau
 
 ## God Nodes (most connected - your core abstractions)
 1. `p()` - 49 edges
@@ -41,7 +44,7 @@
 5. `worn()` - 39 edges
 6. `Ghost.step()` - 22 edges
 7. `moving()` - 20 edges
-8. `Sfx.play()` - 18 edges
+8. `Sfx.play()` - 19 edges
 9. `Abilities.step()` - 16 edges
 10. `Furniture.smash()` - 15 edges
 
@@ -50,17 +53,17 @@
   game/ServerScriptService/Server/Inventory.luau → game/ServerScriptService/Server/Ghost.luau
 - `MonsterFx.handle()` --calls--> `HUD.toast()`  [INFERRED]
   game/StarterPlayer/StarterPlayerScripts/Client/MonsterFx.luau → game/StarterPlayer/StarterPlayerScripts/Client/HUD.luau
+- `Input.init()` --calls--> `HUD.hint()`  [INFERRED]
+  game/StarterPlayer/StarterPlayerScripts/Client/Input.luau → game/StarterPlayer/StarterPlayerScripts/Client/HUD.luau
+- `layoutBars()` --calls--> `Platform.mode()`  [INFERRED]
+  game/StarterPlayer/StarterPlayerScripts/Client/HUD.luau → game/StarterPlayer/StarterPlayerScripts/Client/Platform.luau
 - `liftHint()` --calls--> `Settings.keyName()`  [INFERRED]
   game/StarterPlayer/StarterPlayerScripts/Client/Input.luau → game/StarterPlayer/StarterPlayerScripts/Client/Settings.luau
-- `Hotbar.primary()` --calls--> `VM.impactTime()`  [INFERRED]
-  game/StarterPlayer/StarterPlayerScripts/Client/Hotbar.luau → game/StarterPlayer/StarterPlayerScripts/Client/Viewmodel.luau
-- `update()` --calls--> `VM.itemTip()`  [INFERRED]
-  game/StarterPlayer/StarterPlayerScripts/Client/Hotbar.luau → game/StarterPlayer/StarterPlayerScripts/Client/Viewmodel.luau
 
 ## Import Cycles
 - None detected.
 
-## Communities (23 total, 7 thin omitted)
+## Communities (27 total, 8 thin omitted)
 
 ### Community 0 - "Ghost.luau"
 Cohesion: 0.07
@@ -68,15 +71,11 @@ Nodes (60): checkThrown(), checkThrownPlayers(), Combat.start(), Fire.clear(), F
 
 ### Community 1 - "UltFx.luau"
 Cohesion: 0.09
-Nodes (35): boom(), clone(), EventFx.handle(), EventFx.train(), EventFx.van(), watch(), HUD.banner(), HUD.flash() (+27 more)
+Nodes (37): boom(), clone(), EventFx.handle(), EventFx.train(), EventFx.van(), watch(), HUD.banner(), HUD.flash() (+29 more)
 
 ### Community 2 - "ItemModels.luau"
 Cohesion: 0.19
 Nodes (55): at(), B.axe(), B.ball(), B.bat(), B.beartrap(), B.blower(), B.bottle(), B.brick() (+47 more)
-
-### Community 3 - "ClientMain.client.luau"
-Cohesion: 0.10
-Nodes (7): abilityPose(), bind(), GA.update(), goblinClaw(), pirateSlash(), target(), walkPose()
 
 ### Community 4 - "Data.luau"
 Cohesion: 0.15
@@ -103,16 +102,16 @@ Cohesion: 0.05
 Nodes (48): onPlayer(), Admin.run(), Admin.start(), isAdmin(), isFullAdmin(), passId(), Events.despawn(), areFriends() (+40 more)
 
 ### Community 15 - "AdminPanel.luau"
-Cohesion: 0.13
-Nodes (17): build(), button(), cmd(), corner(), grid(), heading(), label(), log() (+9 more)
+Cohesion: 0.27
+Nodes (13): build(), button(), cmd(), corner(), grid(), heading(), label(), log() (+5 more)
 
 ### Community 18 - "Abilities.luau"
 Cohesion: 0.22
 Nodes (20): Abilities.blocks(), Abilities.clear(), Abilities.dropLevitated(), Abilities.hitClone(), Abilities.interrupt(), Abilities.step(), Abilities.tick(), Abilities.try() (+12 more)
 
 ### Community 19 - "Input.luau"
-Cohesion: 0.10
-Nodes (29): Hotbar.cycle(), Hotbar.drop(), HUD.hint(), HUD.toast(), HUD.update(), layoutBars(), updateWaypoint(), aimedFurniture() (+21 more)
+Cohesion: 0.19
+Nodes (15): Hotbar.cycle(), Hotbar.drop(), aimedFurniture(), allPrompts(), bindAll(), grab(), Input.init(), look() (+7 more)
 
 ### Community 20 - "GoblinLoot.luau"
 Cohesion: 0.14
@@ -126,8 +125,24 @@ Nodes (8): apply(), load(), save(), Settings.bind(), Settings.init(), Settings.k
 Cohesion: 0.40
 Nodes (9): oneShot(), SawAudio.attach(), SawAudio.hit(), SawAudio.init(), SawAudio.used(), selectedId(), sound(), step() (+1 more)
 
+### Community 23 - "Platform.luau"
+Cohesion: 0.33
+Nodes (11): HUD.update(), updateWaypoint(), liftHint(), firstButton(), navStep(), openMenu(), Platform.init(), Platform.label() (+3 more)
+
+### Community 24 - "Fx.luau"
+Cohesion: 0.20
+Nodes (4): Fx.applyZone(), Fx.init(), UltFx.init(), VM.setShake()
+
+### Community 25 - "GhostAnim.luau"
+Cohesion: 0.33
+Nodes (7): abilityPose(), bind(), GA.update(), goblinClaw(), pirateSlash(), target(), walkPose()
+
+### Community 26 - "HUD.luau"
+Cohesion: 0.29
+Nodes (3): HUD.hint(), HUD.toast(), layoutBars()
+
 ## Knowledge Gaps
-- **7 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **8 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
@@ -139,10 +154,10 @@ _Questions this graph is uniquely positioned to answer:_
 - **Why does `p()` connect `ItemModels.luau` to `GoblinLoot.luau`?**
   _High betweenness centrality (0.057) - this node is a cross-community bridge._
 - **Should `UltFx.luau` be split into smaller, more focused modules?**
-  _Cohesion score 0.08985507246376812 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.08973172987974098 - nodes in this community are weakly interconnected._
 - **Why does `VM.setItem()` connect `Viewmodel.luau` to `GoblinLoot.luau`, `LobbyUI.luau`?**
   _High betweenness centrality (0.050) - this node is a cross-community bridge._
 - **Should `ClientMain.client.luau` be split into smaller, more focused modules?**
-  _Cohesion score 0.1 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.13333333333333333 - nodes in this community are weakly interconnected._
 - **Should `Data.luau` be split into smaller, more focused modules?**
   _Cohesion score 0.14795008912655971 - nodes in this community are weakly interconnected._

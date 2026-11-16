@@ -53,6 +53,15 @@ local function abilityPose(ab: string, phase: string, t: number, since: number):
 	local s = math.sin
 	local p = {}
 	local a = math.min(1, since / 0.35)
+	if ab == "blackout" then -- stalking in the dark: hunched, arms reaching, head cocked
+		p.Root = A(0.15, 0, 0); p.Waist = A(0.25, 0, 0); p.Neck = A(-0.3, 0, 0.35 + s(t * 0.7) * 0.1)
+		p.RightShoulder = A(1.2, 0, -0.15); p.LeftShoulder = A(1.2, 0, 0.15)
+		p.RightElbow = A(0.4, 0, 0); p.LeftElbow = A(0.4, 0, 0)
+		local ph = t * 6
+		p.RightHip = A(s(ph) * 0.5, 0, 0); p.LeftHip = A(-s(ph) * 0.5, 0, 0)
+		p.RightKnee = A(-0.3 - math.max(0, s(ph + 1.2)) * 0.7, 0, 0); p.LeftKnee = A(-0.3 - math.max(0, -s(ph + 1.2)) * 0.7, 0, 0)
+		return p
+	end
 	if ab == "shieldBash" then -- the Pirate: shield up and crouched, then a shoulder-first rush, then he straightens up
 		if phase == "brace" then
 			p.Root = A(0.2 * a, 0, 0) * CFrame.new(0, -0.6 * a, 0); p.Waist = A(0.2, 0.25, 0); p.Neck = A(-0.25, -0.2, 0)
@@ -314,6 +323,14 @@ local function target(state: string, t: number, sinceState: number): { [string]:
 		elseif g:GetAttribute("MonsterId") == "Butcher" or g:GetAttribute("MonsterId") == "HollowKing" or g:GetAttribute("MonsterId") == "Demon" then
 			p.Waist = (p.Waist or CFrame.new()) * A(0.25, 0, 0) -- hunched
 			p.Neck = A(-0.2, 0, s(t * 1.3) * 0.08)
+		elseif g:GetAttribute("MonsterId") == "Animatronic" then
+			-- servo-jerky: the pose snaps in steps and the head twitches sideways now and then
+			for k, v in p do
+				local rx, ry, rz = v:ToEulerAnglesXYZ()
+				local q = 0.18
+				p[k] = CFrame.new(v.Position) * A(math.floor(rx / q + 0.5) * q, math.floor(ry / q + 0.5) * q, math.floor(rz / q + 0.5) * q)
+			end
+			p.Neck = A(-0.1, (math.floor(t * 0.8) % 3 - 1) * 0.35, (math.floor(t * 1.3) % 2) * 0.25)
 		elseif g:GetAttribute("MonsterId") == "Pirate" then
 			p.Waist = (p.Waist or CFrame.new()) * A(0.18, 0, 0) -- a crooked skeleton walk, shield up, cutlass low
 			p.Neck = A(-0.15, s(t * 1.1) * 0.15, s(t * 2.7) * 0.1)
@@ -381,12 +398,26 @@ function GA.update(dt: number)
 	-- vanish / spawn / death fade
 	local want = 0
 	if current:GetAttribute("Vanish") then want = 1 end
-	if current:GetAttribute("Shadow") then want = 0.88 end -- the stalker in the dark: barely visible
+	local shadow = current:GetAttribute("Shadow") == true
+	-- the stalker in the dark: the Woman is barely visible, the Party Bear is gone except for its eyes
+	if shadow then want = current:GetAttribute("MonsterId") == "Animatronic" and 1 or 0.88 end
 	if state == "Dead" then want = math.min(1, (t - stateT) / 2.5) end
 	if state == "Spawn" then want = 1 - math.min(1, (t - stateT) / 1.8) end
 	fade += (want - fade) * math.min(1, dt * (state == "Dead" and 3 or 6))
+	local neonEyes = shadow and state ~= "Dead"
 	for _, d in current:GetDescendants() do
-		if d:IsA("BasePart") and d.Name ~= "HumanoidRootPart" then d.LocalTransparencyModifier = fade end
+		-- parts with the Glow attribute (the Party Bear's eyes) stay visible in the dark; DarkNeon parts light up there
+		if d:IsA("BasePart") and d.Name ~= "HumanoidRootPart" then
+			d.LocalTransparencyModifier = (d:GetAttribute("Glow") and state ~= "Dead") and 0 or fade
+			if d:GetAttribute("DarkNeon") then
+				local mat = neonEyes and Enum.Material.Neon or Enum.Material.SmoothPlastic
+				if d.Material ~= mat then d.Material = mat end
+			end
+		elseif d:IsA("PointLight") and d.Parent and d.Parent:GetAttribute("DarkNeon") then
+			d.Brightness = neonEyes and 1.4 or 0.5
+		elseif d:IsA("BillboardGui") and d.Name == "EyeHalo" then
+			d.Enabled = neonEyes
+		end
 	end
 end
 
