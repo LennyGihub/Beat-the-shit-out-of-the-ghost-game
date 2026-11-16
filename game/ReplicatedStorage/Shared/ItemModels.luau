@@ -351,30 +351,61 @@ function B.pistol(m, c, _glow, id)
 	moving(m, ham, "kick", V(0, -0.06, 0.12))
 	mark(m, "Tip", at(0, flare and 0.32 or 0.33, flare and -1.55 or -1.75))
 end
--- Glock 18: black polymer frame, steel slide that kicks back, fire selector, long extended mag
+-- Glock 18: black polymer frame (stippled grip, finger grooves, beavertail, accessory rail, square trigger guard
+-- with the trigger safety), dark steel slide that kicks back (front + rear serrations, compensator cuts, brass
+-- barrel hood in the port, extractor, white-dot sights), red full-auto selector, long 33-round mag.
+-- LeftGrip = the support hand cupped under the shooting hand (held with two hands).
 function B.glock(m, c)
 	local poly = worn(c, 0.05)
-	p(m, V(0.28, 0.62, 0.36), at(0, -0.17, 0.08, -0.28, 0, 0), poly) -- grip
-	for i = 0, 2 do p(m, V(0.3, 0.05, 0.3), at(0, -0.02 - i * 0.16, 0.05 - i * 0.04, -0.28, 0, 0), BLACK) end -- grip texture
-	p(m, V(0.24, 1.25, 0.26), at(0, -0.85, 0.28, -0.28, 0, 0), Color3.fromRGB(28, 28, 30)) -- extended mag
-	p(m, V(0.28, 0.12, 0.3), at(0, -1.45, 0.45, -0.28, 0, 0), BLACK) -- base plate
-	p(m, V(0.27, 0.2, 1.05), at(0, 0.13, -0.33), poly) -- frame / dust cover
-	p(m, V(0.1, 0.18, 0.06), at(0, -0.07, -0.18), BLACK) -- trigger
-	p(m, V(0.12, 0.06, 0.42), at(0, -0.2, -0.22), poly) -- trigger guard
-	p(m, V(0.12, 0.2, 0.06), at(0, -0.12, -0.42), poly)
-	local slide = p(m, V(0.3, 0.26, 1.15), at(0, 0.36, -0.36), Color3.fromRGB(60, 60, 62), M.Metal)
-	moving(m, slide, "kick", V(0, 0, 0.22))
-	for i = 0, 3 do -- slide serrations
-		local s = p(m, V(0.31, 0.2, 0.04), at(0, 0.36, 0.12 - i * 0.07), BLACK)
-		moving(m, s, "kick", V(0, 0, 0.22))
+	local polyD = Color3.fromRGB(22, 22, 24)
+	local steel = Color3.fromRGB(56, 57, 60)
+	local edge = Color3.fromRGB(96, 97, 102)
+	local WHITE = Color3.fromRGB(235, 235, 230)
+	local GF = at(0, -0.17, 0.08, -0.28, 0, 0) -- the grip leans back
+	local function g(size: Vector3, cf: CFrame, col: Color3, mat: Enum.Material?) return p(m, size, GF * cf, col, mat) end
+	-- grip
+	g(V(0.28, 0.62, 0.36), CFrame.new(), poly)
+	for _, x in { -0.142, 0.142 } do g(V(0.02, 0.38, 0.27), at(x, -0.02, 0.01), polyD) end -- stippling panels
+	for i = 0, 2 do g(V(0.26, 0.07, 0.05), at(0, 0.13 - i * 0.15, -0.19), poly) end -- finger grooves
+	g(V(0.26, 0.5, 0.04), at(0, -0.02, 0.19), polyD) -- backstrap
+	g(V(0.26, 0.08, 0.22), at(0, 0.33, 0.17), poly) -- beavertail
+	g(V(0.3, 0.08, 0.38), at(0, -0.3, 0), poly) -- magwell flare
+	g(V(0.22, 0.95, 0.25), at(0, -0.8, -0.02), Color3.fromRGB(30, 30, 32)) -- extended mag
+	for i = 0, 2 do g(V(0.225, 0.05, 0.05), at(0, -0.55 - i * 0.2, 0.06), Color3.fromRGB(70, 70, 74)) end -- witness holes
+	g(V(0.26, 0.1, 0.3), at(0, -1.3, -0.02), BLACK) -- base plate
+	-- frame: dust cover, rail, trigger guard, trigger, levers
+	p(m, V(0.26, 0.18, 0.82), at(0, 0.14, -0.5), poly)
+	p(m, V(0.18, 0.05, 0.5), at(0, 0.03, -0.62), poly) -- accessory rail
+	for i = 0, 2 do p(m, V(0.19, 0.06, 0.04), at(0, 0.03, -0.46 - i * 0.14), BLACK) end
+	p(m, V(0.1, 0.05, 0.44), at(0, -0.2, -0.22), poly) -- square trigger guard
+	p(m, V(0.1, 0.24, 0.05), at(0, -0.09, -0.42), poly)
+	p(m, V(0.07, 0.18, 0.05), at(0, -0.07, -0.17, 0.25, 0, 0), BLACK) -- trigger
+	p(m, V(0.025, 0.11, 0.025), at(0, -0.06, -0.2, 0.25, 0, 0), Color3.fromRGB(80, 80, 84)) -- trigger safety
+	p(m, V(0.03, 0.05, 0.2), at(-0.14, 0.24, -0.2), BLACK) -- slide stop
+	p(m, V(0.29, 0.04, 0.06), at(0, 0.22, -0.45), BLACK) -- takedown lever
+	-- slide (kicks back when it fires)
+	local function sl(size: Vector3, cf: CFrame, col: Color3, mat: Enum.Material?)
+		moving(m, p(m, size, cf, col, mat), "kick", V(0, 0, 0.22))
 	end
-	local port = p(m, V(0.05, 0.12, 0.28), at(0.14, 0.4, -0.38), Color3.fromRGB(130, 110, 60), M.Metal) -- ejection port (brass)
-	moving(m, port, "kick", V(0, 0, 0.22))
-	p(m, V(0.12, 0.12, 0.06), at(0, 0.36, -0.95), BLACK) -- muzzle
-	p(m, V(0.06, 0.08, 0.06), at(0, 0.52, -0.85), Color3.fromRGB(230, 230, 230)) -- front sight dot
-	p(m, V(0.2, 0.08, 0.06), at(0, 0.52, 0.17), BLACK) -- rear sight
-	p(m, V(0.05, 0.08, 0.12), at(-0.15, 0.36, 0.08), Color3.fromRGB(200, 40, 30)) -- auto selector
-	mark(m, "Tip", at(0, 0.36, -1))
+	sl(V(0.3, 0.26, 1.15), at(0, 0.36, -0.36), steel, M.Metal)
+	sl(V(0.2, 0.02, 1.13), at(0, 0.495, -0.36), edge, M.Metal) -- flat top
+	for _, x in { -0.152, 0.152 } do sl(V(0.01, 0.025, 1.12), at(x, 0.48, -0.36), edge, M.Metal) end -- chamfers
+	for i = 0, 4 do sl(V(0.31, 0.19, 0.03), at(0, 0.35, 0.17 - i * 0.06), BLACK) end -- rear serrations
+	for i = 0, 2 do sl(V(0.31, 0.15, 0.03), at(0, 0.35, -0.78 - i * 0.06), BLACK) end -- front serrations
+	sl(V(0.05, 0.12, 0.3), at(0.14, 0.4, -0.38), Color3.fromRGB(130, 110, 60), M.Metal) -- ejection port
+	sl(V(0.16, 0.03, 0.26), at(0, 0.5, -0.36), Color3.fromRGB(150, 128, 70), M.Metal) -- barrel hood
+	sl(V(0.03, 0.05, 0.18), at(0.155, 0.43, -0.14), edge, M.Metal) -- extractor
+	for i = 0, 1 do sl(V(0.07, 0.025, 0.1), at(0, 0.51, -0.7 - i * 0.14), BLACK) end -- compensator cuts
+	sl(V(0.06, 0.09, 0.06), at(0, 0.535, -0.86), BLACK) -- front sight + dot
+	sl(V(0.04, 0.04, 0.02), at(0, 0.55, -0.895), WHITE)
+	sl(V(0.24, 0.08, 0.06), at(0, 0.53, 0.16), BLACK) -- rear sight + dots
+	for _, x in { -0.07, 0.07 } do sl(V(0.035, 0.035, 0.02), at(x, 0.545, 0.125), WHITE) end
+	sl(V(0.15, 0.15, 0.03), at(0, 0.37, -0.945), edge, M.Metal) -- barrel crown
+	sl(V(0.08, 0.08, 0.03), at(0, 0.37, -0.96), BLACK) -- bore
+	sl(V(0.06, 0.06, 0.03), at(0, 0.25, -0.94), BLACK) -- guide rod
+	p(m, V(0.04, 0.09, 0.12), at(-0.165, 0.36, 0.08), Color3.fromRGB(200, 40, 30)) -- full-auto selector
+	mark(m, "Tip", at(0, 0.37, -1))
+	mark(m, "LeftGrip", at(-0.42, -0.24, -0.08)) -- support hand cupped under the shooting hand
 end
 function B.nailgun(m, c)
 	local y = worn(c, 0.12)

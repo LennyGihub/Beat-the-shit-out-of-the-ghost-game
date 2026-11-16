@@ -12,15 +12,15 @@
    "file": "ReplicatedStorage/Shared/ItemModels.luau",
    "instance": "game.ReplicatedStorage.Shared.ItemModels",
    "class": "ModuleScript",
-   "bytes": 44439,
-   "sha1": "e74586e056cc74a045ecb3dd9fbf29ac2a8f9419"
+   "bytes": 46825,
+   "sha1": "b2c3f39cfd43bb4e85e13f5c6340fb6125b56e2b"
   },
   {
    "file": "ReplicatedStorage/Shared/Items.luau",
    "instance": "game.ReplicatedStorage.Shared.Items",
    "class": "ModuleScript",
-   "bytes": 16010,
-   "sha1": "2ce572e7167f206f010ec1e081290263c0448f3e"
+   "bytes": 16056,
+   "sha1": "0be9cc7796d929ea0535a4f4a5e97c842cace35e"
   },
   {
    "file": "ReplicatedStorage/Shared/Maps.luau",
@@ -117,8 +117,8 @@
    "file": "ServerScriptService/Server/Ghost.luau",
    "instance": "game.ServerScriptService.Server.Ghost",
    "class": "ModuleScript",
-   "bytes": 23513,
-   "sha1": "11c5f6ba3ea4bdbead8edca19463c30a22f173d7"
+   "bytes": 24781,
+   "sha1": "f7ca3b2e5e68a38d389953745efcb30534b64992"
   },
   {
    "file": "ServerScriptService/Server/GoblinLoot.luau",
@@ -159,8 +159,8 @@
    "file": "ServerScriptService/Server/Ragdoll.luau",
    "instance": "game.ServerScriptService.Server.Ragdoll",
    "class": "ModuleScript",
-   "bytes": 12944,
-   "sha1": "547c4de3083714974de979cae985ec73f7e1647d"
+   "bytes": 14411,
+   "sha1": "4b33c3e4928988152f51f1354efcf32fb5f7e4a5"
   },
   {
    "file": "ServerScriptService/Server/Remotes.luau",
@@ -201,8 +201,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/Fx.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.Fx",
    "class": "ModuleScript",
-   "bytes": 21027,
-   "sha1": "d742bd6cbf29d527a8c7e0833924dabed3c7a537"
+   "bytes": 21029,
+   "sha1": "7b833901f6721ce3b76851e9c3c95703a684442a"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/GhostAnim.luau",
@@ -320,8 +320,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/Viewmodel.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.Viewmodel",
    "class": "ModuleScript",
-   "bytes": 22189,
-   "sha1": "d1d2c5690a4e10215a0f390ae58bc77c5c7c91a9"
+   "bytes": 22489,
+   "sha1": "dd9654448febcb0aa2edd9fcd4bd2a20cd5c19f2"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/ClientMain.client.luau",

@@ -18,7 +18,8 @@
   "16": "Monsters.luau",
   "17": "Maps.luau",
   "18": "Abilities.luau",
-  "19": "Fx.luau",
+  "19": "Input.luau",
   "20": "GoblinLoot.luau",
-  "21": "ClientMain.client.luau"
+  "21": "ClientMain.client.luau",
+  "22": "Admin.luau"
 }

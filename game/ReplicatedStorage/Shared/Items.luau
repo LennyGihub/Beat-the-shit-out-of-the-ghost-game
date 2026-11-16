@@ -99,6 +99,7 @@ local SFX = {
 	BaseballBat = { hit = "Bonk" },
 	FryingPan = { hit = "PanHit" },
 	LeadPipe = { hit = "PipeFall", every = 1.2 },
+	Crowbar = { hit = "PipeFall", every = 1.2 },
 	DemonBlade = { use = "DemonSwing", hit = "DemonHit" },
 	NailGun = { use = "NailShot" },
 	SaltShotgun = { use = "ShotgunShot", after = "ShotgunPump" },
