@@ -367,7 +367,7 @@ function Abilities.step(g, G, dt: number, now: number, target: Player?, thrp: Ba
 					ab.hit[p] = true
 					local side = flat(hrp.Position - pos)
 					local dir = (ab.dir * 0.85 + side * 0.35).Unit
-					G.hitPlayer(p, nil, a.dmg * dmgScale(g), dir * a.power + Vector3.new(0, 30, 0), "pirate", true, 1.6)
+					G.hitPlayer(p, nil, a.dmg * dmgScale(g), dir * a.power + Vector3.new(0, 18, 0), "pirate", true, 1.6)
 					flyers[p] = { untilT = now + 1.4, dmg = (a.wallDmg or 15) * dmgScale(g) }
 					fx("AbilityHit", hrp.Position, k)
 				end
@@ -477,9 +477,21 @@ function Abilities.tick(G, dt: number, now: number)
 			local v = hrp.AssemblyLinearVelocity
 			local hv = Vector3.new(v.X, 0, v.Z)
 			if hv.Magnitude > 30 then
-				local r = workspace:Raycast(hrp.Position, hv.Unit * (hv.Magnitude * dt * 2.5 + 2.4), g.rp)
+				-- walls and furniture both count (a crate in the way breaks)
+				local rp = RaycastParams.new()
+				rp.FilterType = Enum.RaycastFilterType.Include
+				local list = table.clone(g.rp.FilterDescendantsInstances)
+				local fur = Furniture.folder()
+				if fur then table.insert(list, fur) end
+				rp.FilterDescendantsInstances = list
+				local r = workspace:Raycast(hrp.Position, hv.Unit * (hv.Magnitude * dt * 2.5 + 2.4), rp)
 				if r and r.Normal.Y < 0.6 then
 					flyers[p] = nil
+					if fur and r.Instance:IsDescendantOf(fur) then
+						local m = r.Instance
+						while m and m.Parent ~= fur do m = m.Parent end
+						if m and m:IsA("Model") then Furniture.smash(m, hv + Vector3.new(0, 20, 0), hv.Magnitude) end
+					end
 					G.damagePlayer(p, f.dmg)
 					fx("WallSlam", r.Position, hv.Magnitude)
 					Remotes.Fx:FireClient(p, "Slammed", hv.Magnitude)
