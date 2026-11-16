@@ -7,12 +7,13 @@ local Client = script.Parent:WaitForChild("Client")
 -- third person in the lobby, first person in a run
 local shopOpen = false
 local function camMode()
-	local fp = lp:GetAttribute("InMatch") == true and not shopOpen
+	local fp = lp:GetAttribute("InMatch") == true and not shopOpen and not lp:GetAttribute("Spectating")
 	lp.CameraMode = fp and Enum.CameraMode.LockFirstPerson or Enum.CameraMode.Classic
 	if not fp then lp.CameraMaxZoomDistance = 14; lp.CameraMinZoomDistance = 6 else lp.CameraMinZoomDistance = 0.5 end
 end
 camMode()
 lp:GetAttributeChangedSignal("InMatch"):Connect(camMode)
+lp:GetAttributeChangedSignal("Spectating"):Connect(camMode) -- spectating a teammate: third person
 workspace.CurrentCamera.FieldOfView = 74
 local Remotes = RS:WaitForChild("Remotes")
 
@@ -37,6 +38,7 @@ local AdminPanel = require(Client.AdminPanel)
 local SawAudio = require(Client.SawAudio)
 local LobbyUI = require(Client.LobbyUI)
 local ReviveUI = require(Client.ReviveUI)
+local Spectate = require(Client.Spectate)
 
 Platform.init()
 Settings.init()
@@ -63,6 +65,7 @@ UltShop.init(function(open)
 	camMode()
 end)
 ReviveUI.init()
+Spectate.init()
 -- lobby screen: PLAY (create / join lobbies) and SHOP buttons, friend booster
 QuestUI.init(function(open)
 	Input.setShopOpen(open)
@@ -95,6 +98,8 @@ Remotes.Fx.OnClientEvent:Connect(function(kind: string, ...)
 	elseif kind == "ReviveOffer" or kind == "Revived" then
 		ReviveUI.handle(kind, ...)
 		if kind == "Revived" then Fx.handle("Toast", "BACK FROM THE DEAD") end
+	elseif kind == "BackFromSpectate" then
+		Fx.handle("Toast", "YOU'RE BACK - THE WAVE IS OVER", true)
 	elseif kind == "PartyInvite" then
 		LobbyUI.invite(...)
 	elseif MonsterFx.handles(kind) then

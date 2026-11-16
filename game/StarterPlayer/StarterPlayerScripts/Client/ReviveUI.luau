@@ -1,6 +1,8 @@
 --!strict
--- YOU DIED + REVIVE: when you die in a run the server opens a revive window (Fx "ReviveOffer"); this shows the
--- countdown and a REVIVE button that prompts the REVIVE Developer Product (ReplicatedStorage attribute ReviveProductId).
+-- YOU DIED + REVIVE: when you die in a run the server opens a revive window (Fx "ReviveOffer" window, team); this shows
+-- the countdown and a REVIVE button that prompts the REVIVE Developer Product (ReplicatedStorage attribute
+-- ReviveProductId). Team run (teammates still fighting): the second button is WATCH (spectate, back next wave);
+-- last one standing: GO TO LOBBY. Without a product (and not admin) there is no REVIVE button, just the countdown.
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local MarketplaceService = game:GetService("MarketplaceService")
@@ -17,6 +19,8 @@ local panel: Frame
 local timer: TextLabel
 local btn: TextButton
 local price: number? = nil
+local team = false
+local lobbyBtn: TextButton
 
 local function productId(): number return tonumber(RS:GetAttribute("ReviveProductId")) or 0 end
 
@@ -44,10 +48,11 @@ function ReviveUI.init()
 	lobby.Parent = panel
 	local ls = Instance.new("UIStroke"); ls.Color = Grunge.INK; ls.Thickness = 4; ls.ApplyStrokeMode = Enum.ApplyStrokeMode.Border; ls.Parent = lobby
 	local lpd = Instance.new("UIPadding"); lpd.PaddingTop = UDim.new(0.16, 0); lpd.PaddingBottom = UDim.new(0.16, 0); lpd.Parent = lobby
+	lobbyBtn = lobby
 	lobby.Activated:Connect(function()
 		Sfx.play("Click")
 		gui.Enabled = false
-		Remotes.Revive:FireServer("lobby")
+		Remotes.Revive:FireServer(team and "watch" or "lobby")
 	end)
 	local st = Instance.new("UIStroke"); st.Color = Grunge.INK; st.Thickness = 4; st.ApplyStrokeMode = Enum.ApplyStrokeMode.Border; st.Parent = btn
 	local pad = Instance.new("UIPadding"); pad.PaddingTop = UDim.new(0.12, 0); pad.PaddingBottom = UDim.new(0.12, 0); pad.Parent = btn
@@ -74,14 +79,24 @@ function ReviveUI.init()
 		local untilT = lp:GetAttribute("ReviveUntil")
 		if type(untilT) ~= "number" then gui.Enabled = false; return end
 		local left = math.max(0, math.ceil(untilT - workspace:GetServerTimeNow()))
-		timer.Text = "THE RUN ENDS IN " .. left .. " - COME BACK WHERE YOU FELL?"
+		if team then
+			timer.Text = "REVIVE NOW (" .. left .. ") OR WATCH YOUR TEAM - BACK FREE NEXT WAVE"
+		elseif btn.Visible then
+			timer.Text = "THE RUN ENDS IN " .. left .. " - COME BACK WHERE YOU FELL?"
+		else
+			timer.Text = "THE RUN IS OVER - BACK TO THE PARK IN " .. left
+		end
 	end)
 end
 
 function ReviveUI.handle(kind: string, ...)
 	if kind == "ReviveOffer" then
+		local _, isTeam = ...
+		team = isTeam == true
 		local id = productId()
 		btn.Text = id > 0 and ("REVIVE  R$ " .. tostring(price or "?")) or (lp:GetAttribute("IsAdmin") and "REVIVE (ADMIN)" or "REVIVE - SOON")
+		btn.Visible = id > 0 or lp:GetAttribute("IsAdmin") == true
+		lobbyBtn.Text = team and "WATCH" or "GO TO LOBBY"
 		gui.Enabled = true
 		local s = panel:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
 		s.Parent = panel; s.Scale = 0.6

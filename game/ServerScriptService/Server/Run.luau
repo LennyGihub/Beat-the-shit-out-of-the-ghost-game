@@ -114,6 +114,7 @@ end
 function Run.startFight()
 	if busy or #Run.matchPlayers() == 0 then return end
 	busy = true
+	if Run.respawnSpectators then Run.respawnSpectators() end -- (normally done when the last wave ended)
 	level = kills + 1
 	clearTemp()
 	setWaypoint(nil)
@@ -177,6 +178,8 @@ local function onGhostDeath(g)
 		if diff.id == "Nightmare" then Quests.add(p, "nightmare") end
 		Remotes.Fx:FireClient(p, "Victory", r)
 	end
+	-- the wave is over: teammates who died during it are back (inside, ready for the break and the next wave)
+	Run.respawnSpectators()
 	-- a new event is due after the first kill and every EventLife kills after that
 	if event then eventLeft -= 1 end
 	if not event or eventLeft <= 0 then
@@ -234,33 +237,90 @@ local function onBuy(p: Player, id: string, at: Vector3)
 	Remotes.Fx:FireClient(p, "BuyResult", true, it.name, at)
 end
 
+local leaving = {} :: { [Player]: boolean }
 function Run.leave(p: Player, reason: string)
 	if not p:GetAttribute("InMatch") then return end
+	leaving[p] = true -- no longer counts as standing for the team (spectators)
+	p:SetAttribute("Spectating", nil)
+	p:SetAttribute("ReviveUntil", nil)
 	Run.payout(p, reason)
 	if Run.onReturnLobby then Run.onReturnLobby(p) end
+	task.defer(function() if Run.checkWipe then Run.checkWipe() end end)
 end
+Players.PlayerRemoving:Connect(function(p)
+	task.defer(function()
+		leaving[p] = nil
+		if Run.checkWipe then Run.checkWipe() end
+	end)
+end)
 
--- dying in a run: a revive window opens (REVIVE product); if nobody pays, the run ends for you.
--- Returns how long Main should wait before respawning the character.
+-- dying in a run.
+-- Team still standing: you SPECTATE a teammate (Spectating attribute) and come back for free when the wave's monster
+-- is knocked out; a revive window (REVIVE product) lets you come back right away instead.
+-- Last one standing: the revive window; if nobody pays, the run ends for you and for the team's spectators.
+-- No REVIVE product set up (live game): a short YOU DIED screen instead of the window.
+-- Returns how long Main should wait before respawning the character (spectators are respawned here, not by Main).
 local REVIVE_WINDOW = 30
-local pending = {} :: { [Player]: { untilT: number, at: CFrame } }
+local NO_PRODUCT_WINDOW = 6
+local pending = {} :: { [Player]: { untilT: number, at: CFrame, team: boolean, extended: boolean? } }
 local function reviveOn(): boolean
 	return (tonumber(RS:GetAttribute("ReviveProductId")) or 0) > 0 or RunService:IsStudio()
+end
+local function aliveIn(p: Player): boolean
+	if p:GetAttribute("Spectating") or leaving[p] or not p.Parent then return false end
+	local hum = p.Character and p.Character:FindFirstChildOfClass("Humanoid")
+	return hum ~= nil and hum.Health > 0
+end
+-- match players still on their feet (not dead, not spectating)
+local function aliveCount(except: Player?): number
+	local n = 0
+	for _, o in Run.matchPlayers() do
+		if o ~= except and aliveIn(o) then n += 1 end
+	end
+	-- Studio test hook: ReplicatedStorage attribute DebugFakeTeammate = true counts one more teammate standing
+	if RunService:IsStudio() and RS:GetAttribute("DebugFakeTeammate") then n += 1 end
+	return n
 end
 local function endDeath(p: Player)
 	pending[p] = nil
 	p:SetAttribute("ReviveUntil", nil)
+	p:SetAttribute("Spectating", nil)
 	if not p.Parent or not p:GetAttribute("InMatch") then return end
 	Run.payout(p, "died")
 	task.delay(1.5, function()
 		if p.Parent and p:GetAttribute("InMatch") and Run.onReturnLobby then Run.onReturnLobby(p) end
 	end)
 end
+-- nobody left standing (and no last-player revive window still open): the run is over for everyone left
+local function checkWipe()
+	if aliveCount() > 0 then return end
+	for _, o in Run.matchPlayers() do
+		local pd = pending[o]
+		if pd and not pd.team and os.clock() < pd.untilT then return end -- the last one can still revive
+	end
+	for _, o in Run.matchPlayers() do endDeath(o) end
+end
+Run.checkWipe = checkWipe
+-- the wave is over: spectators are back on their feet, inside the house
+local function respawnSpectators()
+	for _, o in Run.matchPlayers() do
+		if o:GetAttribute("Spectating") then
+			pending[o] = nil
+			o:SetAttribute("ReviveUntil", nil)
+			o:SetAttribute("Spectating", nil)
+			o:LoadCharacter()
+			Remotes.Fx:FireClient(o, "BackFromSpectate")
+		end
+	end
+end
+Run.respawnSpectators = respawnSpectators
+
 function Run.onDied(p: Player): number
 	if not p:GetAttribute("InMatch") then return 4 end
 	local hrp = hrpOf(p)
 	local at = hrp and hrp.CFrame or CFrame.new(MapLoader.spawnInside())
-	pending[p] = { untilT = os.clock() + REVIVE_WINDOW, at = at }
+	local team = aliveCount(p) > 0
+	pending[p] = { untilT = os.clock() + REVIVE_WINDOW, at = at, team = team }
 	-- a revive bought earlier is used right away
 	local spare = p:GetAttribute("SpareRevives") or 0
 	if spare > 0 then
@@ -268,25 +328,55 @@ function Run.onDied(p: Player): number
 		task.delay(1.5, function() Run.revive(p) end)
 		return 99
 	end
-	if not reviveOn() then endDeath(p); return 4 end
-	p:SetAttribute("ReviveUntil", workspace:GetServerTimeNow() + REVIVE_WINDOW)
-	Remotes.Fx:FireClient(p, "ReviveOffer", REVIVE_WINDOW)
+	if team then
+		-- teammates are still fighting: watch them, back next wave (or revive now)
+		p:SetAttribute("Spectating", true)
+		if reviveOn() then
+			p:SetAttribute("ReviveUntil", workspace:GetServerTimeNow() + REVIVE_WINDOW)
+			Remotes.Fx:FireClient(p, "ReviveOffer", REVIVE_WINDOW, true)
+			task.spawn(function()
+				while pending[p] and os.clock() < pending[p].untilT do task.wait(0.25) end
+				-- the window closed: keep spectating until the wave ends
+				if pending[p] and p:GetAttribute("Spectating") then p:SetAttribute("ReviveUntil", nil) end
+			end)
+		end
+		return 1e6
+	end
+	-- the last one standing
+	local window = reviveOn() and REVIVE_WINDOW or NO_PRODUCT_WINDOW
+	pending[p].untilT = os.clock() + window
+	p:SetAttribute("ReviveUntil", workspace:GetServerTimeNow() + window)
+	Remotes.Fx:FireClient(p, "ReviveOffer", window, false)
 	task.spawn(function()
 		while pending[p] and os.clock() < pending[p].untilT do task.wait(0.25) end
-		if pending[p] then endDeath(p) end
+		if pending[p] then
+			endDeath(p)
+			checkWipe() -- the spectators' run is over too
+		end
 	end)
-	return REVIVE_WINDOW + 3
+	return window + 3
 end
--- GO TO LOBBY on the death screen: no revive, the run ends for this player now
+-- the death screen's buttons: "lobby" = leave the run now; "watch" = no revive, keep spectating (team only)
 function Run.giveUp(p: Player)
-	if pending[p] then endDeath(p) end
+	if not pending[p] then return end
+	endDeath(p)
+	checkWipe()
+end
+function Run.watch(p: Player)
+	local pd = pending[p]
+	if pd and pd.team and p:GetAttribute("Spectating") then
+		pd.untilT = 0
+		p:SetAttribute("ReviveUntil", nil)
+	end
 end
 -- the player paid (or used the admin panel): back on their feet where they fell, full health, same run
 function Run.revive(p: Player): boolean
 	local pd = pending[p]
 	if not pd or not p.Parent or not p:GetAttribute("InMatch") then return false end
+	if not pd.team and os.clock() > pd.untilT + 2 then return false end
 	pending[p] = nil
 	p:SetAttribute("ReviveUntil", nil)
+	p:SetAttribute("Spectating", nil)
 	p:LoadCharacter()
 	local ch = p.Character
 	if ch then ch:PivotTo(pd.at + Vector3.new(0, 3, 0)) end

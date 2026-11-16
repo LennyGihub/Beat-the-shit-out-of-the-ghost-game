@@ -159,8 +159,8 @@
    "file": "ServerScriptService/Server/Monetization.luau",
    "instance": "game.ServerScriptService.Server.Monetization",
    "class": "ModuleScript",
-   "bytes": 3879,
-   "sha1": "192369918aee84d8889b8d0e8b4d17b5e85609fc"
+   "bytes": 3922,
+   "sha1": "4ca92e1dd697d2447fff40809c803bb8f996ce14"
   },
   {
    "file": "ServerScriptService/Server/Quests.luau",
@@ -187,8 +187,8 @@
    "file": "ServerScriptService/Server/Run.luau",
    "instance": "game.ServerScriptService.Server.Run",
    "class": "ModuleScript",
-   "bytes": 15914,
-   "sha1": "412b1b8ef7591429da7820a1c04ef444322d1ae2"
+   "bytes": 19593,
+   "sha1": "029a976766e6352d2a3aa182493b901ed26066b9"
   },
   {
    "file": "ServerScriptService/Server/UltRunner.luau",
@@ -306,8 +306,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/ReviveUI.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.ReviveUI",
    "class": "ModuleScript",
-   "bytes": 5181,
-   "sha1": "d6526f999f16f03f45587f75fdf9893338f54b22"
+   "bytes": 5857,
+   "sha1": "38363d7424b0da9f0860aa0f4d243e7dbabf2e32"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/RoomPickUI.luau",
@@ -343,6 +343,13 @@
    "class": "ModuleScript",
    "bytes": 2631,
    "sha1": "67b8bb5dc441c617cadcce545307003d0d7a3a27"
+  },
+  {
+   "file": "StarterPlayer/StarterPlayerScripts/Client/Spectate.luau",
+   "instance": "game.StarterPlayer.StarterPlayerScripts.Client.Spectate",
+   "class": "ModuleScript",
+   "bytes": 4424,
+   "sha1": "5bb2da921d7173bfd313374521a3bf0456af5a15"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/ThirdPersonItems.luau",
@@ -383,8 +390,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/ClientMain.client.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.ClientMain",
    "class": "LocalScript",
-   "bytes": 4675,
-   "sha1": "6a58a368accba6d8273adfecb373bd0f42925977"
+   "bytes": 4971,
+   "sha1": "5abe3b9a26272a1a8d8398723fd2653e7fa162e9"
   }
  ]
 }
