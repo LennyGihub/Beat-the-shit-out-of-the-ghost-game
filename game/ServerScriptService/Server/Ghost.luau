@@ -160,6 +160,9 @@ function Ghost.spawn(level: number, pos: Vector3, monsterId: string?)
 	m:SetAttribute("Rarity", def.rarity)
 	m:SetAttribute("Walker", def.walker)
 	m:SetAttribute("Ability", "")
+	-- the whole monster reaches each client in one go (with streaming on, its parts could otherwise arrive
+	-- after the model and its animation would have nothing to drive)
+	m.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
 	m.Parent = workspace
 	pcall(function() hrp:SetNetworkOwner(nil) end)
 	local g = {

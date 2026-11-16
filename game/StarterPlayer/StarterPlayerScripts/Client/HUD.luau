@@ -35,6 +35,8 @@ local toast: TextLabel
 local objSplat: ImageLabel
 
 function HUD.init()
+	-- the game draws its own health bar: Roblox's default one (top right) would cover the run cash
+	pcall(function() game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.Health, false) end)
 	gui = Instance.new("ScreenGui")
 	gui.Name = "GrungeHUD"
 	gui.ResetOnSpawn = false

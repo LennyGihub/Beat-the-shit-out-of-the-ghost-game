@@ -18,8 +18,6 @@
   "16": "Monsters.luau",
   "17": "Maps.luau",
   "18": "Input.luau",
-  "19": "HUD.luau",
-  "20": "GoblinLoot.luau",
-  "21": "GhostAnim.luau",
-  "22": "SawAudio.luau"
+  "19": "Settings.luau",
+  "20": "GoblinLoot.luau"
 }

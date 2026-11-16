@@ -15,13 +15,44 @@ local swirl: ParticleEmitter? = nil
 local rng = Random.new()
 
 local A = CFrame.Angles
+-- With streaming on, a monster's parts and joints can reach this client a little after the model itself: joints
+-- (and the root, for the swirl) that arrive later are picked up as they come, so the monster is never left
+-- moving without its animation.
+local bindConns = {} :: { RBXScriptConnection }
+local function addJoint(d: Instance)
+	if d:IsA("Motor6D") and joints[d.Name] ~= d then
+		joints[d.Name] = d
+		pose[d.Name] = pose[d.Name] or CFrame.new()
+	end
+end
+local function makeSwirl(hrp: Instance)
+	if not hrp:IsA("BasePart") or hrp:FindFirstChild("SwirlAtt") then return end
+	local a = Instance.new("Attachment"); a.Name = "SwirlAtt"; a.Parent = hrp
+	local pe = Instance.new("ParticleEmitter")
+	pe.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	pe.Shape = Enum.ParticleEmitterShape.Sphere; pe.ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface
+	pe.Color = ColorSequence.new(Color3.fromRGB(150, 60, 255), Color3.fromRGB(20, 0, 40))
+	pe.Size = NumberSequence.new(1.2, 0.2); pe.Speed = NumberRange.new(-24, -16); pe.Lifetime = NumberRange.new(0.6, 0.9)
+	pe.Rate = 120; pe.RotSpeed = NumberRange.new(200, 400); pe.LightEmission = 0.8; pe.Enabled = false
+	pe.Parent = a
+	swirl = pe
+end
+
 local function bind(g: Model)
+	for _, c in bindConns do c:Disconnect() end
+	table.clear(bindConns)
 	current = g
 	joints = {}
 	pose = {}
-	for _, d in g:GetDescendants() do
-		if d:IsA("Motor6D") then joints[d.Name] = d; pose[d.Name] = CFrame.new() end
-	end
+	swirl = nil
+	for _, d in g:GetDescendants() do addJoint(d) end
+	table.insert(bindConns, g.DescendantAdded:Connect(function(d)
+		addJoint(d)
+		if d.Name == "HumanoidRootPart" then makeSwirl(d) end
+	end))
+	table.insert(bindConns, g.DescendantRemoving:Connect(function(d)
+		if d:IsA("Motor6D") and joints[d.Name] == d then joints[d.Name] = nil end
+	end))
 	highlight = Instance.new("Highlight")
 	highlight.FillColor = Color3.new(1, 1, 1)
 	highlight.OutlineTransparency = 1
@@ -29,17 +60,7 @@ local function bind(g: Model)
 	highlight.DepthMode = Enum.HighlightDepthMode.Occluded
 	highlight.Parent = g
 	local hrp = g:FindFirstChild("HumanoidRootPart")
-	if hrp then
-		local a = Instance.new("Attachment"); a.Parent = hrp
-		local pe = Instance.new("ParticleEmitter")
-		pe.Texture = "rbxasset://textures/particles/sparkles_main.dds"
-		pe.Shape = Enum.ParticleEmitterShape.Sphere; pe.ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface
-		pe.Color = ColorSequence.new(Color3.fromRGB(150, 60, 255), Color3.fromRGB(20, 0, 40))
-		pe.Size = NumberSequence.new(1.2, 0.2); pe.Speed = NumberRange.new(-24, -16); pe.Lifetime = NumberRange.new(0.6, 0.9)
-		pe.Rate = 120; pe.RotSpeed = NumberRange.new(200, 400); pe.LightEmission = 0.8; pe.Enabled = false
-		pe.Parent = a
-		swirl = pe
-	end
+	if hrp then makeSwirl(hrp) end
 end
 
 function GA.flash(strength: number?)

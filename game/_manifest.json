@@ -117,8 +117,8 @@
    "file": "ServerScriptService/Server/Ghost.luau",
    "instance": "game.ServerScriptService.Server.Ghost",
    "class": "ModuleScript",
-   "bytes": 26506,
-   "sha1": "7fbfc89df47e151eff73c5297f6c8974b8b12e09"
+   "bytes": 26733,
+   "sha1": "1983398d68980d459a1f4d826c9f6fc8a249c565"
   },
   {
    "file": "ServerScriptService/Server/GoblinLoot.luau",
@@ -215,8 +215,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/GhostAnim.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.GhostAnim",
    "class": "ModuleScript",
-   "bytes": 22800,
-   "sha1": "e57b389ebaf2912f3dcb611adb9ed9ae9d4a9299"
+   "bytes": 23717,
+   "sha1": "50ff38705b7af1e8958bf8e8964a7a61c4b762ce"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/Grunge.luau",
@@ -229,8 +229,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/HUD.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.HUD",
    "class": "ModuleScript",
-   "bytes": 14848,
-   "sha1": "22b236a7b5f5385e93dbbfaa031eb51be34021a2"
+   "bytes": 15048,
+   "sha1": "c073abf65782cc23314c061e645796d7ff844c29"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/Hotbar.luau",
