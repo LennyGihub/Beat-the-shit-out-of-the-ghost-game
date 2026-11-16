@@ -175,7 +175,7 @@ function Abilities.try(g, G, now: number, target: Player?, thrp: BasePart?, dist
 		if dist < 8 then return false end
 		start(g, G, "dark", a.t, {})
 		g.model:SetAttribute("Shadow", true)
-		fx("Blackout", a.t, a.lightsOut == true)
+		fx("Blackout", a.t)
 	elseif k == "gas" then
 		if dist > 55 or #clouds >= (a.max or 3) then return false end
 		start(g, G, "throw", 0.75, {})
@@ -407,14 +407,9 @@ function Abilities.step(g, G, dt: number, now: number, target: Player?, thrp: Ba
 		-- in the dark she rushes the target; reaching them = a heavy strike from behind
 		if thrp and target then
 			local to = Vector3.new(thrp.Position.X - pos.X, 0, thrp.Position.Z - pos.Z)
-			local sp = (a.speed or 22) * (g.speedMult or 1)
-			-- solid monsters (the Animatronic) walk around the walls; the Woman glides through them
-			local goal = (g.def.solid and G.pathPoint) and G.pathPoint(g, thrp.Position) or thrp.Position
-			local step = Vector3.new(goal.X - pos.X, 0, goal.Z - pos.Z)
-			local v = step.Magnitude > 0.5 and step.Unit * sp or Vector3.zero
-			if g.def.solid and G.blockWalls then v = G.blockWalls(g, v) end
-			face(pos + (v.Magnitude > 0.5 and v or to))
-			g.lv.VectorVelocity = hover(g, hoverY, v)
+			face(thrp.Position)
+			local sp = 22 * (g.speedMult or 1)
+			g.lv.VectorVelocity = hover(g, hoverY, to.Magnitude > 0.5 and to.Unit * sp or Vector3.zero)
 			if to.Magnitude < 5.5 and not warded(target) then
 				local back = thrp.Position - thrp.CFrame.LookVector * 3
 				g.model:PivotTo(CFrame.lookAt(Vector3.new(back.X, pos.Y, back.Z), Vector3.new(thrp.Position.X, pos.Y, thrp.Position.Z)))
