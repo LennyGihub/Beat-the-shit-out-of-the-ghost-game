@@ -157,8 +157,6 @@ function Ghost.spawn(level: number, pos: Vector3, monsterId: string?)
 	m:SetAttribute("Rarity", def.rarity)
 	m:SetAttribute("Walker", def.walker)
 	m:SetAttribute("Ability", "")
-	m:SetAttribute("Fear", 0)
-	m:SetAttribute("Fleeing", false)
 	m.Parent = workspace
 	pcall(function() hrp:SetNetworkOwner(nil) end)
 	local g = {
@@ -169,7 +167,6 @@ function Ghost.spawn(level: number, pos: Vector3, monsterId: string?)
 		frozenUntil = 0, slowMult = 1, slowUntil = 0, vulnMult = 1, vulnUntil = 0, burns = {}, ts = nil :: any, launch = nil :: any, fire = nil :: { Instance }?,
 		def = def, hover = hover, bob = def.walker and 0 or 0.35, ab = nil :: any, nextAbility = os.clock() + 5,
 		speedMult = def.speed * Ghost.diff.speed, dmgMult = def.dmg * Ghost.diff.dmg,
-		fear = 0, fearT = 0, fearCalmUntil = 0, flee = nil :: any, floorLock = nil :: any,
 	}
 	Ghost.current = g
 	setState(g, "Spawn", 2.2)
@@ -192,9 +189,6 @@ Ghost.hitClone = Abilities.hitClone
 
 local function pickTarget(g): (Player?, BasePart?)
 	local best, bestD, bestHrp = nil, math.huge, nil
-	-- after running away from fear he holds his new floor: only players who come up / down to him count
-	local lock = g.floorLock
-	if lock and os.clock() > lock.untilT then g.floorLock = nil; lock = nil end
 	for _, p in Players:GetPlayers() do
 		local ch = p.Character
 		local hum = ch and ch:FindFirstChildOfClass("Humanoid")
@@ -203,7 +197,6 @@ local function pickTarget(g): (Player?, BasePart?)
 			local pos = hrp.Position
 			local B = Ghost.houseBounds()
 			local inside = pos.X > B.min.X and pos.X < B.max.X and pos.Z > B.min.Z and pos.Z < B.max.Z
-			if inside and lock and math.abs((pos.Y - 3) - lock.y) > 7 then inside = false end
 			if inside then
 				local d = (pos - g.hrp.Position).Magnitude
 				if d < bestD then best, bestD, bestHrp = p, d, hrp end
@@ -314,6 +307,10 @@ local function stepLaunched(g, dt: number)
 	local pos = g.hrp.Position
 	if L.phase == "up" then
 		local r = workspace:Raycast(pos, Vector3.new(0, 6, 0), g.rp)
+		if r and r.Instance:GetAttribute("Breakable") and Ragdoll.breakWalls(r.Position + Vector3.new(0, 0.5, 0), Vector3.new(0, 75, 0)) > 0 then
+			Remotes.Fx:FireAllClients("WallSmash", r.Position, 90) -- straight up through the deck
+			r = nil
+		end
 		if pos.Y >= L.topY or r then
 			if r then Remotes.Fx:FireAllClients("WallSlam", r.Position, 90) end
 			L.phase = "down"
@@ -322,6 +319,13 @@ local function stepLaunched(g, dt: number)
 	else
 		g.lv.VectorVelocity = Vector3.new(0, -170, 0)
 		local r = workspace:Raycast(pos, Vector3.new(0, -7, 0), g.rp)
+		if r and r.Instance:GetAttribute("Breakable") and Ragdoll.breakWalls(r.Position - Vector3.new(0, 0.5, 0), Vector3.new(0, -170, 0)) > 0 then
+			-- slammed down through a breakable deck: keep falling to the next floor
+			Remotes.Fx:FireAllClients("WallSmash", r.Position, 160)
+			for _, f in Furniture.near(r.Position, 10) do Furniture.smash(f, Vector3.new(0, 30, 0), 80) end
+			Ghost.damage(L.d * 0.4, L.by)
+			r = nil
+		end
 		if r then
 			Remotes.Fx:FireAllClients("WallSlam", r.Position, 160)
 			for _, f in Furniture.near(r.Position, 14) do Furniture.smash(f, Vector3.new(0, 40, 0), 90) end
@@ -344,7 +348,6 @@ function Ghost.hit(by: Player?, dir: Vector3, knock: number, damage: number)
 		Remotes.Fx:FireAllClients("ShieldBlock", g.hrp.Position + g.hrp.CFrame.LookVector * 2)
 	end
 	Ghost.damage(damage, by)
-	Ghost.addFear(6 + knock / 25)
 	if knock <= 0 then return end
 	if g.state == "Dead" then return end
 	if g.ts and os.clock() < g.ts.untilT then return end -- frozen in time: no knockback
@@ -421,95 +424,6 @@ local function claw(g, target: Player?, thrp: BasePart?)
 		local flat = Vector3.new(to.X, 0, to.Z)
 		Remotes.Fx:FireClient(target, "Clawed", flat.Magnitude > 0.01 and flat.Unit or Vector3.zero)
 	end
-end
-
--- FEAR: every hit scares the monster (big hits more); it calms down when you stop. Full bar = it runs to
--- another floor (a GhostSpawns point at a different height, far from the players) and holds that floor:
--- it only fights the players who come to it there, for a while.
-local FEAR_DECAY = 12 -- per second, 1.5 s after the last hit
-function Ghost.addFear(n: number)
-	local g = Ghost.current
-	if not g or g.state == "Dead" or g.state == "Spawn" or g.flee then return end
-	local now = os.clock()
-	if now < g.fearCalmUntil then return end
-	g.fear = math.min(100, g.fear + n)
-	g.fearT = now
-	g.model:SetAttribute("Fear", math.floor(g.fear))
-	if g.fear >= 100 then
-		-- where to run: a spawn point on another floor, as far as possible from every player
-		local feet = g.hrp.Position.Y - g.hover
-		local best, bestScore, any, anyScore = nil, -1, nil, -1
-		for _, sp in MapLoader.ghostSpawns() do
-			local near = math.huge
-			for _, p in Players:GetPlayers() do
-				local ch = p.Character
-				local hrp = ch and ch:FindFirstChild("HumanoidRootPart") :: BasePart?
-				if hrp and p:GetAttribute("InMatch") then near = math.min(near, (hrp.Position - sp).Magnitude) end
-			end
-			if near == math.huge then near = 0 end
-			if math.abs(floorBelow(sp, g.rp) - feet) > 8 and near > bestScore then best, bestScore = sp, near end
-			if near > anyScore then any, anyScore = sp, near end
-		end
-		local goal = best or any
-		if not goal then return end
-		g.flee = { goal = goal, floor = floorBelow(goal, g.rp), t0 = now, untilT = now + 9 }
-		g.model:SetAttribute("Fleeing", true)
-		if g.state == "Ability" or g.state == "WindUp" or g.state == "Swipe" or g.state == "Vanish" or g.state == "Scare" then
-			g.model:SetAttribute("Vanish", false)
-			setState(g, "Chase")
-		end
-		Remotes.Fx:FireAllClients("MonsterFlee", g.hrp.Position, g.def.title, g.flee.floor > feet + 1 and "up" or (g.flee.floor < feet - 1 and "down" or "away"))
-	end
-end
-
-local function fearStep(g, dt: number, now: number)
-	if g.flee or g.fear <= 0 or now - g.fearT < 1.5 then return end
-	g.fear = math.max(0, g.fear - FEAR_DECAY * dt)
-	local shown = math.floor(g.fear)
-	if g.model:GetAttribute("Fear") ~= shown then g.model:SetAttribute("Fear", shown) end
-end
-
--- running away (Chase while g.flee is set): returns when it got there (or teleports after 9 s)
-local function fleeStep(g, dt: number, now: number)
-	local F = g.flee
-	local pos = g.hrp.Position
-	local feet = pos.Y - g.hover
-	local flat = Vector3.new(F.goal.X - pos.X, 0, F.goal.Z - pos.Z)
-	local arrived = flat.Magnitude < 5 and math.abs(feet - F.floor) < 4
-	if not arrived and now > F.untilT then
-		-- stuck: he vanishes and reappears there
-		Remotes.Fx:FireAllClients("GhostVanish", pos)
-		local at = Vector3.new(F.goal.X, F.floor + g.hover, F.goal.Z)
-		g.model:PivotTo(CFrame.new(at) * g.model:GetPivot().Rotation)
-		g.path = nil
-		Remotes.Fx:FireAllClients("GhostVanish", at)
-		arrived = true
-	end
-	if arrived then
-		g.flee = nil
-		g.fear = 0
-		g.fearCalmUntil = now + 12
-		g.floorLock = { y = F.floor, untilT = now + 25 }
-		g.model:SetAttribute("Fear", 0)
-		g.model:SetAttribute("Fleeing", false)
-		g.nextAttack = now + 0.6
-		Remotes.Fx:FireAllClients("MonsterHolds", g.hrp.Position, g.def.title)
-		return
-	end
-	local speed = (C.Speed + (g.level - 1) * C.SpeedPerLevel) * g.speedMult * 1.8
-	local to: Vector3, hoverY: number
-	if g.def.solid then
-		to = pathPoint(g, F.goal) -- walks the stairs
-		hoverY = floorBelow(pos, g.rp) + g.hover
-	else
-		to = F.goal -- floats straight through the floors
-		hoverY = F.floor + g.hover
-	end
-	local d = Vector3.new(to.X - pos.X, 0, to.Z - pos.Z)
-	local v = d.Magnitude > 0.5 and d.Unit * speed or Vector3.zero
-	if g.def.solid then v = blockWalls(g, v) end
-	g.lv.VectorVelocity = v + Vector3.new(0, math.clamp((hoverY - pos.Y) * 4, -40, 40), 0)
-	if v.Magnitude > 0.5 then g.ao.CFrame = CFrame.lookAt(Vector3.zero, Vector3.new(v.X, 0, v.Z)) end
 end
 
 -- knocked out of the house (through a window or the front door, under the floor, into an outside wall):
@@ -613,7 +527,6 @@ function Ghost.step(dt: number)
 		local body = (s == "Ragdoll" and g.model:FindFirstChild("UpperTorso") or g.hrp) :: BasePart
 		if outside(body.Position) then bringBack(g); return end
 	end
-	fearStep(g, dt, now)
 	local target, thrp = pickTarget(g)
 	g.target = target
 	local pos = g.hrp.Position
@@ -663,7 +576,6 @@ function Ghost.step(dt: number)
 		g.lv.VectorVelocity = Vector3.new(0, (hoverY - pos.Y) * 4, 0)
 		if now > g.stateUntil then setState(g, "Chase") end
 	elseif s == "Chase" then
-		if g.flee then return fleeStep(g, dt, now) end
 		if not thrp then
 			g.lv.VectorVelocity = Vector3.new(0, (hoverY - pos.Y) * 4, 0)
 			return

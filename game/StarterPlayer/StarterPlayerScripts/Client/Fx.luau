@@ -297,7 +297,8 @@ function Fx.handle(kind: string, ...)
 		-- the item's own sounds: swing (others hear it in 3D; yours plays from the Hotbar) and hit
 		if sfx and head then
 			if sfx.use and by ~= lp then Sfx.at(sfx.use, head.Position, { PlaybackSpeed = sfx.speed or 1 }) end
-			if sfx.hit and hit then
+			-- your own melee hit sound plays on the swing's impact frame once the server confirms it (Hotbar)
+			if sfx.hit and hit and not (by == lp and Items.byId[id].kind == "melee" and id ~= "Chainsaw") then
 				local key = tostring(by.UserId) .. sfx.hit
 				local now = os.clock()
 				if now - (lastItemSfx[key] or 0) >= (sfx.every or 0.15) then

@@ -55,6 +55,8 @@ local function structure(): Instance?
 end
 
 local function breakable(p: BasePart, st: Instance): boolean
+	-- a map can mark pieces breakable itself (the ship's upper decks: monsters crash through them)
+	if p:GetAttribute("Breakable") then return true end
 	local node: Instance? = p
 	while node and node.Parent ~= st do node = node.Parent end -- the top folder inside Structure
 	if not node or not BREAKABLE[node.Name] then return false end
@@ -263,7 +265,9 @@ function Ragdoll.step(g, dt: number, onWall: (pos: Vector3, speed: number) -> ()
 		for _, n in { "UpperTorso", "Head", "LowerTorso" } do
 			local part = g.model:FindFirstChild(n) :: BasePart?
 			local hit = part and workspace:Raycast(part.Position, dir * reach, rp)
-			if hit and hit.Normal.Y < 0.6 then
+			-- walls, ceilings, and breakable floors hit on a hard landing
+			local floorHit = hit and hit.Normal.Y >= 0.6 and hit.Instance:GetAttribute("Breakable") and v.Y < -35
+			if hit and (hit.Normal.Y < 0.6 or floorHit) then
 				if breakable(hit.Instance :: BasePart, st) then
 					if now - r.lastBreak > 0.03 then
 						r.lastBreak = now

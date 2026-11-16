@@ -193,9 +193,7 @@ function Shop.init(toggle: (boolean) -> ())
 		if id == 0 then Shop.result(false, "The Glock 18 is not on sale yet") return end
 		MarketplaceService:PromptGamePassPurchase(lp, id)
 	end)
-	robuxRow(1995, "REVIVE", Color3.fromRGB(230, 70, 60), "Died in a run? Come back right where you fell, full health, same run. Offered on the death screen.", "revive", function()
-		Shop.result(true, "Revives are offered when you die in a run")
-	end)
+	-- (REVIVE is not sold here: it is only offered on the death screen, ReviveUI)
 	task.spawn(function()
 		for key, id in { money2 = money2PassId(), glock = glockPassId() } do
 			if id > 0 then

@@ -273,6 +273,10 @@ function VM.use()
 	lastUse = os.clock()
 	anim = { t0 = os.clock(), dur = DUR[style] or 0.4, variant = variant }
 end
+-- seconds from VM.use() to the moment the swing connects on screen (melee hit sounds play then)
+function VM.impactTime(): number
+	return (DUR[style] or 0.4) * 0.42
+end
 -- kept for old callers
 function VM.swing(_fast: boolean) VM.use() end
 function VM.recoil(_power: number) VM.use() end

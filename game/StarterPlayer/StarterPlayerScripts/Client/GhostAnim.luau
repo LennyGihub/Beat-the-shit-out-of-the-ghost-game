@@ -306,12 +306,6 @@ local function target(state: string, t: number, sinceState: number): { [string]:
 		local v = hrp and hrp.AssemblyLinearVelocity or Vector3.zero
 		local speed = Vector3.new(v.X, 0, v.Z).Magnitude
 		walkPose(p, t, speed)
-		if g:GetAttribute("Fleeing") then -- scared: runs away flailing its arms
-			p.RightShoulder = A(2.6 + s(t * 16) * 0.5, 0, 0.5); p.LeftShoulder = A(2.6 - s(t * 16) * 0.5, 0, -0.5)
-			p.RightElbow = A(0.6, 0, 0); p.LeftElbow = A(0.6, 0, 0)
-			p.Neck = A(0.3, s(t * 9) * 0.6, 0)
-			return p
-		end
 		if g:GetAttribute("MonsterId") == "Crawler" then
 			p.Root = A(1.15, 0, s(t * 9) * 0.1) * CFrame.new(0, -1.6, 0)
 			p.Neck = A(-1.1, 0, s(t * 23) * 0.2)
