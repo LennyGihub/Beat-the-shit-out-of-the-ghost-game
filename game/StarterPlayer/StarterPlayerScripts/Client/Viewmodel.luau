@@ -21,9 +21,11 @@ local shakeOff = CFrame.new()
 local skinColor = Color3.fromRGB(120, 88, 70)
 local held: Model? = nil
 local heldItem: any = nil
-local heldOffset = CFrame.new()
 local heldLen = 2
-local leftGripLocal: CFrame? = nil -- where the left hand holds the item (part "LeftGrip"), relative to its pivot
+local holdCF = CFrame.new() -- camera-space right-fist pose for the held item (from HOLD)
+local leftGripPart: BasePart? = nil -- where the left hand holds the item
+local tipPart: BasePart? = nil
+local lastUse = -1
 local style = "bat"
 local anim: { t0: number, dur: number, variant: number, hidden: boolean? }? = nil
 local variant = 1
@@ -34,13 +36,52 @@ local trail: Trail? = nil
 local A = CFrame.Angles
 local function C(x, y, z, rx, ry, rz) return CFrame.new(x, y, z) * A(rx or 0, ry or 0, rz or 0) end
 local STUDIO = RunService:IsStudio()
--- per-style right-hand hold pose (replaces the default item guard); the chainsaw sits low on the right,
--- angled toward the crosshair so its side, bar and chain show
--- left fist on an item's LeftGrip: forearm comes from the lower left, not across the screen
-local LEFT_GRIP_ROT = A(0.4, -0.9, -0.6)
-local HOLD = {
+-- HOLD POSES (camera space: +X right, +Y up, -Z forward) ----------------------------------------------
+-- A spec aims the item: the right fist sits at `fist`, the item's tip lands on screen point `aim`
+-- (-1..1 across / up the screen, solved from the item's real length) and `roll` turns it round its own axis.
+-- A CFrame is used as-is (short items held in the fist, and the hand-tuned chainsaw).
+type Hold = { fist: Vector3, aim: Vector2, roll: number }
+local HOLD: { [string]: any } = {
+	bat = { fist = Vector3.new(0.9, -1.05, -1.8), aim = Vector2.new(-0.05, 0.7), roll = -0.4 },
+	golf = { fist = Vector3.new(0.85, -1.05, -1.8), aim = Vector2.new(0.0, 0.5), roll = 0 },
+	slash = { fist = Vector3.new(0.85, -1.0, -1.75), aim = Vector2.new(-0.05, 0.75), roll = 1.3 },
+	heavy = { fist = Vector3.new(0.75, -1.15, -1.35), aim = Vector2.new(-0.4, 0.72), roll = 1.5 },
+	thrust = { fist = Vector3.new(0.65, -1.0, -1.8), aim = Vector2.new(0.05, 0.4), roll = 0 },
 	saw = C(0.9, -1.2, -1.6, 0.7, 0.45, 1.3), -- on its side, top handle to the left, bar up toward the crosshair
+	pistol = { fist = Vector3.new(0.7, -0.8, -1.45), aim = Vector2.new(0.1, -0.02), roll = 0 },
+	shotgun = { fist = Vector3.new(0.72, -0.75, -1.05), aim = Vector2.new(0.14, -0.1), roll = 0 },
+	longgun = { fist = Vector3.new(0.72, -0.78, -1.05), aim = Vector2.new(0.14, -0.1), roll = 0 },
+	spray = { fist = Vector3.new(0.78, -0.82, -1.5), aim = Vector2.new(-0.12, -0.02), roll = 0 },
+	throw = C(0.58, -0.66, -1.45, 0.15, -0.35, 0),
+	drink = C(0.55, -0.68, -1.45, 0.1, -0.3, 0),
+	inject = C(0.6, -0.7, -1.45, 0.15, 0.35, 0),
+	apply = C(0.5, -0.66, -1.55, 0.1, -0.3, 0),
+	raise = C(0.52, -0.62, -1.5, 0.15, -0.2, 0),
+	place = C(0.55, -0.75, -1.6, 0.2, -0.2, 0),
 }
+-- per-item overrides of the style's hold and size
+local HOLD_ID: { [string]: any } = {
+	PepperSpray = C(0.6, -0.62, -1.35, 0.1, 0.25, 0), -- small canister upright in the fist
+	Medkit = C(0.5, -0.5, -1.55, 1.15, -0.35, 0), -- tilted so the box faces forward
+	FireExtinguisher = { fist = Vector3.new(0.75, -0.95, -1.35), aim = Vector2.new(-0.05, -0.08), roll = 0 },
+	UVFlashlight = { fist = Vector3.new(0.72, -0.72, -1.45), aim = Vector2.new(-0.1, 0.02), roll = 0 },
+}
+local SCALE_ID: { [string]: number } = { PotatoCannon = 0.62, PepperSpray = 0.85, UVFlashlight = 1.0 }
+-- left fist on an item's LeftGrip (camera space): the forearm comes in from the lower left
+local LEFT_ROT: { [string]: CFrame } = {
+	saw = A(0.4, -0.9, -0.6),
+	heavy = A(0.5, -0.7, -0.3),
+	shotgun = A(1.15, -0.45, -0.2),
+	longgun = A(1.15, -0.45, -0.2),
+	spray = A(1.1, -0.5, -0.2),
+	pistol = A(1.1, -0.5, -0.2),
+}
+-- first-person size of the held item per style (guns and sprays bigger so the fists don't swallow them)
+local SCALE: { [string]: number } = { pistol = 0.8, shotgun = 0.85, longgun = 0.85, throw = 0.75, drink = 0.75,
+	inject = 0.8, apply = 0.7, raise = 0.75, place = 0.65, heavy = 0.6, spray = 0.95 }
+-- the left fist sits under a gun's forend, not on top of it (camera space)
+local LEFT_DROP: { [string]: Vector3 } = { shotgun = Vector3.new(0, -0.14, 0), longgun = Vector3.new(0, -0.14, 0), spray = Vector3.new(0, -0.1, 0) }
+local LEFT_GRIP_ROT = A(0.4, -0.6, -0.3)
 
 -- weapon styles ------------------------------------------------------------------------------------
 local STYLE = {
@@ -52,34 +93,41 @@ local STYLE = {
 	EnergyDrink = "drink", Painkillers = "drink", Adrenaline = "inject", RageSerum = "inject",
 	Medkit = "apply", KevlarVest = "apply", Talisman = "raise", PocketWatch = "raise", BearTrap = "place",
 }
-local TWO_HANDED = { heavy = true, saw = true, shotgun = true, longgun = true, golf = true }
-local DUR = { heavy = 0.78, bat = 0.42, golf = 0.5, slash = 0.27, thrust = 0.34, saw = 0.12, pistol = 0.2, shotgun = 0.62,
+local DUR = { heavy = 0.78, bat = 0.42, golf = 0.5, slash = 0.3, thrust = 0.34, saw = 0.12, pistol = 0.22, shotgun = 0.62,
 	longgun = 0.45, throw = 0.48, drink = 0.9, inject = 0.8, apply = 0.8, raise = 0.9, place = 0.6, spray = 0.1 }
 
--- right-hand keyframes {t, offset from the guard pose}; left hand follows the item when two-handed
+-- keyframes {t, offset}: translation and rotation in CAMERA space, turning around the right fist
+-- (the chainsaw's keys are in the fist's own frame, LOCAL_KEYS). The left hand follows the item's LeftGrip.
 local KEYS = {
-	heavy = { { 0, C(0, 0, 0) }, { 0.38, C(0.15, 1.25, 0.7, 1.35, 0.1, 0) }, { 0.52, C(-0.1, -0.55, -1.5, -1.25, 0, 0) },
-		{ 0.72, C(-0.1, -0.6, -1.4, -1.2, 0, 0) }, { 1, C(0, 0, 0) } },
-	bat = { { 0, C(0, 0, 0) }, { 0.28, C(0.6, 0.35, 0.45, 0.25, -1.0, -0.45) }, { 0.5, C(-0.9, 0.05, -1.35, -0.45, 1.15, 0.8) },
-		{ 0.72, C(-1.35, -0.3, -0.6, -0.7, 1.55, 1.0) }, { 1, C(0, 0, 0) } },
-	golf = { { 0, C(0, 0, 0) }, { 0.32, C(0.7, -0.6, 0.2, -1.2, -0.8, 0) }, { 0.52, C(-0.4, -0.2, -1.4, -0.2, 0.6, 0) },
-		{ 0.75, C(-0.8, 1.2, -0.6, 1.2, 1.0, 0) }, { 1, C(0, 0, 0) } },
-	slash = { { 0, C(0, 0, 0) }, { 0.2, C(0.7, 0.9, 0.2, 0.6, -0.4, -0.9) }, { 0.55, C(-0.9, -0.6, -1.3, -0.6, 0.7, 1.0) },
+	heavy = { { 0, C(0, 0, 0) }, { 0.36, C(0.15, 0.35, 0.1, 0.7, -0.15, 0) }, { 0.5, C(-0.1, -0.35, -0.6, -1.2, 0.1, 0) },
+		{ 0.72, C(-0.1, -0.4, -0.55, -1.15, 0.1, 0) }, { 1, C(0, 0, 0) } },
+	bat = { { 0, C(0, 0, 0) }, { 0.28, C(0.3, 0.2, 0.35, 0.25, -0.85, -0.35) }, { 0.5, C(-0.6, -0.12, -0.5, -0.45, 1.05, 0.55) },
+		{ 0.72, C(-0.8, -0.32, -0.3, -0.75, 1.45, 0.75) }, { 1, C(0, 0, 0) } },
+	golf = { { 0, C(0, 0, 0) }, { 0.32, C(0.35, -0.15, 0.25, -0.35, -0.85, 0) }, { 0.52, C(-0.3, 0.0, -0.6, 0.3, 0.8, 0) },
+		{ 0.75, C(-0.6, 0.45, -0.35, 1.0, 1.2, 0) }, { 1, C(0, 0, 0) } },
+	slash = { { 0, C(0, 0, 0) }, { 0.2, C(0.3, 0.4, 0.25, 0.45, -0.5, -0.55) }, { 0.55, C(-0.65, -0.45, -0.6, -0.75, 0.9, 0.9) },
 		{ 1, C(0, 0, 0) } },
-	thrust = { { 0, C(0, 0, 0) }, { 0.3, C(0.1, 0.1, 0.6, 0.2, 0, 0) }, { 0.5, C(-0.25, 0.25, -2.0, -0.2, 0, 0) }, { 1, C(0, 0, 0) } },
+	thrust = { { 0, C(0, 0, 0) }, { 0.3, C(0, -0.05, 0.35, 0.1, 0, 0) }, { 0.5, C(-0.2, 0.1, -0.95, -0.05, 0.1, 0) }, { 1, C(0, 0, 0) } },
 	saw = { { 0, C(0, -0.1, -0.5) }, { 0.5, C(0, -0.02, -0.78, -0.1, 0, 0) }, { 1, C(0, -0.1, -0.5) } },
-	pistol = { { 0, C(0, 0, 0) }, { 0.15, C(0, 0.18, 0.45, 0.45, 0, 0) }, { 1, C(0, 0, 0) } },
-	shotgun = { { 0, C(0, 0, 0) }, { 0.1, C(0, 0.25, 0.6, 0.5, 0, 0) }, { 0.35, C(0, 0.05, 0.1, 0.1, 0, 0) }, { 1, C(0, 0, 0) } },
-	longgun = { { 0, C(0, 0, 0) }, { 0.12, C(0, 0.3, 0.75, 0.6, 0, 0) }, { 1, C(0, 0, 0) } },
-	throw = { { 0, C(0, 0, 0) }, { 0.38, C(0.4, 1.0, 0.9, 1.3, -0.2, 0) }, { 0.55, C(-0.2, 0.55, -1.6, -0.6, 0.1, 0) },
-		{ 0.75, C(-0.3, -0.4, -1.2, -0.9, 0.2, 0) }, { 1, C(0, 0, 0) } },
-	drink = { { 0, C(0, 0, 0) }, { 0.3, C(-0.55, 0.65, 0.55, 1.0, 0, 0.3) }, { 0.75, C(-0.55, 0.75, 0.6, 1.5, 0, 0.3) }, { 1, C(0, 0, 0) } },
-	inject = { { 0, C(0, 0, 0) }, { 0.35, C(-0.6, 0.1, -0.2, 0.2, 0.9, 0) }, { 0.5, C(-0.9, -0.1, 0.1, 0.2, 1.2, 0) }, { 0.7, C(-0.9, -0.1, 0.1, 0.2, 1.2, 0) }, { 1, C(0, 0, 0) } },
-	apply = { { 0, C(0, 0, 0) }, { 0.35, C(-0.4, -0.2, 0.3, -0.4, 0, 0) }, { 0.7, C(-0.4, -0.5, 0.5, -0.8, 0, 0) }, { 1, C(0, 0, 0) } },
-	raise = { { 0, C(0, 0, 0) }, { 0.3, C(-0.4, 0.8, -0.6, 0.4, 0, 0) }, { 0.8, C(-0.4, 0.85, -0.7, 0.4, 0, 0) }, { 1, C(0, 0, 0) } },
-	place = { { 0, C(0, 0, 0) }, { 0.45, C(-0.2, -1.6, -1.2, -0.9, 0, 0) }, { 1, C(0, 0, 0) } },
+	pistol = { { 0, C(0, 0, 0) }, { 0.14, C(0, 0.06, 0.22, 0.38, 0, 0.05) }, { 1, C(0, 0, 0) } },
+	shotgun = { { 0, C(0, 0, 0) }, { 0.1, C(0, 0.1, 0.38, 0.42, 0, 0) }, { 0.35, C(0, 0.02, 0.1, 0.08, 0, 0) }, { 1, C(0, 0, 0) } },
+	longgun = { { 0, C(0, 0, 0) }, { 0.12, C(0, 0.12, 0.4, 0.45, 0, 0) }, { 1, C(0, 0, 0) } },
+	throw = { { 0, C(0, 0, 0) }, { 0.38, C(0.25, 0.4, 0.15, 0.9, 0, 0) }, { 0.55, C(-0.2, 0.3, -0.9, -0.5, 0, 0) },
+		{ 0.75, C(-0.25, -0.3, -0.6, -0.8, 0, 0) }, { 1, C(0, 0, 0) } },
+	drink = { { 0, C(0, 0, 0) }, { 0.3, C(-0.35, 0.5, 0.25, 1.0, 0, 0.2) }, { 0.75, C(-0.35, 0.55, 0.3, 1.35, 0, 0.2) }, { 1, C(0, 0, 0) } },
+	inject = { { 0, C(0, 0, 0) }, { 0.35, C(-0.45, -0.05, 0.15, 0, 0.6, 0) }, { 0.5, C(-0.62, -0.2, 0.3, 0, 0.8, 0) },
+		{ 0.7, C(-0.62, -0.2, 0.3, 0, 0.8, 0) }, { 1, C(0, 0, 0) } },
+	apply = { { 0, C(0, 0, 0) }, { 0.35, C(-0.3, -0.2, 0.4, -0.3, 0, 0) }, { 0.7, C(-0.3, -0.45, 0.6, -0.6, 0, 0) }, { 1, C(0, 0, 0) } },
+	raise = { { 0, C(0, 0, 0) }, { 0.3, C(-0.35, 0.6, -0.3, 0.3, 0, 0) }, { 0.8, C(-0.35, 0.65, -0.35, 0.3, 0, 0) }, { 1, C(0, 0, 0) } },
+	place = { { 0, C(0, 0, 0) }, { 0.45, C(-0.1, -0.85, -0.5, -0.6, 0, 0) }, { 1, C(0, 0, 0) } },
 	spray = { { 0, C(0, 0, 0) }, { 1, C(0, 0, 0) } },
 }
+local LOCAL_KEYS = { saw = true }
+-- where the arms come from while holding an item (camera space, below and behind the screen corners)
+local SHOULDER = { R = Vector3.new(1.0, -1.7, 0.35), L = Vector3.new(-1.0, -1.7, 0.35) }
+-- items held in the fist sit in front of it, not inside it (fist frame)
+local OUT = CFrame.new(0, 0.1, -0.3)
+local ITEM_OFF: { [string]: CFrame } = { throw = OUT, drink = OUT, inject = CFrame.new(0, 0.05, -0.2), apply = OUT, raise = OUT, place = OUT }
 
 local function ease(a: number): number return a * a * (3 - 2 * a) end
 
@@ -167,40 +215,50 @@ local function addTrail(m: Model)
 	trail = tr
 end
 
+-- resolve a hold spec into a camera-space right-fist CFrame (see HOLD)
+local function solveHold(spec: any, len: number): CFrame
+	if typeof(spec) == "CFrame" then return spec end
+	local vp = cam.ViewportSize
+	local tanV = math.tan(math.rad(cam.FieldOfView) / 2)
+	local aspect = vp.X / math.max(1, vp.Y)
+	local dir = Vector3.new(spec.aim.X * tanV * aspect, spec.aim.Y * tanV, -1).Unit
+	local F = spec.fist
+	-- point the item from the fist toward the aim ray, at a depth a bit beyond the item's reach
+	local depth = math.max(-F.Z + len * 0.7, 2.0)
+	return CFrame.lookAt(F, dir * (depth / -dir.Z), Vector3.yAxis) * A(0, 0, spec.roll or 0)
+end
+
 -- show an item in the right hand (nil = bare fists)
 function VM.setItem(it: any)
 	if it == heldItem then return end
 	heldItem = it
 	anim = nil
 	trail = nil
-	leftGripLocal = nil
+	leftGripPart = nil
+	tipPart = nil
 	if held then held:Destroy(); held = nil end
 	if not it then return end
 	style = STYLE[it.id] or (it.kind == "throw" and "throw" or (it.kind == "spray" and "spray" or (it.kind == "gun" and "pistol" or "bat")))
 	local m = ItemModels.build(it.shape, it.color, it.glow, it.id)
-	m:ScaleTo(m:GetScale() * 0.55) -- first-person hands are close to the camera (relative: meshes are already scaled)
-	for _, p in m:GetDescendants() do if p:IsA("BasePart") then p.CastShadow = false end end
+	m:ScaleTo(SCALE_ID[it.id] or SCALE[style] or 0.55) -- first-person hands are close to the camera
 	m.Parent = model
 	held = m
+	leftGripPart = m:FindFirstChild("LeftGrip", true) :: BasePart?
+	tipPart = m:FindFirstChild("Tip", true) :: BasePart?
 	local _, size = m:GetBoundingBox()
 	heldLen = math.max(size.X, size.Y, size.Z)
-	local lg = m:FindFirstChild("LeftGrip", true) :: BasePart?
-	if lg then leftGripLocal = m:GetPivot():ToObjectSpace(lg.CFrame) end
-	if it.kind == "melee" then
-		heldOffset = style == "saw" and CFrame.new() or (CFrame.new(0, 0.1, 0) * A(math.rad(70), 0, 0) * CFrame.new(0, 0, 0.6))
-		addTrail(m)
-	elseif it.kind == "gun" or it.kind == "spray" then
-		heldOffset = CFrame.new(-0.05, 0.15, -0.1)
-	else
-		heldOffset = CFrame.new(0, 0.25, -0.15) * A(0, math.rad(25), 0)
-	end
+	-- item length along its forward axis (pivot -> tip), for aiming the hold
+	local fwd = tipPart and -m:GetPivot():PointToObjectSpace(tipPart.Position).Z or size.Z * 0.8
+	holdCF = solveHold(HOLD_ID[it.id] or HOLD[style] or HOLD.bat, math.max(0.3, fwd))
+	lastUse = -1
+	if it.kind == "melee" then addTrail(m) end
 end
 
--- world position of the held item's far end (spray nozzle)
+-- world position of the held item's far end (spray nozzle, muzzle)
 function VM.itemTip(): Vector3?
 	if not held then return nil end
-	local pivot = held:GetPivot()
-	return (pivot * CFrame.new(0, 0, -heldLen * 0.95)).Position
+	if tipPart then return tipPart.Position end
+	return (held:GetPivot() * CFrame.new(0, 0, -heldLen * 0.95)).Position
 end
 
 -- play the held item's animation (called on use)
@@ -208,6 +266,7 @@ function VM.use()
 	if not heldItem then return end
 	variant = -variant
 	freezeUntil, frozenAt = 0, 0
+	lastUse = os.clock()
 	anim = { t0 = os.clock(), dur = DUR[style] or 0.4, variant = variant }
 end
 -- kept for old callers
@@ -247,11 +306,16 @@ local function punchOffset(side: string, now: number): CFrame
 	return out
 end
 
--- the held item's animation offset (right hand) for this frame
+-- the held item's animation offset for this frame (camera space, or the fist's frame for LOCAL_KEYS styles)
 local function itemOffset(now: number): CFrame
 	if spraying then
-		local j = style == "spray" and 0.03 or 0.015
-		return CFrame.new((math.random() - 0.5) * j, (math.random() - 0.5) * j, -0.15) * A(-0.05, 0, 0)
+		local j = 0.02
+		return CFrame.new((math.random() - 0.5) * j, (math.random() - 0.5) * j, 0.06) * A(0.03, 0, 0)
+	end
+	local forced = STUDIO and lp:GetAttribute("DebugAnimA") -- Studio test hook: freeze the animation at fraction a
+	if type(forced) == "number" then
+		local cf = sample(KEYS[style] or KEYS.bat, math.clamp(forced, 0, 1))
+		return cf
 	end
 	if style == "saw" and not anim then
 		return CFrame.new((math.random() - 0.5) * 0.015, (math.random() - 0.5) * 0.015, -0.3) -- idling engine
@@ -269,12 +333,12 @@ local function itemOffset(now: number): CFrame
 	if a >= 1 then
 		anim = nil
 		if trail then trail.Enabled = false end
-		return CFrame.new()
+		return style == "saw" and CFrame.new(0, 0, -0.3) or CFrame.new()
 	end
 	local keys = KEYS[style] or KEYS.bat
 	local cf = sample(keys, a)
 	if anim.variant < 0 and (style == "bat" or style == "slash") then cf = mirror(cf) end
-	if trail then trail.Enabled = a > 0.25 and a < 0.8 end
+	if trail then trail.Enabled = a > 0.22 and a < 0.8 end
 	if style == "saw" then cf *= CFrame.new((math.random() - 0.5) * 0.06, (math.random() - 0.5) * 0.06, 0) end
 	-- thrown items leave the hand at release and come back
 	anim.hidden = style == "throw" and a > 0.52 and a < 0.92
@@ -305,54 +369,65 @@ function VM.update(dt: number)
 	local ult = lp:GetAttribute("UltActive") == true
 	local jitter = ult and CFrame.new(math.random() * 0.03, math.random() * 0.03, 0) or CFrame.new()
 	local base = cam.CFrame * shakeOff * bob * jitter * CFrame.new(-sway.X * 1.2, sway.Y * 1.2, 0)
-	local itemCF: CFrame? = nil
-	local rightFist: CFrame? = nil
-	local twoHand = held ~= nil and TWO_HANDED[style] == true and carryAlpha < 0.5
+	local itemHidden = carryAlpha > 0.5 or (anim ~= nil and anim.hidden == true)
 	for _, side in { "R", "L" } do
 		local a = arms[side]
 		local sx = side == "R" and 1 or -1
 		local guard = CFrame.new(sx * 0.62, -0.62 + (side == "L" and -0.04 or 0), -1.5) * A(0.22, sx * -0.14, sx * -0.25)
-		if side == "R" and held then
-			guard = HOLD[style] or (CFrame.new(0.5, -0.66, -1.35) * A(0.18, -0.1, -0.2))
-			if STUDIO then -- tuning hooks: player attributes DebugHold / DebugHeldOffset (CFrame)
-				local g, o = lp:GetAttribute("DebugHold"), lp:GetAttribute("DebugHeldOffset")
-				if typeof(g) == "CFrame" then guard = g end
-				if typeof(o) == "CFrame" then heldOffset = o end
-				local l = lp:GetAttribute("DebugLeftRot")
-				if typeof(l) == "CFrame" then LEFT_GRIP_ROT = l end
-			end
-		end
 		local carry = CFrame.new(sx * 0.7, -2.6, -1.2) * A(0.6, 0, sx * -0.15) -- arms drop out of view while lifting
-		local pose = guard:Lerp(carry, carryAlpha)
-		local fistCF = base * pose * punchOffset(side, now)
+		local fistCF
 		if side == "R" and held then
-			fistCF = fistCF * itemOffset(now)
-			itemCF = fistCF * heldOffset
-			rightFist = fistCF
+			local hold = holdCF
+			if STUDIO then -- tuning hooks (player attributes): DebugHold (CFrame) or DebugFist/DebugAim/DebugRoll
+				local g = lp:GetAttribute("DebugHold")
+				local f, ai = lp:GetAttribute("DebugFist"), lp:GetAttribute("DebugAim")
+				if typeof(g) == "CFrame" then hold = g end
+				if typeof(f) == "Vector3" and typeof(ai) == "Vector2" then
+					local fwd = tipPart and -(held :: Model):GetPivot():PointToObjectSpace(tipPart.Position).Z or heldLen
+					hold = solveHold({ fist = f, aim = ai, roll = lp:GetAttribute("DebugRoll") or 0 }, fwd)
+				end
+			end
+			local pose = hold:Lerp(carry, carryAlpha)
+			local key = itemOffset(now)
+			if LOCAL_KEYS[style] then
+				fistCF = base * pose * key
+			else
+				fistCF = base * (CFrame.new(pose.Position + key.Position) * key.Rotation * pose.Rotation)
+			end
+			-- the item sits in the fist; move it (and its moving parts) now so the left hand can find its grip
+			held:PivotTo(fistCF * (ITEM_OFF[style] or CFrame.identity))
+			ItemModels.animate(held :: Model, anim and 3.2 or 0.35, lastUse > 0 and (now - lastUse) or nil)
+		else
+			fistCF = base * guard:Lerp(carry, carryAlpha) * punchOffset(side, now)
 		end
-		if side == "L" and twoHand and itemCF and leftGripLocal then
-			-- the item says where the left hand goes (chainsaw top handle); forearm comes in from the left
-			fistCF = CFrame.new(((itemCF :: CFrame) * (leftGripLocal :: CFrame)).Position) * base.Rotation * LEFT_GRIP_ROT
-		elseif side == "L" and twoHand and itemCF then
-			-- second hand further along the handle, same angle as the right hand (forearm toward the camera)
-			local along = ((itemCF :: CFrame) * CFrame.new(0, -0.05, -math.min(heldLen * 0.3, 0.9))).Position
-			fistCF = CFrame.new(along) * (rightFist :: CFrame).Rotation * A(0, 0.15, 0.2)
+		if side == "L" and held and leftGripPart and carryAlpha < 0.5 and not itemHidden then
+			-- two-handed item: the left fist holds the item's LeftGrip, forearm from the lower left
+			local rot = LEFT_ROT[style] or LEFT_GRIP_ROT
+			if STUDIO then local l = lp:GetAttribute("DebugLeftRot"); if typeof(l) == "CFrame" then rot = l end end
+			fistCF = CFrame.new(leftGripPart.Position + base:VectorToWorldSpace(LEFT_DROP[style] or Vector3.zero)) * base.Rotation * rot
 		elseif side == "L" and held and (style == "inject" or style == "apply") and anim then
 			fistCF = base * CFrame.new(-0.55, -0.75, -1.3) * A(0.3, 0.4, 0.2) -- offer the arm / chest
 		end
 		a.fist.CFrame = fistCF
-		a.arm.CFrame = fistCF * CFrame.new(0, -0.04, 1.05)
-		a.sleeve.CFrame = fistCF * CFrame.new(0, -0.04, 2.0)
+		if held and carryAlpha < 0.5 then
+			-- holding an item: the forearm runs from the fist back to the shoulder (off the bottom corner),
+			-- so swings and throws never push the arm into the camera
+			local sh = base * SHOULDER[side]
+			local from = fistCF.Position
+			local dir = (sh - from).Unit
+			a.arm.CFrame = CFrame.lookAt(from + dir * 1.05, sh, base.UpVector)
+			a.sleeve.CFrame = CFrame.lookAt(from + dir * 2.0, sh + dir, base.UpVector)
+		else
+			a.arm.CFrame = fistCF * CFrame.new(0, -0.04, 1.05)
+			a.sleeve.CFrame = fistCF * CFrame.new(0, -0.04, 2.0)
+		end
 		a.brass.CFrame = fistCF * CFrame.new(0, 0.1, -0.22)
 		a.brass.LocalTransparencyModifier = 1
 		a.fist.Material = ult and Enum.Material.Neon or Enum.Material.SmoothPlastic
 		a.fist.Color = ult and Color3.fromRGB(255, 70, 30) or skinColor
 	end
-	if held and itemCF then
-		held:PivotTo(itemCF)
-		ItemModels.animate(held, anim and 3.2 or 0.35) -- chainsaw chain: races while cutting, crawls at idle
-		local hide = carryAlpha > 0.5 or (anim ~= nil and anim.hidden == true)
-		for _, p in held:GetDescendants() do if p:IsA("BasePart") then p.LocalTransparencyModifier = hide and 1 or 0 end end
+	if held then
+		for _, p in held:GetDescendants() do if p:IsA("BasePart") then p.LocalTransparencyModifier = itemHidden and 1 or 0 end end
 	end
 end
 

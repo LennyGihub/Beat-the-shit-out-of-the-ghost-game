@@ -1,46 +1,245 @@
--- 3D models for the 50 items (stands + first-person hands). Each item has an AI-made textured mesh in
--- ReplicatedStorage.ItemMeshes.<ItemId> (pivot = grip, pointing toward -Z); the part-built shapes below are the fallback.
--- Model space: grip at the origin, the item points/extends toward -Z (barrel, blade tip), +Y is up.
+-- 3D models for the 50 items, all in the blocky PS2 style (flat colours, chunky blocks, no smooth meshes),
+-- like the first-person hands. Used by the first-person hands, other players' hands and the event shops.
+-- Model space: the right-hand grip is the origin, the item extends toward -Z (barrel, blade, nozzle), +Y is up.
+-- Optional parts: "LeftGrip" (where the left hand holds a two-handed item), "Tip" (muzzle / nozzle / blade end).
+-- Moving parts live in a folder "Moving" (attribute Mv = kick | spin | flicker) and the chainsaw chain in "Chain";
+-- ItemModels.animate moves them every frame.
 local ItemModels = {}
 local M = Enum.Material
-local CYL = Enum.PartType.Cylinder
-local BALL = Enum.PartType.Ball
-local ALONG = CFrame.Angles(0, math.pi / 2, 0) -- cylinder axis (X) -> along Z
-local UPC = CFrame.Angles(0, 0, math.pi / 2) -- cylinder axis -> Y
-local WOOD = Color3.fromRGB(120, 85, 55)
-local DARK = Color3.fromRGB(35, 35, 38)
-local STEEL = Color3.fromRGB(190, 192, 198)
+local P = M.SmoothPlastic
+local WOOD = Color3.fromRGB(112, 80, 52)
+local DARK = Color3.fromRGB(32, 30, 28)
+local BLACK = Color3.fromRGB(22, 21, 20)
+local STEEL = Color3.fromRGB(150, 150, 146)
+local RUST = Color3.fromRGB(120, 70, 40)
+local GOLD = Color3.fromRGB(196, 158, 64)
+local TAPE = Color3.fromRGB(60, 58, 54)
+local GRIME = Color3.fromRGB(60, 52, 44)
+local A = CFrame.Angles
+local function V(x, y, z) return Vector3.new(x, y, z) end
+local function at(x, y, z, rx, ry, rz) return CFrame.new(x, y, z) * A(rx or 0, ry or 0, rz or 0) end
+local function worn(c: Color3, k: number?): Color3 return c:Lerp(GRIME, k or 0.18) end
 
 local function p(m: Model, size: Vector3, cf: CFrame, color: Color3, mat: Enum.Material?, shape: Enum.PartType?): BasePart
 	local part = Instance.new("Part")
-	part.Size = size; part.CFrame = cf; part.Color = color; part.Material = mat or M.SmoothPlastic
+	part.Size = size; part.CFrame = cf; part.Color = color; part.Material = mat or P
 	if shape then part.Shape = shape end
+	part.TopSurface = Enum.SurfaceType.Smooth; part.BottomSurface = Enum.SurfaceType.Smooth
 	part.Anchored = true; part.CanCollide = false; part.CanQuery = false; part.CanTouch = false; part.CastShadow = false
 	part.Parent = m
 	return part
 end
-local function stick(m, len, d, color, mat, z0) -- cylinder from z0 toward -Z
-	return p(m, Vector3.new(len, d, d), CFrame.new(0, 0, (z0 or 0) - len / 2) * ALONG, color, mat, CYL)
+local function mark(m: Model, name: string, cf: CFrame)
+	local q = p(m, Vector3.one * 0.15, cf, BLACK)
+	q.Name = name; q.Transparency = 1
+	return q
+end
+-- moving parts: kick = pushed by `a` (model-space Vector3) on each use, spin = turns around axis `a` at `b` rad/s,
+-- flicker = flame / light that flickers
+local function moving(m: Model, part: BasePart, mode: string, a: any?, b: number?)
+	local f = m:FindFirstChild("Moving") or Instance.new("Folder")
+	f.Name = "Moving"; f.Parent = m
+	part:SetAttribute("Mv", mode)
+	part:SetAttribute("Rel", part.CFrame)
+	if mode == "kick" then part:SetAttribute("Kick", a) end
+	if mode == "spin" then part:SetAttribute("Axis", a); part:SetAttribute("Rate", b) end
+	if mode == "flicker" then part:SetAttribute("Base", part.Transparency) end
+	part.Parent = f
+end
+local function flame(m: Model, cf: CFrame, s: number)
+	local o = p(m, V(0.34, 0.5, 0.34) * s, cf * CFrame.new(0, 0.2 * s, 0), Color3.fromRGB(255, 120, 30), M.Neon)
+	o.Transparency = 0.15; moving(m, o, "flicker")
+	local i = p(m, V(0.2, 0.34, 0.2) * s, cf * CFrame.new(0, 0.14 * s, 0), Color3.fromRGB(255, 230, 120), M.Neon)
+	i.Transparency = 0.1; moving(m, i, "flicker")
 end
 
 local B = {}
-function B.bat(m, c) stick(m, 1.2, 0.3, DARK, M.Fabric, 0.4); p(m, Vector3.new(3.4, 0.5, 0.5), CFrame.new(0, 0, -2.3) * ALONG, c, M.Wood, CYL) end
-function B.spikedbat(m, c)
-	B.bat(m, c)
-	for i = 0, 5 do p(m, Vector3.new(0.08, 0.5, 0.08), CFrame.new(0, 0, -1.8 - i * 0.4) * CFrame.Angles(0, 0, i * 1.1) * CFrame.new(0, 0.32, 0), STEEL, M.Metal) end
+-- MELEE ----------------------------------------------------------------------------------------------
+-- tapered wooden bat: knob, taped grip, three widening sections, end cap
+function B.bat(m, c, glow)
+	local w = worn(c, 0.12)
+	p(m, V(0.42, 0.42, 0.16), at(0, 0, 0.55), worn(c, 0.3))
+	p(m, V(0.3, 0.3, 1.0), at(0, 0, 0.02), TAPE)
+	for i = 0, 2 do p(m, V(0.32, 0.06, 0.08), at(0, 0.15, 0.4 - i * 0.35), BLACK) end -- tape wraps
+	p(m, V(0.32, 0.32, 0.7), at(0, 0, -0.82), w)
+	p(m, V(0.4, 0.4, 0.75), at(0, 0, -1.5), w)
+	p(m, V(0.5, 0.5, 1.45), at(0, 0, -2.55), w)
+	p(m, V(0.44, 0.44, 0.1), at(0, 0, -3.3), worn(c, 0.35))
+	p(m, V(0.52, 0.08, 0.3), at(0, 0.02, -2.3), worn(c, 0.45)) -- scuffed label
+	mark(m, "Tip", at(0, 0, -3.2))
+	if glow then -- burning bat: flames along the barrel
+		for i = 0, 3 do flame(m, at(i % 2 == 0 and 0.12 or -0.12, 0.25, -2.0 - i * 0.38), 1 + (i % 2) * 0.3) end
+		local f = p(m, V(0.56, 0.56, 1.5), at(0, 0, -2.55), Color3.fromRGB(80, 30, 10), M.CrackedLava)
+		f.Transparency = 0.25
+	end
 end
-function B.pan(m, c) stick(m, 1.8, 0.2, DARK, M.Metal, 0.4); p(m, Vector3.new(0.15, 1.8, 1.8), CFrame.new(0, 0, -2.2) * UPC, c, M.Metal, CYL) end
-function B.crowbar(m, c) p(m, Vector3.new(0.18, 0.18, 3.6), CFrame.new(0, 0, -1.4), c, M.Metal); p(m, Vector3.new(0.18, 0.6, 0.18), CFrame.new(0, 0.25, -3.25) * CFrame.Angles(0.4, 0, 0), c, M.Metal) end
-function B.pipe(m, c) stick(m, 3.4, 0.28, c, M.Metal, 0.4); p(m, Vector3.new(0.35, 0.4, 0.4), CFrame.new(0, 0, -2.9) * ALONG, c, M.Metal, CYL) end
-function B.shovel(m, c) stick(m, 3.4, 0.2, WOOD, M.Wood, 0.4); p(m, Vector3.new(1, 0.08, 1.3), CFrame.new(0, 0, -3.6), c, M.Metal) end
-function B.golf(m, c) stick(m, 3.6, 0.12, c, M.Metal, 0.4); p(m, Vector3.new(0.5, 0.35, 0.3), CFrame.new(0.15, -0.1, -3.3), DARK, M.Metal) end
-function B.machete(m, c) stick(m, 0.9, 0.22, DARK, M.Fabric, 0.4); p(m, Vector3.new(0.06, 0.45, 2.2), CFrame.new(0, 0.05, -1.6), c, M.Metal) end
-function B.katana(m, c) stick(m, 1.1, 0.18, DARK, M.Fabric, 0.4); p(m, Vector3.new(0.4, 0.1, 0.4), CFrame.new(0, 0, -0.75), Color3.fromRGB(180, 150, 60), M.Metal); p(m, Vector3.new(0.05, 0.22, 3.2), CFrame.new(0, 0, -2.4), c, M.Metal) end
-function B.axe(m, c) stick(m, 3, 0.22, WOOD, M.Wood, 0.4); p(m, Vector3.new(0.15, 1, 0.8), CFrame.new(0, 0.4, -2.4), c, M.Metal); p(m, Vector3.new(0.12, 0.4, 0.5), CFrame.new(0, -0.3, -2.4), DARK, M.Metal) end
-function B.sledge(m, c) stick(m, 3.4, 0.22, WOOD, M.Wood, 0.4); p(m, Vector3.new(0.7, 0.7, 1.6), CFrame.new(0, 0, -3.2) * CFrame.Angles(0, math.pi / 2, 0), c, M.Metal) end
-function B.warhammer(m, c) B.sledge(m, c); p(m, Vector3.new(0.4, 0.4, 0.4), CFrame.new(0, 0, -3.2), Color3.fromRGB(230, 240, 255), M.Neon) end
-function B.pickaxe(m, c) stick(m, 3, 0.2, WOOD, M.Wood, 0.4); p(m, Vector3.new(0.15, 0.2, 2.2), CFrame.new(0, 0, -2.6) * CFrame.Angles(0, math.pi / 2, 0), c, M.Ice) end
-function B.cross(m, c) p(m, Vector3.new(0.25, 0.25, 2.2), CFrame.new(0, 0, -0.9), c, M.Metal); p(m, Vector3.new(1.2, 0.22, 0.22), CFrame.new(0, 0, -1.4), c, M.Metal) end
+function B.spikedbat(m, c, glow)
+	B.bat(m, c, glow)
+	local nail = Color3.fromRGB(170, 168, 160)
+	local dirs = { at(0, 0.32, 0), at(0.32, 0, 0, 0, 0, -math.pi / 2), at(0, -0.32, 0, math.pi, 0, 0), at(-0.32, 0, 0, 0, 0, math.pi / 2) }
+	for i = 0, 7 do
+		local d = dirs[i % 4 + 1]
+		p(m, V(0.07, 0.36, 0.07), at(0, 0, -1.85 - i * 0.18) * d, nail, M.Metal)
+	end
+	for i = 0, 3 do p(m, V(0.54, 0.04, 0.06), at(0, 0.24, -1.9 - i * 0.4), Color3.fromRGB(110, 20, 16)) end -- dried blood
+end
+-- cast-iron pan, face sideways (normal = +X) so the swing hits flat
+function B.pan(m, c)
+	local iron = worn(c, 0.05)
+	p(m, V(0.2, 0.2, 1.5), at(0, 0, -0.15), BLACK)
+	p(m, V(0.12, 0.12, 0.12), at(0, 0, 0.55), STEEL, M.Metal)
+	p(m, V(0.12, 0.26, 0.3), at(0, 0, -0.95), iron)
+	local zc = -1.95
+	p(m, V(0.12, 1.5, 1.5), at(0, 0, zc), iron)
+	p(m, V(0.12, 1.1, 1.8), at(0, 0, zc), iron)
+	p(m, V(0.12, 1.8, 1.1), at(0, 0, zc), iron)
+	for _, s in { -1, 1 } do
+		p(m, V(0.3, 0.12, 1.2), at(0.08, s * 0.86, zc), iron)
+		p(m, V(0.3, 1.2, 0.12), at(0.08, 0, zc + s * 0.86), iron)
+		p(m, V(0.3, 0.12, 0.6), at(0.08, s * 0.65, zc + s * 0.6, 0, 0, 0) * A(0, 0, 0), iron)
+	end
+	p(m, V(0.02, 1.2, 1.2), at(0.15, 0, zc), Color3.fromRGB(70, 66, 62)) -- inside, a bit lighter
+end
+function B.crowbar(m, c)
+	local red = worn(c, 0.1)
+	p(m, V(0.18, 0.18, 3.0), at(0, 0, -1.0), red, M.Metal)
+	p(m, V(0.26, 0.06, 0.36), at(0, -0.02, 0.62, 0.15, 0, 0), STEEL, M.Metal) -- chisel end
+	p(m, V(0.18, 0.18, 0.4), at(0, 0.12, -2.62, 0.5, 0, 0), red, M.Metal)
+	p(m, V(0.18, 0.18, 0.4), at(0, 0.4, -2.78, 1.2, 0, 0), red, M.Metal)
+	p(m, V(0.2, 0.12, 0.36), at(0, 0.62, -2.62, 2.2, 0, 0), STEEL, M.Metal) -- claw
+	p(m, V(0.04, 0.1, 0.24), at(0, 0.66, -2.5, 2.2, 0, 0), BLACK) -- claw slot
+	for i = 0, 3 do p(m, V(0.2, 0.2, 0.04), at(0, 0, -1.2 - i * 0.35), worn(c, 0.5), M.Metal) end -- chipped paint
+	mark(m, "Tip", at(0, 0.5, -2.8))
+end
+function B.pipe(m, c)
+	local g = worn(c, 0.12)
+	p(m, V(0.34, 0.34, 0.9), at(0, 0, 0.05), TAPE)
+	p(m, V(0.28, 0.28, 2.4), at(0, 0, -1.6), g, M.Metal)
+	for i = 0, 2 do p(m, V(0.32, 0.32, 0.06), at(0, 0, -2.5 - i * 0.12), worn(c, 0.4), M.Metal) end -- threads
+	p(m, V(0.44, 0.44, 0.5), at(0, 0, -2.95), g, M.Metal) -- elbow
+	p(m, V(0.3, 0.55, 0.3), at(0, 0.38, -2.95), g, M.Metal)
+	p(m, V(0.36, 0.1, 0.36), at(0, 0.68, -2.95), worn(c, 0.4), M.Metal)
+	mark(m, "Tip", at(0, 0.3, -3))
+end
+function B.shovel(m, c)
+	local wood = worn(WOOD, 0.1)
+	p(m, V(0.2, 0.22, 3.1), at(0, 0, -1.15), wood)
+	p(m, V(0.62, 0.14, 0.14), at(0, 0, 0.55), BLACK) -- D handle
+	for _, s in { -1, 1 } do p(m, V(0.12, 0.12, 0.42), at(s * 0.25, 0, 0.32, 0, -s * 0.5, 0), BLACK) end
+	p(m, V(0.3, 0.28, 0.5), at(0, 0, -2.85), worn(c, 0.2), M.Metal) -- collar
+	local blade = worn(c, 0.05)
+	p(m, V(0.95, 0.08, 1.1), at(0, -0.04, -3.6), blade, M.Metal)
+	p(m, V(0.7, 0.08, 0.25), at(0, -0.04, -4.25), blade, M.Metal)
+	p(m, V(0.12, 0.16, 1.1), at(0.47, 0.02, -3.6), blade, M.Metal)
+	p(m, V(0.12, 0.16, 1.1), at(-0.47, 0.02, -3.6), blade, M.Metal)
+	p(m, V(0.5, 0.09, 0.4), at(0.1, -0.03, -3.5), RUST) -- rust patch
+	mark(m, "LeftGrip", at(0, 0, -1.7))
+	mark(m, "Tip", at(0, 0, -4.2))
+end
+function B.golf(m, c)
+	p(m, V(0.18, 0.18, 0.9), at(0, 0, 0.05), BLACK)
+	p(m, V(0.2, 0.2, 0.08), at(0, 0, 0.52), DARK)
+	p(m, V(0.1, 0.1, 2.7), at(0, 0, -1.75), worn(c, 0.05), M.Metal)
+	p(m, V(0.14, 0.14, 0.3), at(0, 0, -3.15), DARK)
+	p(m, V(0.24, 0.32, 0.62), at(0.12, -0.14, -3.32, 0, 0.1, 0), worn(c, 0.15), M.Metal) -- iron head
+	p(m, V(0.02, 0.24, 0.5), at(0.25, -0.14, -3.32), Color3.fromRGB(110, 110, 112)) -- grooves face
+	mark(m, "Tip", at(0.12, -0.15, -3.3))
+end
+function B.machete(m, c)
+	p(m, V(0.2, 0.3, 0.95), at(0, -0.02, 0.05), BLACK)
+	for i = 0, 1 do p(m, V(0.22, 0.08, 0.08), at(0, -0.02, 0.3 - i * 0.5), STEEL, M.Metal) end -- rivets
+	p(m, V(0.22, 0.4, 0.1), at(0, 0.02, -0.45), DARK)
+	local s = worn(c, 0.12)
+	p(m, V(0.06, 0.42, 1.2), at(0, 0.02, -1.1), s, M.Metal)
+	p(m, V(0.06, 0.54, 1.0), at(0, 0.08, -2.2), s, M.Metal)
+	p(m, V(0.06, 0.4, 0.3), at(0, 0.2, -2.85), s, M.Metal)
+	p(m, V(0.06, 0.2, 0.2), at(0, 0.32, -3.05), s, M.Metal)
+	p(m, V(0.07, 0.1, 2.1), at(0, -0.15, -1.75), Color3.fromRGB(215, 215, 210), M.Metal) -- edge
+	p(m, V(0.07, 0.12, 0.5), at(0, 0.1, -1.6), Color3.fromRGB(120, 20, 16)) -- stain
+	mark(m, "Tip", at(0, 0.2, -3))
+end
+function B.katana(m, c, glow)
+	p(m, V(0.2, 0.24, 1.15), at(0, 0, 0.1), BLACK)
+	for i = 0, 3 do p(m, V(0.22, 0.1, 0.1), at(0, 0.08, 0.5 - i * 0.27, 0, 0, 0.78), Color3.fromRGB(150, 30, 26)) end -- wrap diamonds
+	p(m, V(0.24, 0.28, 0.12), at(0, 0, -0.5), GOLD, M.Metal)
+	p(m, V(0.5, 0.56, 0.1), at(0, 0.02, -0.6), DARK, M.Metal) -- tsuba
+	p(m, V(0.12, 0.26, 0.18), at(0, 0.04, -0.75), GOLD, M.Metal)
+	local s = worn(c, 0.05)
+	p(m, V(0.05, 0.22, 2.5), at(0, 0.04, -2.05), s, M.Metal)
+	p(m, V(0.05, 0.18, 0.5), at(0, 0.08, -3.5, -0.12, 0, 0), s, M.Metal)
+	p(m, V(0.05, 0.1, 0.25), at(0, 0.15, -3.8, -0.4, 0, 0), s, M.Metal)
+	local edge = p(m, V(0.06, 0.06, 2.9), at(0, 0.17, -2.3), glow and glow or Color3.fromRGB(235, 235, 240), glow and M.Neon or M.Metal)
+	if glow then moving(m, edge, "flicker") end
+	mark(m, "Tip", at(0, 0.1, -3.8))
+end
+function B.axe(m, c)
+	local wood = worn(WOOD, 0.05)
+	p(m, V(0.2, 0.26, 3.1), at(0, 0, -1.15), wood)
+	p(m, V(0.24, 0.3, 0.2), at(0, 0, 0.45), BLACK)
+	p(m, V(0.26, 0.4, 0.5), at(0, 0.05, -2.75), DARK, M.Metal) -- eye
+	local red = worn(c, 0.1)
+	p(m, V(0.14, 0.7, 0.42), at(0, 0.5, -2.75), red, M.Metal)
+	p(m, V(0.14, 0.4, 0.62), at(0, 0.95, -2.75), red, M.Metal)
+	p(m, V(0.15, 0.14, 0.8), at(0, 1.18, -2.75), Color3.fromRGB(205, 205, 200), M.Metal) -- edge
+	p(m, V(0.14, 0.5, 0.2), at(0, -0.4, -2.75), red, M.Metal) -- back spike
+	p(m, V(0.1, 0.2, 0.12), at(0, -0.72, -2.75), Color3.fromRGB(190, 190, 186), M.Metal)
+	mark(m, "LeftGrip", at(0, 0, -1.45))
+	mark(m, "Tip", at(0, 1.1, -2.75))
+end
+function B.sledge(m, c)
+	local wood = worn(WOOD, 0.08)
+	p(m, V(0.22, 0.24, 3.2), at(0, 0, -1.2), wood)
+	p(m, V(0.26, 0.28, 0.7), at(0, 0, 0.2), BLACK)
+	local h = worn(c, 0.05)
+	p(m, V(0.62, 1.4, 0.62), at(0, 0, -3.05), h, M.Metal)
+	p(m, V(0.7, 0.14, 0.7), at(0, 0.72, -3.05), worn(c, 0.4), M.Metal)
+	p(m, V(0.7, 0.14, 0.7), at(0, -0.72, -3.05), worn(c, 0.4), M.Metal)
+	mark(m, "LeftGrip", at(0, 0, -1.6))
+	mark(m, "Tip", at(0, 0.7, -3.05))
+end
+function B.warhammer(m, c, glow)
+	B.sledge(m, c)
+	for _, y in { -0.35, 0.35 } do p(m, V(0.66, 0.12, 0.66), at(0, y, -3.05), GOLD, M.Metal) end
+	local core = p(m, V(0.66, 0.4, 0.66), at(0, 0, -3.05), glow or Color3.fromRGB(200, 230, 255), M.Neon)
+	moving(m, core, "flicker")
+	for i = 0, 2 do -- crackling bolts
+		local b = p(m, V(0.06, 0.5, 0.06), at(0.36, -0.4 + i * 0.4, -3.05, 0, 0, 0.6 * (i - 1)), Color3.fromRGB(220, 240, 255), M.Neon)
+		moving(m, b, "flicker")
+	end
+	p(m, V(0.3, 0.3, 0.3), at(0, 0, -3.55), GOLD, M.Metal) -- top spike
+end
+function B.pickaxe(m, c, glow)
+	local wood = worn(WOOD, 0.05)
+	p(m, V(0.2, 0.24, 3.0), at(0, 0, -1.1), wood)
+	p(m, V(0.24, 0.28, 0.5), at(0, 0, 0.3), BLACK)
+	p(m, V(0.28, 0.34, 0.34), at(0, 0, -2.75), DARK, M.Metal)
+	local ice = c
+	for _, s in { -1, 1 } do
+		p(m, V(0.18, 0.5, 0.24), at(0, s * 0.38, -2.72, s * 0.15, 0, 0), ice, M.Ice)
+		p(m, V(0.16, 0.42, 0.2), at(0, s * 0.78, -2.6, s * 0.4, 0, 0), ice, M.Ice)
+		p(m, V(0.12, 0.3, 0.14), at(0, s * 1.08, -2.42, s * 0.7, 0, 0), Color3.fromRGB(230, 245, 255), M.Ice)
+	end
+	if glow then
+		for i = 0, 2 do
+			local s = p(m, V(0.12, 0.3, 0.12), at(0.12, 0.2 * (i - 1), -2.3 - i * 0.12, 0.3 * i, 0, 0.4), glow, M.Neon)
+			moving(m, s, "flicker")
+		end
+	end
+	mark(m, "LeftGrip", at(0, 0, -1.4))
+	mark(m, "Tip", at(0, 1.05, -2.45))
+end
+function B.cross(m, c, glow)
+	local g = worn(c, 0.1)
+	p(m, V(0.22, 0.22, 0.7), at(0, 0, 0.1), DARK) -- wrapped base
+	p(m, V(0.26, 0.26, 2.3), at(0, 0, -1.3), g, M.Metal)
+	p(m, V(1.3, 0.26, 0.26), at(0, 0, -1.85), g, M.Metal)
+	for _, x in { -0.68, 0.68 } do p(m, V(0.16, 0.36, 0.36), at(x, 0, -1.85), worn(c, 0.3), M.Metal) end
+	p(m, V(0.36, 0.36, 0.16), at(0, 0, -2.5), worn(c, 0.3), M.Metal)
+	local gem = p(m, V(0.18, 0.3, 0.18), at(0, 0.1, -1.85), glow or Color3.fromRGB(255, 245, 200), M.Neon)
+	moving(m, gem, "flicker")
+	mark(m, "Tip", at(0, 0, -2.4))
+end
+
 -- Chainsaw: blocky PS2-era build (flat colours, chunky blocks, no smooth meshes), like the hands.
 -- Right hand = rear handle (origin), left hand = the wrap-around top handle (part "LeftGrip").
 -- The chain is 28 teeth in a folder "Chain" that ItemModels.animate slides around the bar.
@@ -97,6 +296,7 @@ function B.chainsaw(m, c)
 	p(m, Vector3.new(1.0, 0.5, 0.1), CFrame.new(-0.08, 1.05, -1.86), grey, P) -- hand guard
 	local lg = p(m, Vector3.one * 0.2, CFrame.new(-0.3, 1.12, -1.6), black, P)
 	lg.Name = "LeftGrip"; lg.Transparency = 1
+	mark(m, "Tip", CFrame.new(SAW_X, SAW_BAR_Y, SAW_Z1 - 0.2))
 	-- guide bar: flat plate with a stepped (low-poly) nose
 	local len = SAW_Z0 - SAW_Z1
 	p(m, Vector3.new(0.12, SAW_BAR_H, len), CFrame.new(SAW_X, SAW_BAR_Y, (SAW_Z0 + SAW_Z1) / 2), bar, M.Metal)
@@ -110,88 +310,486 @@ function B.chainsaw(m, c)
 		t.Name = "Tooth"; t:SetAttribute("T", i / SAW_TEETH); t.Parent = chain
 	end
 end
-function B.nailgun(m, c) p(m, Vector3.new(0.6, 0.7, 1.8), CFrame.new(0, 0.2, -0.8), c); p(m, Vector3.new(0.4, 0.9, 0.4), CFrame.new(0, -0.4, 0), DARK) ; p(m, Vector3.new(0.3, 0.3, 0.6), CFrame.new(0, 0.1, -1.9), DARK, M.Metal) end
-function B.taser(m, c) p(m, Vector3.new(0.45, 0.5, 1.2), CFrame.new(0, 0.15, -0.6), c); p(m, Vector3.new(0.35, 0.8, 0.35), CFrame.new(0, -0.35, 0), DARK) end
-function B.pistol(m, c) p(m, Vector3.new(0.3, 0.35, 1.4), CFrame.new(0, 0.2, -0.65), c, M.Metal); p(m, Vector3.new(0.28, 0.8, 0.35), CFrame.new(0, -0.3, 0), DARK) ; stick(m, 0.6, 0.18, c, M.Metal, -1.3) end
-function B.shotgun(m, c) p(m, Vector3.new(0.35, 0.5, 1.6), CFrame.new(0, -0.1, 0.4), c, M.Wood); stick(m, 3.2, 0.22, DARK, M.Metal, -0.4); stick(m, 1.2, 0.3, c, M.Wood, -1.0) end
-function B.cannon(m, c) stick(m, 3, 0.6, c, M.SmoothPlastic, 0.4); p(m, Vector3.new(0.3, 0.8, 0.3), CFrame.new(0, -0.5, 0), DARK) end
-function B.crossbow(m, c) p(m, Vector3.new(0.3, 0.3, 2.2), CFrame.new(0, 0, -0.9), c, M.Wood); p(m, Vector3.new(2.2, 0.15, 0.2), CFrame.new(0, 0, -1.8), DARK, M.Wood); p(m, Vector3.new(0.12, 0.12, 1.8), CFrame.new(0, 0.18, -1.2), STEEL, M.Metal) end
-function B.harpoon(m, c) stick(m, 2.6, 0.35, c, M.Metal, 0.4); p(m, Vector3.new(0.12, 0.12, 1.4), CFrame.new(0, 0, -2.8), STEEL, M.Metal); p(m, Vector3.new(0.5, 0.15, 0.3), CFrame.new(0, 0, -3.4), STEEL, M.Metal) end
-function B.brick(m, c) p(m, Vector3.new(0.9, 0.5, 1.6), CFrame.new(0, 0, -0.6), c, M.Brick) end
-function B.knife(m, c) stick(m, 0.6, 0.14, DARK, M.Fabric, 0.2); p(m, Vector3.new(0.04, 0.22, 0.9), CFrame.new(0, 0, -0.8), c, M.Metal) end
-function B.firecracker(m, c) for i = 0, 2 do p(m, Vector3.new(0.9, 0.22, 0.22), CFrame.new(0.25 * i - 0.25, 0, -0.5) * UPC, c, M.SmoothPlastic, CYL) end end
-function B.grenade(m, c) p(m, Vector3.new(0.8, 0.95, 0.8), CFrame.new(0, 0, -0.5), c, M.Metal, BALL); p(m, Vector3.new(0.3, 0.3, 0.3), CFrame.new(0, 0.55, -0.5), DARK, M.Metal) end
-function B.bottle(m, c) p(m, Vector3.new(1.1, 0.7, 0.7), CFrame.new(0, 0, -0.5) * UPC, c, M.Glass, CYL); p(m, Vector3.new(0.5, 0.3, 0.3), CFrame.new(0, 0.75, -0.5) * UPC, c, M.Glass, CYL); p(m, Vector3.new(0.15, 0.6, 0.15), CFrame.new(0, 1.2, -0.5), Color3.fromRGB(230, 220, 200), M.Fabric) end
-function B.pouch(m, c) p(m, Vector3.new(0.9, 0.9, 0.9), CFrame.new(0, 0, -0.5), c, M.Fabric, BALL); p(m, Vector3.new(0.35, 0.2, 0.35), CFrame.new(0, 0.5, -0.5), Color3.fromRGB(90, 70, 50), M.Fabric) end
-function B.ball(m, c) p(m, Vector3.one * 1.3, CFrame.new(0, 0, -0.6), c, M.SmoothPlastic, BALL) end
-function B.pipebomb(m, c) stick(m, 1.2, 0.4, c, M.Metal, 0); p(m, Vector3.new(0.05, 0.4, 0.05), CFrame.new(0, 0.3, -0.6), Color3.fromRGB(200, 40, 30)) end
-function B.doll(m, c) p(m, Vector3.new(0.5, 0.7, 0.35), CFrame.new(0, 0, -0.5), c, M.Fabric); p(m, Vector3.one * 0.5, CFrame.new(0, 0.55, -0.5), c, M.Fabric, BALL); p(m, Vector3.new(0.08, 0.6, 0.08), CFrame.new(0.1, 0.1, -0.7) * CFrame.Angles(0.6, 0, 0.3), STEEL, M.Metal) end
-function B.blower(m, c) p(m, Vector3.new(0.9, 0.9, 1.2), CFrame.new(0, 0, 0), c); stick(m, 2.2, 0.4, c, M.SmoothPlastic, -0.6) end
-function B.can(m, c) p(m, Vector3.new(1, 0.5, 0.5), CFrame.new(0, 0, -0.4) * UPC, c, M.Metal, CYL); p(m, Vector3.new(0.15, 0.2, 0.2), CFrame.new(0, 0.55, -0.4) * UPC, DARK, M.Metal, CYL) end
-function B.extinguisher(m, c) p(m, Vector3.new(1.6, 0.8, 0.8), CFrame.new(0, -0.2, 0.2) * UPC, c, M.Metal, CYL); stick(m, 1.2, 0.18, DARK, M.Rubber, -0.4) end
-function B.flashlight(m, c) stick(m, 1.6, 0.35, DARK, M.Metal, 0.4); p(m, Vector3.new(0.3, 0.55, 0.55), CFrame.new(0, 0, -1.3) * ALONG, c, M.Neon, CYL) end
-function B.vacuum(m, c) p(m, Vector3.new(1, 1, 1.2), CFrame.new(0, -0.1, 0.2), c); stick(m, 2.4, 0.35, DARK, M.SmoothPlastic, -0.4); p(m, Vector3.new(0.8, 0.2, 0.4), CFrame.new(0, 0, -2.9), DARK) end
-function B.flamethrower(m, c) p(m, Vector3.new(0.6, 0.6, 1.4), CFrame.new(0, 0, 0), c, M.Metal); stick(m, 2.2, 0.25, DARK, M.Metal, -0.7); p(m, Vector3.new(0.2, 0.2, 0.2), CFrame.new(0, 0, -2.95), Color3.fromRGB(255, 120, 30), M.Neon) end
-function B.medkit(m, c) p(m, Vector3.new(1.2, 0.8, 0.5), CFrame.new(0, 0, -0.4), c); p(m, Vector3.new(0.5, 0.15, 0.52), CFrame.new(0, 0, -0.4), Color3.fromRGB(200, 20, 20)); p(m, Vector3.new(0.15, 0.5, 0.52), CFrame.new(0, 0, -0.4), Color3.fromRGB(200, 20, 20)) end
-function B.pills(m, c) p(m, Vector3.new(0.9, 0.45, 0.45), CFrame.new(0, 0, -0.4) * UPC, c, M.SmoothPlastic, CYL); p(m, Vector3.new(0.2, 0.5, 0.5), CFrame.new(0, 0.5, -0.4) * UPC, Color3.fromRGB(240, 240, 235), M.SmoothPlastic, CYL) end
-function B.syringe(m, c) stick(m, 1.1, 0.25, c, M.Glass, 0.2); stick(m, 0.6, 0.05, STEEL, M.Metal, -0.9) end
-function B.vest(m, c) p(m, Vector3.new(1.4, 1.5, 0.4), CFrame.new(0, 0, -0.4), c, M.Fabric) end
-function B.talisman(m, c) p(m, Vector3.new(0.6, 1.3, 0.05), CFrame.new(0, 0.2, -0.5), c, M.SmoothPlastic); p(m, Vector3.new(0.1, 0.8, 0.06), CFrame.new(0, 0.2, -0.5), Color3.fromRGB(170, 20, 20)) end
-function B.watch(m, c) p(m, Vector3.new(0.15, 0.8, 0.8), CFrame.new(0, 0, -0.5) * UPC, c, M.Metal, CYL); p(m, Vector3.new(0.16, 0.65, 0.65), CFrame.new(0, 0.01, -0.5) * UPC, Color3.fromRGB(235, 230, 210), M.SmoothPlastic, CYL) end
-function B.beartrap(m, c)
-	p(m, Vector3.new(0.15, 1.6, 1.6), CFrame.new(0, 0, -0.6) * UPC, c, M.Metal, CYL)
-	for k = 0, 5 do p(m, Vector3.new(0.1, 0.35, 0.1), CFrame.new(0, 0, -0.6) * CFrame.Angles(0, k * math.pi / 3, 0) * CFrame.new(0, 0.2, 0.7), STEEL, M.Metal) end
+
+-- GUNS (the hand holds the grip at the origin; barrel above it, toward -Z) -----------------------------
+-- revolver / flare gun (same frame, the colour decides): grip, frame, cylinder, barrel, hammer that kicks
+function B.pistol(m, c, _glow, id)
+	local flare = id == "FlareGun"
+	local body = worn(c, 0.1)
+	local grip = flare and BLACK or Color3.fromRGB(96, 62, 40)
+	p(m, V(0.26, 0.66, 0.36), at(0, -0.18, 0.06, -0.25, 0, 0), grip)
+	p(m, V(0.28, 0.08, 0.38), at(0, -0.5, 0.15, -0.25, 0, 0), DARK)
+	p(m, V(0.28, 0.32, 0.62), at(0, 0.24, -0.2), body, M.Metal) -- frame
+	p(m, V(0.1, 0.22, 0.06), at(0, -0.04, -0.22), DARK, M.Metal) -- trigger
+	p(m, V(0.12, 0.06, 0.4), at(0, -0.17, -0.25), body, M.Metal) -- guard
+	if flare then
+		p(m, V(0.42, 0.42, 1.0), at(0, 0.32, -0.95), body)
+		p(m, V(0.46, 0.46, 0.14), at(0, 0.32, -1.45), worn(c, 0.35))
+		p(m, V(0.24, 0.24, 0.05), at(0, 0.32, -1.53), BLACK)
+		p(m, V(0.3, 0.12, 0.4), at(0, 0.56, -0.3), DARK)
+	else
+		p(m, V(0.38, 0.38, 0.44), at(0, 0.28, -0.52), Color3.fromRGB(120, 120, 124), M.Metal) -- cylinder
+		for _, y in { 0.12, 0.44 } do p(m, V(0.4, 0.05, 0.36), at(0, y, -0.52), DARK, M.Metal) end
+		p(m, V(0.2, 0.22, 1.0), at(0, 0.33, -1.2), body, M.Metal)
+		p(m, V(0.24, 0.1, 1.0), at(0, 0.2, -1.2), worn(c, 0.3), M.Metal) -- ejector rod housing
+		p(m, V(0.06, 0.1, 0.08), at(0, 0.48, -1.62), body, M.Metal) -- sight
+		p(m, V(0.12, 0.12, 0.05), at(0, 0.33, -1.71), BLACK)
+	end
+	local ham = p(m, V(0.1, 0.2, 0.16), at(0, 0.44, 0.08, -0.3, 0, 0), DARK, M.Metal)
+	moving(m, ham, "kick", V(0, -0.06, 0.12))
+	mark(m, "Tip", at(0, flare and 0.32 or 0.33, flare and -1.55 or -1.75))
+end
+function B.nailgun(m, c)
+	local y = worn(c, 0.12)
+	p(m, V(0.3, 0.66, 0.36), at(0, -0.15, 0.02, -0.2, 0, 0), BLACK)
+	p(m, V(0.44, 0.6, 1.3), at(0, 0.38, -0.4), y) -- body
+	p(m, V(0.46, 0.2, 0.9), at(0, 0.72, -0.3), DARK) -- top cap
+	p(m, V(0.18, 0.34, 0.5), at(0, 0.3, 0.42), BLACK) -- air fitting
+	local nose = p(m, V(0.24, 0.3, 0.5), at(0, 0.2, -1.25), DARK, M.Metal)
+	moving(m, nose, "kick", V(0, 0, 0.18))
+	p(m, V(0.16, 0.2, 1.1), at(0, -0.1, -0.85, -0.35, 0, 0), STEEL, M.Metal) -- nail strip
+	p(m, V(0.12, 0.12, 0.12), at(0, 0.2, -1.52), Color3.fromRGB(200, 40, 30)) -- safety tip
+	mark(m, "Tip", at(0, 0.2, -1.55))
+end
+function B.taser(m, c)
+	p(m, V(0.28, 0.62, 0.34), at(0, -0.15, 0.02, -0.2, 0, 0), BLACK)
+	p(m, V(0.34, 0.42, 0.95), at(0, 0.3, -0.35), worn(c, 0.1))
+	p(m, V(0.36, 0.1, 0.8), at(0, 0.54, -0.3), BLACK)
+	p(m, V(0.38, 0.38, 0.26), at(0, 0.3, -0.95), DARK) -- cartridge
+	for _, x in { -0.09, 0.09 } do
+		local e = p(m, V(0.08, 0.08, 0.06), at(x, 0.3, -1.1), Color3.fromRGB(120, 200, 255), M.Neon)
+		moving(m, e, "flicker")
+	end
+	p(m, V(0.06, 0.06, 0.06), at(0, 0.56, 0.05), Color3.fromRGB(80, 255, 80), M.Neon) -- ready light
+	mark(m, "Tip", at(0, 0.3, -1.12))
+end
+-- pump shotgun: stock behind the hand, receiver, barrel + tube, pump that slides back on each shot
+function B.shotgun(m, c)
+	local wood = worn(c, 0.08)
+	p(m, V(0.28, 0.42, 1.1), at(0, -0.05, 0.75, 0.12, 0, 0), wood) -- stock
+	p(m, V(0.3, 0.5, 0.12), at(0, -0.12, 1.32, 0.12, 0, 0), BLACK) -- butt pad
+	p(m, V(0.24, 0.3, 0.3), at(0, -0.06, 0.12), wood) -- wrist
+	p(m, V(0.3, 0.42, 0.9), at(0, 0.1, -0.45), DARK, M.Metal) -- receiver
+	p(m, V(0.06, 0.2, 0.3), at(0.16, 0.1, -0.4), Color3.fromRGB(70, 70, 72), M.Metal) -- ejection port
+	p(m, V(0.18, 0.18, 2.4), at(0, 0.2, -2.05), Color3.fromRGB(48, 48, 50), M.Metal)
+	p(m, V(0.16, 0.16, 1.9), at(0, -0.02, -1.8), Color3.fromRGB(58, 58, 60), M.Metal)
+	p(m, V(0.08, 0.08, 0.08), at(0, 0.32, -3.15), STEEL, M.Metal) -- bead sight
+	p(m, V(0.1, 0.18, 0.06), at(0, -0.14, -0.3), DARK, M.Metal) -- trigger
+	local pump = p(m, V(0.3, 0.28, 0.8), at(0, -0.04, -1.6), wood)
+	moving(m, pump, "kick", V(0, 0, 0.45))
+	for i = 0, 3 do
+		local r = p(m, V(0.32, 0.04, 0.06), at(0, 0.08, -1.32 - i * 0.18), worn(c, 0.4))
+		moving(m, r, "kick", V(0, 0, 0.45))
+	end
+	local lg = mark(m, "LeftGrip", at(0, -0.06, -1.6))
+	moving(m, lg, "kick", V(0, 0, 0.45))
+	mark(m, "Tip", at(0, 0.2, -3.25))
+end
+-- potato cannon: PVC chamber, reducer, long barrel, tape, igniter
+function B.cannon(m, c)
+	local pvc = Color3.fromRGB(128, 124, 112)
+	p(m, V(0.3, 0.66, 0.34), at(0, -0.2, 0.05, -0.2, 0, 0), BLACK)
+	p(m, V(0.8, 0.8, 1.2), at(0, 0.5, 0.25), pvc) -- chamber
+	p(m, V(0.86, 0.86, 0.16), at(0, 0.5, 0.92), worn(pvc, 0.3)) -- end cap
+	p(m, V(0.62, 0.62, 0.3), at(0, 0.5, -0.5), worn(pvc, 0.2)) -- reducer
+	p(m, V(0.46, 0.46, 2.5), at(0, 0.5, -1.85), pvc)
+	p(m, V(0.5, 0.5, 0.12), at(0, 0.5, -3.1), worn(pvc, 0.3))
+	p(m, V(0.34, 0.34, 0.04), at(0, 0.5, -3.17), BLACK)
+	for _, z in { -1.0, -2.4 } do p(m, V(0.5, 0.5, 0.2), at(0, 0.5, z), worn(c, 0.1)) end -- duct tape
+	p(m, V(0.2, 0.16, 0.2), at(0, 0.98, 0.35), Color3.fromRGB(200, 40, 30)) -- igniter button
+	p(m, V(0.22, 0.12, 0.6), at(0, 0.05, -1.5), BLACK) -- front handle
+	mark(m, "LeftGrip", at(0, -0.05, -1.5))
+	mark(m, "Tip", at(0, 0.5, -3.2))
+end
+-- crossbow with a stake loaded; the string kicks forward on each shot
+function B.crossbow(m, c)
+	local wood = worn(c, 0.08)
+	p(m, V(0.26, 0.44, 0.9), at(0, -0.02, 0.6, 0.1, 0, 0), wood) -- butt
+	p(m, V(0.24, 0.3, 0.3), at(0, -0.05, 0.05), wood)
+	p(m, V(0.26, 0.26, 2.1), at(0, 0.12, -1.05), wood) -- tiller
+	p(m, V(0.3, 0.12, 0.5), at(0, 0.3, -0.2), DARK, M.Metal) -- latch
+	p(m, V(0.3, 0.3, 0.3), at(0, 0.15, -2.1), DARK, M.Metal) -- limb mount
+	for _, s in { -1, 1 } do
+		p(m, V(0.7, 0.12, 0.18), at(s * 0.45, 0.2, -2.1, 0, s * 0.15, 0), DARK, M.Metal)
+		p(m, V(0.6, 0.12, 0.16), at(s * 1.0, 0.2, -1.92, 0, s * 0.5, 0), DARK, M.Metal)
+	end
+	for _, s in { -1, 1 } do
+		local st = p(m, V(1.2, 0.04, 0.04), at(s * 0.6, 0.27, -1.3, 0, s * -0.55, 0), Color3.fromRGB(210, 205, 190))
+		moving(m, st, "kick", V(0, 0, -0.35))
+	end
+	p(m, V(0.12, 0.12, 1.7), at(0, 0.36, -1.35), Color3.fromRGB(150, 110, 70)) -- stake
+	p(m, V(0.08, 0.08, 0.26), at(0, 0.36, -2.3), STEEL, M.Metal)
+	mark(m, "LeftGrip", at(0, -0.05, -1.4))
+	mark(m, "Tip", at(0, 0.36, -2.4))
+end
+-- harpoon gun: steel tube with the spear sticking out, pistol grip, front handle
+function B.harpoon(m, c)
+	local g = worn(c, 0.1)
+	p(m, V(0.28, 0.62, 0.34), at(0, -0.15, 0.05, -0.2, 0, 0), BLACK)
+	p(m, V(0.34, 0.34, 0.8), at(0, 0.2, 0.6), g, M.Metal) -- stock tube
+	p(m, V(0.42, 0.42, 2.4), at(0, 0.28, -0.95), g, M.Metal)
+	for _, z in { 0.1, -1.0, -2.1 } do p(m, V(0.46, 0.46, 0.12), at(0, 0.28, z), DARK, M.Metal) end
+	p(m, V(0.1, 0.1, 1.2), at(0, 0.28, -2.7), STEEL, M.Metal) -- spear
+	p(m, V(0.24, 0.2, 0.3), at(0, 0.28, -3.35), STEEL, M.Metal)
+	p(m, V(0.12, 0.12, 0.2), at(0, 0.28, -3.55), Color3.fromRGB(200, 200, 196), M.Metal)
+	for _, s in { -1, 1 } do p(m, V(0.06, 0.06, 0.26), at(s * 0.12, 0.28, -3.15, 0, s * 0.6, 0), STEEL, M.Metal) end -- barbs
+	p(m, V(0.2, 0.5, 0.24), at(0, -0.12, -1.4), BLACK) -- front grip
+	p(m, V(0.06, 0.06, 2.0), at(0.24, 0.1, -1.0), Color3.fromRGB(230, 220, 180)) -- rope
+	mark(m, "LeftGrip", at(0, -0.15, -1.4))
+	mark(m, "Tip", at(0, 0.28, -3.6))
 end
 
--- shapes rebuilt in the blocky PS2 style: these ignore the old AI meshes in ReplicatedStorage.ItemMeshes
-local BLOCKY = { chainsaw = true }
+-- THROWABLES (held in the fist: the object sits just in front of the origin) -------------------------
+function B.brick(m, c)
+	local r = worn(c, 0.1)
+	p(m, V(0.62, 0.42, 1.0), at(0, 0.1, -0.45), r)
+	p(m, V(0.64, 0.06, 1.02), at(0, 0.0, -0.45), Color3.fromRGB(150, 140, 120)) -- mortar line
+	for _, z in { -0.2, -0.45, -0.7 } do p(m, V(0.18, 0.02, 0.16), at(0, 0.32, z), Color3.fromRGB(50, 26, 20)) end -- holes
+	p(m, V(0.2, 0.2, 0.2), at(0.24, 0.24, -0.88), worn(c, 0.5)) -- chipped corner
+	mark(m, "Tip", at(0, 0.1, -0.95))
+end
+function B.knife(m, c)
+	for i = -1, 1 do
+		local k = at(i * 0.1, 0.05, -0.1, 0, i * 0.25, 0)
+		p(m, V(0.1, 0.14, 0.45), k * at(0, 0, 0.1), BLACK)
+		p(m, V(0.14, 0.18, 0.05), k * at(0, 0, -0.14), DARK, M.Metal)
+		p(m, V(0.03, 0.16, 0.55), k * at(0, 0.01, -0.45), worn(c, 0.05), M.Metal)
+		p(m, V(0.03, 0.08, 0.15), k * at(0, 0.03, -0.78), worn(c, 0.05), M.Metal)
+	end
+	mark(m, "Tip", at(0, 0.05, -0.8))
+end
+function B.firecracker(m, c)
+	for i = 0, 4 do
+		local x, z = (i % 3 - 1) * 0.17, (i < 3 and -0.3 or -0.47)
+		p(m, V(0.16, 0.85, 0.16), at(x, 0.2, z), worn(c, i % 2 == 0 and 0.05 or 0.2))
+		p(m, V(0.17, 0.08, 0.17), at(x, 0.6, z), Color3.fromRGB(230, 200, 60))
+		p(m, V(0.03, 0.22, 0.03), at(x, 0.72, z, 0, 0, 0.3), Color3.fromRGB(220, 220, 210)) -- fuse
+	end
+	p(m, V(0.56, 0.2, 0.4), at(0, 0.1, -0.38), Color3.fromRGB(230, 220, 190)) -- paper band
+	local spark = p(m, V(0.1, 0.1, 0.1), at(-0.05, 0.86, -0.3), Color3.fromRGB(255, 200, 80), M.Neon)
+	moving(m, spark, "flicker")
+	mark(m, "Tip", at(0, 0.3, -0.5))
+end
+function B.grenade(m, c, glow, id)
+	local holy = id == "HolyWaterGrenade"
+	local g = worn(c, holy and 0 or 0.15)
+	local z = -0.4
+	p(m, V(0.6, 0.72, 0.6), at(0, 0.18, z), g, holy and M.Glass or P)
+	p(m, V(0.7, 0.5, 0.5), at(0, 0.18, z), g, holy and M.Glass or P)
+	p(m, V(0.5, 0.5, 0.7), at(0, 0.18, z), g, holy and M.Glass or P)
+	if not holy then for _, y in { 0.0, 0.36 } do p(m, V(0.72, 0.05, 0.72), at(0, y, z), worn(c, 0.4)) end end
+	p(m, V(0.3, 0.2, 0.3), at(0, 0.62, z), DARK, M.Metal) -- fuze
+	p(m, V(0.1, 0.5, 0.16), at(0.3, 0.42, z, 0, 0, -0.2), STEEL, M.Metal) -- spoon
+	p(m, V(0.04, 0.22, 0.22), at(-0.2, 0.68, z), STEEL, M.Metal) -- pin ring
+	if holy then
+		local cr = p(m, V(0.06, 0.4, 0.1), at(0, 0.2, z - 0.36), glow or Color3.fromRGB(255, 240, 170), M.Neon)
+		local cr2 = p(m, V(0.06, 0.1, 0.3), at(0, 0.28, z - 0.36), glow or Color3.fromRGB(255, 240, 170), M.Neon)
+		moving(m, cr, "flicker"); moving(m, cr2, "flicker")
+		p(m, V(0.4, 0.5, 0.4), at(0, 0.15, z), Color3.fromRGB(180, 210, 255), M.Neon).Transparency = 0.5 -- water inside
+	else -- stink fumes
+		for i = 0, 1 do
+			local f = p(m, V(0.2, 0.2, 0.2), at(0.1 - i * 0.2, 0.85 + i * 0.12, z), Color3.fromRGB(140, 170, 60), M.Neon)
+			f.Transparency = 0.5; moving(m, f, "flicker")
+		end
+	end
+	mark(m, "Tip", at(0, 0.2, -0.7))
+end
+function B.bottle(m, c)
+	local glass = p(m, V(0.46, 0.8, 0.46), at(0, 0.25, -0.38), c, M.Glass)
+	glass.Transparency = 0.25
+	p(m, V(0.38, 0.4, 0.38), at(0, 0.12, -0.38), Color3.fromRGB(170, 120, 40)).Transparency = 0.3 -- fuel inside
+	p(m, V(0.3, 0.12, 0.3), at(0, 0.72, -0.38), c, M.Glass)
+	p(m, V(0.2, 0.34, 0.2), at(0, 0.92, -0.38), c, M.Glass)
+	p(m, V(0.26, 0.26, 0.22), at(0, 1.18, -0.38, 0, 0, 0.3), Color3.fromRGB(215, 205, 180), M.Fabric) -- rag
+	p(m, V(0.12, 0.3, 0.1), at(0.12, 1.0, -0.26, 0, 0, -0.3), Color3.fromRGB(190, 180, 160), M.Fabric)
+	flame(m, at(0, 1.3, -0.38), 1)
+	mark(m, "Tip", at(0, 1.3, -0.38))
+end
+function B.pouch(m, c)
+	local cloth = worn(c, 0.12)
+	p(m, V(0.74, 0.62, 0.74), at(0, 0.18, -0.42), cloth, M.Fabric)
+	p(m, V(0.62, 0.74, 0.62), at(0, 0.18, -0.42), cloth, M.Fabric)
+	p(m, V(0.36, 0.2, 0.36), at(0, 0.6, -0.42), worn(c, 0.3), M.Fabric) -- neck
+	p(m, V(0.4, 0.06, 0.4), at(0, 0.54, -0.42), Color3.fromRGB(150, 110, 60)) -- string
+	p(m, V(0.44, 0.16, 0.36), at(0, 0.76, -0.42), cloth, M.Fabric) -- tied top
+	p(m, V(0.14, 0.14, 0.02), at(0.1, 0.2, -0.8), Color3.fromRGB(40, 40, 120)) -- stamp
+	mark(m, "Tip", at(0, 0.2, -0.8))
+end
+function B.ball(m, c)
+	local b = worn(c, 0.05)
+	local z = -0.55
+	p(m, V(1.0, 1.0, 1.0), at(0, 0.3, z), b)
+	p(m, V(1.2, 0.72, 0.72), at(0, 0.3, z), b)
+	p(m, V(0.72, 1.2, 0.72), at(0, 0.3, z), b)
+	p(m, V(0.72, 0.72, 1.2), at(0, 0.3, z), b)
+	for i, o in { V(-0.12, 0.62, 0.1), V(0.12, 0.62, 0.1), V(0, 0.62, -0.2) } do -- finger holes on top
+		p(m, V(0.14, 0.04, 0.14), at(o.X, 0.3 + o.Y * 0.98, z + o.Z), BLACK)
+	end
+	p(m, V(0.4, 0.04, 0.3), at(0.2, 0.3, z - 0.61, math.pi / 2, 0, 0), worn(c, 0.5)) -- scuff
+	mark(m, "Tip", at(0, 0.3, z - 0.6))
+end
+function B.pipebomb(m, c)
+	local g = worn(c, 0.1)
+	p(m, V(0.36, 0.36, 1.0), at(0, 0.12, -0.42), g, M.Metal)
+	for _, z in { 0.1, -0.94 } do p(m, V(0.46, 0.46, 0.18), at(0, 0.12, z), DARK, M.Metal) end
+	p(m, V(0.38, 0.38, 0.28), at(0, 0.12, -0.45), Color3.fromRGB(140, 110, 50)) -- tape
+	p(m, V(0.24, 0.12, 0.16), at(0, 0.34, -0.45), BLACK) -- timer
+	local led = p(m, V(0.06, 0.04, 0.06), at(0.06, 0.41, -0.45), Color3.fromRGB(255, 40, 30), M.Neon)
+	moving(m, led, "flicker")
+	for i, col in { Color3.fromRGB(200, 30, 30), Color3.fromRGB(40, 80, 200) } do
+		p(m, V(0.04, 0.04, 0.6), at(-0.12 + i * 0.08, 0.33, -0.2, 0.2, 0, 0), col)
+	end
+	mark(m, "Tip", at(0, 0.12, -0.95))
+end
+function B.doll(m, c)
+	local cloth = worn(c, 0.1)
+	local z = -0.35
+	p(m, V(0.42, 0.52, 0.28), at(0, 0.3, z), cloth, M.Fabric) -- body
+	p(m, V(0.46, 0.44, 0.38), at(0, 0.78, z), cloth, M.Fabric) -- head
+	for _, x in { -0.1, 0.1 } do p(m, V(0.1, 0.1, 0.04), at(x, 0.82, z - 0.2), BLACK) end -- button eyes
+	p(m, V(0.22, 0.03, 0.03), at(0, 0.66, z - 0.2), Color3.fromRGB(120, 20, 20)) -- stitched mouth
+	for _, x in { -1, 1 } do
+		p(m, V(0.14, 0.38, 0.14), at(x * 0.28, 0.32, z, 0, 0, x * 0.4), cloth, M.Fabric) -- arms
+		p(m, V(0.15, 0.36, 0.15), at(x * 0.11, -0.12, z), worn(c, 0.3), M.Fabric) -- legs
+	end
+	p(m, V(0.48, 0.12, 0.42), at(0, 1.02, z), Color3.fromRGB(40, 25, 20), M.Fabric) -- hair
+	for i = 0, 2 do -- pins
+		p(m, V(0.03, 0.03, 0.4), at(-0.1 + i * 0.1, 0.3 + i * 0.12, z - 0.2, 0.3, 0.2 * i, 0), STEEL, M.Metal)
+		p(m, V(0.07, 0.07, 0.07), at(-0.1 + i * 0.1, 0.36 + i * 0.12, z - 0.38), Color3.fromRGB(200, 30, 30))
+	end
+	mark(m, "Tip", at(0, 0.5, z - 0.3))
+end
+
+-- SPRAYS (held like a gun: grip at the origin, nozzle toward -Z) --------------------------------------
+function B.blower(m, c)
+	local o = worn(c, 0.1)
+	p(m, V(0.22, 0.24, 0.7), at(0, 0.05, 0), BLACK) -- top handle
+	for _, z in { 0.32, -0.32 } do p(m, V(0.2, 0.4, 0.14), at(0, -0.15, z), BLACK) end
+	p(m, V(0.9, 0.85, 1.1), at(0, -0.7, 0.05), o) -- engine
+	p(m, V(0.92, 0.2, 1.12), at(0, -0.3, 0.05), DARK)
+	p(m, V(0.1, 0.6, 0.6), at(-0.5, -0.7, 0.05), DARK) -- intake
+	local fan = p(m, V(0.06, 0.5, 0.12), at(-0.56, -0.7, 0.05), Color3.fromRGB(150, 150, 150))
+	moving(m, fan, "spin", V(1, 0, 0), 30)
+	p(m, V(0.42, 0.42, 0.6), at(0, -0.6, -0.75), o) -- elbow
+	p(m, V(0.36, 0.36, 1.8), at(0, -0.62, -1.9), Color3.fromRGB(60, 60, 58))
+	p(m, V(0.42, 0.3, 0.14), at(0, -0.62, -2.82), DARK)
+	mark(m, "Tip", at(0, -0.62, -2.9))
+end
+function B.can(m, c, _glow, id)
+	local drink = id == "EnergyDrink"
+	local body = worn(c, 0.08)
+	if drink then -- soda can held upright, opening on top
+		p(m, V(0.4, 0.72, 0.4), at(0, 0.25, -0.3), body, M.Metal)
+		p(m, V(0.36, 0.08, 0.36), at(0, 0.65, -0.3), STEEL, M.Metal)
+		p(m, V(0.12, 0.03, 0.18), at(0, 0.7, -0.33), Color3.fromRGB(190, 190, 186), M.Metal) -- tab
+		p(m, V(0.41, 0.22, 0.41), at(0, 0.3, -0.3), Color3.fromRGB(30, 30, 30)) -- label band
+		p(m, V(0.12, 0.2, 0.02), at(0, 0.3, -0.51, 0, 0, 0.6), Color3.fromRGB(240, 240, 60), M.Neon) -- bolt logo
+		mark(m, "Tip", at(0, 0.7, -0.3))
+	else -- pepper spray canister, nozzle pointing forward
+		p(m, V(0.3, 0.8, 0.3), at(0, 0.08, -0.15), body, M.Metal)
+		p(m, V(0.31, 0.24, 0.31), at(0, 0.0, -0.15), Color3.fromRGB(240, 230, 200)) -- label
+		p(m, V(0.26, 0.2, 0.3), at(0, 0.58, -0.18), BLACK) -- actuator
+		p(m, V(0.08, 0.08, 0.1), at(0, 0.6, -0.36), DARK)
+		mark(m, "Tip", at(0, 0.6, -0.42))
+	end
+end
+function B.extinguisher(m, c)
+	local red = worn(c, 0.08)
+	p(m, V(0.22, 0.12, 0.6), at(0, 0.08, 0.05), BLACK) -- carry handle
+	p(m, V(0.18, 0.1, 0.5), at(0, 0.24, 0.0, 0.25, 0, 0), BLACK) -- squeeze lever
+	p(m, V(0.3, 0.3, 0.36), at(0, -0.1, 0.05), DARK, M.Metal) -- valve
+	p(m, V(0.7, 1.6, 0.7), at(0, -1.05, 0.05), red, M.Metal)
+	p(m, V(0.55, 1.7, 0.55), at(0, -1.05, 0.05), red, M.Metal)
+	p(m, V(0.72, 0.4, 0.72), at(0, -0.95, 0.05), Color3.fromRGB(235, 230, 215)) -- label
+	p(m, V(0.12, 0.12, 0.12), at(0.18, 0.02, 0.15), Color3.fromRGB(240, 240, 240)) -- gauge
+	p(m, V(0.1, 0.1, 0.7), at(0, -0.2, -0.35, -0.6, 0, 0), BLACK) -- hose
+	p(m, V(0.1, 0.1, 0.8), at(0, -0.3, -0.95), BLACK)
+	p(m, V(0.22, 0.22, 0.5), at(0, -0.3, -1.5), DARK) -- horn
+	p(m, V(0.3, 0.3, 0.12), at(0, -0.3, -1.78), BLACK)
+	mark(m, "LeftGrip", at(0, -0.3, -1.25))
+	mark(m, "Tip", at(0, -0.3, -1.85))
+end
+function B.flashlight(m, c)
+	p(m, V(0.34, 0.34, 1.3), at(0, 0, -0.25), BLACK, M.Metal)
+	for i = 0, 3 do p(m, V(0.36, 0.06, 0.08), at(0, 0.17, 0.2 - i * 0.18), DARK) end -- grip ribs
+	p(m, V(0.12, 0.08, 0.16), at(0, 0.2, -0.5), Color3.fromRGB(80, 80, 80)) -- switch
+	p(m, V(0.5, 0.5, 0.42), at(0, 0, -1.08), DARK, M.Metal) -- head
+	local lens = p(m, V(0.4, 0.4, 0.04), at(0, 0, -1.3), c, M.Neon)
+	moving(m, lens, "flicker")
+	mark(m, "Tip", at(0, 0, -1.35))
+end
+function B.vacuum(m, c)
+	local y = worn(c, 0.1)
+	p(m, V(0.24, 0.26, 0.6), at(0, 0, 0.05), BLACK) -- handle
+	p(m, V(0.9, 0.8, 0.9), at(0, -0.7, 0.55), y) -- canister
+	p(m, V(0.94, 0.25, 0.94), at(0, -0.22, 0.55), DARK) -- motor head
+	p(m, V(0.16, 0.16, 0.8), at(0, -0.4, 0.15, 0.6, 0, 0), BLACK) -- hose
+	p(m, V(0.3, 0.3, 2.2), at(0, -0.05, -1.3), Color3.fromRGB(170, 170, 166), M.Metal) -- wand
+	p(m, V(0.9, 0.22, 0.42), at(0, -0.15, -2.5), DARK) -- floor nozzle
+	p(m, V(0.92, 0.06, 0.06), at(0, -0.26, -2.68), Color3.fromRGB(80, 80, 80))
+	mark(m, "LeftGrip", at(0, -0.1, -1.2))
+	mark(m, "Tip", at(0, -0.15, -2.75))
+end
+function B.flamethrower(m, c)
+	local g = worn(c, 0.1)
+	p(m, V(0.28, 0.6, 0.34), at(0, -0.15, 0.05, -0.2, 0, 0), BLACK)
+	p(m, V(0.36, 0.4, 1.3), at(0, 0.25, -0.35), DARK, M.Metal) -- body
+	for _, x in { -0.27, 0.27 } do p(m, V(0.36, 0.36, 1.2), at(x, -0.15, 0.2), g, M.Metal) end -- fuel tanks
+	for _, x in { -0.27, 0.27 } do p(m, V(0.38, 0.38, 0.1), at(x, -0.15, -0.4), Color3.fromRGB(180, 30, 25)) end
+	p(m, V(0.24, 0.24, 1.6), at(0, 0.3, -1.75), Color3.fromRGB(70, 70, 70), M.Metal) -- barrel
+	for i = 0, 3 do p(m, V(0.3, 0.3, 0.06), at(0, 0.3, -1.2 - i * 0.25), DARK, M.Metal) end -- heat fins
+	p(m, V(0.3, 0.3, 0.22), at(0, 0.3, -2.62), DARK, M.Metal) -- nozzle
+	p(m, V(0.2, 0.5, 0.24), at(0, -0.05, -1.4), BLACK) -- front grip
+	local pilot = p(m, V(0.1, 0.12, 0.1), at(0, 0.12, -2.68), Color3.fromRGB(90, 160, 255), M.Neon)
+	moving(m, pilot, "flicker")
+	mark(m, "LeftGrip", at(0, -0.1, -1.4))
+	mark(m, "Tip", at(0, 0.3, -2.75))
+end
+
+-- USE ITEMS (held in the fist) ------------------------------------------------------------------------
+function B.medkit(m, c)
+	local box = worn(c, 0.08)
+	p(m, V(0.4, 0.12, 0.12), at(0, 0.15, -0.2), BLACK) -- handle
+	p(m, V(1.2, 0.8, 0.42), at(0, -0.35, -0.2, 0, math.pi / 2, 0), box)
+	p(m, V(1.22, 0.06, 0.44), at(0, -0.12, -0.2, 0, math.pi / 2, 0), worn(c, 0.3)) -- lid seam
+	for _, s in { -1, 1 } do
+		p(m, V(0.02, 0.15, 0.48), at(s * 0.22, -0.35, -0.2), Color3.fromRGB(200, 20, 20))
+		p(m, V(0.02, 0.48, 0.15), at(s * 0.22, -0.35, -0.2), Color3.fromRGB(200, 20, 20))
+	end
+	mark(m, "Tip", at(0, -0.3, -0.85))
+end
+function B.pills(m, c)
+	local b = p(m, V(0.4, 0.62, 0.4), at(0, 0.2, -0.3), c)
+	b.Transparency = 0.15
+	p(m, V(0.42, 0.18, 0.42), at(0, 0.6, -0.3), Color3.fromRGB(240, 240, 235)) -- cap
+	p(m, V(0.41, 0.3, 0.41), at(0, 0.18, -0.3), Color3.fromRGB(240, 235, 220)) -- label
+	p(m, V(0.2, 0.06, 0.02), at(0, 0.22, -0.51), Color3.fromRGB(200, 30, 30))
+	mark(m, "Tip", at(0, 0.6, -0.3))
+end
+function B.syringe(m, c)
+	p(m, V(0.08, 0.3, 0.3), at(0, 0.02, 0.45), Color3.fromRGB(230, 230, 225)) -- thumb pad
+	p(m, V(0.06, 0.06, 0.5), at(0, 0.02, 0.2), Color3.fromRGB(230, 230, 225)) -- plunger
+	p(m, V(0.4, 0.08, 0.08), at(0, 0.02, -0.05), Color3.fromRGB(230, 230, 225)) -- finger flange
+	local glass = p(m, V(0.2, 0.2, 0.85), at(0, 0.02, -0.5), Color3.fromRGB(220, 235, 240), M.Glass)
+	glass.Transparency = 0.5
+	local fluid = p(m, V(0.14, 0.14, 0.6), at(0, 0.02, -0.6), c, M.Neon)
+	moving(m, fluid, "flicker")
+	p(m, V(0.1, 0.1, 0.1), at(0, 0.02, -0.98), Color3.fromRGB(200, 200, 200))
+	p(m, V(0.03, 0.03, 0.5), at(0, 0.02, -1.28), STEEL, M.Metal) -- needle
+	mark(m, "Tip", at(0, 0.02, -1.5))
+end
+function B.vest(m, c)
+	local v = worn(c, 0.08)
+	p(m, V(1.2, 1.4, 0.32), at(0, 0.0, -0.45), v, M.Fabric)
+	for _, x in { -0.4, 0.4 } do p(m, V(0.3, 0.4, 0.3), at(x, 0.85, -0.45), v, M.Fabric) end -- shoulder straps
+	p(m, V(0.9, 0.9, 0.06), at(0, 0.05, -0.64), worn(c, 0.3), M.Fabric) -- plate
+	for i = 0, 2 do p(m, V(0.3, 0.28, 0.1), at(-0.36 + i * 0.36, -0.45, -0.66), worn(c, 0.4), M.Fabric) end -- pouches
+	p(m, V(0.5, 0.14, 0.02), at(0, 0.38, -0.68), Color3.fromRGB(220, 220, 210)) -- "POLICE"-style patch, no text
+	mark(m, "Tip", at(0, 0, -0.7))
+end
+function B.talisman(m, c)
+	p(m, V(0.62, 1.2, 0.04), at(0, 0.55, -0.35), worn(c, 0.05))
+	p(m, V(0.66, 0.08, 0.05), at(0, 1.12, -0.35), Color3.fromRGB(160, 20, 20))
+	for i = 0, 4 do -- red brush strokes
+		p(m, V(0.12 + (i % 2) * 0.16, 0.06, 0.05), at((i % 2 == 0) and 0 or 0.06, 0.95 - i * 0.17, -0.37), Color3.fromRGB(170, 20, 20))
+	end
+	p(m, V(0.06, 0.62, 0.05), at(0, 0.5, -0.37), Color3.fromRGB(170, 20, 20))
+	local glow = p(m, V(0.66, 1.24, 0.02), at(0, 0.55, -0.32), Color3.fromRGB(255, 220, 140), M.Neon)
+	glow.Transparency = 0.8; moving(m, glow, "flicker")
+	mark(m, "Tip", at(0, 1.1, -0.35))
+end
+function B.watch(m, c)
+	local g = worn(c, 0.05)
+	local z = -0.35
+	p(m, V(0.7, 0.7, 0.16), at(0, 0.3, z), g, M.Metal)
+	p(m, V(0.84, 0.5, 0.16), at(0, 0.3, z), g, M.Metal)
+	p(m, V(0.5, 0.84, 0.16), at(0, 0.3, z), g, M.Metal)
+	p(m, V(0.6, 0.6, 0.02), at(0, 0.3, z - 0.09), Color3.fromRGB(235, 228, 205)) -- face
+	p(m, V(0.14, 0.14, 0.14), at(0, 0.78, z), g, M.Metal) -- crown
+	p(m, V(0.2, 0.06, 0.06), at(0, 0.88, z), g, M.Metal)
+	for i = 0, 3 do p(m, V(0.06, 0.06, 0.12), at(0.05 * i, 0.95 + i * 0.1, z + 0.06 * i), GOLD, M.Metal) end -- chain
+	local h1 = p(m, V(0.03, 0.24, 0.02), at(0, 0.3, z - 0.11) * CFrame.new(0, 0.1, 0), BLACK)
+	local h2 = p(m, V(0.03, 0.16, 0.02), at(0, 0.3, z - 0.11) * CFrame.new(0, 0.07, 0), Color3.fromRGB(150, 20, 20))
+	-- hands spin backwards (cursed) around the face centre: rotate about an axis through (0,0.3,z)
+	moving(m, h1, "spin", V(0, 0, 1), -3)
+	moving(m, h2, "spin", V(0, 0, 1), -0.5)
+	h1:SetAttribute("Center", V(0, 0.3, z - 0.11)); h2:SetAttribute("Center", V(0, 0.3, z - 0.11))
+	mark(m, "Tip", at(0, 0.3, z - 0.1))
+end
+function B.beartrap(m, c)
+	local g = worn(c, 0.1)
+	local z = -0.55
+	p(m, V(0.9, 0.08, 0.2), at(0, -0.3, z), DARK, M.Metal) -- base bar
+	p(m, V(0.36, 0.06, 0.36), at(0, -0.24, z), Color3.fromRGB(120, 110, 90), M.Metal) -- pan
+	for _, s in { -1, 1 } do
+		for k = -2, 2 do -- jaw: arc of 5 segments with teeth
+			local a = k * 0.32
+			local o = at(0, -0.2, z) * A(0, a, 0) * CFrame.new(0, 0.08, s * 0.55)
+			p(m, V(0.36, 0.14, 0.08), o, g, M.Metal)
+			p(m, V(0.08, 0.16, 0.06), o * CFrame.new(0, 0.14, -s * 0.02), Color3.fromRGB(170, 165, 150), M.Metal)
+		end
+	end
+	for _, x in { -0.62, 0.62 } do p(m, V(0.2, 0.12, 0.5), at(x, -0.28, z), g, M.Metal) end -- springs
+	p(m, V(0.06, 0.06, 0.6), at(0, -0.28, z + 0.5), DARK, M.Metal) -- chain
+	mark(m, "Tip", at(0, 0, z))
+end
 
 function ItemModels.build(shape: string, color: Color3, glow: Color3?, id: string?): Model
-	local meshes = game:GetService("ReplicatedStorage"):FindFirstChild("ItemMeshes")
-	local mesh = id and not BLOCKY[shape] and meshes and meshes:FindFirstChild(id)
-	if mesh then
-		local m = mesh:Clone()
-		m.Name = "Item_" .. shape
-		for _, d in m:GetDescendants() do
-			if d:IsA("BasePart") then d.Anchored = true; d.CanCollide = false; d.CanQuery = false; d.CanTouch = false; d.CastShadow = false end
-		end
-		if glow then
-			local root = m:FindFirstChildWhichIsA("BasePart", true)
-			if root then local l = Instance.new("PointLight"); l.Color = glow; l.Range = 8; l.Brightness = 1.2; l.Parent = root end
-		end
-		return m
-	end
 	local m = Instance.new("Model")
 	m.Name = "Item_" .. shape
 	local grip = p(m, Vector3.one * 0.2, CFrame.new(), color)
 	grip.Name = "Grip"; grip.Transparency = 1
 	m.PrimaryPart = grip
 	local f = B[shape] or B.brick
-	f(m, color)
+	f(m, color, glow, id)
 	if glow then
 		local l = Instance.new("PointLight"); l.Color = glow; l.Range = 8; l.Brightness = 1.2; l.Parent = grip
 	end
 	return m
 end
 
--- per-frame motion of an item's moving parts (the chainsaw chain). speed = loops per second.
--- Teeth positions are relative to the model's pivot, so call it after the model is moved.
-function ItemModels.animate(m: Model, speed: number)
-	local chain = m:FindFirstChild("Chain")
-	if not chain then return end
+-- per-frame motion of an item's moving parts. chainSpeed = chainsaw chain loops per second,
+-- useAge = seconds since the item was last used (kick parts snap back and return), nil = never used.
+-- Positions are relative to the model's pivot, so call it after the model is moved.
+local function scaled(cf: CFrame, s: number): CFrame return cf - cf.Position + cf.Position * s end
+function ItemModels.animate(m: Model, chainSpeed: number, useAge: number?)
 	local pivot = m:GetPivot()
 	local scale = m:GetScale()
-	local shift = (os.clock() * speed) % 1
-	for _, t in chain:GetChildren() do
-		local base = t:GetAttribute("T")
-		if type(base) == "number" then
-			local cf = sawLoop(base + shift)
-			;(t :: BasePart).CFrame = pivot * (cf - cf.Position + cf.Position * scale)
+	local now = os.clock()
+	local chain = m:FindFirstChild("Chain")
+	if chain then
+		local shift = (now * chainSpeed) % 1
+		for _, t in chain:GetChildren() do
+			local base = t:GetAttribute("T")
+			if type(base) == "number" then (t :: BasePart).CFrame = pivot * scaled(sawLoop(base + shift), scale) end
+		end
+	end
+	local mv = m:FindFirstChild("Moving")
+	if not mv then return end
+	local age = useAge or 99
+	local k = age < 0.05 and age / 0.05 or math.max(0, 1 - (age - 0.05) / 0.22)
+	for _, part in mv:GetChildren() do
+		local bp = part :: BasePart
+		local mode = bp:GetAttribute("Mv")
+		local rel = bp:GetAttribute("Rel")
+		if typeof(rel) ~= "CFrame" then continue end
+		if mode == "kick" then
+			local kick = bp:GetAttribute("Kick") :: Vector3
+			bp.CFrame = pivot * scaled(CFrame.new(kick * k) * rel, scale)
+		elseif mode == "spin" then
+			local axis = bp:GetAttribute("Axis") :: Vector3
+			local ang = now * (bp:GetAttribute("Rate") :: number)
+			local c = bp:GetAttribute("Center")
+			local cf = typeof(c) == "Vector3" and (CFrame.new(c) * CFrame.fromAxisAngle(axis, ang) * CFrame.new(-c) * rel) or (rel * CFrame.fromAxisAngle(axis, ang))
+			bp.CFrame = pivot * scaled(cf, scale)
+		elseif mode == "flicker" then
+			local base = bp:GetAttribute("Base") or 0
+			bp.Transparency = math.clamp(base + math.noise(now * 9, bp.Size.X * 10, bp.Size.Y * 10) * 0.45 + 0.1, 0, 0.9)
 		end
 	end
 end
 
--- how big the model is along its length (for laying it on a shelf)
+-- long items lie along the shelf in the event shops
 function ItemModels.isLong(shape: string): boolean
 	local long = { bat = 1, spikedbat = 1, pan = 1, crowbar = 1, pipe = 1, shovel = 1, golf = 1, machete = 1, katana = 1, axe = 1, sledge = 1, warhammer = 1,
 		pickaxe = 1, chainsaw = 1, shotgun = 1, cannon = 1, harpoon = 1, crossbow = 1, blower = 1, vacuum = 1, flamethrower = 1, cross = 1 }
