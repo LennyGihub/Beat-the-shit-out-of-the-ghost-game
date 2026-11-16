@@ -32,11 +32,6 @@ local List: { Monster } = {
 		-- shield bash: braces (shield up, blocks hits from the front), then rushes you and sends you flying into the walls
 		ability = { kind = "shieldBash", cd = 5.5, min = 7, max = 45, brace = 0.7, speed = 72, power = 135, dmg = 14, wallDmg = 16 },
 		desc = "A skeleton with a cutlass and a shield. His shield bash throws you into the walls; his raised shield blocks hits." }),
-	m({ id = "Animatronic", name = "The Animatronic", title = "THE ANIMATRONIC", rarity = 2, template = "Animatronic", color = C(104, 78, 56),
-		hp = 1.3, speed = 1.0, dmg = 1.25, reward = 1.6, hover = 0, walker = true, scale = 1, solid = true,
-		-- kills every light in the house and stalks you in the dark (only its eyes glow); reaching you = a heavy hit
-		ability = { kind = "blackout", cd = 14, t = 10, dmg = 30, speed = 15, lightsOut = true },
-		desc = "A rotting party animatronic. It shuts every light off and hunts you in the dark: watch for its eyes." }),
 	m({ id = "Goblin", name = "The Goblin", title = "THE GOBLIN", rarity = 2, template = "Goblin", color = C(110, 190, 60),
 		hp = 1.25, speed = 1.08, dmg = 1, reward = 1.6, hover = 0, walker = true, scale = 1, solid = true,
 		ability = { kind = "steal", cd = 6, range = 11 }, -- grabs the item in your hands, then uses it on you
