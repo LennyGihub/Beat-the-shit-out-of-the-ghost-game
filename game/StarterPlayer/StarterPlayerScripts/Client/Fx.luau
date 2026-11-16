@@ -160,7 +160,7 @@ function Fx.handle(kind: string, ...)
 		if hrp and typeof(dir) == "Vector3" then hrp.AssemblyLinearVelocity = dir * 55 + Vector3.new(0, 22, 0) end
 	elseif kind == "Fling" then
 		-- thrown across the room (a monster grab, or another player's throw): tumble, then get back up
-		local vel, t, byName = args[1], args[2], args[3]
+		local vel, t, byName, label = args[1], args[2], args[3], args[4]
 		local ch = lp.Character
 		local hrp = ch and ch:FindFirstChild("HumanoidRootPart") :: BasePart?
 		local hum = ch and ch:FindFirstChildOfClass("Humanoid")
@@ -186,6 +186,8 @@ function Fx.handle(kind: string, ...)
 			task.delay(typeof(t) == "number" and t or 1, function()
 				if hum.Parent and hum.Health > 0 then hum:ChangeState(Enum.HumanoidStateType.GettingUp) end
 			end)
+			-- the Goblin's hits: the camera is glued to your tumbling head, you lose all sense of direction
+			if label == "goblin" then Fx.headCam(ch, (typeof(t) == "number" and t or 1) + 0.35) end
 		end
 		Sfx.play("PunchHeavy", { PlaybackSpeed = 0.7 })
 		HUD.flash(Color3.fromRGB(150, 0, 0), 0.4)
@@ -393,6 +395,32 @@ function Fx.applyZone(zone: string, dt: number)
 		atm.Density = p.AtmDensity; atm.Color = p.AtmColor; atm.Decay = p.AtmDecay; atm.Haze = p.AtmHaze; atm.Glare = p.AtmGlare
 	end
 	if cc then cc.TintColor = p.Tint; cc.Saturation = p.Sat; cc.Contrast = p.Contrast end
+end
+
+-- the camera follows the head (position AND rotation) for `dur` seconds, then eases back to normal
+local headCamUntil, headCamBound = 0, false
+function Fx.headCam(ch: Model, dur: number)
+	local head = ch:FindFirstChild("Head") :: BasePart?
+	if not head then return end
+	headCamUntil = math.max(headCamUntil, os.clock() + dur)
+	if headCamBound then return end
+	headCamBound = true
+	local t0, blend = os.clock(), 0
+	local roll = (rng:NextNumber() < 0.5 and -1 or 1) * rng:NextNumber(2.5, 4) -- extra spin, rad/s
+	RunService:BindToRenderStep("GoblinHeadCam", Enum.RenderPriority.Camera.Value + 1, function(dt)
+		local now = os.clock()
+		local on = now < headCamUntil and head.Parent ~= nil
+		blend = on and math.min(1, blend + dt * 10) or math.max(0, blend - dt * 2.5)
+		if blend <= 0 and not on then
+			RunService:UnbindFromRenderStep("GoblinHeadCam")
+			headCamBound = false
+			return
+		end
+		if head.Parent then
+			local want = head.CFrame * CFrame.new(0, 0.3, -0.2) * CFrame.Angles(0, 0, (now - t0) * roll)
+			cam.CFrame = cam.CFrame:Lerp(want, blend)
+		end
+	end)
 end
 
 function Fx.init()

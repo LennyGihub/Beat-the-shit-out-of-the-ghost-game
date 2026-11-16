@@ -298,8 +298,8 @@ end
 
 -- PvP: something a player threw hits another player in the run. Damage + a fling, no damage to the thrower.
 Combat.PVP_MULT = 0.5 -- player-vs-player damage is half of what the ghost would take
--- raw = vel is the exact fling velocity (monster throws), otherwise it is scaled to a PvP knock
-function Combat.hitPlayer(victim: Player, by: Player?, dmg: number, vel: Vector3, label: string?, raw: boolean?)
+-- raw = vel is the exact fling velocity (monster throws), otherwise it is scaled to a PvP knock; ragT = ragdoll seconds
+function Combat.hitPlayer(victim: Player, by: Player?, dmg: number, vel: Vector3, label: string?, raw: boolean?, ragT: number?)
 	if victim == by or not victim:GetAttribute("InMatch") then return end
 	if not by and victim:GetAttribute("Warded") then return end
 	local hum, hrp = alive(victim)
@@ -311,7 +311,7 @@ function Combat.hitPlayer(victim: Player, by: Player?, dmg: number, vel: Vector3
 		flat = flat.Magnitude > 0.1 and flat.Unit or Vector3.new(0, 0, 1)
 		fling = flat * math.clamp(vel.Magnitude * 0.6, 30, 70) + Vector3.new(0, 26, 0)
 	end
-	Remotes.Fx:FireClient(victim, "Fling", fling, raw and 1.2 or 0.9, by and by.Name or "")
+	Remotes.Fx:FireClient(victim, "Fling", fling, ragT or (raw and 1.2 or 0.9), by and by.Name or "", label or "")
 	Remotes.Fx:FireAllClients("PlayerHit", hrp.Position, dmg, by, label or "")
 end
 

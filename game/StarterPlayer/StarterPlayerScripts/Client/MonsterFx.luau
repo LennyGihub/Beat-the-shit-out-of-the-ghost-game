@@ -15,7 +15,12 @@ local KINDS = {
 	AbilityWind = true, AbilityHit = true, Grabbed = true, Released = true, Pounce = true, Wail = true,
 	Blackout = true, BlackoutEnd = true, GasThrow = true, GasCloud = true, Gassed = true,
 	HellMark = true, HellPillar = true, Charge = true, CloneSpawn = true, CloneShatter = true,
+	GoblinSteal = true, GoblinUse = true, GoblinDrop = true,
 }
+local Items = require(game:GetService("ReplicatedStorage").Shared.Items)
+local GOBLIN = Color3.fromRGB(130, 230, 70)
+local GOLD = Color3.fromRGB(255, 205, 60)
+local sprayPE: ParticleEmitter? = nil
 function MonsterFx.handles(kind: string): boolean return KINDS[kind] == true end
 
 local function part(props: { [string]: any }): BasePart
@@ -95,12 +100,64 @@ function MonsterFx.handle(kind: string, ...)
 	local a = { ... }
 	if kind == "AbilityWind" then
 		local pos, k = a[1], a[2]
-		local col = k == "wail" and Color3.fromRGB(160, 230, 240) or (k == "charge" and Color3.fromRGB(220, 220, 240) or Color3.fromRGB(255, 70, 40))
+		local col = k == "wail" and Color3.fromRGB(160, 230, 240) or (k == "charge" and Color3.fromRGB(220, 220, 240) or (k == "steal" and GOBLIN or Color3.fromRGB(255, 70, 40)))
 		emitter(pos, { Color = ColorSequence.new(col), LightEmission = 1, Size = NumberSequence.new(2, 0), Speed = NumberRange.new(-14, -8),
 			Shape = Enum.ParticleEmitterShape.Sphere, ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface, Lifetime = NumberRange.new(0.4, 0.6),
 			Texture = "rbxasset://textures/particles/sparkles_main.dds" }, 40, 1.5)
 		Sfx.at(k == "wail" and "GhostWail" or "GhostHurt", pos, { PlaybackSpeed = k == "wail" and 0.8 or 0.6, Volume = 1.2 })
 		Fx.shake(0.15 * near(pos, 60))
+	elseif kind == "GoblinSteal" then
+		-- the Goblin snatches an item: green + gold burst, a cackle
+		local pos, victim = a[1], a[2]
+		emitter(pos, { Color = ColorSequence.new(GOBLIN, GOLD), LightEmission = 1, Size = NumberSequence.new(1.2, 0), Speed = NumberRange.new(8, 20),
+			Lifetime = NumberRange.new(0.4, 0.8), SpreadAngle = Vector2.new(180, 180), Texture = "rbxasset://textures/particles/sparkles_main.dds" }, 50, 1.5)
+		Sfx.at("DemonLaugh", pos, { PlaybackSpeed = 1.75, Volume = 1.3 })
+		Sfx.at("Whoosh", pos, { PlaybackSpeed = 1.3 })
+		if victim == lp then
+			HUD.flash(Color3.fromRGB(60, 150, 30), 0.45)
+			Fx.shake(0.35)
+		end
+	elseif kind == "GoblinUse" then
+		-- he swings / fires / throws / sprays the stolen item
+		local model, id, how, t = a[1], a[2], a[3], a[4]
+		if typeof(model) ~= "Instance" then return end
+		local handPart = model:FindFirstChild("RightHand") :: BasePart?
+		local loot = model:FindFirstChild("Loot")
+		local tip = loot and loot:FindFirstChild("Tip", true) :: BasePart?
+		local pos = (tip or handPart or model:FindFirstChild("HumanoidRootPart") :: BasePart).Position
+		local it = Items.byId[id or ""]
+		local sfx = it and it.sfx
+		if how == "stop" then
+			if sprayPE then sprayPE:Destroy(); sprayPE = nil end
+		elseif how == "spray" and it then
+			if sprayPE then sprayPE:Destroy() end
+			local at = (tip or handPart) :: BasePart?
+			if at then
+				local pe = Instance.new("ParticleEmitter")
+				pe.Texture = "rbxasset://textures/particles/smoke_main.dds"
+				pe.Color = ColorSequence.new(it.particle or Color3.fromRGB(220, 220, 220))
+				pe.EmissionDirection = Enum.NormalId.Front
+				pe.Speed = NumberRange.new(40, 55); pe.SpreadAngle = Vector2.new(14, 14)
+				pe.Size = NumberSequence.new(0.6, 3.5); pe.Lifetime = NumberRange.new(0.35, 0.5)
+				pe.Transparency = NumberSequence.new(0.3, 1); pe.Rate = 90
+				pe.LightEmission = it.fx and it.fx.burn and 0.8 or 0.1
+				pe.Parent = at
+				sprayPE = pe
+				Debris:AddItem(pe, t or 1.6)
+			end
+			Sfx.at("Whoosh", pos, { PlaybackSpeed = 0.6, Volume = 1 })
+		elseif how == "hit" then
+			Sfx.at(sfx and sfx.hit or "PunchHeavy", pos, { PlaybackSpeed = sfx and sfx.speed or 0.8, Volume = 1.1 })
+		else -- swing / throw
+			Sfx.at(sfx and sfx.use or "Whoosh", pos, { PlaybackSpeed = sfx and sfx.speed or 0.8, Volume = 1 })
+		end
+	elseif kind == "GoblinDrop" then
+		-- he lets go of a stolen item (knocked out) or it breaks in his hands
+		local pos, _, broke = a[1], a[2], a[3]
+		emitter(pos, { Color = ColorSequence.new(broke and Color3.fromRGB(140, 130, 120) or GOLD), LightEmission = broke and 0 or 1,
+			Size = NumberSequence.new(0.9, 0), Speed = NumberRange.new(10, 22), Lifetime = NumberRange.new(0.3, 0.7),
+			SpreadAngle = Vector2.new(180, 180), Texture = "rbxasset://textures/particles/sparkles_main.dds" }, 30, 1.2)
+		Sfx.at(broke and "WoodBreak" or "Cash", pos, { Volume = 0.9 })
 	elseif kind == "AbilityHit" then
 		local pos = a[1]
 		emitter(pos, { Color = ColorSequence.new(Color3.fromRGB(140, 10, 10)), Size = NumberSequence.new(0.8, 1.6), Speed = NumberRange.new(10, 25),
