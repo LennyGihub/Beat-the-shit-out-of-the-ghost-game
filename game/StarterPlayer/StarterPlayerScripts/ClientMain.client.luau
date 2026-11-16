@@ -83,6 +83,8 @@ Remotes.Fx.OnClientEvent:Connect(function(kind: string, ...)
 	elseif kind == "ItemSwing" then
 		local by = ...
 		if by ~= Players.LocalPlayer then ThirdPersonItems.swing(by) end
+		local _, id, hit = ...
+		if by == Players.LocalPlayer and hit then Hotbar.confirmHit(id) end -- melee hit sound (Hotbar)
 		Fx.handle(kind, ...)
 	elseif kind == "ReviveOffer" or kind == "Revived" then
 		ReviveUI.handle(kind, ...)

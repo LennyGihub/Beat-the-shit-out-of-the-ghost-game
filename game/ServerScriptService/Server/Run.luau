@@ -239,7 +239,7 @@ end
 
 -- dying in a run: a revive window opens (REVIVE product); if nobody pays, the run ends for you.
 -- Returns how long Main should wait before respawning the character.
-local REVIVE_WINDOW = 10
+local REVIVE_WINDOW = 30
 local pending = {} :: { [Player]: { untilT: number, at: CFrame } }
 local function reviveOn(): boolean
 	return (tonumber(RS:GetAttribute("ReviveProductId")) or 0) > 0 or RunService:IsStudio()
@@ -273,6 +273,10 @@ function Run.onDied(p: Player): number
 		if pending[p] then endDeath(p) end
 	end)
 	return REVIVE_WINDOW + 3
+end
+-- GO TO LOBBY on the death screen: no revive, the run ends for this player now
+function Run.giveUp(p: Player)
+	if pending[p] then endDeath(p) end
 end
 -- the player paid (or used the admin panel): back on their feet where they fell, full health, same run
 function Run.revive(p: Player): boolean
@@ -350,10 +354,24 @@ function Run.start()
 		end)
 	end)
 	local lastTick = 0
+	local lastWarn = {} :: { [Player]: number }
 	RunService.Heartbeat:Connect(function(dt)
 		Ghost.step(dt)
 		local now = os.clock()
-		if state == "Outside" then
+		if state == "Intro" or (state == "Fight" and Ghost.alive()) then
+			-- no running out to the shop while a monster is in the house: back inside
+			for _, p in Run.matchPlayers() do
+				local hrp = hrpOf(p)
+				if hrp and (hrp.Position.Z > Config.OutsideZ - 2 or not insideHouse(hrp.Position)) then
+					hrp.AssemblyLinearVelocity = Vector3.zero
+					;(p.Character :: Model):PivotTo(CFrame.new(MapLoader.spawnInside() + Vector3.new(0, 3, 0)))
+					if now - (lastWarn[p] or 0) > 2 then
+						lastWarn[p] = now
+						Remotes.Fx:FireClient(p, "Toast", "THE DOOR WON'T OPEN WHILE THE MONSTER IS HERE")
+					end
+				end
+			end
+		elseif state == "Outside" then
 			for _, p in Run.matchPlayers() do
 				local hrp = hrpOf(p)
 				if hrp and (hrp.Position.Z > Config.OutsideZ or not insideHouse(hrp.Position)) then

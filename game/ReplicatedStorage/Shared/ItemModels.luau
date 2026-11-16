@@ -356,6 +356,19 @@ end
 -- barrel hood in the port, extractor, white-dot sights), red full-auto selector, long 33-round mag.
 -- LeftGrip = the support hand cupped under the shooting hand (held with two hands).
 function B.glock(m, c)
+	-- the photorealistic version: an AI-generated textured mesh (ReplicatedStorage.ItemMeshes.Glock18),
+	-- muzzle toward -Z like every item; placed so its grip sits in the hand. The blocky one below is the fallback.
+	local store = game:GetService("ReplicatedStorage"):FindFirstChild("ItemMeshes")
+	local mesh = store and store:FindFirstChild("Glock18")
+	if mesh then
+		local g = mesh:Clone() :: BasePart
+		g.Anchored = true; g.CanCollide = false; g.CanQuery = false; g.CanTouch = false; g.CastShadow = false
+		g.CFrame = CFrame.new(0, 0.15, -0.42)
+		g.Parent = m
+		mark(m, "Tip", at(0, 0.5, -1.15))
+		mark(m, "LeftGrip", at(-0.42, -0.24, -0.08))
+		return
+	end
 	local poly = worn(c, 0.05)
 	local polyD = Color3.fromRGB(22, 22, 24)
 	local steel = Color3.fromRGB(56, 57, 60)

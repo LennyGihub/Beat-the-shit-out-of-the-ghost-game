@@ -101,6 +101,22 @@ function Hotbar.drop()
 	if sel > 0 and slots[sel] then Remotes.Drop:FireServer(sel) end
 end
 
+-- melee hit sounds: played on the swing's impact frame, only if the server confirms the hit
+-- (its answer normally arrives before the impact frame; a late answer plays at once)
+local pendingHit: { id: string, impact: number, confirmed: boolean, played: boolean }? = nil
+local function playHit(id: string)
+	local it = Items.byId[id]
+	local sfx = it and it.sfx
+	if sfx and sfx.hit then Sfx.play(sfx.hit, { PlaybackSpeed = (sfx.speed or 1) * (0.95 + math.random() * 0.1) }) end
+end
+function Hotbar.confirmHit(id: string)
+	local p = pendingHit
+	if not p or p.id ~= id or p.played then return end
+	p.confirmed = true
+	local late = os.clock() - p.impact
+	if late >= 0 and late < 0.4 then p.played = true; playHit(id) end
+end
+
 -- left click / hold with an item in hand. Returns true if an item handled it.
 function Hotbar.primary(): boolean
 	local it = Hotbar.current()
@@ -119,6 +135,13 @@ function Hotbar.primary(): boolean
 		Sfx.play("Whoosh", { PlaybackSpeed = (it.cd > 0.6 and 0.55 or 0.75) + math.random() * 0.25 })
 	elseif it.kind == "throw" or it.kind == "trap" then
 		Sfx.play("Whoosh", { PlaybackSpeed = 0.6 })
+	end
+	if it.kind == "melee" and it.id ~= "Chainsaw" and it.sfx and it.sfx.hit then
+		local p = { id = it.id, impact = now + VM.impactTime(), confirmed = false, played = false }
+		pendingHit = p
+		task.delay(VM.impactTime(), function()
+			if p.confirmed and not p.played then p.played = true; playHit(p.id) end
+		end)
 	end
 	Remotes.Use:FireServer(sel, cam.CFrame.LookVector)
 	return true
@@ -270,6 +293,9 @@ function Hotbar.init()
 		if n then Hotbar.select(n) end -- drop is a rebindable action in Input
 	end)
 	RunService.Heartbeat:Connect(update)
+	if RunService:IsStudio() then -- Studio test hook: changing player attribute DebugUse = one click with the held item
+		lp:GetAttributeChangedSignal("DebugUse"):Connect(function() Hotbar.primary() end)
+	end
 end
 
 return Hotbar

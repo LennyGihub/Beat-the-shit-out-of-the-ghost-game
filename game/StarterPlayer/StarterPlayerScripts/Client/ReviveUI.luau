@@ -33,9 +33,22 @@ function ReviveUI.init()
 	btn = Instance.new("TextButton")
 	btn.AutoButtonColor = true; btn.BorderSizePixel = 0; btn.BackgroundColor3 = Color3.fromRGB(30, 120, 60)
 	btn.Font = Grunge.FONT; btn.TextScaled = true; btn.TextColor3 = Grunge.PAPER; btn.TextStrokeTransparency = 0.3; btn.Text = "REVIVE"
-	btn.Position = UDim2.fromScale(0.2, 0.56); btn.Size = UDim2.fromScale(0.6, 0.3); btn.ZIndex = 12; btn.Rotation = 1; btn.Modal = true
+	btn.Position = UDim2.fromScale(0.05, 0.56); btn.Size = UDim2.fromScale(0.52, 0.3); btn.ZIndex = 12; btn.Rotation = 1; btn.Modal = true
 	btn.Parent = panel
 	Platform.menu(panel, nil) -- a controller lands on REVIVE
+	-- or give up: back to the lobby now (paid out like a normal death)
+	local lobby = Instance.new("TextButton")
+	lobby.AutoButtonColor = true; lobby.BorderSizePixel = 0; lobby.BackgroundColor3 = Color3.fromRGB(45, 40, 36)
+	lobby.Font = Grunge.FONT; lobby.TextScaled = true; lobby.TextColor3 = Grunge.PAPER; lobby.TextStrokeTransparency = 0.3; lobby.Text = "GO TO LOBBY"
+	lobby.Position = UDim2.fromScale(0.61, 0.6); lobby.Size = UDim2.fromScale(0.34, 0.22); lobby.ZIndex = 12; lobby.Rotation = -1
+	lobby.Parent = panel
+	local ls = Instance.new("UIStroke"); ls.Color = Grunge.INK; ls.Thickness = 4; ls.ApplyStrokeMode = Enum.ApplyStrokeMode.Border; ls.Parent = lobby
+	local lpd = Instance.new("UIPadding"); lpd.PaddingTop = UDim.new(0.16, 0); lpd.PaddingBottom = UDim.new(0.16, 0); lpd.Parent = lobby
+	lobby.Activated:Connect(function()
+		Sfx.play("Click")
+		gui.Enabled = false
+		Remotes.Revive:FireServer("lobby")
+	end)
 	local st = Instance.new("UIStroke"); st.Color = Grunge.INK; st.Thickness = 4; st.ApplyStrokeMode = Enum.ApplyStrokeMode.Border; st.Parent = btn
 	local pad = Instance.new("UIPadding"); pad.PaddingTop = UDim.new(0.12, 0); pad.PaddingBottom = UDim.new(0.12, 0); pad.Parent = btn
 	btn.Activated:Connect(function()
