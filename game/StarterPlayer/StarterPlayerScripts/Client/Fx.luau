@@ -116,7 +116,7 @@ function Fx.handle(kind: string, ...)
 		burst(pos, Color3.fromRGB(190, 225, 230), 10 + combo * 2, 18 + combo * 2, 0.5)
 		local heavy = combo >= 5 or isUlt
 		Sfx.at(heavy and "PunchHeavy" or "PunchLight", pos, { PlaybackSpeed = math.max(0.75, 1.15 - combo * 0.03), Volume = 0.8 + math.min(combo, 10) * 0.05 })
-		if combo % 3 == 0 then Sfx.at("GhostHurt", pos, { PlaybackSpeed = rng:NextNumber(0.9, 1.15) }) end
+		if combo % 3 == 0 then Sfx.at(Sfx.voice("Hurt"), pos, { PlaybackSpeed = rng:NextNumber(0.9, 1.15) }) end
 		if mine then
 			Fx.shake(0.18 + math.min(combo, 15) * 0.045 + (isUlt and 0.3 or 0))
 			Fx.kick(2 + math.min(combo, 12) * 0.6)
@@ -140,7 +140,7 @@ function Fx.handle(kind: string, ...)
 		if d < 80 then Fx.shake(math.clamp(speed / 100, 0.3, 1) * (1 - d / 80)) end
 	elseif kind == "GhostRagdoll" then
 		-- knocked out: a silly yelp and a big shake
-		Sfx.at("GhostHurt", args[1], { Volume = 1.2, PlaybackSpeed = 1.5 })
+		Sfx.at(Sfx.voice("Hurt"), args[1], { Volume = 1.2, PlaybackSpeed = Sfx.voice("Hurt") == "GhostHurt" and 1.5 or 1.1 })
 		Sfx.at("PunchHeavy", args[1], { Volume = 1.2, PlaybackSpeed = 0.7 })
 		Fx.shake(0.5)
 	elseif kind == "WallSlam" then
@@ -151,7 +151,7 @@ function Fx.handle(kind: string, ...)
 		if d < 60 then Fx.shake(math.clamp(speed / 120, 0.2, 0.9) * (1 - d / 60)) end
 	elseif kind == "Clawed" then
 		local dir = args[1]
-		Sfx.play("GhostScream", { Volume = 0.7, PlaybackSpeed = 1.2 })
+		Sfx.play(Sfx.voice("Claw"), { Volume = 0.7, PlaybackSpeed = Sfx.voice("Claw") == "GhostScream" and 1.2 or 1 })
 		Sfx.play("PunchLight", { PlaybackSpeed = 0.7 })
 		slash()
 		HUD.flash(Color3.fromRGB(150, 0, 0), 0.5)
@@ -204,16 +204,18 @@ function Fx.handle(kind: string, ...)
 	elseif kind == "GhostScream" then
 		Sfx.at("GhostScream", args[1], { Volume = 0.3 })
 	elseif kind == "GhostWindUp" then
-		Sfx.at("GhostWail", args[1], { PlaybackSpeed = 1.4, Volume = 0.8 })
+		local w = Sfx.voice("WindUp")
+		Sfx.at(w, args[1], { PlaybackSpeed = w == "GhostWail" and 1.4 or 1, Volume = 0.8 })
 	elseif kind == "GhostVanish" then
 		Sfx.at("GhostWhisper", args[1], { Volume = 0.8 })
 	elseif kind == "GhostSpawn" then
-		Sfx.at("GhostScream", args[1], { Volume = 1.2, PlaybackSpeed = 0.8 })
+		local v = Sfx.voice("Spawn", args[2])
+		Sfx.at(v, args[1], { Volume = 1.2, PlaybackSpeed = v == "GhostScream" and 0.8 or 1 })
 		Fx.shake(0.4)
 		setMusic(true)
 	elseif kind == "GhostDeath" then
 		local pos = args[1]
-		Sfx.play("GhostDeath", { Volume = 1.2 })
+		Sfx.play(Sfx.voice("Death"), { Volume = 1.2 })
 		burst(pos, Color3.fromRGB(210, 240, 245), 120, 30, 1.4)
 		flashBall(pos, Color3.new(1, 1, 1), 26, 0.9)
 		Fx.shake(0.9)

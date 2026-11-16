@@ -1,7 +1,9 @@
--- Player save data: Cash, owned items, next ghost level, kills.
+-- Player save data: Cash, owned items, next ghost level, kills, settings (volumes + keybinds).
 -- Never overwrites a save that failed to load; saves on leave, every 90 s and on shutdown.
 local DSS = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+local Remotes = require(script.Parent.Remotes)
 
 local Data = {}
 local okStore, store = pcall(function() return DSS:GetDataStore("GhostBrawl_v1") end)
@@ -9,9 +11,36 @@ local profiles = {} -- [Player] = { loaded = bool, data = table }
 
 local function fresh() return { Cash = 0, Owned = {}, GhostLevel = 1, Kills = 0, Ults = { Rage = true }, Equipped = "Rage" } end
 
+-- settings sent by the client: volumes 0..1 and keyboard keybinds (action -> KeyCode / mouse button name)
+local BIND_ACTIONS = { Punch = true, Lift = true, Ultimate = true, Sprint = true, Drop = true, Use = true, Settings = true }
+local MOUSE = { MouseButton1 = true, MouseButton2 = true, MouseButton3 = true }
+local function cleanSettings(s: any): { [string]: any }?
+	if type(s) ~= "table" then return nil end
+	local out = { sfx = 1, music = 1, binds = {} }
+	for _, k in { "sfx", "music" } do
+		local v = tonumber(s[k])
+		if v and v == v then out[k] = math.clamp(math.floor(v * 100 + 0.5) / 100, 0, 1) end
+	end
+	if type(s.binds) == "table" then
+		for action, key in s.binds do
+			if BIND_ACTIONS[action] and type(key) == "string" and #key <= 24 then
+				local ok = MOUSE[key] or pcall(function() return (Enum.KeyCode :: any)[key] end)
+				if ok then out.binds[action] = key end
+			end
+		end
+	end
+	return out
+end
+
+local function publishSettings(player: Player, data)
+	if data.Settings then player:SetAttribute("Settings", HttpService:JSONEncode(data.Settings)) end
+	player:SetAttribute("SettingsLoaded", true)
+end
+
 local function publish(player)
 	local p = profiles[player]
 	if not p then return end
+	publishSettings(player, p.data)
 	player:SetAttribute("Cash", p.data.Cash)
 	player:SetAttribute("GhostLevel", p.data.GhostLevel)
 	local owned = {}
@@ -49,6 +78,7 @@ function Data.load(player: Player)
 						for id, v in res.Ults do if type(id) == "string" and v == true then prof.data.Ults[id] = true end end
 					end
 					if type(res.Equipped) == "string" and prof.data.Ults[res.Equipped] then prof.data.Equipped = res.Equipped end
+					prof.data.Settings = cleanSettings(res.Settings)
 					if type(res.Owned) == "table" then
 						for id, v in res.Owned do if type(id) == "string" and v == true then prof.data.Owned[id] = true end end
 					end
@@ -67,7 +97,7 @@ end
 function Data.save(player: Player)
 	local prof = profiles[player]
 	if not prof or not prof.loaded or not okStore then return end
-	local snap = { Cash = prof.data.Cash, GhostLevel = prof.data.GhostLevel, Kills = prof.data.Kills, Owned = table.clone(prof.data.Owned), Ults = table.clone(prof.data.Ults), Equipped = prof.data.Equipped }
+	local snap = { Cash = prof.data.Cash, GhostLevel = prof.data.GhostLevel, Kills = prof.data.Kills, Owned = table.clone(prof.data.Owned), Ults = table.clone(prof.data.Ults), Equipped = prof.data.Equipped, Settings = prof.data.Settings }
 	for i = 1, 3 do
 		local ok, err = pcall(function()
 			store:UpdateAsync("u_" .. player.UserId, function() return snap end)
@@ -135,6 +165,18 @@ function Data.winGhost(player: Player, level: number)
 end
 
 function Data.start()
+	local last = {} :: { [Player]: number }
+	Remotes.SaveSettings.OnServerEvent:Connect(function(p, s)
+		if os.clock() - (last[p] or 0) < 0.4 then return end
+		last[p] = os.clock()
+		local prof = profiles[p]
+		local clean = cleanSettings(s)
+		if prof and clean then
+			prof.data.Settings = clean
+			publishSettings(p, prof.data)
+		end
+	end)
+	Players.PlayerRemoving:Connect(function(p) last[p] = nil end)
 	Players.PlayerRemoving:Connect(function(p)
 		Data.save(p)
 		profiles[p] = nil

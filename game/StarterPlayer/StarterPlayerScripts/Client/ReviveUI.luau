@@ -6,6 +6,7 @@ local RS = game:GetService("ReplicatedStorage")
 local MarketplaceService = game:GetService("MarketplaceService")
 local TweenService = game:GetService("TweenService")
 local Grunge = require(script.Parent.Grunge)
+local Platform = require(script.Parent.Platform)
 local Sfx = require(script.Parent.Sfx)
 local Remotes = RS:WaitForChild("Remotes")
 
@@ -34,6 +35,7 @@ function ReviveUI.init()
 	btn.Font = Grunge.FONT; btn.TextScaled = true; btn.TextColor3 = Grunge.PAPER; btn.TextStrokeTransparency = 0.3; btn.Text = "REVIVE"
 	btn.Position = UDim2.fromScale(0.2, 0.56); btn.Size = UDim2.fromScale(0.6, 0.3); btn.ZIndex = 12; btn.Rotation = 1; btn.Modal = true
 	btn.Parent = panel
+	Platform.menu(panel, nil) -- a controller lands on REVIVE
 	local st = Instance.new("UIStroke"); st.Color = Grunge.INK; st.Thickness = 4; st.ApplyStrokeMode = Enum.ApplyStrokeMode.Border; st.Parent = btn
 	local pad = Instance.new("UIPadding"); pad.PaddingTop = UDim.new(0.12, 0); pad.PaddingBottom = UDim.new(0.12, 0); pad.Parent = btn
 	btn.Activated:Connect(function()

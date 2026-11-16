@@ -1,4 +1,4 @@
--- Run hotbar: 5 item slots (keys 1-5, same key again = fists, X = drop), item use + its first-person feel.
+-- Run hotbar: 5 item slots (keys 1-5 / L1-R1 / tap a slot, same key again = fists, drop key = drop), item use + its first-person feel.
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -9,6 +9,7 @@ local Grunge = require(script.Parent.Grunge)
 local VM = require(script.Parent.Viewmodel)
 local Sfx = require(script.Parent.Sfx)
 local SawAudio = require(script.Parent.SawAudio)
+local Platform = require(script.Parent.Platform)
 local Remotes = RS:WaitForChild("Remotes")
 
 local Hotbar = {}
@@ -81,6 +82,23 @@ function Hotbar.select(n: number)
 	if n == sel or not slots[n] then n = 0 end
 	Remotes.Select:FireServer(n)
 	Sfx.play("Click", { Volume = 0.3 })
+end
+
+-- controller L1 / R1: the previous / next filled slot (past the last one = fists)
+function Hotbar.cycle(dir: number)
+	local n = sel
+	for _ = 1, SLOTS + 1 do
+		n = (n + dir) % (SLOTS + 1)
+		if n == 0 or slots[n] then break end
+	end
+	if n ~= sel then
+		Remotes.Select:FireServer(n)
+		Sfx.play("Click", { Volume = 0.3 })
+	end
+end
+
+function Hotbar.drop()
+	if sel > 0 and slots[sel] then Remotes.Drop:FireServer(sel) end
 end
 
 -- left click / hold with an item in hand. Returns true if an item handled it.
@@ -181,9 +199,11 @@ end
 
 local function update()
 	local it = Hotbar.current()
-	local holding = UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) or Hotbar.touchHold == true
+	-- touchHold = the hit input is held (mouse / key / R2 / the HIT button, set by Input)
+	local holding = Hotbar.touchHold == true
 		or (RunService:IsStudio() and lp:GetAttribute("DebugSpray") == true) -- Studio test hook: hold the trigger
-	if it and it.kind == "spray" and holding and lp:GetAttribute("InMatch") and (UIS.MouseBehavior == Enum.MouseBehavior.LockCenter or lp:GetAttribute("DebugSpray") == true) then
+	local aiming = UIS.MouseBehavior == Enum.MouseBehavior.LockCenter or Platform.mode() ~= "keyboard" or lp:GetAttribute("DebugSpray") == true
+	if it and it.kind == "spray" and holding and lp:GetAttribute("InMatch") and aiming then
 		setSpray(true, it)
 		local tip = VM.itemTip()
 		if sprayAtt and tip then sprayAtt.WorldCFrame = CFrame.lookAt(tip, tip + cam.CFrame.LookVector) * CFrame.Angles(-math.pi / 2, 0, 0) end
@@ -223,10 +243,22 @@ function Hotbar.init()
 		local uses = Grunge.text(box, { Text = "", Font = Grunge.TYPE, AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(0.95, 0, 0.92, -4), Size = UDim2.fromScale(0.5, 0.26), TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = Color3.fromRGB(150, 220, 110) })
 		local mark = Grunge.frame(box, { BackgroundTransparency = 0, BackgroundColor3 = Color3.fromRGB(190, 25, 20), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 0, -4), Size = UDim2.new(0.6, 0, 0, 6), Rotation = -3, Visible = false })
 		local scale = Instance.new("UIScale"); scale.Parent = holder
+		-- tap a slot to hold that item (phones; also clickable when the mouse is free)
+		local tap = Instance.new("TextButton")
+		tap.Text = ""; tap.BackgroundTransparency = 1; tap.Size = UDim2.fromScale(1, 1); tap.ZIndex = 10; tap.Selectable = false
+		tap.Parent = holder
+		tap.Activated:Connect(function() Hotbar.select(n) end)
 		local _ = num
 		frames[n] = { box = box, edge = edge, name = name, uses = uses, mark = mark, scale = scale }
 	end
-	Grunge.text(root, { Text = "[1-5] SWAP   [X] DROP", Font = Grunge.TYPE, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 1, 2), Size = UDim2.fromScale(0.6, 0.22), TextColor3 = Color3.fromRGB(170, 160, 145) })
+	local help = Grunge.text(root, { Text = "[1-5] SWAP   [X] DROP", Font = Grunge.TYPE, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 1, 2), Size = UDim2.fromScale(0.6, 0.22), TextColor3 = Color3.fromRGB(170, 160, 145) })
+	local function helpText()
+		local m = Platform.mode()
+		help.Text = m == "gamepad" and "[L1 / R1] SWAP   [D-PAD DOWN] DROP" or (m == "touch" and "TAP A SLOT TO SWAP" or ("[1-5] SWAP   " .. Platform.label("Drop") .. " DROP"))
+	end
+	helpText()
+	Platform.changed:Connect(helpText)
+	Hotbar.refreshHelp = helpText
 	lp:GetAttributeChangedSignal("Inv"):Connect(refresh)
 	lp:GetAttributeChangedSignal("Sel"):Connect(refresh)
 	lp:GetAttributeChangedSignal("InMatch"):Connect(refresh)
@@ -235,8 +267,7 @@ function Hotbar.init()
 	UIS.InputBegan:Connect(function(input, processed)
 		if processed or not lp:GetAttribute("InMatch") then return end
 		local n = keys[input.KeyCode]
-		if n then Hotbar.select(n)
-		elseif input.KeyCode == Enum.KeyCode.X and sel > 0 then Remotes.Drop:FireServer(sel) end
+		if n then Hotbar.select(n) end -- drop is a rebindable action in Input
 	end)
 	RunService.Heartbeat:Connect(update)
 end

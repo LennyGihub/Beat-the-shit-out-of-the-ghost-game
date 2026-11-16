@@ -43,4 +43,14 @@ return {
 	DemonRoar = { ids = { 136542763428450 }, volume = 1 },
 	DemonLaugh = { ids = { 6841094848 }, volume = 1 },
 	Telekinesis = { ids = { 7935048120 }, volume = 0.9 },
+	-- monster voices (Roblox SFX library; Sfx.voice picks the current monster's)
+	DemonSpawn = { ids = { 9116299488, 9113980319 }, volume = 1 },
+	DemonGrowl = { ids = { 9114628357, 9114628321 }, volume = 1 },
+	DemonHurt = { ids = { 9114628818, 9113971531 }, volume = 0.9 },
+	DemonDeath = { ids = { 9113985445 }, volume = 1 },
+	GoblinSpawn = { ids = { 9114624343 }, volume = 1 },
+	GoblinGrowl = { ids = { 9114625030, 9114624510 }, volume = 1 },
+	GoblinHurt = { ids = { 9114625192, 9114624507 }, volume = 0.9 },
+	GoblinDeath = { ids = { 9114624129 }, volume = 1 },
+	GoblinCackle = { ids = { 9114625189 }, volume = 1 },
 }
