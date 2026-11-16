@@ -16,6 +16,7 @@ local KINDS = {
 	Blackout = true, BlackoutEnd = true, GasThrow = true, GasCloud = true, Gassed = true,
 	HellMark = true, HellPillar = true, Charge = true, CloneSpawn = true, CloneShatter = true,
 	GoblinSteal = true, GoblinUse = true, GoblinDrop = true,
+	MonsterFlee = true, MonsterHolds = true, ShieldBlock = true, Slammed = true,
 }
 local Items = require(game:GetService("ReplicatedStorage").Shared.Items)
 local GOBLIN = Color3.fromRGB(130, 230, 70)
@@ -107,6 +108,29 @@ function MonsterFx.handle(kind: string, ...)
 		local own = Sfx.voice("WindUp")
 		Sfx.at(k == "wail" and "GhostWail" or (own == "GhostWail" and "GhostHurt" or own), pos, { PlaybackSpeed = k == "wail" and 0.8 or (own == "GhostWail" and 0.6 or 1), Volume = 1.2 })
 		Fx.shake(0.15 * near(pos, 60))
+	elseif kind == "MonsterFlee" then
+		-- too much fear: it runs to another floor
+		local pos, title, way = a[1], a[2], a[3]
+		local name = string.gsub(tostring(title or "IT"), "^THE ", "")
+		HUD.toast("THE " .. name .. " IS SCARED - IT RUNS " .. (way == "up" and "UPSTAIRS!" or (way == "down" and "DOWNSTAIRS!" or "AWAY!")), true)
+		Sfx.at(Sfx.voice("Hurt"), pos, { PlaybackSpeed = 1.35, Volume = 1.3 })
+		emitter(pos, { Color = ColorSequence.new(Color3.fromRGB(230, 200, 70)), LightEmission = 0.6, Size = NumberSequence.new(1.4, 0),
+			Speed = NumberRange.new(6, 14), Lifetime = NumberRange.new(0.4, 0.8), SpreadAngle = Vector2.new(180, 180) }, 30, 1.2)
+	elseif kind == "MonsterHolds" then
+		local name = string.gsub(tostring(a[2] or "IT"), "^THE ", "")
+		HUD.toast("THE " .. name .. " IS HOLED UP ON ANOTHER FLOOR - GO GET IT")
+	elseif kind == "ShieldBlock" then
+		local pos = a[1]
+		emitter(pos, { Color = ColorSequence.new(Color3.fromRGB(255, 230, 150)), LightEmission = 1, Size = NumberSequence.new(0.6, 0),
+			Speed = NumberRange.new(14, 28), Lifetime = NumberRange.new(0.15, 0.35), SpreadAngle = Vector2.new(70, 70),
+			Texture = "rbxasset://textures/particles/sparkles_main.dds" }, 24, 0.6)
+		Sfx.at("ShieldBlock", pos, { Volume = 1 })
+		if near(pos, 30) > 0 then HUD.toast("BLOCKED!") end
+	elseif kind == "Slammed" then
+		-- the Pirate threw you into a wall
+		HUD.flash(Color3.fromRGB(120, 0, 0), 0.7)
+		Fx.shake(1.1)
+		Sfx.play("PunchHeavy", { PlaybackSpeed = 0.55, Volume = 1.3 })
 	elseif kind == "GoblinSteal" then
 		-- the Goblin snatches an item: green + gold burst, a cackle
 		local pos, victim = a[1], a[2]

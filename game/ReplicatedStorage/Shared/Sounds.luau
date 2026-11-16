@@ -53,4 +53,9 @@ return {
 	GoblinHurt = { ids = { 9114625192, 9114624507 }, volume = 0.9 },
 	GoblinDeath = { ids = { 9114624129 }, volume = 1 },
 	GoblinCackle = { ids = { 9114625189 }, volume = 1 },
+	PirateSpawn = { ids = { 96613418930760, 127423594846774 }, volume = 1 },
+	PirateSwing = { ids = { 101266427032050 }, volume = 0.9 },
+	PirateHurt = { ids = { 101736510694103, 9126253838 }, volume = 0.9 },
+	PirateDeath = { ids = { 109913671094159 }, volume = 1 },
+	ShieldBlock = { ids = { 9119072660, 9119072674 }, volume = 1 },
 }

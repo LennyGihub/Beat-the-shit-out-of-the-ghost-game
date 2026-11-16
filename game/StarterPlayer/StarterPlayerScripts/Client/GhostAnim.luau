@@ -53,6 +53,25 @@ local function abilityPose(ab: string, phase: string, t: number, since: number):
 	local s = math.sin
 	local p = {}
 	local a = math.min(1, since / 0.35)
+	if ab == "shieldBash" then -- the Pirate: shield up and crouched, then a shoulder-first rush, then he straightens up
+		if phase == "brace" then
+			p.Root = A(0.2 * a, 0, 0) * CFrame.new(0, -0.6 * a, 0); p.Waist = A(0.2, 0.25, 0); p.Neck = A(-0.25, -0.2, 0)
+			p.LeftShoulder = A(0.55, 0.3, -0.35); p.LeftElbow = A(1.5, 0, 0)
+			p.RightShoulder = A(-0.4, 0, 0.5); p.RightElbow = A(0.6, 0, 0)
+			p.RightHip = A(0.45, 0, 0.15); p.LeftHip = A(-0.1, 0, -0.15); p.RightKnee = A(-0.7, 0, 0); p.LeftKnee = A(-0.4, 0, 0)
+		elseif phase == "rush" then
+			local run = s(t * 22)
+			p.Root = A(0.5, 0, 0) * CFrame.new(0, -0.4, 0); p.Waist = A(0.2, 0.35, 0); p.Neck = A(-0.55, -0.3, 0)
+			p.LeftShoulder = A(0.7, 0.3, -0.3); p.LeftElbow = A(1.4, 0, 0)
+			p.RightShoulder = A(-0.6, 0, 0.4); p.RightElbow = A(0.5, 0, 0)
+			p.RightHip = A(run * 0.9, 0, 0); p.LeftHip = A(-run * 0.9, 0, 0)
+			p.RightKnee = A(-0.3 - math.max(0, run) * 0.9, 0, 0); p.LeftKnee = A(-0.3 - math.max(0, -run) * 0.9, 0, 0)
+		else
+			p.Root = A(-0.1, 0, 0); p.Neck = A(0.2, 0, s(t * 25) * 0.1)
+			p.LeftShoulder = A(0.3, 0, -0.3); p.LeftElbow = A(1.0, 0, 0); p.RightShoulder = A(0.2, 0, 0.3)
+		end
+		return p
+	end
 	if ab == "steal" then -- the Goblin: snatch an item, cackle, then use it
 		if phase == "reach" then
 			p.Root = A(0.15 * a, 0, 0) * CFrame.new(0, -0.4 * a, -1.0 * a); p.Waist = A(0.35 * a, 0, 0); p.Neck = A(-0.35 * a, 0, 0)
@@ -213,6 +232,23 @@ local function goblinClaw(state: string, t: number, since: number): { [string]: 
 	return p
 end
 
+-- the Pirate's cutlass slashes (WindUp -> Swipe): overhead-right then a sweep across, shield kept up
+local function pirateSlash(state: string, t: number, since: number): { [string]: CFrame }
+	local p = {}
+	local a = math.min(1, since / 0.4)
+	p.LeftShoulder = A(0.55, 0.3, -0.35); p.LeftElbow = A(1.5, 0, 0) -- shield in front
+	if state == "WindUp" then
+		p.Root = A(-0.08 * a, 0, 0); p.Waist = A(-0.1, -0.6 * a, 0); p.Neck = A(0.05, 0.45 * a, 0)
+		p.RightShoulder = A(2.7 * a, 0, 0.6 * a); p.RightElbow = A(0.9 * a, 0, 0); p.RightWrist = A(0.4 * a, 0, 0)
+		p.RightHip = A(-0.3, 0, 0.1); p.LeftHip = A(0.3, 0, -0.1)
+	else
+		p.Root = A(0.2, 0, 0) * CFrame.new(0, -0.3, -1.0); p.Waist = A(0.25, 0.7, 0); p.Neck = A(-0.15, -0.45, 0)
+		p.RightShoulder = A(1.2, 0, -0.9); p.RightElbow = A(0.05, 0, 0); p.RightWrist = A(-0.4, 0, 0)
+		p.LeftHip = A(0.65, 0, 0); p.RightHip = A(-0.5, 0, 0); p.LeftKnee = A(-0.5, 0, 0)
+	end
+	return p
+end
+
 local function target(state: string, t: number, sinceState: number): { [string]: CFrame }
 	local s = math.sin
 	local p = {}
@@ -222,6 +258,9 @@ local function target(state: string, t: number, sinceState: number): { [string]:
 	end
 	if (state == "WindUp" or state == "Swipe") and g:GetAttribute("MonsterId") == "Goblin" then
 		return goblinClaw(state, t, sinceState)
+	end
+	if (state == "WindUp" or state == "Swipe") and g:GetAttribute("MonsterId") == "Pirate" then
+		return pirateSlash(state, t, sinceState)
 	end
 	if state == "WindUp" then
 		local a = math.min(1, sinceState / 0.45)
@@ -267,6 +306,12 @@ local function target(state: string, t: number, sinceState: number): { [string]:
 		local v = hrp and hrp.AssemblyLinearVelocity or Vector3.zero
 		local speed = Vector3.new(v.X, 0, v.Z).Magnitude
 		walkPose(p, t, speed)
+		if g:GetAttribute("Fleeing") then -- scared: runs away flailing its arms
+			p.RightShoulder = A(2.6 + s(t * 16) * 0.5, 0, 0.5); p.LeftShoulder = A(2.6 - s(t * 16) * 0.5, 0, -0.5)
+			p.RightElbow = A(0.6, 0, 0); p.LeftElbow = A(0.6, 0, 0)
+			p.Neck = A(0.3, s(t * 9) * 0.6, 0)
+			return p
+		end
 		if g:GetAttribute("MonsterId") == "Crawler" then
 			p.Root = A(1.15, 0, s(t * 9) * 0.1) * CFrame.new(0, -1.6, 0)
 			p.Neck = A(-1.1, 0, s(t * 23) * 0.2)
@@ -275,6 +320,11 @@ local function target(state: string, t: number, sinceState: number): { [string]:
 		elseif g:GetAttribute("MonsterId") == "Butcher" or g:GetAttribute("MonsterId") == "HollowKing" or g:GetAttribute("MonsterId") == "Demon" then
 			p.Waist = (p.Waist or CFrame.new()) * A(0.25, 0, 0) -- hunched
 			p.Neck = A(-0.2, 0, s(t * 1.3) * 0.08)
+		elseif g:GetAttribute("MonsterId") == "Pirate" then
+			p.Waist = (p.Waist or CFrame.new()) * A(0.18, 0, 0) -- a crooked skeleton walk, shield up, cutlass low
+			p.Neck = A(-0.15, s(t * 1.1) * 0.15, s(t * 2.7) * 0.1)
+			p.LeftShoulder = A(0.15, 0.25, -0.25); p.LeftElbow = A(1.35, 0, 0)
+			p.RightElbow = A(0.5, 0, 0)
 		elseif g:GetAttribute("MonsterId") == "Goblin" then
 			p.Waist = (p.Waist or CFrame.new()) * A(0.3, 0, 0) -- hunched, sneaky
 			p.Neck = A(-0.35, s(t * 1.7) * 0.25, s(t * 2.3) * 0.08) -- looking around for something to steal

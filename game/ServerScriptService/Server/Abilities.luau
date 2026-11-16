@@ -15,6 +15,8 @@ local rng = Random.new()
 local clouds = {} :: { { pos: Vector3, r: number, dps: number, untilT: number, nextTick: number } }
 local marks = {} :: { { at: number, pts: { Vector3 }, r: number, dmg: number } }
 local clones = {} :: { { model: Model, untilT: number, speed: number, dmg: number, hover: number } }
+-- players the Pirate's shield bash sent flying: hitting a wall hurts (once)
+local flyers = {} :: { [Player]: { untilT: number, dmg: number } }
 
 local function hrpOf(p: Player): BasePart?
 	local ch = p.Character
@@ -109,6 +111,10 @@ function Abilities.try(g, G, now: number, target: Player?, thrp: BasePart?, dist
 	local k = a.kind
 	if k == "steal" then
 		return Loot.try(g, G, now, a, target, thrp, dist)
+	elseif k == "shieldBash" then
+		if dist < a.min or dist > a.max or warded(target) then return false end
+		start(g, G, "brace", a.brace, {})
+		fx("AbilityWind", g.hrp.Position, k)
 	elseif k == "grabThrow" then
 		if dist > a.range or warded(target) then return false end
 		start(g, G, "wind", 0.55, { victim = target })
@@ -331,6 +337,47 @@ function Abilities.step(g, G, dt: number, now: number, target: Player?, thrp: Ba
 		elseif ab.phase == "throw" and now >= ab.untilT then
 			finish(g, G, 0.4)
 		end
+	elseif k == "shieldBash" then
+		-- brace (shield up, shuffling toward you) -> rush in a straight line -> recover
+		if ab.phase == "brace" then
+			if thrp then face(thrp.Position) end
+			local to = thrp and flat(thrp.Position - pos) or flat(g.hrp.CFrame.LookVector)
+			g.lv.VectorVelocity = hover(g, hoverY, to * 3)
+			if now >= ab.untilT then
+				local d = thrp and Vector3.new(thrp.Position.X - pos.X, 0, thrp.Position.Z - pos.Z).Magnitude or 20
+				ab.dir = to
+				ab.hit = {}
+				setPhase(g, "rush", math.clamp(d / a.speed + 0.25, 0.3, 0.95))
+				fx("Charge", pos, ab.dir)
+			end
+		elseif ab.phase == "rush" then
+			g.ao.CFrame = CFrame.lookAt(Vector3.zero, ab.dir)
+			local v = ab.dir * a.speed * (g.speedMult or 1)
+			-- a wall in front: he bonks into it and stops
+			local wall = workspace:Raycast(pos, ab.dir * 3.2, g.rp)
+			if wall and wall.Normal.Y < 0.6 then
+				fx("WallSlam", wall.Position, 70)
+				setPhase(g, "recover", 0.7)
+				return
+			end
+			g.lv.VectorVelocity = hover(g, hoverY, v)
+			for _, p in matchPlayers() do
+				local hrp = hrpOf(p)
+				if hrp and not ab.hit[p] and (hrp.Position - pos).Magnitude < 7 and not warded(p) then
+					ab.hit[p] = true
+					local side = flat(hrp.Position - pos)
+					local dir = (ab.dir * 0.85 + side * 0.35).Unit
+					G.hitPlayer(p, nil, a.dmg * dmgScale(g), dir * a.power + Vector3.new(0, 30, 0), "pirate", true, 1.6)
+					flyers[p] = { untilT = now + 1.4, dmg = (a.wallDmg or 15) * dmgScale(g) }
+					fx("AbilityHit", hrp.Position, k)
+				end
+			end
+			for _, m in Furniture.near(pos, 5) do Furniture.smash(m, ab.dir * a.speed + Vector3.new(0, 25, 0), 90) end
+			if now >= ab.untilT then setPhase(g, "recover", 0.5) end
+		elseif ab.phase == "recover" then
+			g.lv.VectorVelocity = hover(g, hoverY, Vector3.zero)
+			if now >= ab.untilT then finish(g, G, 0.3) end
+		end
 	elseif k == "furnitureStorm" or k == "hellfire" or k == "clones" or k == "gas" then
 		g.lv.VectorVelocity = hover(g, hoverY, Vector3.zero)
 		if thrp then face(thrp.Position) end
@@ -420,6 +467,26 @@ end
 -- lingering things: gas clouds, hellfire marks, mirror clones
 function Abilities.tick(G, dt: number, now: number)
 	Loot.tick(G, dt, now)
+	-- shield-bashed players flying across the room: the first wall they hit hurts
+	for p, f in flyers do
+		local hrp = hrpOf(p)
+		local g = G.current
+		if not hrp or not g or now > f.untilT then
+			flyers[p] = nil
+		else
+			local v = hrp.AssemblyLinearVelocity
+			local hv = Vector3.new(v.X, 0, v.Z)
+			if hv.Magnitude > 30 then
+				local r = workspace:Raycast(hrp.Position, hv.Unit * (hv.Magnitude * dt * 2.5 + 2.4), g.rp)
+				if r and r.Normal.Y < 0.6 then
+					flyers[p] = nil
+					G.damagePlayer(p, f.dmg)
+					fx("WallSlam", r.Position, hv.Magnitude)
+					Remotes.Fx:FireClient(p, "Slammed", hv.Magnitude)
+				end
+			end
+		end
+	end
 	for i = #clouds, 1, -1 do
 		local c = clouds[i]
 		if now > c.untilT then
@@ -496,10 +563,17 @@ end
 
 function Abilities.clear()
 	Loot.clear()
+	flyers = {}
 	for _, c in clones do if c.model.Parent then c.model:Destroy() end end
 	clones = {}
 	clouds = {}
 	marks = {}
+end
+
+-- the Pirate's raised shield (bracing for the bash) blocks hits from the front. dir = the hit's direction
+function Abilities.blocks(g, dir: Vector3): boolean
+	if not g.ab or g.ab.kind ~= "shieldBash" or g.ab.phase ~= "brace" then return false end
+	return flat(dir):Dot(flat(g.hrp.CFrame.LookVector)) < -0.25
 end
 
 -- the Goblin gives back a stolen item (knocked out, killed, despawned)

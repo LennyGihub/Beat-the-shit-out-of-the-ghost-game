@@ -12,7 +12,8 @@ local Ultimates = require(RS.Shared.Ultimates)
 local HUD = {}
 local lp = Players.LocalPlayer
 local gui: ScreenGui
-local health, stamina, brut, ghostBar
+local health, stamina, brut, ghostBar, fearBar
+local fearLabel: TextLabel
 local ghostRoot: Frame
 local ghostTitle: TextLabel
 local comboLabel: TextLabel
@@ -72,6 +73,9 @@ function HUD.init()
 	local gar = Instance.new("UIAspectRatioConstraint"); gar.AspectRatio = 9; gar.Parent = ghostRoot
 	ghostTitle = Grunge.text(ghostRoot, { Text = "THE WOMAN IN THE HOUSE", Font = Grunge.HORROR, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0), Size = UDim2.fromScale(0.8, 0.42), TextColor3 = Color3.fromRGB(200, 225, 228), ZIndex = 7 })
 	ghostBar = Grunge.bar(ghostRoot, { size = UDim2.fromScale(1, 0.42), pos = UDim2.fromScale(0, 0.5), color = Color3.fromRGB(150, 205, 210), rot = 0.4, seed = 51, slices = 40 })
+	-- fear: a smaller bar under the health. Full = the monster runs to another floor
+	fearBar = Grunge.bar(ghostRoot, { size = UDim2.fromScale(0.5, 0.2), pos = UDim2.fromScale(0.25, 1.0), color = Color3.fromRGB(200, 170, 50), rot = -0.6, seed = 63, slices = 22 })
+	fearLabel = Grunge.text(ghostRoot, { Text = "FEAR", Font = Grunge.FONT, AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(0.24, 0.96), Size = UDim2.fromScale(0.12, 0.28), TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = Color3.fromRGB(220, 190, 70), Rotation = -3, ZIndex = 7 })
 
 	-- crosshair + transient labels
 	crosshair = Grunge.frame(gui, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(6, 6), BackgroundTransparency = 0.25, BackgroundColor3 = Grunge.PAPER })
@@ -225,6 +229,10 @@ function HUD.update(dt: number)
 	elseif g and g:GetAttribute("MaxHP") and g:GetAttribute("State") ~= "Dead" then
 		ghostRoot.Visible = true
 		ghostBar:set((g:GetAttribute("HP") or 0) / g:GetAttribute("MaxHP"), dt)
+		local fleeing = g:GetAttribute("Fleeing") == true
+		fearBar:set(fleeing and 1 or (g:GetAttribute("Fear") or 0) / 100, dt)
+		fearLabel.Text = fleeing and "SCARED!" or "FEAR"
+		fearLabel.TextColor3 = fleeing and Color3.fromRGB(255, 80 + math.floor(math.abs(math.sin(t * 8)) * 120), 60) or Color3.fromRGB(220, 190, 70)
 		-- monster name, tinted by rarity (rare blue, legendary gold)
 		local rar = g:GetAttribute("Rarity") or 0
 		ghostTitle.Text = g:GetAttribute("MonsterName") or "THE WOMAN IN THE HOUSE"
