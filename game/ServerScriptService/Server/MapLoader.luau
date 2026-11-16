@@ -55,11 +55,48 @@ function MapLoader.load(id: string): boolean
 	local live = workspace:FindFirstChild("Mansion") :: Model
 	for _, c in live:GetChildren() do c:Destroy() end
 	for _, c in src:GetChildren() do c:Clone().Parent = live end
+	-- the map's settings (SpawnInside, MinY, CeilingY, AtSea...) replace the old map's
+	for k in live:GetAttributes() do live:SetAttribute(k, nil) end
+	for k, v in src:GetAttributes() do live:SetAttribute(k, v) end
 	live:SetAttribute("MapId", id)
 	current = id
 	RS:SetAttribute("MapId", id)
 	Furniture.recapture()
+	MapLoader.setSea(live:GetAttribute("AtSea") == true)
+	MapLoader.hookRescue(live)
 	return true
+end
+
+-- the ship map floats at sea: the forest around the yard is put away while it is loaded (and comes back after)
+local hiddenForest: Instance? = nil
+function MapLoader.setSea(on: boolean)
+	local grounds = workspace:FindFirstChild("Grounds")
+	if on and not hiddenForest then
+		local f = grounds and grounds:FindFirstChild("Forest")
+		if f then hiddenForest = f; f.Parent = SS end
+	elseif not on and hiddenForest then
+		hiddenForest.Parent = grounds
+		hiddenForest = nil
+	end
+end
+
+-- parts with the Rescue attribute (the sea): a player who falls in is put back at the map's spawn point
+function MapLoader.hookRescue(live: Instance)
+	for _, d in live:GetDescendants() do
+		if d:IsA("BasePart") and d:GetAttribute("Rescue") then
+			d.Touched:Connect(function(hit)
+				local ch = hit.Parent
+				local p = ch and game:GetService("Players"):GetPlayerFromCharacter(ch)
+				local hrp = ch and ch:FindFirstChild("HumanoidRootPart") :: BasePart?
+				if p and hrp and not ch:GetAttribute("Rescuing") then
+					ch:SetAttribute("Rescuing", true)
+					hrp.AssemblyLinearVelocity = Vector3.zero
+					ch:PivotTo(CFrame.new(MapLoader.spawnInside() + Vector3.new(0, 3, 0)))
+					task.delay(0.5, function() if ch.Parent then ch:SetAttribute("Rescuing", nil) end end)
+				end
+			end)
+		end
+	end
 end
 
 -- where the monster can appear: the map's GhostSpawns parts, else the Mansion's points

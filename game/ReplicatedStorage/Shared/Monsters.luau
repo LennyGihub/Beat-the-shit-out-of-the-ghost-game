@@ -1,5 +1,5 @@
 --!strict
--- The monsters: the Woman (always ghost 1), the Red Demon and the Goblin (rare). pick() falls back to the Woman.
+-- The monsters: the Woman (always ghost 1), the Red Demon, the Pirate and the Goblin (rare). pick() falls back to the Woman.
 -- template = model name in ServerStorage.Monsters (the Woman uses ServerStorage.GhostTemplate).
 -- hp/speed/dmg/reward multiply the level-based values in Config.Ghost / Config.Reward.
 -- hover = root height above the floor (floaters ~4.6, walkers = their hip height).
@@ -27,6 +27,11 @@ local List: { Monster } = {
 		hp = 1.4, speed = 0.95, dmg = 1.3, reward = 1.5, hover = 0, walker = true, scale = 1, solid = true, -- solid: no walking through walls
 		ability = { kind = "levitateThrow", cd = 6.5, range = 70, lift = 1.3, aim = 0.45, power = 150, dmg = 22 },
 		desc = "Lifts the furniture with his mind and hurls it at you." }),
+	m({ id = "Pirate", name = "The Pirate", title = "THE PIRATE", rarity = 1, template = "Pirate", color = C(226, 214, 186),
+		hp = 1.35, speed = 1.05, dmg = 1.2, reward = 1.5, hover = 0, walker = true, scale = 1, solid = true,
+		-- shield bash: braces (shield up, blocks hits from the front), then rushes you and sends you flying into the walls
+		ability = { kind = "shieldBash", cd = 5.5, min = 7, max = 45, brace = 0.7, speed = 72, power = 135, dmg = 14, wallDmg = 16 },
+		desc = "A skeleton with a cutlass and a shield. His shield bash throws you into the walls; his raised shield blocks hits." }),
 	m({ id = "Goblin", name = "The Goblin", title = "THE GOBLIN", rarity = 2, template = "Goblin", color = C(110, 190, 60),
 		hp = 1.25, speed = 1.08, dmg = 1, reward = 1.6, hover = 0, walker = true, scale = 1, solid = true,
 		ability = { kind = "steal", cd = 6, range = 11 }, -- grabs the item in your hands, then uses it on you

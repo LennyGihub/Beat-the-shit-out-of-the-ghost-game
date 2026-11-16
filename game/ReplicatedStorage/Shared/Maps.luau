@@ -1,5 +1,5 @@
 --!strict
--- The 11 maps (the Mansion is free, the rest are bought at the Hooded Dealer) and the 4 difficulties.
+-- The 12 maps (the Mansion is free, the rest are bought at the Hooded Dealer) and the 4 difficulties.
 -- Every map is a ServerStorage.Maps.<id> model built on the same footprint as the Mansion
 -- (house x -80..80, z -60..60, front door at z = 60 facing the yard), so the run, events and yard all fit.
 -- light = the "inside" lighting the client uses for that map (tint, ambient, colour grade).
@@ -22,6 +22,8 @@ local List: { Map } = {
 		light = light(C(255, 220, 190), C(40, 30, 32), -0.3, 0.28, 1.5) },
 	{ id = "Motel", name = "Last Stop Motel", price = 8000, desc = "A row of cheap rooms off a buzzing neon hallway.", color = C(230, 80, 120),
 		light = light(C(255, 210, 230), C(34, 22, 30), -0.2, 0.25) },
+	{ id = "Ship", name = "The Ghost Ship", price = 9500, desc = "A rotting galleon adrift at sea: the hold, the deck, the captain's cabin. Don't fall in.", color = C(60, 120, 160),
+		light = light(C(210, 228, 255), C(22, 30, 40), -0.3, 0.25, 1.3) },
 	{ id = "Farm", name = "Hollow Creek Farm", price = 11000, desc = "A farmhouse and its barn, hay everywhere.", color = C(190, 140, 70),
 		light = light(C(255, 226, 180), C(34, 28, 20), -0.3, 0.22) },
 	{ id = "Asylum", name = "Ravenhill Asylum", price = 15000, desc = "Padded cells and iron beds. She was a patient here.", color = C(120, 160, 150),

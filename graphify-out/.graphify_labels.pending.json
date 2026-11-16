@@ -5,7 +5,7 @@
   "3": "ClientMain.client.luau",
   "4": "Data.luau",
   "5": "Viewmodel.luau",
-  "6": "Ragdoll.luau",
+  "6": "Inventory.luau",
   "7": "LobbyUI.luau",
   "8": "Config.luau",
   "9": "Items.luau",
@@ -20,6 +20,5 @@
   "18": "Abilities.luau",
   "19": "Input.luau",
   "20": "GoblinLoot.luau",
-  "21": "Settings.luau",
   "22": "SawAudio.luau"
 }
