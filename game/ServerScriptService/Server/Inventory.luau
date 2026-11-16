@@ -152,6 +152,46 @@ local function structure(): RaycastParams
 	return rp
 end
 
+-- stakes and harpoons stay stuck in the monster (welded to the body part they hit, max 10)
+local STICK = { StakeCrossbow = "stake", HarpoonGun = "harpoon" }
+local function stickIn(g, part: BasePart, at: Vector3, d: Vector3, kind: string)
+	local m = Instance.new("Model")
+	m.Name = "Stuck_" .. kind
+	local big = kind == "harpoon"
+	local len = big and 5.5 or 3.4
+	local function blk(size: Vector3, offset: number, color: Color3, mat: Enum.Material, y: number?)
+		local q = Instance.new("Part")
+		q.Size = size; q.Color = color; q.Material = mat
+		q.CanCollide = false; q.CanQuery = false; q.CanTouch = false; q.Massless = true; q.CastShadow = false
+		q.TopSurface = Enum.SurfaceType.Smooth; q.BottomSurface = Enum.SurfaceType.Smooth
+		-- the tip is buried 0.8 deep at `at`, the shaft sticks out back toward the shooter
+		q.CFrame = CFrame.lookAt(at, at + d) * CFrame.new(0, y or 0, -0.8 + offset)
+		q.Parent = m
+		return q
+	end
+	local shaft = big and Color3.fromRGB(80, 96, 110) or Color3.fromRGB(150, 110, 70)
+	local w = big and 0.32 or 0.22
+	local root = blk(Vector3.new(w, w, len), len / 2, shaft, big and Enum.Material.Metal or Enum.Material.Wood)
+	if big then
+		blk(Vector3.new(0.5, 0.5, 0.3), len - 0.2, Color3.fromRGB(50, 50, 52), Enum.Material.Metal) -- butt ring
+		blk(Vector3.new(0.12, 0.12, 2.4), len + 1.2, Color3.fromRGB(230, 220, 180), Enum.Material.Fabric, -0.3) -- rope end
+		for _, s in { -1, 1 } do -- barbs poking out of the body
+			local b = blk(Vector3.new(0.1, 0.1, 0.7), 0.6, Color3.fromRGB(190, 190, 186), Enum.Material.Metal)
+			b.CFrame = b.CFrame * CFrame.Angles(0, s * 0.6, 0)
+		end
+	else
+		for _, s in { -1, 1 } do blk(Vector3.new(0.04, 0.3, 0.5), len - 0.3, Color3.fromRGB(200, 40, 30), Enum.Material.SmoothPlastic) end -- fletching
+	end
+	for _, q in m:GetChildren() do
+		local wc = Instance.new("WeldConstraint"); wc.Part0 = part; wc.Part1 = q :: BasePart; wc.Parent = q
+	end
+	m.PrimaryPart = root
+	m.Parent = g.model
+	g.stuck = g.stuck or {}
+	table.insert(g.stuck, m)
+	if #g.stuck > 10 then (table.remove(g.stuck, 1) :: Model):Destroy() end
+end
+
 local function useGun(p: Player, n: number, it, dir: Vector3)
 	local _, _, head = alive(p)
 	if not head then return end
@@ -160,6 +200,7 @@ local function useGun(p: Player, n: number, it, dir: Vector3)
 	local g = ghostAlive()
 	local total, hits = 0, 0
 	local endPoints = {}
+	local firstHit: { part: BasePart, at: Vector3, d: Vector3 }? = nil
 	for _ = 1, it.pellets do
 		local d = (dir + Vector3.new(rng:NextNumber(-1, 1), rng:NextNumber(-1, 1), rng:NextNumber(-1, 1)) * it.spread).Unit
 		local endPt = o + d * it.range
@@ -174,6 +215,7 @@ local function useGun(p: Player, n: number, it, dir: Vector3)
 						hits += 1
 						total += it.dmg
 						endPt = o + d * t
+						if not firstHit then firstHit = { part = part, at = part.Position - d * 0.6, d = d } end
 						break
 					end
 				end
@@ -185,6 +227,8 @@ local function useGun(p: Player, n: number, it, dir: Vector3)
 	if hits > 0 and g then
 		local dmg = Combat.registerHit(p, dir, g.hrp.Position, total, it.knock * math.sqrt(hits), 2, 1)
 		applyFx(p, it, dmg, dir)
+		local kind = STICK[it.id]
+		if kind and firstHit and g.model.Parent then pcall(stickIn, g, firstHit.part, firstHit.at, firstHit.d, kind) end
 	end
 end
 

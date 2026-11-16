@@ -87,6 +87,8 @@ function Hotbar.primary(): boolean
 	VM.use()
 	if it.id == "Chainsaw" then
 		SawAudio.used() -- engine revs instead of a whoosh per tick
+	elseif it.kind == "melee" and it.sfx and it.sfx.use then
+		Sfx.play(it.sfx.use, { PlaybackSpeed = 0.95 + math.random() * 0.1 })
 	elseif it.kind == "melee" then
 		Sfx.play("Whoosh", { PlaybackSpeed = (it.cd > 0.6 and 0.55 or 0.75) + math.random() * 0.25 })
 	elseif it.kind == "throw" or it.kind == "trap" then

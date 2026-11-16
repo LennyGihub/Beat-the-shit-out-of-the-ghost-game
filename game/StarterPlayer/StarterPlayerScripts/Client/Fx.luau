@@ -17,6 +17,7 @@ local UltFx = require(script.Parent.UltFx)
 local Ultimates = require(RS.Shared.Ultimates)
 local Items = require(RS.Shared.Items)
 
+local lastItemSfx = {} :: { [string]: number }
 local Fx = {}
 local lp = Players.LocalPlayer
 local cam = workspace.CurrentCamera
@@ -129,6 +130,19 @@ function Fx.handle(kind: string, ...)
 		burst(pos, Color3.fromRGB(120, 100, 80), 18, 20, 1.2)
 		local d = (cam.CFrame.Position - pos).Magnitude
 		if d < 40 then Fx.shake(0.25 * (1 - d / 40) + 0.05) end
+	elseif kind == "WallSmash" then
+		-- she smashed through a wall
+		local pos, speed = args[1], args[2]
+		Sfx.at("WoodBreak", pos, { Volume = 1.3, PlaybackSpeed = 0.8 + math.random() * 0.3 })
+		Sfx.at("Crash", pos, { Volume = 1, PlaybackSpeed = 1.1 })
+		burst(pos, Color3.fromRGB(190, 175, 150), 45, 35, 1.8)
+		local d = (cam.CFrame.Position - pos).Magnitude
+		if d < 80 then Fx.shake(math.clamp(speed / 100, 0.3, 1) * (1 - d / 80)) end
+	elseif kind == "GhostRagdoll" then
+		-- knocked out: a silly yelp and a big shake
+		Sfx.at("GhostHurt", args[1], { Volume = 1.2, PlaybackSpeed = 1.5 })
+		Sfx.at("PunchHeavy", args[1], { Volume = 1.2, PlaybackSpeed = 0.7 })
+		Fx.shake(0.5)
 	elseif kind == "WallSlam" then
 		local pos, speed = args[1], args[2]
 		Sfx.at("PunchHeavy", pos, { PlaybackSpeed = 0.6, Volume = 1.2 })
@@ -254,7 +268,13 @@ function Fx.handle(kind: string, ...)
 			TweenService:Create(tr, TweenInfo.new(0.12), { Transparency = 1 }):Play()
 			Debris:AddItem(tr, 0.15)
 		end
-		Sfx.at("PunchHeavy", from, { PlaybackSpeed = 1.6, Volume = 0.7 })
+		local sfx = Items.byId[args[5] or ""] and Items.byId[args[5]].sfx
+		if sfx and sfx.use then
+			Sfx.at(sfx.use, from, { PlaybackSpeed = sfx.speed or 1 })
+			if sfx.after then task.delay(0.4, function() Sfx.at(sfx.after, from) end) end
+		else
+			Sfx.at("PunchHeavy", from, { PlaybackSpeed = 1.6, Volume = 0.7 })
+		end
 		if by == lp then Fx.shake(0.15); Fx.kick(3) end
 	elseif kind == "ItemBoom" then
 		local pos, radius, color, loud = args[1], args[2], args[3], args[4]
@@ -268,7 +288,22 @@ function Fx.handle(kind: string, ...)
 		burst(args[1], Color3.fromRGB(150, 150, 150), 14, 10, 0.5)
 	elseif kind == "ItemSwing" then
 		local by, id, hit = args[1], args[2], args[3]
-		if by ~= lp and id == "Chainsaw" then
+		local sfx = Items.byId[id] and Items.byId[id].sfx
+		local head = by and by.Character and by.Character:FindFirstChild("Head") :: BasePart?
+		-- the item's own sounds: swing (others hear it in 3D; yours plays from the Hotbar) and hit
+		if sfx and head then
+			if sfx.use and by ~= lp then Sfx.at(sfx.use, head.Position, { PlaybackSpeed = sfx.speed or 1 }) end
+			if sfx.hit and hit then
+				local key = tostring(by.UserId) .. sfx.hit
+				local now = os.clock()
+				if now - (lastItemSfx[key] or 0) >= (sfx.every or 0.15) then
+					lastItemSfx[key] = now
+					if by == lp then Sfx.play(sfx.hit, { PlaybackSpeed = (sfx.speed or 1) * (0.95 + math.random() * 0.1) })
+					else Sfx.at(sfx.hit, head.Position, { PlaybackSpeed = sfx.speed or 1 }) end
+				end
+			end
+		end
+		if by ~= lp and (id == "Chainsaw" or (sfx and sfx.use)) then
 			-- their saw's own 3D engine loop covers it (ThirdPersonItems + SawAudio)
 		elseif by ~= lp and by and by.Character and by.Character:FindFirstChild("Head") then
 			Sfx.at("Whoosh", by.Character.Head.Position, { PlaybackSpeed = 0.8 })

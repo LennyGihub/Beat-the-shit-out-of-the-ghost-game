@@ -81,4 +81,16 @@ local List: { Item } = {
 
 local byId: { [string]: Item } = {}
 for _, it in List do byId[it.id] = it end
+-- item sounds (names in Shared/Sounds): hit = plays when it connects, use = when you swing / fire,
+-- after = a second sound a moment later (pump), every = minimum seconds between two hit sounds, speed = pitch
+local SFX = {
+	BaseballBat = { hit = "Bonk" },
+	FryingPan = { hit = "PanHit" },
+	LeadPipe = { hit = "PipeFall", every = 1.2 },
+	DemonBlade = { use = "DemonSwing", hit = "DemonHit" },
+	NailGun = { use = "NailShot" },
+	SaltShotgun = { use = "ShotgunShot", after = "ShotgunPump" },
+	PotatoCannon = { use = "CannonShot", speed = 0.8 },
+}
+for id, s in SFX do if byId[id] then byId[id].sfx = s end end
 return { list = List, byId = byId, rarity = RARITY }

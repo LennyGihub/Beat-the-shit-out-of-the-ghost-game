@@ -8,6 +8,7 @@ local Config = require(RS.Shared.Config)
 local Remotes = require(script.Parent.Remotes)
 local Furniture = require(script.Parent.Furniture)
 local Abilities = require(script.Parent.Abilities)
+local Ragdoll = require(script.Parent.Ragdoll)
 local Monsters = require(RS.Shared.Monsters)
 local C = Config.Ghost
 
@@ -57,6 +58,7 @@ end
 
 function Ghost.spawn(level: number, pos: Vector3, monsterId: string?)
 	Ghost.despawn()
+	Ragdoll.restoreWalls() -- walls she smashed through last time are back
 	local def = Monsters.byId[monsterId or "Woman"] or Monsters.byId.Woman
 	local m = template(def):Clone()
 	m.Name = "Ghost"
@@ -126,6 +128,8 @@ function Ghost.despawn()
 	Ghost.current = nil
 	Abilities.clear()
 end
+
+Ghost.restoreWalls = Ragdoll.restoreWalls
 
 -- mirror clones can be punched apart
 Ghost.hitClone = Abilities.hitClone
@@ -210,7 +214,7 @@ end
 
 function Ghost.launch(h: number, d: number, by: Player?)
 	local g = Ghost.current
-	if not g or g.state == "Dead" or g.state == "Spawn" then return end
+	if not g or g.state == "Dead" or g.state == "Spawn" or g.state == "Ragdoll" then return end
 	g.model:SetAttribute("Vanish", false)
 	g.launch = { phase = "up", topY = g.hrp.Position.Y + h, d = d, by = by }
 	setState(g, "Launched")
@@ -229,7 +233,7 @@ end
 -- push her with a velocity (leaf blower, shop vac, harpoon) without damage
 function Ghost.shove(v: Vector3)
 	local g = Ghost.current
-	if not g or g.state == "Dead" or g.state == "Spawn" or g.state == "Launched" then return end
+	if not g or g.state == "Dead" or g.state == "Spawn" or g.state == "Launched" or g.state == "Ragdoll" then return end
 	if g.ts and os.clock() < g.ts.untilT then return end
 	g.vel = v
 	if g.state ~= "Knocked" then setState(g, "Knocked", 0.12) end
@@ -277,6 +281,20 @@ function Ghost.hit(by: Player?, dir: Vector3, knock: number, damage: number)
 	if g.state == "Launched" then return end
 	local flat = Vector3.new(dir.X, 0, dir.Z)
 	flat = flat.Magnitude > 0.01 and flat.Unit or Vector3.new(0, 0, -1)
+	-- a big hit knocks her out: she goes limp and flies (through walls)
+	local ragVel = flat * math.clamp(knock * 0.75, 55, 115) + Vector3.new(0, 26 + knock * 0.1, 0)
+	if g.state == "Ragdoll" then
+		Ragdoll.kick(g, flat * math.clamp(knock * 0.7, 30, 100) + Vector3.new(0, 30, 0)) -- juggle her while she is down
+		return
+	end
+	if knock >= Ragdoll.MIN_KNOCK then
+		g.model:SetAttribute("Vanish", false)
+		setState(g, "Ragdoll", 4.5)
+		Ragdoll.start(g, ragVel)
+		Remotes.Fx:FireAllClients("GhostRagdoll", g.hrp.Position)
+		g.nextAttack = math.max(g.nextAttack, os.clock() + 2)
+		return
+	end
 	g.vel = flat * knock + Vector3.new(0, math.min(knock * 0.15, 18), 0)
 	setState(g, "Knocked", 0.18)
 	g.nextAttack = math.max(g.nextAttack, os.clock() + 0.9)
@@ -364,6 +382,22 @@ function Ghost.step(dt: number)
 	local target, thrp = pickTarget(g)
 	g.target = target
 	local pos = g.hrp.Position
+	if s == "Ragdoll" then
+		local done = Ragdoll.step(g, dt, function(at: Vector3, speed: number)
+			Remotes.Fx:FireAllClients("WallSmash", at, speed)
+			Ghost.damage(speed * C.WallSlamFactor * 0.5, nil)
+		end)
+		local torso = (g.model:FindFirstChild("UpperTorso") or g.hrp) :: BasePart
+		local v = torso.AssemblyLinearVelocity
+		if v.Magnitude > 14 then
+			for _, f in Furniture.near(torso.Position, 4.5) do Furniture.smash(f, v, v.Magnitude) end
+		end
+		if done and Ghost.alive() then
+			Ragdoll.stop(g)
+			setState(g, "Recover", 0.9)
+		end
+		return
+	end
 	if s == "Launched" then return stepLaunched(g, dt) end
 	if s == "Knocked" then return stepKnocked(g, dt, now) end
 	if now < g.frozenUntil then

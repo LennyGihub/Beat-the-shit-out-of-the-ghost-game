@@ -70,6 +70,7 @@ local SCALE_ID: { [string]: number } = { PotatoCannon = 0.62, PepperSpray = 0.85
 -- left fist on an item's LeftGrip (camera space): the forearm comes in from the lower left
 local LEFT_ROT: { [string]: CFrame } = {
 	saw = A(0.4, -0.9, -0.6),
+	bat = A(0.3, -0.5, -0.3),
 	heavy = A(0.5, -0.7, -0.3),
 	shotgun = A(1.15, -0.45, -0.2),
 	longgun = A(1.15, -0.45, -0.2),

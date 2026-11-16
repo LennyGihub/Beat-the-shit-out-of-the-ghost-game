@@ -56,7 +56,7 @@ local function find(list: { any }, word: string?): any
 end
 
 local HELP = "cash <n> | runcash <n> | give <item> | clearitems | ult <id> | allults | allmaps | heal | brut | god | start [map] [diff] | "
-	.. "next | killghost | monster <id|off> | event plane|van|train | leave | endrun"
+	.. "next | killghost | bring | ragdoll [power] | monster <id|off> | event plane|van|train | leave | endrun"
 
 local CMD: { [string]: (p: Player, a: string?, b: string?) -> (boolean, string) } = {}
 
@@ -146,6 +146,27 @@ CMD.killghost = function(p)
 	if not Ghost.alive() then return false, "No ghost alive" end
 	Ghost.damage(1e9, p)
 	return true, "Ghost killed"
+end
+
+-- pull the ghost 8 studs in front of you
+CMD.bring = function(p)
+	if not Ghost.alive() then return false, "No ghost alive" end
+	local head = p.Character and p.Character:FindFirstChild("Head") :: BasePart?
+	if not head then return false, "No character" end
+	local look = Vector3.new(head.CFrame.LookVector.X, 0, head.CFrame.LookVector.Z).Unit
+	local at = head.Position + look * 8
+	Ghost.current.model:PivotTo(CFrame.lookAt(at, head.Position))
+	return true, "Ghost brought in front of you"
+end
+
+-- knock her out with a huge hit toward where you look (ragdoll + wall smash test)
+CMD.ragdoll = function(p, a)
+	if not Ghost.alive() then return false, "No ghost alive" end
+	local g = Ghost.current
+	local head = p.Character and p.Character:FindFirstChild("Head") :: BasePart?
+	local look = head and Vector3.new(head.CFrame.LookVector.X, 0, head.CFrame.LookVector.Z) or Vector3.new(0, 0, -1)
+	Ghost.hit(p, look.Magnitude > 0.01 and look.Unit or Vector3.new(0, 0, -1), num(a) or 150, 1)
+	return true, "BONK! She is flying"
 end
 
 CMD.monster = function(_p, a)

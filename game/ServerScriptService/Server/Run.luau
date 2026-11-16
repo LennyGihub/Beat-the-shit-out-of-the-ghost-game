@@ -265,6 +265,7 @@ end
 
 function Run.endMatch()
 	Ghost.despawn()
+	Ghost.restoreWalls()
 	clearTemp()
 	if event then Events.despawn(event); event = nil end
 	Inventory.clearWorld()

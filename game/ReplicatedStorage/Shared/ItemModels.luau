@@ -63,13 +63,14 @@ function B.bat(m, c, glow)
 	for i = 0, 2 do p(m, V(0.32, 0.06, 0.08), at(0, 0.15, 0.4 - i * 0.35), BLACK) end -- tape wraps
 	p(m, V(0.32, 0.32, 0.7), at(0, 0, -0.82), w)
 	p(m, V(0.4, 0.4, 0.75), at(0, 0, -1.5), w)
-	p(m, V(0.5, 0.5, 1.45), at(0, 0, -2.55), w)
-	p(m, V(0.44, 0.44, 0.1), at(0, 0, -3.3), worn(c, 0.35))
-	p(m, V(0.52, 0.08, 0.3), at(0, 0.02, -2.3), worn(c, 0.45)) -- scuffed label
-	mark(m, "Tip", at(0, 0, -3.2))
+	p(m, V(0.5, 0.5, 2.1), at(0, 0, -2.88), w)
+	p(m, V(0.44, 0.44, 0.1), at(0, 0, -3.97), worn(c, 0.35))
+	p(m, V(0.52, 0.08, 0.3), at(0, 0.02, -2.6), worn(c, 0.45)) -- scuffed label
+	mark(m, "Tip", at(0, 0, -3.9))
+	if not glow then mark(m, "LeftGrip", at(0, 0, -0.42)) end -- two hands on the grip
 	if glow then -- burning bat: flames along the barrel
-		for i = 0, 3 do flame(m, at(i % 2 == 0 and 0.12 or -0.12, 0.25, -2.0 - i * 0.38), 1 + (i % 2) * 0.3) end
-		local f = p(m, V(0.56, 0.56, 1.5), at(0, 0, -2.55), Color3.fromRGB(80, 30, 10), M.CrackedLava)
+		for i = 0, 4 do flame(m, at(i % 2 == 0 and 0.12 or -0.12, 0.25, -2.1 - i * 0.4), 1 + (i % 2) * 0.3) end
+		local f = p(m, V(0.56, 0.56, 2.15), at(0, 0, -2.88), Color3.fromRGB(80, 30, 10), M.CrackedLava)
 		f.Transparency = 0.25
 	end
 end
