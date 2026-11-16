@@ -17,6 +17,7 @@ local Events = require(script.Parent.Events)
 local Monsters = require(RS.Shared.Monsters)
 local Maps = require(RS.Shared.Maps)
 local MapLoader = require(script.Parent.MapLoader)
+local Quests = require(script.Parent.Quests)
 local Friends = require(script.Parent.Friends)
 
 local Run = {}
@@ -88,6 +89,7 @@ function Run.payout(p: Player, reason: string): number
 	local st = stats[p]
 	if not st or st.paid then return 0 end
 	st.paid = true
+	if st.kills > 0 then Quests.add(p, "runs") end -- a finished run (at least one monster knocked out)
 	local g = Ghost.current
 	if g and g.damageBy[p] then st.damage += g.damageBy[p]; g.damageBy[p] = 0 end
 	local cash = math.floor((st.earned + st.damage / Config.Payout.DamageDiv * diff.reward) * Friends.mult(p) * (p:GetAttribute("Money2") and 2 or 1)) -- friend booster, 2X money
@@ -169,6 +171,10 @@ local function onGhostDeath(g)
 		local r = math.floor(reward * Friends.mult(p) * (p:GetAttribute("Money2") and 2 or 1)) -- friend booster, 2X money
 		p:SetAttribute("RunCash", (p:GetAttribute("RunCash") or 0) + r)
 		Data.winGhost(p, g.level)
+		Quests.add(p, "kills")
+		Quests.add(p, "kill_" .. ((g.def and g.def.id) or "Woman"))
+		Quests.add(p, "wave", g.level)
+		if diff.id == "Nightmare" then Quests.add(p, "nightmare") end
 		Remotes.Fx:FireClient(p, "Victory", r)
 	end
 	-- a new event is due after the first kill and every EventLife kills after that
@@ -224,6 +230,7 @@ local function onBuy(p: Player, id: string, at: Vector3)
 		return
 	end
 	p:SetAttribute("RunCash", cash - it.price)
+	Quests.add(p, "buys")
 	Remotes.Fx:FireClient(p, "BuyResult", true, it.name, at)
 end
 

@@ -28,6 +28,7 @@ local MapLoader = require(Server.MapLoader)
 local Admin = require(Server.Admin)
 local Friends = require(Server.Friends)
 local Monetization = require(Server.Monetization)
+local Quests = require(Server.Quests)
 
 local isMatchServer = game.PrivateServerId ~= "" and game.PrivateServerOwnerId == 0
 Run.mode = isMatchServer and "Match" or "Lobby"
@@ -45,6 +46,7 @@ Lobby.start()
 Admin.start()
 Friends.start()
 Monetization.start()
+Quests.start()
 
 local expected = 1
 local firstJoin = nil :: number?
@@ -86,6 +88,7 @@ local function onPlayer(p: Player)
 	end)
 	p:LoadCharacter()
 	Data.load(p)
+	Quests.setup(p)
 	if Run.mode == "Match" then
 		firstJoin = firstJoin or os.clock()
 		-- start when the whole party has arrived (or after 15 s)

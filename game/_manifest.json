@@ -37,6 +37,13 @@
    "sha1": "491b8d7d07414985b0d9c762851f2357152137a5"
   },
   {
+   "file": "ReplicatedStorage/Shared/Quests.luau",
+   "instance": "game.ReplicatedStorage.Shared.Quests",
+   "class": "ModuleScript",
+   "bytes": 3153,
+   "sha1": "6f69ba5fb6b9d01cb1d47f31857c83903286c4b9"
+  },
+  {
    "file": "ReplicatedStorage/Shared/Sounds.luau",
    "instance": "game.ReplicatedStorage.Shared.Sounds",
    "class": "ModuleScript",
@@ -54,8 +61,8 @@
    "file": "ServerScriptService/Main.server.luau",
    "instance": "game.ServerScriptService.Main",
    "class": "Script",
-   "bytes": 4441,
-   "sha1": "4b0b9d28d62b67391ecac33240373bedb7feff06"
+   "bytes": 4511,
+   "sha1": "ab76816ab9288b92f2ed4fd927134b80ab470b5b"
   },
   {
    "file": "ServerScriptService/Server/Abilities.luau",
@@ -75,15 +82,15 @@
    "file": "ServerScriptService/Server/Combat.luau",
    "instance": "game.ServerScriptService.Server.Combat",
    "class": "ModuleScript",
-   "bytes": 22681,
-   "sha1": "6b09024eeb75adec36151760f51f59eb2099ee89"
+   "bytes": 23027,
+   "sha1": "b64ab7426ba02919d4394d7e9389138b7aaf08f4"
   },
   {
    "file": "ServerScriptService/Server/Data.luau",
    "instance": "game.ServerScriptService.Server.Data",
    "class": "ModuleScript",
-   "bytes": 8735,
-   "sha1": "2511aacebe3609a5ec171f974c67e928e2beae1b"
+   "bytes": 8946,
+   "sha1": "434a9301d536c7c57312c3da26373dac4cc2c9c2"
   },
   {
    "file": "ServerScriptService/Server/Events.luau",
@@ -156,6 +163,13 @@
    "sha1": "192369918aee84d8889b8d0e8b4d17b5e85609fc"
   },
   {
+   "file": "ServerScriptService/Server/Quests.luau",
+   "instance": "game.ServerScriptService.Server.Quests",
+   "class": "ModuleScript",
+   "bytes": 5752,
+   "sha1": "4bc404642db9302208344ba43debbb03363a954c"
+  },
+  {
    "file": "ServerScriptService/Server/Ragdoll.luau",
    "instance": "game.ServerScriptService.Server.Ragdoll",
    "class": "ModuleScript",
@@ -166,15 +180,15 @@
    "file": "ServerScriptService/Server/Remotes.luau",
    "instance": "game.ServerScriptService.Server.Remotes",
    "class": "ModuleScript",
-   "bytes": 722,
-   "sha1": "d26a654f727334f9f5b49b6efb0e5e2cabe209e4"
+   "bytes": 731,
+   "sha1": "b670f34d4d85d3f9701cae2bc5a145876a83f4d4"
   },
   {
    "file": "ServerScriptService/Server/Run.luau",
    "instance": "game.ServerScriptService.Server.Run",
    "class": "ModuleScript",
-   "bytes": 15561,
-   "sha1": "980984d2b0dffbfb61ff5b8e38192860dd0df56d"
+   "bytes": 15914,
+   "sha1": "412b1b8ef7591429da7820a1c04ef444322d1ae2"
   },
   {
    "file": "ServerScriptService/Server/UltRunner.luau",
@@ -208,8 +222,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/Fx.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.Fx",
    "class": "ModuleScript",
-   "bytes": 22593,
-   "sha1": "6ddfae003a082477d9634ac5f10bbe30034d21a9"
+   "bytes": 22602,
+   "sha1": "f7135b745d521ccbcbc3cf8fa896f9dc9ec7f78f"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/GhostAnim.luau",
@@ -250,8 +264,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/LobbyUI.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.LobbyUI",
    "class": "ModuleScript",
-   "bytes": 21457,
-   "sha1": "3849b2bd2223d21ded7a740a651aaa897ad7397b"
+   "bytes": 22849,
+   "sha1": "aad3032c2063eade06ac85ab3018e148936b34a0"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/MonsterFx.luau",
@@ -280,6 +294,13 @@
    "class": "ModuleScript",
    "bytes": 5462,
    "sha1": "fbaac854dc8480528c91802930ef7f3dd9249f3a"
+  },
+  {
+   "file": "StarterPlayer/StarterPlayerScripts/Client/QuestUI.luau",
+   "instance": "game.StarterPlayer.StarterPlayerScripts.Client.QuestUI",
+   "class": "ModuleScript",
+   "bytes": 10312,
+   "sha1": "ca2a8a8735f1b96034c729c950a54ccc39e91110"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/ReviveUI.luau",
@@ -362,8 +383,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/ClientMain.client.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.ClientMain",
    "class": "LocalScript",
-   "bytes": 4482,
-   "sha1": "bbc009e9ee2a7c1b1b791c39ab0f87e42992918c"
+   "bytes": 4675,
+   "sha1": "6a58a368accba6d8273adfecb373bd0f42925977"
   }
  ]
 }

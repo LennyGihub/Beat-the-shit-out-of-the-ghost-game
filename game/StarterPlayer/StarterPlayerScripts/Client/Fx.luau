@@ -356,7 +356,7 @@ function Fx.handle(kind: string, ...)
 		HUD.banner(reason == "died" and "YOU DIED" or "RUN OVER", "+$" .. tostring(cash) .. "  (" .. tostring(k) .. " GHOSTS)", 5)
 		Sfx.play("Cash")
 	elseif kind == "Toast" then
-		HUD.toast(args[1])
+		HUD.toast(args[1], args[2])
 	elseif kind == "BackInLobby" then
 		HUD.banner("BACK IN THE PARK", "", 2.5)
 	elseif kind == "Lift" then

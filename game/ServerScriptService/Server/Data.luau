@@ -84,6 +84,7 @@ function Data.load(player: Player)
 					if type(res.Owned) == "table" then
 						for id, v in res.Owned do if type(id) == "string" and v == true then prof.data.Owned[id] = true end end
 					end
+					if type(res.Quests) == "table" then prof.data.Quests = res.Quests end -- cleaned up by Server/Quests
 					if type(res.Receipts) == "table" then
 						for _, id in res.Receipts do if type(id) == "string" then table.insert(prof.data.Receipts, id) end end
 					end
@@ -103,7 +104,8 @@ end
 function Data.save(player: Player): boolean
 	local prof = profiles[player]
 	if not prof or not prof.loaded or not okStore then return false end
-	local snap = { Cash = prof.data.Cash, GhostLevel = prof.data.GhostLevel, Kills = prof.data.Kills, Owned = table.clone(prof.data.Owned), Ults = table.clone(prof.data.Ults), Equipped = prof.data.Equipped, Settings = prof.data.Settings, Receipts = table.clone(prof.data.Receipts) }
+	local snap = { Cash = prof.data.Cash, GhostLevel = prof.data.GhostLevel, Kills = prof.data.Kills, Owned = table.clone(prof.data.Owned), Ults = table.clone(prof.data.Ults), Equipped = prof.data.Equipped, Settings = prof.data.Settings, Receipts = table.clone(prof.data.Receipts),
+		Quests = prof.data.Quests and HttpService:JSONDecode(HttpService:JSONEncode(prof.data.Quests)) or nil }
 	for i = 1, 3 do
 		local ok, err = pcall(function()
 			store:UpdateAsync("u_" .. player.UserId, function() return snap end)

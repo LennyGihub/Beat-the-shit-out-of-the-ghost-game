@@ -25,6 +25,7 @@ local GA = require(Client.GhostAnim)
 local Fx = require(Client.Fx)
 local Input = require(Client.Input)
 local UltShop = require(Client.UltShopUI)
+local QuestUI = require(Client.QuestUI)
 local PlaneFx = require(Client.PlaneFx)
 local EventFx = require(Client.EventFx)
 local Prompts = require(Client.Prompts)
@@ -63,7 +64,12 @@ UltShop.init(function(open)
 end)
 ReviveUI.init()
 -- lobby screen: PLAY (create / join lobbies) and SHOP buttons, friend booster
-LobbyUI.init(function() UltShop.open() end, function(open) Input.setShopOpen(open) end)
+QuestUI.init(function(open)
+	Input.setShopOpen(open)
+	shopOpen = open
+	camMode()
+end)
+LobbyUI.init(function() UltShop.open() end, function(open) Input.setShopOpen(open) end, function() QuestUI.open() end, QuestUI.claimable, QuestUI.changed)
 Input.openPlay = LobbyUI.togglePlay
 
 Remotes.Fx.OnClientEvent:Connect(function(kind: string, ...)

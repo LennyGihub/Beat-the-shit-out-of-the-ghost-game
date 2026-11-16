@@ -10,6 +10,7 @@ local Remotes = require(script.Parent.Remotes)
 local Data = require(script.Parent.Data)
 local Furniture = require(script.Parent.Furniture)
 local Ghost = require(script.Parent.Ghost)
+local Quests = require(script.Parent.Quests)
 local P, ST, BR, CA = Config.Punch, Config.Stamina, Config.Brutality, Config.Carry
 
 local Combat = {}
@@ -114,6 +115,7 @@ local function guard(player: Player, s, amount: number, from: Vector3?): number
 		s.stamina -= cost
 		sync(player, s, true)
 		Remotes.Fx:FireClient(player, "Blocked", amount, false)
+		Quests.add(player, "blocks")
 		return BL.Damage
 	end
 	-- out of stamina: the guard breaks, the hit lands in full
@@ -279,6 +281,10 @@ function Combat.registerHit(player: Player, dir: Vector3, hitPos: Vector3, baseD
 	if not isUlt then s.brut = math.min(BR.Max, s.brut + (BR.PerHit + math.min(s.combo, 20) * BR.PerCombo) * (step > 0 and 1 or 0.35)) end
 	Remotes.Fx:FireAllClients("Hit", hitPos, math.max(s.combo, 1), dmg, isUlt, player)
 	if c >= CH.MinRelease then Remotes.Fx:FireAllClients("ChargedHit", hitPos, c, player) end
+	-- quests: hits (or thrown-object hits), fully charged hits, best combo
+	Quests.add(player, obj and "throws" or "hits")
+	if c >= 0.95 then Quests.add(player, "charged") end
+	Quests.add(player, "combo", s.combo)
 	sync(player, s, true)
 	return dmg
 end
@@ -460,6 +466,7 @@ local function checkThrown()
 				end
 				local vel = prim.AssemblyLinearVelocity
 				Ghost.hit(by, vel, math.min(60 + w * 14, 170) * knockMul, dmg, true)
+				if by and by.Parent then Quests.add(by, "throws") end
 				if s and not isUlt then s.brut = math.min(BR.Max, s.brut + BR.ThrowHit * Combat.stat(by, "brutality")) end
 				Remotes.Fx:FireAllClients("Hit", prim.Position, math.max(s and s.combo or 0, 4), dmg, isUlt, by)
 				Furniture.smash(m, vel, 120)

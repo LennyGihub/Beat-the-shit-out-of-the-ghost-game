@@ -1,5 +1,6 @@
 --!strict
--- Lobby screen (grunge, like the fight HUD): PLAY and SHOP buttons on the left, the friend booster tag, and the
+-- Lobby screen (grunge, like the fight HUD): PLAY, SHOP and QUESTS buttons on the left (QUESTS shows how many
+-- quests are ready to claim), the friend booster tag, and the
 -- PLAY panel: create a lobby (map you own, difficulty, 1-4 players) or join an open one, then the host presses START.
 -- Lobbies live on the server (Lobby.luau, Remotes.Party); the list comes in the ReplicatedStorage attribute "Parties".
 local Players = game:GetService("Players")
@@ -69,8 +70,8 @@ local function parties(): { any }
 end
 
 -- big splatter button for the left column
-local function bigButton(text: string, color: Color3, y: number, rot: number, onClick: () -> ()): TextButton
-	local holder = Grunge.frame(side, { Position = UDim2.fromScale(0, y), Size = UDim2.fromScale(1, 0.26) })
+local function bigButton(text: string, color: Color3, y: number, rot: number, onClick: () -> (), h: number?): TextButton
+	local holder = Grunge.frame(side, { Position = UDim2.fromScale(0, y), Size = UDim2.fromScale(1, h or 0.26) })
 	-- a rough painted slab: dark ink shadow, the colour on top, a lighter scratch, ink outline
 	Grunge.frame(holder, { BackgroundTransparency = 0, BackgroundColor3 = Grunge.INK, Size = UDim2.fromScale(1, 1), Position = UDim2.fromScale(0.03, 0.08), Rotation = rot })
 	local slab = Grunge.frame(holder, { BackgroundTransparency = 0, BackgroundColor3 = color, Size = UDim2.fromScale(1, 1), Rotation = rot, ZIndex = 2 })
@@ -203,7 +204,8 @@ function LobbyUI.invite(hostName: string, partyId: string)
 	task.delay(15, function() if invitePartyId == partyId then invitePop.Visible = false end end)
 end
 
-function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> ())
+-- quests: opener, how many are ready to claim, and the signal that fires when that may change
+function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpener: (() -> ())?, questCount: (() -> number)?, questChanged: RBXScriptSignal?)
 	openShop = shopOpener
 	onToggle = toggled
 	gui = Instance.new("ScreenGui")
@@ -214,17 +216,34 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> ())
 	-- left column: PLAY / SHOP
 	side = Grunge.frame(gui, { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 28, 0.5, 0), Size = UDim2.fromScale(0.17, 0.42) })
 	local sar = Instance.new("UIAspectRatioConstraint"); sar.AspectRatio = 0.85; sar.Parent = side
-	bigButton("PLAY", Color3.fromRGB(150, 20, 18), 0, -4, function() setOpen(not panel.Visible) end)
-	bigButton("SHOP", Color3.fromRGB(170, 120, 24), 0.33, 3, function()
+	bigButton("PLAY", Color3.fromRGB(150, 20, 18), 0, -4, function() setOpen(not panel.Visible) end, 0.24)
+	bigButton("SHOP", Color3.fromRGB(170, 120, 24), 0.28, 3, function()
 		if panel.Visible then setOpen(false) end
 		if openShop then openShop() end
-	end)
+	end, 0.24)
+	local questBtn = bigButton("QUESTS", Color3.fromRGB(40, 90, 120), 0.56, -2, function()
+		if panel.Visible then setOpen(false) end
+		if questOpener then questOpener() end
+	end, 0.24)
+	-- red badge: quests ready to claim
+	local badge = Grunge.frame(questBtn.Parent :: Instance, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.97, 0.12), Size = UDim2.fromScale(0.2, 0.42), BackgroundTransparency = 0, BackgroundColor3 = Color3.fromRGB(200, 30, 24), ZIndex = 8, Visible = false })
+	local bc = Instance.new("UICorner"); bc.CornerRadius = UDim.new(0.5, 0); bc.Parent = badge
+	local bst = Instance.new("UIStroke"); bst.Color = Grunge.INK; bst.Thickness = 3; bst.Parent = badge
+	local bar = Instance.new("UIAspectRatioConstraint"); bar.AspectRatio = 1; bar.Parent = badge
+	local badgeText = Grunge.text(badge, { Text = "", Size = UDim2.fromScale(1, 1), TextColor3 = Grunge.PAPER, ZIndex = 9 })
+	local function refreshBadge()
+		local n = questCount and questCount() or 0
+		badge.Visible = n > 0
+		badgeText.Text = tostring(n)
+	end
+	if questChanged then questChanged:Connect(refreshBadge) end
+	refreshBadge()
 	-- controller: D-pad up opens PLAY (the stick keeps moving the character)
-	local padTag = Grunge.text(side, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0, 0.78), Size = UDim2.fromScale(1.3, 0.08), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(255, 200, 120), Rotation = -2 })
+	local padTag = Grunge.text(side, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0, 0.95), Size = UDim2.fromScale(1.3, 0.08), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(255, 200, 120), Rotation = -2 })
 	local function padHint() padTag.Text = Platform.mode() == "gamepad" and "D-PAD UP: PLAY   D-PAD LEFT: SETTINGS" or "" end
 	padHint()
 	Platform.changed:Connect(padHint)
-	boostTag = Grunge.text(side, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0, 0.66), Size = UDim2.fromScale(1.3, 0.1), TextXAlignment = Enum.TextXAlignment.Left, Rotation = -2 })
+	boostTag = Grunge.text(side, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0, 0.84), Size = UDim2.fromScale(1.3, 0.1), TextXAlignment = Enum.TextXAlignment.Left, Rotation = -2 })
 
 	-- PLAY panel
 	panel = Grunge.panel(gui, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.55, 0.52), Size = UDim2.fromScale(0.62, 0.8), Rotation = 0, Visible = false }, 33)
