@@ -15,6 +15,8 @@ Usage:
 The code graph (graphify) is rebuilt automatically, offline.
 """
 import argparse
+import urllib.error
+import time
 import hashlib
 import json
 import os
@@ -47,13 +49,25 @@ class Bridge:
         if self.sid:
             h["Mcp-Session-Id"] = self.sid
             h["MCP-Protocol-Version"] = "2025-06-18"
-        req = urllib.request.Request(URL, json.dumps(body).encode(), h)
-        with urllib.request.urlopen(req, timeout=300) as r:
-            txt = r.read().decode("utf-8", "replace")
-            data = [l[6:] for l in txt.splitlines() if l.startswith("data: ")]
-            if not data and txt.strip().startswith(("{", "[")):
-                data = [txt]  # plain JSON reply (mcp-gateway.js), not an SSE stream
-            return r.headers.get("Mcp-Session-Id"), (json.loads(data[-1]) if data else None)
+        # the tunnel sometimes drops a request (502/503/504 before it reaches the PC): try again a few times
+        last = None
+        for attempt in range(6):
+            req = urllib.request.Request(URL, json.dumps(body).encode(), h)
+            try:
+                with urllib.request.urlopen(req, timeout=300) as r:
+                    txt = r.read().decode("utf-8", "replace")
+                    data = [l[6:] for l in txt.splitlines() if l.startswith("data: ")]
+                    if not data and txt.strip().startswith(("{", "[")):
+                        data = [txt]  # plain JSON reply (mcp-gateway.js), not an SSE stream
+                    return r.headers.get("Mcp-Session-Id"), (json.loads(data[-1]) if data else None)
+            except urllib.error.HTTPError as e:
+                if e.code not in (502, 503, 504):
+                    raise
+                last = e
+            except urllib.error.URLError as e:
+                last = e
+            time.sleep(1.5 * (attempt + 1))
+        raise last
 
     def call(self, name, args):
         self.n += 1
