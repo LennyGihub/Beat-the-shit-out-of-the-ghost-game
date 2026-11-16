@@ -356,14 +356,19 @@ end
 -- barrel hood in the port, extractor, white-dot sights), red full-auto selector, long 33-round mag.
 -- LeftGrip = the support hand cupped under the shooting hand (held with two hands).
 function B.glock(m, c)
-	-- the photorealistic version: an AI-generated textured mesh (ReplicatedStorage.ItemMeshes.Glock18),
-	-- muzzle toward -Z like every item; placed so its grip sits in the hand. The blocky one below is the fallback.
+	-- the realistic version: ReplicatedStorage.ItemMeshes.Glock18 (a detailed model or mesh, muzzle toward -Z,
+	-- centred on its bounding box), placed so its grip sits in the hand. The blocky one below is the fallback.
 	local store = game:GetService("ReplicatedStorage"):FindFirstChild("ItemMeshes")
 	local mesh = store and store:FindFirstChild("Glock18")
 	if mesh then
-		local g = mesh:Clone() :: BasePart
-		g.Anchored = true; g.CanCollide = false; g.CanQuery = false; g.CanTouch = false; g.CastShadow = false
-		g.CFrame = CFrame.new(0, 0.15, -0.42)
+		local g = mesh:Clone()
+		local place = CFrame.new(0, 0.15, -0.42) * CFrame.Angles(0, math.rad(mesh:GetAttribute("Yaw") or 0), 0)
+		for _, d in (g:IsA("BasePart") and { g } or g:GetDescendants()) do
+			if d:IsA("BasePart") then
+				d.Anchored = true; d.CanCollide = false; d.CanQuery = false; d.CanTouch = false; d.CastShadow = false
+			end
+		end
+		if g:IsA("Model") then g:PivotTo(place) else (g :: BasePart).CFrame = place end
 		g.Parent = m
 		mark(m, "Tip", at(0, 0.5, -1.15))
 		mark(m, "LeftGrip", at(-0.42, -0.24, -0.08))
