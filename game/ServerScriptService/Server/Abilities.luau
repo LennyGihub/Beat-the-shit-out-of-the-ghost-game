@@ -6,6 +6,7 @@
 -- G is the Ghost module (damagePlayer / hitPlayer / rootPlayer are injected into it by Combat).
 local Players = game:GetService("Players")
 local Remotes = require(script.Parent.Remotes)
+local Sounds = require(game:GetService("ReplicatedStorage").Shared.Sounds)
 local Furniture = require(script.Parent.Furniture)
 
 local Abilities = {}
@@ -72,10 +73,27 @@ function Abilities.interrupt(g)
 		Remotes.Fx:FireClient(g.ab.victim, "Released")
 	end
 	if g.ab.kind == "blackout" then fx("BlackoutEnd") end
+	if g.ab.kind == "levitateThrow" and g.ab.obj then Abilities.dropLevitated(g.ab) end
 	g.ab = nil
 	g.model:SetAttribute("Ability", "")
 	g.model:SetAttribute("AbilityPhase", "")
 	g.nextAbility = os.clock() + g.def.ability.cd * 0.6
+end
+
+-- let go of a levitated object (thrown, or the spell was interrupted): it falls normally again
+function Abilities.dropLevitated(ab)
+	local obj = ab.obj :: Model?
+	if not obj or not obj.Parent then return end
+	local hl = obj:FindFirstChild("DemonGrip") if hl then hl:Destroy() end
+	local prim = obj.PrimaryPart
+	if prim then
+		local au = prim:FindFirstChild("DemonAura") if au then au:Destroy() end
+		prim.Anchored = false
+	end
+	obj:SetAttribute("CarriedBy", nil)
+	for _, p in obj:GetDescendants() do
+		if p:IsA("BasePart") then p.CanCollide = true; p.CanTouch = true; p.CollisionGroup = "Default" end
+	end
 end
 
 -- melee damage scale of this monster (level, monster and difficulty)
@@ -95,6 +113,34 @@ function Abilities.try(g, G, now: number, target: Player?, thrp: BasePart?, dist
 		if dist < a.min or dist > a.max then return false end
 		start(g, G, "crouch", 0.55, { aim = thrp.Position })
 		fx("AbilityWind", g.hrp.Position, k)
+	elseif k == "levitateThrow" then
+		if dist > (a.range or 70) then return false end
+		local list = Furniture.nearest(g.hrp.Position, 40, 1)
+		if #list == 0 then g.nextAbility = now + 2; return false end
+		local obj = list[1]
+		local prim = obj.PrimaryPart :: BasePart
+		-- he takes it with his mind: nobody can grab it, it passes through everything while it floats
+		obj:SetAttribute("CarriedBy", -1)
+		for _, p in obj:GetDescendants() do
+			if p:IsA("BasePart") then p.CanCollide = false; p.CanTouch = false; p.CollisionGroup = "Carried" end
+		end
+		prim.Anchored = true
+		local hl = Instance.new("Highlight")
+		hl.Name = "DemonGrip"; hl.FillColor = Color3.fromRGB(255, 40, 20); hl.FillTransparency = 0.6
+		hl.OutlineColor = Color3.fromRGB(255, 90, 40); hl.Parent = obj
+		local aura = Instance.new("ParticleEmitter")
+		aura.Name = "DemonAura"; aura.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+		aura.Color = ColorSequence.new(Color3.fromRGB(255, 60, 30)); aura.LightEmission = 1; aura.Rate = 30
+		aura.Size = NumberSequence.new(0.5, 0); aura.Lifetime = NumberRange.new(0.5, 1); aura.Speed = NumberRange.new(1, 3)
+		aura.SpreadAngle = Vector2.new(180, 180); aura.Parent = prim
+		local function snd(name: string, parent: Instance, vol: number?)
+			local s = Instance.new("Sound"); s.SoundId = "rbxassetid://" .. Sounds[name].ids[1]; s.Volume = vol or Sounds[name].volume
+			s.RollOffMinDistance = 10; s.RollOffMaxDistance = 140; s.Parent = parent; s:Play()
+			game:GetService("Debris"):AddItem(s, 6)
+		end
+		snd("Telekinesis", prim)
+		snd("DemonLaugh", g.model:FindFirstChild("Head") or g.hrp)
+		start(g, G, "lift", a.lift or 1.3, { obj = obj, from = obj:GetPivot(), t0 = now, spin = rng:NextNumber(-2, 2), snd = snd })
 	elseif k == "furnitureStorm" then
 		if dist > 70 then return false end
 		local list = Furniture.nearest(g.hrp.Position, 45, a.count)
@@ -247,6 +293,36 @@ function Abilities.step(g, G, dt: number, now: number, target: Player?, thrp: Ba
 				end
 				finish(g, G, 0.7)
 			end
+		end
+	elseif k == "levitateThrow" then
+		-- lift (rise to over his raised hand) -> aim (it hovers and shakes) -> throw
+		g.lv.VectorVelocity = hover(g, hoverY, Vector3.zero)
+		if thrp then face(thrp.Position) end
+		local ab = g.ab
+		local obj = ab.obj :: Model
+		if ab.phase ~= "throw" and (not obj or not obj.Parent or obj:GetAttribute("Broken")) then finish(g, G, 0.3); return end
+		local hold = g.hrp.CFrame * CFrame.new(1.5, 7.5, -3.5)
+		if ab.phase == "lift" or ab.phase == "aim" then
+			local f = ab.phase == "lift" and math.clamp((now - ab.t0) / a.lift, 0, 1) or 1
+			local e = f * f * (3 - 2 * f)
+			local pos = ab.from.Position:Lerp(hold.Position, e) + Vector3.new(0, math.sin(now * 5) * 0.35, 0)
+			local shake = ab.phase == "aim" and Vector3.new(rng:NextNumber(-0.2, 0.2), rng:NextNumber(-0.2, 0.2), rng:NextNumber(-0.2, 0.2)) or Vector3.zero
+			obj:PivotTo(CFrame.new(pos + shake) * ab.from.Rotation * CFrame.Angles(0, (now - ab.t0) * ab.spin, math.sin(now * 2) * 0.25))
+			if ab.phase == "lift" and now >= ab.untilT then setPhase(g, "aim", a.aim or 0.45)
+			elseif ab.phase == "aim" and now >= ab.untilT then
+				setPhase(g, "throw", 0.5)
+				ab.snd("DemonRoar", g.model:FindFirstChild("Head") or g.hrp)
+				Abilities.dropLevitated(ab)
+				local hrp = hrpOf(target)
+				if hrp then
+					Furniture.flingAt(obj, hrp.Position + Vector3.new(0, 1, 0), nil, a.power or 150)
+					local info = Furniture.thrown[obj]
+					if info then info.monster = (a.dmg or 20) * dmgScale(g) end
+				end
+				ab.obj = nil
+			end
+		elseif ab.phase == "throw" and now >= ab.untilT then
+			finish(g, G, 0.4)
 		end
 	elseif k == "furnitureStorm" or k == "hellfire" or k == "clones" or k == "gas" then
 		g.lv.VectorVelocity = hover(g, hoverY, Vector3.zero)

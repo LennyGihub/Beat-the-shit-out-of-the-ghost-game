@@ -1,5 +1,5 @@
 --!strict
--- The monsters. Only the Woman is left (the 9 extra monsters were removed); pick() falls back to her.
+-- The monsters: the Woman (always ghost 1) and the Red Demon. pick() falls back to the Woman.
 -- template = model name in ServerStorage.Monsters (the Woman uses ServerStorage.GhostTemplate).
 -- hp/speed/dmg/reward multiply the level-based values in Config.Ghost / Config.Reward.
 -- hover = root height above the floor (floaters ~4.6, walkers = their hip height).
@@ -23,6 +23,10 @@ local List: { Monster } = {
 	m({ id = "Woman", name = "The Woman", title = "THE WOMAN IN THE HOUSE", rarity = 0, template = "GhostTemplate", color = C(150, 200, 210),
 		hp = 1, speed = 1, dmg = 1, reward = 1, hover = 4.6, walker = false, scale = 1,
 		ability = { kind = "scare", cd = 18 }, desc = "Vanishes and screams in your face." }),
+	m({ id = "Demon", name = "The Red Demon", title = "THE RED DEMON", rarity = 1, template = "Demon", color = C(200, 40, 30),
+		hp = 1.4, speed = 0.95, dmg = 1.3, reward = 1.5, hover = 0, walker = true, scale = 1,
+		ability = { kind = "levitateThrow", cd = 6.5, range = 70, lift = 1.3, aim = 0.45, power = 150, dmg = 22 },
+		desc = "Lifts the furniture with his mind and hurls it at you." }),
 }
 
 local byId: { [string]: Monster } = {}

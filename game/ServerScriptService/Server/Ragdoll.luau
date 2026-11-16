@@ -113,15 +113,17 @@ local function carve(p: BasePart, holeCF: CFrame, holeSize: Vector3, push: Vecto
 	return true
 end
 
--- smash the walls where she hits: returns how many wall pieces were cut
-function Ragdoll.breakWalls(pos: Vector3, vel: Vector3): number
+-- smash the walls where she hits (or where something explodes): returns how many wall pieces were cut.
+-- width = hole size across (default 6), up = how far above `pos` it reaches (default 3.5)
+function Ragdoll.breakWalls(pos: Vector3, vel: Vector3, width: number?, up: number?): number
 	local st = structure()
 	if not st then return 0 end
 	-- from well below her (down to the floor) to a bit above her
-	local bottom, top = pos.Y - 12, pos.Y + 3.5
+	local w = width or HOLE_W
+	local bottom, top = pos.Y - 12, pos.Y + (up or 3.5)
 	local holeCF = CFrame.new(pos.X, (bottom + top) / 2, pos.Z)
-	local holeSize = Vector3.new(HOLE_W, top - bottom, HOLE_W)
-	local push = vel.Magnitude > 1 and vel.Unit or Vector3.zero
+	local holeSize = Vector3.new(w, top - bottom, w)
+	local push = vel.Magnitude > 1 and vel.Unit or Vector3.new(0, 0.6, 0)
 	local hmin, hmax = holeCF.Position - holeSize / 2, holeCF.Position + holeSize / 2
 	-- every interior part whose box overlaps the hole (not a spatial query: the wainscot and rails have
 	-- CanQuery off, so queries would miss them and leave the bottom of the wall standing)

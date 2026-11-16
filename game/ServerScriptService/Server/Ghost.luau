@@ -9,6 +9,7 @@ local Remotes = require(script.Parent.Remotes)
 local Furniture = require(script.Parent.Furniture)
 local Abilities = require(script.Parent.Abilities)
 local Ragdoll = require(script.Parent.Ragdoll)
+local Fire = require(script.Parent.Fire)
 local Monsters = require(RS.Shared.Monsters)
 local C = Config.Ghost
 
@@ -59,6 +60,7 @@ end
 function Ghost.spawn(level: number, pos: Vector3, monsterId: string?)
 	Ghost.despawn()
 	Ragdoll.restoreWalls() -- walls she smashed through last time are back
+	Fire.clear() -- and the fires are out
 	local def = Monsters.byId[monsterId or "Woman"] or Monsters.byId.Woman
 	local m = template(def):Clone()
 	m.Name = "Ghost"
@@ -112,7 +114,7 @@ function Ghost.spawn(level: number, pos: Vector3, monsterId: string?)
 		vel = Vector3.zero, state = "Spawn", stateStart = os.clock(), stateUntil = os.clock() + 2.2,
 		nextAttack = os.clock() + 3, nextScare = os.clock() + rng:NextNumber(C.ScareMin, C.ScareMax),
 		damageBy = {} :: { [Player]: number }, target = nil :: Player?, rp = structParams(),
-		frozenUntil = 0, slowMult = 1, slowUntil = 0, vulnMult = 1, vulnUntil = 0, burns = {}, ts = nil :: any, launch = nil :: any, fire = nil :: Fire?,
+		frozenUntil = 0, slowMult = 1, slowUntil = 0, vulnMult = 1, vulnUntil = 0, burns = {}, ts = nil :: any, launch = nil :: any, fire = nil :: { Instance }?,
 		def = def, hover = hover, bob = def.walker and 0 or 0.35, ab = nil :: any, nextAbility = os.clock() + 5,
 		speedMult = def.speed * Ghost.diff.speed, dmgMult = def.dmg * Ghost.diff.dmg,
 	}
@@ -364,11 +366,11 @@ function Ghost.step(dt: number)
 	end
 	if not Ghost.alive() then return end
 	if #g.burns > 0 and not g.fire then
-		local f = Instance.new("Fire"); f.Size = 7; f.Heat = 12
-		f.Color = g.burns[#g.burns].color; f.SecondaryColor = Color3.new(1, 1, 0.6)
-		f.Parent = g.model:FindFirstChild("UpperTorso"); g.fire = f
+		local torso = g.model:FindFirstChild("UpperTorso")
+		if torso then g.fire = Fire.flames(torso, 1.3) end -- realistic flames on her body
 	elseif #g.burns == 0 and g.fire then
-		g.fire:Destroy(); g.fire = nil
+		for _, e in g.fire do e:Destroy() end
+		g.fire = nil
 	end
 	-- time stop ends: everything stored lands at once
 	if g.ts and now >= g.ts.untilT then

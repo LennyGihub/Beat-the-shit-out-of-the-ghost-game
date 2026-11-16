@@ -23,6 +23,14 @@ local lastUse = {} :: { [string]: number }
 local spraying = false
 local sprayEmitter: ParticleEmitter? = nil
 local sprayAtt: Attachment? = nil
+-- flashlight: a light cone + real spot light instead of smoke; blowers: a vacuum loop
+local beamEnd: Attachment? = nil
+local beam: Beam? = nil
+local core: Beam? = nil
+local spot: SpotLight? = nil
+local vacSound: Sound? = nil
+local FIRE_COLORS = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 245, 190)), ColorSequenceKeypoint.new(0.25, Color3.fromRGB(255, 170, 40)),
+	ColorSequenceKeypoint.new(0.6, Color3.fromRGB(230, 70, 20)), ColorSequenceKeypoint.new(1, Color3.fromRGB(60, 30, 25)) })
 
 local function parse()
 	slots = {}
@@ -113,23 +121,80 @@ local function setSpray(on: boolean, it)
 			sprayEmitter = pe
 		end
 		local pe = sprayEmitter :: ParticleEmitter
-		pe.Color = ColorSequence.new(it.particle or Color3.new(1, 1, 1))
 		local reach = it.range or 18 -- the spray visibly reaches as far as it hits
 		pe.Speed = NumberRange.new(reach * 1.7, reach * 2.5)
-		pe.LightEmission = it.id == "Flamethrower" and 1 or 0.3
-		pe.Enabled = true
-	elseif sprayEmitter then
-		sprayEmitter.Enabled = false
+		local fire = it.id == "Flamethrower"
+		-- real flames for the flamethrower, smoke-like puffs for the others
+		pe.Texture = fire and "rbxasset://textures/particles/fire_main.dds" or "rbxasset://textures/particles/smoke_main.dds"
+		pe.Color = fire and FIRE_COLORS or ColorSequence.new(it.particle or Color3.new(1, 1, 1))
+		pe.LightEmission = fire and 1 or 0.3
+		pe.Size = fire and NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(0.5, 3.2), NumberSequenceKeypoint.new(1, 5) })
+			or NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.4), NumberSequenceKeypoint.new(1, 3) })
+		pe.RotSpeed = NumberRange.new(-120, 120); pe.Rotation = NumberRange.new(0, 360)
+		pe.Rate = fire and 110 or 70
+		if it.id == "UVFlashlight" then
+			-- a light beam, not smoke
+			pe.Enabled = false
+			if not beam then
+				beamEnd = Instance.new("Attachment"); (beamEnd :: Attachment).Parent = workspace.Terrain
+				local b = Instance.new("Beam")
+				b.Attachment0 = sprayAtt; b.Attachment1 = beamEnd
+				b.FaceCamera = true; b.LightEmission = 1; b.LightInfluence = 0; b.Segments = 1
+				b.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(0.6, 0.72), NumberSequenceKeypoint.new(1, 0.95) })
+				b.Parent = workspace.Terrain
+				beam = b
+				-- a brighter, narrow core inside the cone
+				local c = b:Clone()
+				c.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.15), NumberSequenceKeypoint.new(0.7, 0.6), NumberSequenceKeypoint.new(1, 0.9) })
+				c.Parent = workspace.Terrain
+				core = c
+				local s = Instance.new("SpotLight")
+				s.Face = Enum.NormalId.Top; s.Angle = 38; s.Brightness = 14; s.Shadows = true
+				s.Parent = sprayAtt
+				spot = s
+			end
+			local b, s = beam :: Beam, spot :: SpotLight
+			b.Color = ColorSequence.new(it.color); b.Width0 = 0.7; b.Width1 = reach * 0.5
+			b.Enabled = true
+			local c = core :: Beam
+			c.Color = ColorSequence.new(it.color:Lerp(Color3.new(1, 1, 1), 0.45)); c.Width0 = 0.3; c.Width1 = reach * 0.16
+			c.Enabled = true
+			s.Color = it.color; s.Range = reach * 1.3; s.Enabled = true
+		else
+			pe.Enabled = true
+			if beam then beam.Enabled = false end
+			if core then core.Enabled = false end
+			if spot then spot.Enabled = false end
+		end
+		-- wind items sound like a vacuum
+		if (it.id == "LeafBlower" or it.id == "ShopVac") and not vacSound then
+			vacSound = Sfx.loop("Vacuum", { PlaybackSpeed = it.id == "LeafBlower" and 1.15 or 0.95 })
+		end
+	else
+		if sprayEmitter then sprayEmitter.Enabled = false end
+		if beam then beam.Enabled = false end
+		if core then core.Enabled = false end
+		if spot then spot.Enabled = false end
+		if vacSound then vacSound:Destroy(); vacSound = nil end
 	end
 end
 
 local function update()
 	local it = Hotbar.current()
 	local holding = UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) or Hotbar.touchHold == true
-	if it and it.kind == "spray" and holding and lp:GetAttribute("InMatch") and UIS.MouseBehavior == Enum.MouseBehavior.LockCenter then
+		or (RunService:IsStudio() and lp:GetAttribute("DebugSpray") == true) -- Studio test hook: hold the trigger
+	if it and it.kind == "spray" and holding and lp:GetAttribute("InMatch") and (UIS.MouseBehavior == Enum.MouseBehavior.LockCenter or lp:GetAttribute("DebugSpray") == true) then
 		setSpray(true, it)
 		local tip = VM.itemTip()
 		if sprayAtt and tip then sprayAtt.WorldCFrame = CFrame.lookAt(tip, tip + cam.CFrame.LookVector) * CFrame.Angles(-math.pi / 2, 0, 0) end
+		if beamEnd and tip then
+			-- the beam stops at the first wall
+			local rp = RaycastParams.new()
+			rp.FilterType = Enum.RaycastFilterType.Exclude
+			rp.FilterDescendantsInstances = { lp.Character, cam }
+			local r = workspace:Raycast(tip, cam.CFrame.LookVector * (it.range or 30), rp)
+			beamEnd.WorldPosition = r and r.Position or (tip + cam.CFrame.LookVector * (it.range or 30))
+		end
 		local now = os.clock()
 		if now - (lastUse[it.id] or 0) >= 0.1 then
 			lastUse[it.id] = now

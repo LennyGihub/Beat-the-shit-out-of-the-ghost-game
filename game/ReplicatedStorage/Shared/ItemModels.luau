@@ -51,6 +51,17 @@ local function flame(m: Model, cf: CFrame, s: number)
 	o.Transparency = 0.15; moving(m, o, "flicker")
 	local i = p(m, V(0.2, 0.34, 0.2) * s, cf * CFrame.new(0, 0.14 * s, 0), Color3.fromRGB(255, 230, 120), M.Neon)
 	i.Transparency = 0.1; moving(m, i, "flicker")
+	-- real flame particles licking up from the block core
+	local e = Instance.new("ParticleEmitter")
+	e.Texture = "rbxasset://textures/particles/fire_main.dds"
+	e.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 235, 170)), ColorSequenceKeypoint.new(0.4, Color3.fromRGB(255, 140, 30)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 30, 10)) })
+	e.LightEmission = 1; e.LightInfluence = 0
+	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.35 * s), NumberSequenceKeypoint.new(0.4, 0.6 * s), NumberSequenceKeypoint.new(1, 0) })
+	e.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 1) })
+	e.Lifetime = NumberRange.new(0.25, 0.45); e.Rate = 30; e.Speed = NumberRange.new(1, 2.5)
+	e.Acceleration = Vector3.new(0, 6, 0); e.SpreadAngle = Vector2.new(15, 15); e.Rotation = NumberRange.new(0, 360); e.RotSpeed = NumberRange.new(-120, 120)
+	e.Parent = o
 end
 
 local B = {}

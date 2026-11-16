@@ -7,6 +7,8 @@ local Items = require(RS.Shared.Items)
 local Remotes = require(script.Parent.Remotes)
 local Ghost = require(script.Parent.Ghost)
 local Combat = require(script.Parent.Combat)
+local Ragdoll = require(script.Parent.Ragdoll)
+local Fire = require(script.Parent.Fire)
 local Furniture = require(script.Parent.Furniture)
 
 local Inventory = {}
@@ -135,6 +137,7 @@ local function useMelee(p: Player, n: number, it, dir: Vector3)
 	if hitPos then
 		local dmg = Combat.registerHit(p, dir, hitPos, it.dmg, it.knock, math.max(1, it.knock / 5), it.cd >= 0.2 and 1 or 0)
 		applyFx(p, it, dmg, dir)
+		if it.fx and it.fx.burn then Fire.ignite(hitPos, 7, p, 1) end -- burning bat: the wood around her catches fire
 	end
 end
 
@@ -224,6 +227,7 @@ local function useGun(p: Player, n: number, it, dir: Vector3)
 		table.insert(endPoints, endPt)
 	end
 	Remotes.Fx:FireAllClients("Tracer", o, endPoints, it.tracer or Color3.fromRGB(255, 230, 160), p, it.id)
+	if it.fx and it.fx.burn and endPoints[1] then Fire.ignite(endPoints[1], 4, p, 1) end -- flare: sets fire where it lands
 	if hits > 0 and g then
 		local dmg = Combat.registerHit(p, dir, g.hrp.Position, total, it.knock * math.sqrt(hits), 2, 1)
 		applyFx(p, it, dmg, dir)
@@ -234,6 +238,12 @@ end
 
 local function explode(p: Player, it, pos: Vector3, direct: Player?)
 	Remotes.Fx:FireAllClients("ItemBoom", pos, it.radius, it.color, it.boom == true, it.id)
+	if it.fx and it.fx.burn then Fire.ignite(pos, it.radius * 0.6, p, 3, true) end -- molotov: a patch of fire
+	-- explosives blow holes in the inside walls (pipe bomb big, firecrackers small)
+	if it.boom or it.id == "Firecrackers" then
+		local w = math.clamp(it.radius * (it.boom and 0.75 or 0.5), 4, 14)
+		if Ragdoll.breakWalls(pos, Vector3.zero, w, w * 0.6) > 0 then Remotes.Fx:FireAllClients("WallSmash", pos, 120) end
+	end
 	-- PvP: the player it hit takes the full hit, others caught in a blast take part of it (never the thrower)
 	for _, other in Players:GetPlayers() do
 		if other ~= p and other:GetAttribute("InMatch") then
@@ -284,10 +294,23 @@ local function useThrow(p: Player, n: number, it, dir: Vector3)
 	Remotes.Fx:FireAllClients("ItemSwing", p, it.id, false)
 end
 
+local lastFlame = {} :: { [Player]: number }
 local function useSpray(p: Player, n: number, it, dir: Vector3)
 	local _, _, head = alive(p)
 	if not head then return end
 	consume(p, n)
+	-- flamethrower: the wood it is aimed at catches fire
+	if it.fx and it.fx.burn and os.clock() - (lastFlame[p] or 0) > 0.35 then
+		lastFlame[p] = os.clock()
+		local rp = RaycastParams.new()
+		rp.FilterType = Enum.RaycastFilterType.Exclude
+		local ex = { p.Character :: Instance }
+		local gm = workspace:FindFirstChild("Ghost")
+		if gm then table.insert(ex, gm) end
+		rp.FilterDescendantsInstances = ex
+		local r = workspace:Raycast((head :: BasePart).Position, dir.Unit * it.range, rp)
+		if r then Fire.ignite(r.Position, 2.5, p, 1) end
+	end
 	local g = ghostAlive()
 	if not g then return end
 	local o = (head :: BasePart).Position

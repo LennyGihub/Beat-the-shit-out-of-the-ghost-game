@@ -53,7 +53,20 @@ local function abilityPose(ab: string, phase: string, t: number, since: number):
 	local s = math.sin
 	local p = {}
 	local a = math.min(1, since / 0.35)
-	if ab == "grabThrow" then
+	if ab == "levitateThrow" then
+		if phase == "lift" or phase == "aim" then -- right hand raised, fingers spread, controlling the object
+			local shake = phase == "aim" and s(t * 40) * 0.05 or 0
+			p.Waist = A(-0.15, -0.25, 0); p.Neck = A(-0.35, -0.2, 0)
+			p.RightShoulder = A(2.6 * a + shake, 0, -0.35); p.RightElbow = A(0.25, 0, 0); p.RightWrist = A(-0.7, 0, 0)
+			p.LeftShoulder = A(0.6 * a, 0, 0.7 * a); p.LeftElbow = A(0.6, 0, 0)
+			p.RightHip = A(0.2, 0, 0); p.LeftHip = A(-0.25, 0, 0)
+		else -- throw: the arm whips forward and down, body lunges
+			p.Root = A(0.25, 0, 0); p.Waist = A(0.35, 0.3, 0); p.Neck = A(0.2, 0, 0)
+			p.RightShoulder = A(0.5, 0, -0.3); p.RightElbow = A(0.1, 0, 0); p.RightWrist = A(0.3, 0, 0)
+			p.LeftShoulder = A(-0.4, 0, 0.5)
+			p.RightHip = A(-0.4, 0, 0); p.LeftHip = A(0.45, 0, 0); p.LeftKnee = A(-0.4, 0, 0)
+		end
+	elseif ab == "grabThrow" then
 		if phase == "wind" then
 			p.Root = A(0.3 * a, 0, 0); p.Waist = A(0.25 * a, 0, 0)
 			p.RightShoulder = A(1.4 * a, 0, -0.3); p.LeftShoulder = A(1.4 * a, 0, 0.3)
@@ -178,7 +191,7 @@ local function target(state: string, t: number, sinceState: number): { [string]:
 			p.Neck = A(-1.1, 0, s(t * 23) * 0.2)
 			p.RightShoulder = A(1.6 + s(t * 9) * 0.6, 0, -0.2); p.LeftShoulder = A(1.6 - s(t * 9) * 0.6, 0, 0.2)
 			p.RightHip = A(-0.2 - s(t * 9) * 0.5, 0, 0.2); p.LeftHip = A(-0.2 + s(t * 9) * 0.5, 0, -0.2)
-		elseif g:GetAttribute("MonsterId") == "Butcher" or g:GetAttribute("MonsterId") == "HollowKing" then
+		elseif g:GetAttribute("MonsterId") == "Butcher" or g:GetAttribute("MonsterId") == "HollowKing" or g:GetAttribute("MonsterId") == "Demon" then
 			p.Waist = (p.Waist or CFrame.new()) * A(0.25, 0, 0) -- hunched
 			p.Neck = A(-0.2, 0, s(t * 1.3) * 0.08)
 		end

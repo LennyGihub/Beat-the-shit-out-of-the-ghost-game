@@ -1,6 +1,7 @@
 -- Runs an ultimate's activation actions (see Shared/Ultimates for the action list).
 local RS = game:GetService("ReplicatedStorage")
 local Remotes = require(script.Parent.Remotes)
+local Ragdoll = require(script.Parent.Ragdoll)
 local Furniture = require(script.Parent.Furniture)
 local Ghost = require(script.Parent.Ghost)
 local Combat = require(script.Parent.Combat)
@@ -31,6 +32,9 @@ end
 -- explosive punches (buff.explode)
 function Runner.explode(player: Player, pos: Vector3, radius: number, color: Color3)
 	Remotes.Fx:FireAllClients("UltShock", pos, radius, color)
+	-- explosions blow holes in the inside walls too
+	local w = math.clamp(radius * 0.5, 3, 9)
+	if Ragdoll.breakWalls(pos, Vector3.zero, w, w * 0.6) > 0 then Remotes.Fx:FireAllClients("WallSmash", pos, 100) end
 	for _, f in Furniture.near(pos, radius) do
 		local c = f:GetBoundingBox().Position
 		Furniture.smash(f, (c - pos).Unit * 60 + Vector3.new(0, 25, 0), 70)
