@@ -11,6 +11,8 @@
 - One command makes an image and returns its Roblox id: `python3 tools/make_image.py <name> "<what it is>"` (`--kind art --size 1024x576` for backgrounds/art; `--no-upload` to look at it first). It uses Pollinations' free model, cuts the white background for icons, stores the PNG in the public `game-art` repo and uploads it through Studio. The last printed line is `rbxassetid://...`.
 - Needs the `game-art` repo at `/home/user/game-art` with push access: if missing, attach `lennygihub/game-art` (add_repo, push) and clone it there. Needs the bridge's "Image relay" window running on the PC.
 - Look at the image (Read the PNG) before using it in the game; regenerate with another `--seed` if it's off. Never put text in generated images; add text with TextLabels.
+- This game's pictures use `--style ps2` (low-poly PS2 horror look; the default style is a bright cartoon). `--kind art` keeps the dark background (good for shop cards); `--upload-only` pushes + uploads a PNG that is already saved.
+- The lobby shop's pictures are a batch: `tools/art/shop_images.txt` (name | size | prompt) with `python3 tools/art/gen_shop_images.py gen [names] [--seed N]` (generate, no upload; review with a contact sheet), `upload` (ids into `tools/art/shop_ids.json`; don't start/stop a playtest while it runs) and `module <path>/ReplicatedStorage/Shared/ShopArt.luau` (writes the id table the shop reads). Don't write "PlayStation", "console" or "no game controller" in a prompt: the model then draws controllers and logos.
 
 ## 3D models (free, low-token)
 
@@ -23,6 +25,7 @@ Studio's own tools do 3D for free and answer with a few lines, so prefer them ov
 
 ## Saving the game's code (user's standing instruction)
 
+- Monster test hooks (Studio playtest, set on the server): ReplicatedStorage attributes `DebugMonster` = id, `DebugEvolved` = tier (1-3), `DebugTeamSize` = n, `DebugFreezeGhost` = true (holds it still for photos); player attribute `DebugCam` = CFrame (client) places the camera. Admin commands: `monster <id>`, `evolved on|off|<tier>`.
 - `main` is the one branch for this game. The user asked that every session push there directly; do it even though the session works on its own `claude/...` branch.
 - At the end of every request that changed scripts in Studio, run `tools/save_game.sh "game: <short summary>"`. It exports Studio's scripts to `game/`, rebuilds the graphify map offline and pushes both to `main` (through a temporary worktree, so the session branch is untouched). Don't read the exported code back; the script's last lines say if it worked.
 - If several Studios are open, pass the place: `EXPORT_ARGS='--studio "<name>"' tools/save_game.sh "..."`. If the bridge is off, say the save was skipped.

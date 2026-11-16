@@ -20,6 +20,9 @@ The PS2 textures are MaterialVariants in MaterialService.AssistantMaterials (mad
    The Mansion itself becomes ServerStorage.Maps.Mansion at server start (MapLoader.init).
 -> `monster_extras` (weapons, glows, fire, particles on ServerStorage.Monsters.*, after the AI monsters are made).
 -> `lobby_forest` (after `lobby`: dark forest clearing, AI trees from LobbyAssets.ForestTree1..3, SHOP booth, QUEST board).
+-> `lobby_remake` (after `lobby_forest`, standalone): replaces the AI trees with hand-built low-poly pines / oaks / dead trees,
+   each queue room's AI shed with a hand-built log cabin, and brightens the clearing (fill lights, lamp posts, ground).
+   The lobby's Lighting preset itself is PRESETS.lobby in Client/Fx.luau.
 -> `maps/furnish.luau` (prepend `lib2 furn_lib maplib`: extra furniture + detail in every map but the Mansion/Factory).
 -> `demon`, `animatronic`, `titan` (hand-built part monsters: ServerStorage.Monsters.Demon / .Animatronic = The Party Bear / .Titan = The Flayed Giant;
    standalone, no lib2 needed: `python3 tools/studio.py luau Edit tools/build/animatronic.luau`).

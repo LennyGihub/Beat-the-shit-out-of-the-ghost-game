@@ -1,0 +1,70 @@
+# name | size | prompt   (python3 tools/art/gen_shop_images.py: PS2-style pictures for the lobby shop)
+btg_ult_Rage|512x512|a clenched bloody fist punching forward with a red shockwave ring around it, black background
+btg_ult_GroundPound|512x512|a fist slamming down into a cracked wooden floor, dust and splinters flying, black background
+btg_ult_HeavyHands|512x512|two huge heavy grey stone fists side by side, black background
+btg_ult_SecondWind|512x512|a glowing green heart with a white medical cross and swirls of wind, black background
+btg_ult_SkyUppercut|512x512|a fist rising straight up with a light blue motion trail, uppercut, black background
+btg_ult_TableFlipper|512x512|a wooden dining table flipped upside down spinning in the air, black background
+btg_ult_HotHead|512x512|a human skull engulfed in orange flames, black background
+btg_ult_BrainFreeze|512x512|a human brain frozen inside a block of blue ice, black background
+btg_ult_StreetSweeper|512x512|an old push broom sweeping a big yellow wave of dust, black background
+btg_ult_Caffeine|512x512|a steaming mug of black coffee crackling with electric sparks, black background
+btg_ult_ThunderFist|512x512|a clenched fist crackling with bright blue lightning, black background
+btg_ult_MeteorPunch|512x512|a flaming meteor shaped like a fist falling from a dark sky
+btg_ult_ExplodingFists|512x512|a fist hitting with a big orange explosion burst, black background
+btg_ult_VampireRush|512x512|an open vampire mouth with two long sharp white fangs dripping red blood, black background
+btg_ult_Frostbite|512x512|a frozen blue hand covered with icicles, black background
+btg_ult_Poltergeist|512x512|an old wooden chair and a table lamp floating in mid air in a dark empty room with a purple ghostly glow
+btg_ult_Bulldozer|512x512|a rusty yellow bulldozer with its blade charging forward, black background
+btg_ult_Hellfire|512x512|a ring of fire burning on a dark floor, black background
+btg_ult_BulletTime|512x512|a single brass bullet frozen in mid air with long blue motion streaks behind it, black background
+btg_ult_GiantMode|512x512|a giant bare foot stomping down next to a tiny house, night
+btg_ult_BlackHole|512x512|a black hole swirling with purple light sucking in chairs and tables
+btg_ult_Thunderstorm|512x512|a dark storm cloud with many lightning bolts striking down, black background
+btg_ult_MeteorShower|512x512|several flaming meteors raining down from a dark red sky
+btg_ult_IceAge|512x512|a wave of huge jagged blue ice crystal spikes, black background
+btg_ult_FurnitureTornado|512x512|a grey tornado full of spinning chairs and tables, dark sky
+btg_ult_Inferno|512x512|a towering wall of raging orange fire, black background
+btg_ult_TimeStop|512x512|a cracked blank clock face without numerals, only tick marks, two glowing blue hands, frozen in ice, black background
+btg_ult_OrbitalUppercut|512x512|a fist punching up through a broken roof into a starry night sky
+btg_ult_BloodMoon|512x512|a huge blood red full moon behind dead tree branches
+btg_ult_HolySmite|512x512|a golden beam of holy light striking down from the sky onto a stone cross, black background
+btg_ult_Armageddon|512x512|a burning cracked planet with meteors falling on it, black space background
+btg_ult_WrathOfZeus|512x512|a muscular hand holding a huge golden lightning bolt, black background
+btg_ult_Singularity|512x512|a black sphere bending light with a glowing white ring, swallowing an old house
+btg_ult_TitanForm|512x512|a giant muscular silhouette towering over a small old mansion at night
+btg_ult_ReversePossession|512x512|a pale ghost woman trapped inside a glowing red magic circle on the floor, black background
+btg_ult_DragonFist|512x512|a clenched fist with a fiery dragon head coiled around it, black background
+btg_ult_AbsoluteZero|512x512|a big jagged snowflake of ice glowing cold blue with frozen mist, black background
+btg_ult_Earthquake|512x512|cracked ground split open by a deep glowing fissure, black background
+btg_ult_BerserkGod|512x512|a horned viking helmet with two glowing red eyes underneath, black background
+btg_ult_FurnitureApocalypse|512x512|a huge swarm of chairs, sofas and wardrobes flying through the air like missiles, dark
+btg_ult_GrandExorcism|512x512|a wooden crucifix glowing with blinding white holy light above an old bible, black background
+btg_ult_Supernova|512x512|an exploding star, a huge white and orange burst, black space background
+btg_ult_EventHorizon|512x512|a black hole with a bright orange accretion disc ring, black space background
+btg_ult_GodMode|512x512|a golden glowing fist with a halo above it, black background
+btg_ult_Ragnarok|512x512|lightning and meteors striking a huge burning tree at night
+btg_ult_HouseCollapse|512x512|an old mansion collapsing into rubble and dust at night
+btg_ult_Colossus|512x512|an enormous ancient mossy stone titan seen from far below, its head in the clouds, towering over a dark pine forest at night
+btg_ult_InfiniteCombo|512x512|many fists punching in a blur around a glowing orange infinity loop, black background
+btg_ult_GhostNuke|512x512|a nuclear mushroom cloud glowing sickly green at night
+btg_ult_OnePunch|512x512|a single red boxing glove punching with a huge yellow impact star, black background
+btg_map_Mansion|512x384|an old haunted victorian mansion at night, a few lit windows, fog, dead trees
+btg_map_Hospital|512x384|an abandoned hospital corridor with flickering lights and empty gurneys
+btg_map_School|512x384|an empty high school hallway with rows of lockers at night
+btg_map_Church|512x384|a dark gothic chapel interior with wooden pews and candles
+btg_map_Motel|512x384|a run-down roadside motel at night lit by a pink neon glow, row of doors
+btg_map_Ship|512x384|a rotting ghost pirate galleon ship adrift on a dark foggy sea
+btg_map_Farm|512x384|an old farmhouse and a red barn at dusk with hay bales
+btg_map_Asylum|512x384|an asylum padded cell with a rusty iron bed, cold light
+btg_map_Hotel|512x384|an eerie grand hotel lobby with red carpet and a chandelier
+btg_map_Prison|512x384|a prison cellblock with two tiers of barred cells around a concrete yard
+btg_map_Factory|512x384|a doll factory workshop with shelves full of creepy doll heads
+btg_map_Funeral|512x384|a funeral home viewing room with a dark wooden coffin and wilted flowers
+btg_cash1|512x512|a small pile of three plain blocky green banknotes and a few gold coins, very low-poly, flat shading, black background
+btg_cash2|512x512|a canvas money bag stuffed full of green dollar bills, black background
+btg_cash3|512x512|an open leather briefcase packed with stacks of green dollar bills, black background
+btg_cash4|512x512|an open steel bank vault door full of gold bars and stacks of cash
+btg_pass_money2|512x512|two tall stacks of green dollar bills glowing with a green aura, black background
+btg_pass_glock|512x512|a black semi-automatic pistol handgun, side view, black background
+btg_pass_admin|512x512|a golden crown resting on a red velvet cushion with an old key, black background

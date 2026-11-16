@@ -29,13 +29,20 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ART = os.environ.get("GAME_ART_DIR", os.path.join(os.path.dirname(ROOT), "game-art"))
 STYLE = ("bright cartoon roblox simulator style, bold shapes, thick dark outline, glossy highlights, "
          "saturated colours, no text, no letters, no watermark")
+# --style ps2: this game's look (Beat the Ghost): PlayStation 2 era survival horror
+# (no "PlayStation" / "console" / "video game" words in it: the model then draws controllers and logos)
+STYLE_PS2 = ("early 2000s survival horror style, low-poly 3D render, chunky polygons, "
+             "low resolution pixelated textures, gritty muted colours with one strong accent colour, hard dramatic "
+             "lighting, slightly grainy, no text, no letters, no numbers, no watermark, no logos")
+STYLES = {"cartoon": STYLE, "ps2": STYLE_PS2}
 
 
-def generate(prompt, w, h, seed, kind):
+def generate(prompt, w, h, seed, kind, style="cartoon"):
+    st = STYLES[style]
     if kind == "icon":
-        prompt = f"single {prompt}, game icon, {STYLE}, centered, isolated on a flat solid pure white background, no shadow"
+        prompt = f"single {prompt}, game icon, {st}, centered, isolated on a flat solid pure white background, no shadow"
     else:
-        prompt = f"{prompt}, {STYLE}"
+        prompt = f"{prompt}, {st}"
     url = (f"https://gen.pollinations.ai/image/{urllib.parse.quote(prompt)}"
            f"?model=z-image&width={w}&height={h}&seed={seed}")
     with urllib.request.urlopen(url, timeout=240) as r:
@@ -75,20 +82,23 @@ def main():
     ap.add_argument("--size", default="512x512")
     ap.add_argument("--seed", type=int, default=7)
     ap.add_argument("--no-upload", action="store_true", help="only generate + save locally (to look at it first)")
+    ap.add_argument("--style", choices=sorted(STYLES), default="cartoon", help="ps2 = this game's PS2 horror look")
+    ap.add_argument("--upload-only", action="store_true", help="skip generating: push + upload the PNG already saved under this name")
     a = ap.parse_args()
     w, h = (int(x) for x in a.size.lower().split("x"))
     if not os.path.isdir(os.path.join(ART, ".git")):
         sys.exit(f"game-art repo not found at {ART} (attach lennygihub/game-art with push access and clone it there).")
 
-    im = generate(a.prompt, w, h, a.seed, a.kind)
     folder = "icons" if a.kind == "icon" else "art"
-    out = cut_white(im) if a.kind == "icon" else im
-    if a.kind == "icon":
-        out.thumbnail((512, 512), Image.LANCZOS)
     rel = f"{folder}/{a.name}.png"
-    os.makedirs(os.path.join(ART, folder), exist_ok=True)
-    out.save(os.path.join(ART, rel), optimize=True)
-    print("saved", os.path.join(ART, rel), out.size)
+    if not a.upload_only:
+        im = generate(a.prompt, w, h, a.seed, a.kind, a.style)
+        out = cut_white(im) if a.kind == "icon" else im
+        if a.kind == "icon":
+            out.thumbnail((512, 512), Image.LANCZOS)
+        os.makedirs(os.path.join(ART, folder), exist_ok=True)
+        out.save(os.path.join(ART, rel), optimize=True)
+        print("saved", os.path.join(ART, rel), out.size)
     if a.no_upload:
         return
 
