@@ -1,7 +1,7 @@
 # Graph Report - Beat-the-shit-out-of-the-ghost-game  (2026-11-16)
 
 ## Corpus Check
-- 51 files · ~81,427 words
+- 51 files · ~81,469 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 3 file(s) not represented in the graph (top: (none) 3)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `209c1612`
+- Built from commit: `5246330a`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -43,17 +43,17 @@
 7. `moving()` - 20 edges
 8. `Sfx.play()` - 18 edges
 9. `Abilities.step()` - 16 edges
-10. `Run.startFight()` - 15 edges
+10. `Furniture.smash()` - 15 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `update()` --calls--> `VM.itemTip()`  [INFERRED]
+  game/StarterPlayer/StarterPlayerScripts/Client/Hotbar.luau → game/StarterPlayer/StarterPlayerScripts/Client/Viewmodel.luau
+- `Hotbar.primary()` --calls--> `VM.impactTime()`  [INFERRED]
+  game/StarterPlayer/StarterPlayerScripts/Client/Hotbar.luau → game/StarterPlayer/StarterPlayerScripts/Client/Viewmodel.luau
 - `applyFx()` --calls--> `Ghost.vuln()`  [INFERRED]
   game/ServerScriptService/Server/Inventory.luau → game/ServerScriptService/Server/Ghost.luau
 - `MonsterFx.handle()` --calls--> `HUD.toast()`  [INFERRED]
   game/StarterPlayer/StarterPlayerScripts/Client/MonsterFx.luau → game/StarterPlayer/StarterPlayerScripts/Client/HUD.luau
-- `Hotbar.primary()` --calls--> `VM.impactTime()`  [INFERRED]
-  game/StarterPlayer/StarterPlayerScripts/Client/Hotbar.luau → game/StarterPlayer/StarterPlayerScripts/Client/Viewmodel.luau
-- `update()` --calls--> `VM.itemTip()`  [INFERRED]
-  game/StarterPlayer/StarterPlayerScripts/Client/Hotbar.luau → game/StarterPlayer/StarterPlayerScripts/Client/Viewmodel.luau
 - `liftHint()` --calls--> `Settings.keyName()`  [INFERRED]
   game/StarterPlayer/StarterPlayerScripts/Client/Input.luau → game/StarterPlayer/StarterPlayerScripts/Client/Settings.luau
 
