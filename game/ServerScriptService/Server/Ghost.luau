@@ -351,6 +351,11 @@ function Ghost.hit(by: Player?, dir: Vector3, knock: number, damage: number)
 		Remotes.Fx:FireAllClients("ShieldBlock", g.hrp.Position + g.hrp.CFrame.LookVector * 2)
 	end
 	Ghost.damage(damage, by)
+	-- any hit on the Party Bear while it hunts you in the dark breaks the hunt: the lights come back and it never
+	-- reaches you (no strike, no jumpscare), even from weapons with no knockback
+	if g.state == "Ability" and g.ab and g.ab.kind == "blackout" and g.def.ability.lightsOut then
+		setState(g, "Recover", 0.6)
+	end
 	if knock <= 0 then return end
 	if g.state == "Dead" then return end
 	if g.ts and os.clock() < g.ts.untilT then return end -- frozen in time: no knockback

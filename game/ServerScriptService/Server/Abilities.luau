@@ -1,3 +1,4 @@
+local STUDIO = game:GetService("RunService"):IsStudio()
 -- Monster special abilities (see Shared/Monsters). Ghost.luau calls:
 --   Abilities.try(g, G, now, target, thrp, dist)  in Chase: maybe start the ability (returns true if it did)
 --   Abilities.step(g, G, dt, now, target, thrp, hoverY)  while g.state == "Ability"
@@ -408,6 +409,8 @@ function Abilities.step(g, G, dt: number, now: number, target: Player?, thrp: Ba
 		if thrp and target then
 			local to = Vector3.new(thrp.Position.X - pos.X, 0, thrp.Position.Z - pos.Z)
 			local sp = (a.speed or 22) * (g.speedMult or 1)
+			-- Studio test hook: ReplicatedStorage attribute DebugHuntHold = true makes the hunter stand still in the dark
+			if STUDIO and game:GetService("ReplicatedStorage"):GetAttribute("DebugHuntHold") then sp = 0 end
 			-- solid monsters (the Animatronic) walk around the walls; the Woman glides through them
 			local goal = (g.def.solid and G.pathPoint) and G.pathPoint(g, thrp.Position) or thrp.Position
 			local step = Vector3.new(goal.X - pos.X, 0, goal.Z - pos.Z)

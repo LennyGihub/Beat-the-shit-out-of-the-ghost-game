@@ -123,10 +123,29 @@ local function jumpscare(model: any)
 end
 
 local blackoutCC: ColorCorrectionEffect? = nil
--- the Animatronic's blackout: every lamp in the house goes dark (lights off, glowing neon dulled), a music
--- box plays while it hunts; all put back when it ends
+-- the Party Bear's blackout: every lamp in the house drops to 5% (glowing neon dulled), each player gets a
+-- small light around them so they can still find their way, and a music box plays while it hunts; all put back
+-- when it ends
+local DIM = 0.05
 local dimmed = {} :: { [Instance]: any }
 local musicBox: Sound? = nil
+local bodyLights = {} :: { PointLight }
+local function playerLights(on: boolean)
+	for _, l in bodyLights do l:Destroy() end
+	table.clear(bodyLights)
+	if not on then return end
+	for _, p in Players:GetPlayers() do
+		local r = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+		if r then
+			local l = Instance.new("PointLight")
+			l.Name = "DarkLight"; l.Color = Color3.fromRGB(255, 214, 170); l.Shadows = false -- (it sits inside the body)
+			-- yours is a little stronger than your teammates'
+			l.Range = p == lp and 16 or 10; l.Brightness = p == lp and 2 or 1.2
+			l.Parent = r
+			table.insert(bodyLights, l)
+		end
+	end
+end
 local function lightsOut(on: boolean)
 	if on then
 		local house = workspace:FindFirstChild("Mansion")
@@ -134,27 +153,30 @@ local function lightsOut(on: boolean)
 		for _, d in house:GetDescendants() do
 			if dimmed[d] == nil then
 				if d:IsA("Light") and d.Enabled then
-					dimmed[d] = true; d.Enabled = false
+					dimmed[d] = d.Brightness; d.Brightness = d.Brightness * DIM
 				elseif d:IsA("BasePart") and d.Material == Enum.Material.Neon then
 					dimmed[d] = d.Color; d.Material = Enum.Material.SmoothPlastic; d.Color = d.Color:Lerp(Color3.new(0, 0, 0), 0.75)
 				end
 			end
 		end
+		playerLights(true)
 		Sfx.play("Breaker", { Volume = 1.2, PlaybackSpeed = 0.7 })
 		if musicBox then musicBox:Destroy() end
 		musicBox = Sfx.loop("MusicBox", { PlaybackSpeed = 0.85 })
 	else
 		for d, v in dimmed do
 			if d.Parent then
-				if d:IsA("Light") then (d :: Light).Enabled = true
+				if d:IsA("Light") then (d :: Light).Brightness = v
 				else (d :: BasePart).Material = Enum.Material.Neon; (d :: BasePart).Color = v end
 			end
 		end
 		table.clear(dimmed)
+		playerLights(false)
 		if musicBox then musicBox:Destroy(); musicBox = nil end
 	end
 end
 
+local blackoutId = 0
 local function blackout(on: boolean, t: number?, allLights: boolean?)
 	if not blackoutCC then
 		blackoutCC = Instance.new("ColorCorrectionEffect")
@@ -165,10 +187,13 @@ local function blackout(on: boolean, t: number?, allLights: boolean?)
 	if on then
 		Sfx.play("GhostWhisper", { Volume = 1.2, PlaybackSpeed = 0.6 })
 		HUD.banner("THE LIGHTS ARE OUT", allLights and "WATCH FOR ITS EYES" or "IT'S COMING FOR YOU", 2.5)
-		local dark = allLights and { Brightness = -0.42, Contrast = 0.6, Saturation = -0.85 } or { Brightness = -0.32, Contrast = 0.5, Saturation = -0.8 }
+		local dark = allLights and { Brightness = -0.05, Contrast = 0.15, Saturation = -0.4 } or { Brightness = -0.32, Contrast = 0.5, Saturation = -0.8 }
 		TweenService:Create(cc, TweenInfo.new(allLights and 0.15 or 0.4), dark):Play()
 		if allLights then lightsOut(true) end
-		task.delay((t or 5) + 0.2, function() blackout(false) end)
+		blackoutId += 1
+		local id = blackoutId
+		-- safety end, ignored if this blackout already ended and a newer one started
+		task.delay((t or 5) + 0.2, function() if id == blackoutId then blackout(false) end end)
 	else
 		TweenService:Create(cc, TweenInfo.new(0.6), { Brightness = 0, Contrast = 0, Saturation = 0 }):Play()
 		lightsOut(false)

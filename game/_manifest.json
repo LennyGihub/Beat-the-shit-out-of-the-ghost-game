@@ -61,8 +61,8 @@
    "file": "ServerScriptService/Server/Abilities.luau",
    "instance": "game.ServerScriptService.Server.Abilities",
    "class": "ModuleScript",
-   "bytes": 25548,
-   "sha1": "6236db8f17ebdfc0e50310a592316aa056356a44"
+   "bytes": 25818,
+   "sha1": "221d881a2a325b20a03c318877da50c1e9d6fe28"
   },
   {
    "file": "ServerScriptService/Server/Admin.luau",
@@ -117,8 +117,8 @@
    "file": "ServerScriptService/Server/Ghost.luau",
    "instance": "game.ServerScriptService.Server.Ghost",
    "class": "ModuleScript",
-   "bytes": 26185,
-   "sha1": "aa35f4680c8fa5c4bdeb7a349b4a291970485b0e"
+   "bytes": 26506,
+   "sha1": "7fbfc89df47e151eff73c5297f6c8974b8b12e09"
   },
   {
    "file": "ServerScriptService/Server/GoblinLoot.luau",
@@ -250,8 +250,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/MonsterFx.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.MonsterFx",
    "class": "ModuleScript",
-   "bytes": 19809,
-   "sha1": "03fd46ba2a3958a1c603a783d6d738a67d49b136"
+   "bytes": 20778,
+   "sha1": "819de092aedd41c42ffd4a40f3fc413d958ddbfd"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/PlaneFx.luau",
