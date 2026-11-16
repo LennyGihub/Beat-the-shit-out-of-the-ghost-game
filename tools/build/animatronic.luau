@@ -27,7 +27,7 @@ local function part(name: string, size: Vector3, cf: CFrame, color: Color3, mat:
 	local p = Instance.new("Part")
 	p.Name = name; p.Size = size; p.CFrame = cf; p.Color = color; p.Material = mat or FAB
 	p.TopSurface = Enum.SurfaceType.Smooth; p.BottomSurface = Enum.SurfaceType.Smooth
-	p.Anchored = false; p.CanCollide = false; p.CanTouch = false; p.CanQuery = false; p.CastShadow = true
+	p.Anchored = false; p.CanCollide = false; p.CanTouch = false; p.CastShadow = true
 	p.Parent = m
 	return p
 end
