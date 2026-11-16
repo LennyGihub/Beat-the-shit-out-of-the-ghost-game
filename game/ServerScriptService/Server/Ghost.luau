@@ -409,11 +409,36 @@ end
 
 -- knocked out of the house (through a window or the front door, under the floor, into an outside wall):
 -- teleported back in at the closest monster spawn point
-local OUT_MARGIN = 1.5
+-- The limit is the inner side of the loaded map's outside walls (they are ~2 studs thick): a body centre past
+-- it is inside the wall or out of the house. Measured once per map from Structure.Exterior.
+local bounds = { map = "", min = Config.House.Min, max = Config.House.Max }
+local function houseBounds()
+	local live = workspace:FindFirstChild("Mansion")
+	local id = live and live:GetAttribute("MapId") or "Mansion"
+	if bounds.map == id then return bounds end
+	bounds.map = id
+	bounds.min, bounds.max = Config.House.Min, Config.House.Max
+	local ext = live and live:FindFirstChild("Structure") and live.Structure:FindFirstChild("Exterior")
+	if ext then
+		local mn, mx = Vector3.new(math.huge, math.huge, math.huge), Vector3.new(-math.huge, -math.huge, -math.huge)
+		for _, d in ext:GetDescendants() do
+			if d:IsA("BasePart") and d.CanCollide and d.Size.Y > 6 then
+				local half = d.CFrame:VectorToWorldSpace(d.Size / 2)
+				half = Vector3.new(math.abs(half.X), math.abs(half.Y), math.abs(half.Z))
+				mn = mn:Min(d.Position - half); mx = mx:Max(d.Position + half)
+			end
+		end
+		if mx.X > mn.X and mx.Z > mn.Z then
+			local wall = 1.6
+			bounds.min = Vector3.new(mn.X + wall, Config.House.Min.Y, mn.Z + wall)
+			bounds.max = Vector3.new(mx.X - wall, mx.Y + 2, mx.Z - wall) -- above the outside walls = in the roof
+		end
+	end
+	return bounds
+end
 local function outside(p: Vector3): boolean
-	local H = Config.House
-	return p.X < H.Min.X - OUT_MARGIN or p.X > H.Max.X + OUT_MARGIN or p.Z < H.Min.Z - OUT_MARGIN or p.Z > H.Max.Z + OUT_MARGIN
-		or p.Y < H.Min.Y - 10 or p.Y > H.Max.Y + 10
+	local B = houseBounds()
+	return p.X < B.min.X or p.X > B.max.X or p.Z < B.min.Z or p.Z > B.max.Z or p.Y < B.min.Y - 10 or p.Y > B.max.Y
 end
 
 local function bringBack(g)

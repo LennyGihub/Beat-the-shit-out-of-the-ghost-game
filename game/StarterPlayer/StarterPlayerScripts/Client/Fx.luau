@@ -80,7 +80,7 @@ local function slash()
 end
 
 local function jumpscare()
-	Sfx.play("Jumpscare", { Volume = 1.2 })
+	Sfx.play("Jumpscare", { Volume = 0.3 })
 	Fx.shake(1.2)
 	Fx.kick(-22)
 	HUD.flash(Color3.new(1, 1, 1), 0.9)
@@ -202,7 +202,7 @@ function Fx.handle(kind: string, ...)
 	elseif kind == "Jumpscare" then
 		jumpscare()
 	elseif kind == "GhostScream" then
-		Sfx.at("GhostScream", args[1], { Volume = 1 })
+		Sfx.at("GhostScream", args[1], { Volume = 0.3 })
 	elseif kind == "GhostWindUp" then
 		Sfx.at("GhostWail", args[1], { PlaybackSpeed = 1.4, Volume = 0.8 })
 	elseif kind == "GhostVanish" then

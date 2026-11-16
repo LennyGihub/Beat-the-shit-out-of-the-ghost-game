@@ -250,6 +250,41 @@ function Ragdoll.step(g, dt: number, onWall: (pos: Vector3, speed: number) -> ()
 			for p in r.saved do (p :: BasePart).AssemblyLinearVelocity *= 0.88 end -- she keeps flying through the hole
 		end
 	end
+	-- sweep every frame from the torso, head and hips along the flight: a fast body covers several studs per
+	-- frame, so a short look-ahead let her slam into a wall from far away without breaking it (or slip through
+	-- a thin one). Inside walls in the way break; outside walls / stairs bounce her back instead.
+	local st = structure()
+	if st and speed > 14 then
+		local rp = RaycastParams.new()
+		rp.FilterType = Enum.RaycastFilterType.Include
+		rp.FilterDescendantsInstances = { st }
+		local dir = v.Unit
+		local reach = speed * dt * 3 + 2.5
+		for _, n in { "UpperTorso", "Head", "LowerTorso" } do
+			local part = g.model:FindFirstChild(n) :: BasePart?
+			local hit = part and workspace:Raycast(part.Position, dir * reach, rp)
+			if hit and hit.Normal.Y < 0.6 then
+				if breakable(hit.Instance :: BasePart, st) then
+					if now - r.lastBreak > 0.03 then
+						r.lastBreak = now
+						if Ragdoll.breakWalls(hit.Position + dir * 0.6, v) > 0 then
+							onWall(hit.Position, speed)
+							for p in r.saved do (p :: BasePart).AssemblyLinearVelocity *= 0.88 end
+						end
+					end
+				elseif -dir:Dot(hit.Normal) > 0.2 and hit.Distance <= speed * dt * 1.5 + 1.6 then -- about to touch it
+					local nrm = hit.Normal
+					for p in r.saved do
+						local bp = p :: BasePart
+						local pv = bp.AssemblyLinearVelocity
+						local into = pv:Dot(nrm)
+						if into < 0 then bp.AssemblyLinearVelocity = pv - nrm * into * 1.35 end
+					end
+				end
+				break
+			end
+		end
+	end
 	r.still = speed < 5 and r.still + dt or 0
 	return (now - g.stateStart > 1.2 and r.still > 0.5) or now > g.stateUntil or torso.Position.Y < -40
 end

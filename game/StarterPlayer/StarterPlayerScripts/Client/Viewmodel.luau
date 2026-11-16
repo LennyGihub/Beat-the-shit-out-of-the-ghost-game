@@ -49,6 +49,7 @@ local HOLD: { [string]: any } = {
 	thrust = { fist = Vector3.new(0.65, -1.0, -1.8), aim = Vector2.new(0.05, 0.4), roll = 0 },
 	saw = C(0.9, -1.2, -1.6, 0.7, 0.45, 1.3), -- on its side, top handle to the left, bar up toward the crosshair
 	pistol = { fist = Vector3.new(0.7, -0.8, -1.45), aim = Vector2.new(0.1, -0.02), roll = 0 },
+	glock = C(0.4, -0.8, -1.75, 0, 0.1, 0), -- two hands, held straight and level (not tilted up)
 	shotgun = { fist = Vector3.new(0.72, -0.75, -1.05), aim = Vector2.new(0.14, -0.1), roll = 0 },
 	longgun = { fist = Vector3.new(0.72, -0.78, -1.05), aim = Vector2.new(0.14, -0.1), roll = 0 },
 	spray = { fist = Vector3.new(0.78, -0.82, -1.5), aim = Vector2.new(-0.12, -0.02), roll = 0 },
@@ -76,9 +77,10 @@ local LEFT_ROT: { [string]: CFrame } = {
 	longgun = A(1.15, -0.45, -0.2),
 	spray = A(1.1, -0.5, -0.2),
 	pistol = A(1.1, -0.5, -0.2),
+	glock = A(0.1, -0.25, -0.35), -- cupped under the shooting hand
 }
 -- first-person size of the held item per style (guns and sprays bigger so the fists don't swallow them)
-local SCALE: { [string]: number } = { pistol = 0.8, shotgun = 0.85, longgun = 0.85, throw = 0.75, drink = 0.75,
+local SCALE: { [string]: number } = { pistol = 0.8, glock = 1.05, shotgun = 0.85, longgun = 0.85, throw = 0.75, drink = 0.75,
 	inject = 0.8, apply = 0.7, raise = 0.75, place = 0.65, heavy = 0.6, spray = 0.95 }
 -- the left fist sits under a gun's forend, not on top of it (camera space)
 local LEFT_DROP: { [string]: Vector3 } = { shotgun = Vector3.new(0, -0.14, 0), longgun = Vector3.new(0, -0.14, 0), spray = Vector3.new(0, -0.1, 0) }
@@ -89,12 +91,12 @@ local STYLE = {
 	FireAxe = "heavy", Sledgehammer = "heavy", StormHammer = "heavy", Shovel = "heavy", FrostPickaxe = "heavy",
 	BaseballBat = "bat", SpikedBat = "bat", BurningBat = "bat", LeadPipe = "bat", Crowbar = "bat", FryingPan = "bat", GolfClub = "golf",
 	Katana = "slash", DemonBlade = "slash", Machete = "slash", HolyCross = "thrust", Chainsaw = "saw",
-	NailGun = "pistol", Taser = "pistol", Glock18 = "pistol", FlareGun = "pistol", SilverRevolver = "pistol",
+	NailGun = "pistol", Taser = "pistol", Glock18 = "glock", FlareGun = "pistol", SilverRevolver = "pistol",
 	SaltShotgun = "shotgun", PotatoCannon = "longgun", StakeCrossbow = "longgun", HarpoonGun = "longgun",
 	EnergyDrink = "drink", Painkillers = "drink", Adrenaline = "inject", RageSerum = "inject",
 	Medkit = "apply", KevlarVest = "apply", Talisman = "raise", PocketWatch = "raise", BearTrap = "place",
 }
-local DUR = { heavy = 0.78, bat = 0.42, golf = 0.5, slash = 0.3, thrust = 0.34, saw = 0.12, pistol = 0.22, shotgun = 0.62,
+local DUR = { heavy = 0.78, bat = 0.42, golf = 0.5, slash = 0.3, thrust = 0.34, saw = 0.12, pistol = 0.22, glock = 0.1, shotgun = 0.62,
 	longgun = 0.45, throw = 0.48, drink = 0.9, inject = 0.8, apply = 0.8, raise = 0.9, place = 0.6, spray = 0.1 }
 
 -- keyframes {t, offset}: translation and rotation in CAMERA space, turning around the right fist
@@ -111,6 +113,7 @@ local KEYS = {
 	thrust = { { 0, C(0, 0, 0) }, { 0.3, C(0, -0.05, 0.35, 0.1, 0, 0) }, { 0.5, C(-0.2, 0.1, -0.95, -0.05, 0.1, 0) }, { 1, C(0, 0, 0) } },
 	saw = { { 0, C(0, -0.1, -0.5) }, { 0.5, C(0, -0.02, -0.78, -0.1, 0, 0) }, { 1, C(0, -0.1, -0.5) } },
 	pistol = { { 0, C(0, 0, 0) }, { 0.14, C(0, 0.06, 0.22, 0.38, 0, 0.05) }, { 1, C(0, 0, 0) } },
+	glock = { { 0, C(0, 0, 0) }, { 0.25, C(0, 0.03, 0.1, 0.16, 0, 0) }, { 1, C(0, 0, 0) } }, -- short full-auto kick
 	shotgun = { { 0, C(0, 0, 0) }, { 0.1, C(0, 0.1, 0.38, 0.42, 0, 0) }, { 0.35, C(0, 0.02, 0.1, 0.08, 0, 0) }, { 1, C(0, 0, 0) } },
 	longgun = { { 0, C(0, 0, 0) }, { 0.12, C(0, 0.12, 0.4, 0.45, 0, 0) }, { 1, C(0, 0, 0) } },
 	throw = { { 0, C(0, 0, 0) }, { 0.38, C(0.25, 0.4, 0.15, 0.9, 0, 0) }, { 0.55, C(-0.2, 0.3, -0.9, -0.5, 0, 0) },
