@@ -5,6 +5,8 @@ local Debris = game:GetService("Debris")
 local Remotes = require(script.Parent.Remotes)
 
 local Furniture = {}
+-- set by UltRunner: an explosive barrel broke at pos (by = who threw it, if anyone)
+Furniture.onExplode = nil :: ((pos: Vector3, by: Player?) -> ())?
 Furniture.thrown = {} :: { [Model]: { by: Player?, t: number, power: number } }
 local template: Model? = nil
 local debrisFolder: Folder
@@ -60,8 +62,10 @@ function Furniture.smash(m: Model, vel: Vector3, strength: number?)
 	if m:GetAttribute("Broken") then return end
 	m:SetAttribute("Broken", true)
 	CS:RemoveTag(m, "Furniture")
+	local thrownBy = Furniture.thrown[m] and Furniture.thrown[m].by
 	Furniture.thrown[m] = nil
 	local cf, size = m:GetBoundingBox()
+	if m:GetAttribute("Explosive") and Furniture.onExplode then task.defer(Furniture.onExplode, cf.Position, thrownBy) end
 	Remotes.Fx:FireAllClients("Smash", cf.Position, size.Magnitude, m:GetAttribute("Kind"))
 	local s = strength or vel.Magnitude
 	local parts = {}

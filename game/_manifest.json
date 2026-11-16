@@ -5,8 +5,8 @@
    "file": "ReplicatedStorage/Shared/Config.luau",
    "instance": "game.ReplicatedStorage.Shared.Config",
    "class": "ModuleScript",
-   "bytes": 6390,
-   "sha1": "c2e0e914d5624bf8514f07362c4e115e5dfff9f1"
+   "bytes": 6829,
+   "sha1": "62bb0c8f2e3494722aa5d20936affcc733fde7dc"
   },
   {
    "file": "ReplicatedStorage/Shared/ItemModels.luau",
@@ -131,8 +131,8 @@
    "file": "ServerScriptService/Server/Furniture.luau",
    "instance": "game.ServerScriptService.Server.Furniture",
    "class": "ModuleScript",
-   "bytes": 7561,
-   "sha1": "4f77345dd4916af019ce90f478bbcf629aff590f"
+   "bytes": 7897,
+   "sha1": "975c2316cb06a7dada87300d083125a41abdf209"
   },
   {
    "file": "ServerScriptService/Server/Fury.luau",
@@ -215,8 +215,8 @@
    "file": "ServerScriptService/Server/UltRunner.luau",
    "instance": "game.ServerScriptService.Server.UltRunner",
    "class": "ModuleScript",
-   "bytes": 5134,
-   "sha1": "d2abebb98c4112e5de479568f50670c623ff5579"
+   "bytes": 6635,
+   "sha1": "38e4973c9bc40c1e77b290b4424fb333066d30a3"
   },
   {
    "file": "StarterPlayer/StarterCharacterScripts/Health.server.luau",

@@ -110,6 +110,10 @@ local Config = {
 	},
 	Reward = { Base = 200, PerLevel = 120 }, -- RUN cash per ghost (spent on items, lost after the run)
 	Payout = { PerKill = 55, PerLevel = 22, DamageDiv = 30 }, -- real cash paid when you die or leave the run (x difficulty reward)
+	-- EXPLOSIVE BARRELS (red, in every map; a Furniture model with the attribute Explosive): they blow up when they
+	-- break (thrown at something, the monster knocked into them, a shockwave): inside walls open, furniture near
+	-- them flies (other barrels chain), the monster is blasted and set alight, players too close are thrown.
+	Barrel = { Radius = 17, Damage = 60, Knock = 135, PlayerRadius = 10, PlayerDamage = 18, FireRadius = 6 },
 	-- event cinematics (Client EventFx / PlaneFx play them, Server Events waits for them): seconds until the crash
 	Events = { PlaneTime = 5, VanTime = 3.2, VanSettle = 0.6, TrainTime = 4.6 },
 	-- (read them with Config.eventTime(name): in Studio the ReplicatedStorage attribute DebugEventSlow = n plays them n times slower)

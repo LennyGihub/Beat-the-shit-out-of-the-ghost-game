@@ -5,6 +5,8 @@ local Ragdoll = require(script.Parent.Ragdoll)
 local Furniture = require(script.Parent.Furniture)
 local Ghost = require(script.Parent.Ghost)
 local Combat = require(script.Parent.Combat)
+local Fire = require(script.Parent.Fire)
+local Config = require(RS.Shared.Config)
 
 local Runner = {}
 local rng = Random.new()
@@ -26,6 +28,32 @@ local function shock(player: Player, center: Vector3, r: number, d: number, k: n
 	local gp = ghostPos()
 	if gp and (gp - center).Magnitude < r then
 		Ghost.hit(player, gp - center, k, d * Combat.stat(player, "damage"), nil, true)
+	end
+end
+
+-- an explosive barrel went off (Furniture.onExplode): Config.Barrel
+function Runner.barrel(pos: Vector3, by: Player?)
+	local B = Config.Barrel
+	Remotes.Fx:FireAllClients("ItemBoom", pos, B.Radius, Color3.fromRGB(255, 140, 40), true, "Barrel")
+	if Ragdoll.breakWalls(pos, Vector3.zero, 9, 6) > 0 then Remotes.Fx:FireAllClients("WallSmash", pos, 120) end
+	for _, f in Furniture.near(pos, B.Radius * 0.7) do -- everything near it flies (other barrels go off in turn)
+		local c = f:GetBoundingBox().Position
+		local out = c - pos
+		Furniture.smash(f, (out.Magnitude > 0.1 and out.Unit or Vector3.yAxis) * 70 + Vector3.new(0, 30, 0), 90)
+	end
+	local gp = ghostPos()
+	if gp and (gp - pos).Magnitude < B.Radius then
+		local f = 1 - (gp - pos).Magnitude / B.Radius * 0.5
+		Ghost.hit(by, gp - pos, B.Knock, B.Damage * f * (by and Combat.stat(by, "damage") or 1), true, true)
+		Ghost.burn(6, 4, nil, by)
+	end
+	Fire.ignite(pos, B.FireRadius, by, 3, true)
+	for _, p in game:GetService("Players"):GetPlayers() do
+		local hrp = p:GetAttribute("InMatch") and p.Character and p.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if hrp and (hrp.Position - pos).Magnitude < B.PlayerRadius then
+			local out = hrp.Position - pos
+			Combat.hitPlayer(p, nil, B.PlayerDamage, (out.Magnitude > 0.1 and out.Unit or Vector3.yAxis) * 55 + Vector3.new(0, 28, 0), "barrel", true, 1)
+		end
 	end
 end
 
@@ -142,6 +170,7 @@ end
 function Runner.start()
 	Combat.runUltimate = Runner.run
 	Combat.explode = Runner.explode
+	Furniture.onExplode = Runner.barrel
 end
 
 return Runner
