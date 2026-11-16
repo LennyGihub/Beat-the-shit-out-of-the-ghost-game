@@ -48,7 +48,9 @@ local Config = {
 		DamagePerWeight = 7,
 		SlowPerWeight = 1.4,
 	},
-	Player = { WalkSpeed = 17, SprintSpeed = 26, MaxHealth = 100 },
+	Player = { WalkSpeed = 17, SprintSpeed = 26, MaxHealth = 300 },
+	-- a second monster hit within Window seconds knocks you down (ragdoll for Time seconds); blocked hits don't count
+	Knockdown = { Window = 4, Time = 1.6, Speed = 45, Lift = 22 },
 	Ghost = {
 		BaseHP = 400,
 		HPPerLevel = 180,

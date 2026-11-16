@@ -76,6 +76,9 @@ function Abilities.interrupt(g)
 	if g.ab.kind == "grabThrow" and g.ab.victim and g.ab.phase == "hold" then
 		Remotes.Fx:FireClient(g.ab.victim, "Released")
 	end
+	if g.ab.kind == "titanGrab" and g.ab.victim and g.ab.phase ~= "wind" then
+		Remotes.Fx:FireClient(g.ab.victim, "Released") -- knocked out of his grip: the victim drops
+	end
 	if g.ab.kind == "blackout" then fx("BlackoutEnd"); g.model:SetAttribute("Shadow", false) end
 	if g.ab.kind == "steal" then Remotes.Fx:FireAllClients("GoblinUse", g.model, "", "stop", 0) end
 	if g.ab.kind == "levitateThrow" and g.ab.obj then Abilities.dropLevitated(g.ab) end
@@ -116,9 +119,9 @@ function Abilities.try(g, G, now: number, target: Player?, thrp: BasePart?, dist
 		if dist < a.min or dist > a.max or warded(target) then return false end
 		start(g, G, "brace", a.brace, {})
 		fx("AbilityWind", g.hrp.Position, k)
-	elseif k == "grabThrow" then
+	elseif k == "grabThrow" or k == "titanGrab" then
 		if dist > a.range or warded(target) then return false end
-		start(g, G, "wind", 0.55, { victim = target })
+		start(g, G, "wind", k == "titanGrab" and 0.7 or 0.55, { victim = target })
 		fx("AbilityWind", g.hrp.Position, k)
 	elseif k == "pounce" then
 		if dist < a.min or dist > a.max then return false end
@@ -248,6 +251,86 @@ function Abilities.step(g, G, dt: number, now: number, target: Player?, thrp: Ba
 	local function face(p: Vector3)
 		local f = Vector3.new(p.X, pos.Y, p.Z)
 		if (f - pos).Magnitude > 0.1 then g.ao.CFrame = CFrame.lookAt(pos, f).Rotation end
+	end
+	if k == "titanGrab" then
+		-- the Flayed Giant: grab, then (another player standing) carry the victim over and swing them into that
+		-- player twice, then throw; (alone) throw right away
+		local vh = ab.victim and hrpOf(ab.victim)
+		local victimOk = vh ~= nil and ab.victim.Parent ~= nil and not warded(ab.victim)
+		local function throwVictim()
+			if victimOk then
+				local side = g.hrp.CFrame.RightVector * (rng:NextNumber() < 0.5 and -1 or 1)
+				local dir = flat(g.hrp.CFrame.LookVector * 0.6 + side * 0.8)
+				G.hitPlayer(ab.victim, nil, a.dmg * dmgScale(g), dir * a.power + Vector3.new(0, 48, 0), "titan", true, 1.4)
+			end
+			finish(g, G, 0.8)
+		end
+		local function otherAlive(): (Player?, BasePart?)
+			local best, bestHrp, bestD = nil, nil, a.swingRange or 60
+			for _, p in matchPlayers() do
+				local h = hrpOf(p)
+				local hum = p.Character and p.Character:FindFirstChildOfClass("Humanoid")
+				if p ~= ab.victim and h and hum and hum.Health > 0 and not warded(p) and not p:GetAttribute("Spectating") then
+					local d = (h.Position - pos).Magnitude
+					if d < bestD then best, bestHrp, bestD = p, h, d end
+				end
+			end
+			return best, bestHrp
+		end
+		if ab.phase == "wind" then
+			g.lv.VectorVelocity = hover(g, hoverY, Vector3.zero)
+			if vh then face(vh.Position) end
+			if now >= ab.untilT then
+				if vh and (vh.Position - pos).Magnitude <= a.range + 3 and not warded(ab.victim) then
+					local hand = g.model:FindFirstChild("RightHand") or g.model:FindFirstChild("RightLowerArm") or g.hrp
+					local other = otherAlive()
+					Remotes.Fx:FireClient(ab.victim, "Grabbed", hand, other and 6.5 or 1)
+					fx("AbilityHit", vh.Position, k)
+					if other then
+						ab.other = other
+						ab.swings = 0
+						setPhase(g, "carry", 3.5)
+					else
+						setPhase(g, "hold", 0.8)
+					end
+				else
+					finish(g, G, 0.6) -- missed
+				end
+			end
+		elseif ab.phase == "hold" then
+			g.lv.VectorVelocity = hover(g, hoverY, Vector3.zero)
+			if now >= ab.untilT or not victimOk then throwVictim() end
+		elseif ab.phase == "carry" then
+			-- walk over to the other player with the victim in his fist
+			local oh = ab.other and hrpOf(ab.other)
+			if not victimOk then finish(g, G, 0.6); return end
+			if not oh then setPhase(g, "hold", 0.4); return end
+			local to = Vector3.new(oh.Position.X - pos.X, 0, oh.Position.Z - pos.Z)
+			face(oh.Position)
+			if to.Magnitude <= (a.swingReach or 13) then
+				setPhase(g, "swing", 0.5)
+			elseif now >= ab.untilT then
+				setPhase(g, "hold", 0.3) -- couldn't reach them: just throw
+			else
+				g.lv.VectorVelocity = hover(g, hoverY, to.Unit * (a.carrySpeed or 26) * (g.speedMult or 1))
+			end
+		elseif ab.phase == "swing" or ab.phase == "swing2" then
+			-- the victim is the club: two swings into the other player (two phase names so the arm swings twice)
+			g.lv.VectorVelocity = hover(g, hoverY, Vector3.zero)
+			local oh = ab.other and hrpOf(ab.other)
+			if oh then face(oh.Position) end
+			if now >= ab.untilT then
+				ab.swings += 1
+				if oh and victimOk and (oh.Position - pos).Magnitude <= (a.swingReach or 13) + 5 then
+					local side = flat(oh.Position - pos)
+					G.hitPlayer(ab.other, nil, a.swingDmg * dmgScale(g), side * 70 + g.hrp.CFrame.RightVector * -30 + Vector3.new(0, 30, 0), "titan", true, 1.0)
+					G.damagePlayer(ab.victim, a.swingDmg * 0.5 * dmgScale(g), nil, Vector3.zero) -- being swung hurts too
+					fx("AbilityHit", oh.Position, k)
+				end
+				if ab.swings >= 2 then setPhase(g, "hold", 0.35) else setPhase(g, "swing2", 0.55) end
+			end
+		end
+		return
 	end
 	if k == "grabThrow" then
 		local vh = ab.victim and hrpOf(ab.victim)

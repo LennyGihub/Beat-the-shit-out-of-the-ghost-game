@@ -436,7 +436,7 @@ end
 local function claw(g, target: Player?, thrp: BasePart?)
 	if not target or not thrp or warded(target) then return end
 	local to = thrp.Position - g.hrp.Position
-	if to.Magnitude <= C.SwipeReach then
+	if to.Magnitude <= C.SwipeReach * ((g.def :: any).reach or 1) then
 		local dmg = (C.SwipeDamage + (g.level - 1) * C.SwipeDamagePerLevel) * g.dmgMult
 		if Ghost.damagePlayer then Ghost.damagePlayer(target, dmg) end
 		local flat = Vector3.new(to.X, 0, to.Z)
@@ -583,6 +583,14 @@ function Ghost.step(dt: number)
 		local to = Vector3.new(tp.X - pos.X, 0, tp.Z - pos.Z)
 		local v = to.Magnitude > 0.5 and to.Unit * speed or Vector3.zero
 		if g.def.solid then v = blockWalls(g, v) end
+		-- wallBreaker (the Flayed Giant): too big for the doors, he smashes through the inside walls in his way
+		if (g.def :: any).wallBreaker and v.Magnitude > 1 and now >= (g.nextWallBreak or 0) then
+			local r = workspace:Raycast(pos + Vector3.new(0, 2, 0), v.Unit * 7, g.rp)
+			if r and r.Normal.Y < 0.6 and Ragdoll.breakWalls(r.Position + Vector3.new(0, 2, 0), v.Unit * 70, 9, 9) > 0 then
+				g.nextWallBreak = now + 0.35
+				Remotes.Fx:FireAllClients("WallSmash", r.Position, 110)
+			end
+		end
 		g.lv.VectorVelocity = v + Vector3.new(0, (hoverY - pos.Y) * 4, 0)
 	end
 
@@ -606,7 +614,7 @@ function Ghost.step(dt: number)
 		if phase < 0.12 and dist > 14 then speed *= 0.1 elseif phase < 0.3 and dist > 14 then speed *= 1.8 end
 		moveToward(g.def.solid and pathPoint(g, thrp.Position) or thrp.Position, speed)
 		if now >= g.slowUntil and Abilities.try(g, Ghost, now, target, thrp, dist) then return end
-		if dist < C.AttackRange and now > g.nextAttack then
+		if dist < C.AttackRange * ((g.def :: any).reach or 1) and now > g.nextAttack then
 			setState(g, "WindUp", C.WindUp)
 			Remotes.Fx:FireAllClients("GhostWindUp", pos)
 		elseif g.def.ability.kind == "scare" and now > g.nextScare and dist > 12 and not warded(target) then

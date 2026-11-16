@@ -387,9 +387,10 @@ local PRESETS = {
 	inside = { ClockTime = 19.1, Brightness = 1.4, Exposure = 0, Ambient = Color3.fromRGB(30, 27, 25), Outdoor = Color3.fromRGB(105, 110, 138),
 		AtmDensity = 0.12, AtmColor = Color3.fromRGB(58, 60, 78), AtmDecay = Color3.fromRGB(36, 36, 50), AtmHaze = 0.6, AtmGlare = 0,
 		Tint = Color3.fromRGB(255, 240, 226), Sat = -0.38, Contrast = 0.22 },
-	lobby = { ClockTime = 19.6, Brightness = 1.0, Exposure = -0.2, Ambient = Color3.fromRGB(35, 38, 30), Outdoor = Color3.fromRGB(90, 95, 80),
-		AtmDensity = 0.42, AtmColor = Color3.fromRGB(168, 166, 122), AtmDecay = Color3.fromRGB(96, 98, 70), AtmHaze = 2.4, AtmGlare = 0.8,
-		Tint = Color3.fromRGB(230, 238, 200), Sat = -0.25, Contrast = 0.2 },
+	-- the lobby: a dark forest at night (cold blue fog, lanterns and glowing mushrooms do the lighting)
+	lobby = { ClockTime = 21.5, Brightness = 1.0, Exposure = 0, Ambient = Color3.fromRGB(36, 40, 46), Outdoor = Color3.fromRGB(78, 88, 108),
+		AtmDensity = 0.5, AtmColor = Color3.fromRGB(46, 54, 62), AtmDecay = Color3.fromRGB(16, 20, 24), AtmHaze = 2.2, AtmGlare = 0,
+		Tint = Color3.fromRGB(205, 220, 235), Sat = -0.3, Contrast = 0.24 },
 }
 PRESETS.yard = table.clone(PRESETS.inside)
 PRESETS.yard.Exposure = 0.35

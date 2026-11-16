@@ -15,6 +15,7 @@ local swirl: ParticleEmitter? = nil
 local rng = Random.new()
 
 local A = CFrame.Angles
+local phaseSeen, phaseT = "", 0 -- the AbilityPhase attribute and when it last changed (swing timing)
 -- With streaming on, a monster's parts and joints can reach this client a little after the model itself: joints
 -- (and the root, for the swirl) that arrive later are picked up as they come, so the monster is never left
 -- moving without its animation.
@@ -153,6 +154,34 @@ local function abilityPose(ab: string, phase: string, t: number, since: number):
 			p.RightShoulder = A(0.5, 0, -0.3); p.RightElbow = A(0.1, 0, 0); p.RightWrist = A(0.3, 0, 0)
 			p.LeftShoulder = A(-0.4, 0, 0.5)
 			p.RightHip = A(-0.4, 0, 0); p.LeftHip = A(0.45, 0, 0); p.LeftKnee = A(-0.4, 0, 0)
+		end
+	elseif ab == "titanGrab" then
+		-- the Flayed Giant: reach, carry the victim out in front, swing them across (twice), lift and throw
+		local ph = os.clock() - phaseT
+		if phase == "wind" then
+			p.Root = A(0.35 * a, 0, 0); p.Waist = A(0.3 * a, 0, 0); p.Neck = A(-0.3 * a, 0, 0)
+			p.RightShoulder = A(1.5 * a, 0, -0.2); p.LeftShoulder = A(1.3 * a, 0, 0.3)
+			p.RightElbow = A(0.15, 0, 0); p.LeftElbow = A(0.3, 0, 0)
+		elseif phase == "carry" then
+			p.Waist = A(0.1, 0.2, 0); p.Neck = A(-0.15, 0, 0)
+			p.RightShoulder = A(1.55, 0, -0.15); p.RightElbow = A(0.15, 0, 0)
+			p.LeftShoulder = A(s(t * 6) * 0.4, 0, 0.15)
+			local w = t * 6
+			p.RightHip = A(s(w) * 0.55, 0, 0); p.LeftHip = A(-s(w) * 0.55, 0, 0)
+			p.RightKnee = A(-math.max(0, s(w + 1.2)) * 0.8, 0, 0); p.LeftKnee = A(-math.max(0, -s(w + 1.2)) * 0.8, 0, 0)
+		elseif phase == "swing" or phase == "swing2" then
+			local k = math.clamp(ph / 0.42, 0, 1)
+			k = k * k * (3 - 2 * k)
+			p.Root = A(0.1, 0, 0)
+			p.Waist = A(0.15, 1.1 - 2.3 * k, 0) -- a full twist from his right to his left
+			p.Neck = A(-0.1, -0.5 + k, 0)
+			p.RightShoulder = A(1.45, 0, -1.25 + 0.4 * k); p.RightElbow = A(0.1, 0, 0)
+			p.LeftShoulder = A(0.5, 0, 0.6); p.LeftElbow = A(0.6, 0, 0)
+			p.RightHip = A(-0.2, 0, 0); p.LeftHip = A(0.3, 0, 0); p.LeftKnee = A(-0.3, 0, 0)
+		else -- hold: lift the victim overhead, then the throw
+			p.Waist = A(-0.25, 0.3, 0); p.Neck = A(-0.3, 0, 0)
+			p.RightShoulder = A(2.9, 0, -0.2); p.RightElbow = A(0.3, 0, 0)
+			p.LeftShoulder = A(0.6, 0, 0.6)
 		end
 	elseif ab == "grabThrow" then
 		if phase == "wind" then
@@ -393,6 +422,8 @@ function GA.update(dt: number)
 	if not current or not current.Parent then return end
 	local t = os.clock()
 	local state = current:GetAttribute("State") or "Chase"
+	local ph = current:GetAttribute("AbilityPhase") or ""
+	if ph ~= phaseSeen then phaseSeen = ph; phaseT = t end
 	if state ~= stateSeen then
 		stateSeen = state; stateT = t
 		if state == "WindUp" then gobVariant = gobVariant % 3 + 1 end

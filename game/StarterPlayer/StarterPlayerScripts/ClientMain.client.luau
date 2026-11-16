@@ -98,6 +98,8 @@ Remotes.Fx.OnClientEvent:Connect(function(kind: string, ...)
 	elseif kind == "ReviveOffer" or kind == "Revived" then
 		ReviveUI.handle(kind, ...)
 		if kind == "Revived" then Fx.handle("Toast", "BACK FROM THE DEAD") end
+	elseif kind == "OpenQuests" then
+		QuestUI.open()
 	elseif kind == "BackFromSpectate" then
 		Fx.handle("Toast", "YOU'RE BACK - THE WAVE IS OVER", true)
 	elseif kind == "PartyInvite" then

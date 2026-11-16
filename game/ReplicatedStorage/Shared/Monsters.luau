@@ -40,6 +40,13 @@ local List: { Monster } = {
 		-- kills every light in the house and stalks you in the dark (only its eyes glow); reaching you = a jumpscare and a heavy hit
 		ability = { kind = "blackout", cd = 14, t = 10, dmg = 30, speed = 15, lightsOut = true },
 		desc = "A rotting party-mascot bear. It shuts every light off and hunts you in the dark: only its eyes glow." }),
+	m({ id = "Titan", name = "The Flayed Giant", title = "THE FLAYED GIANT", rarity = 2, template = "Titan", color = C(170, 58, 44),
+		hp = 1.6, speed = 0.82, dmg = 1.3, reward = 1.8, hover = 0, walker = true, scale = 1, solid = false,
+		reach = 1.6, -- long arms: attacks from further away
+		wallBreaker = true, -- too big for the doors: smashes through the inside walls in his way
+		-- grabs you; with another player standing he carries you over and swings you into them twice, then throws you
+		ability = { kind = "titanGrab", cd = 7.5, range = 15, swingRange = 60, swingReach = 13, carrySpeed = 26, dmg = 26, swingDmg = 20, power = 120 },
+		desc = "A skinless giant, steaming. He grabs you and throws you, or uses you as a club on your friends." }),
 	m({ id = "Goblin", name = "The Goblin", title = "THE GOBLIN", rarity = 2, template = "Goblin", color = C(110, 190, 60),
 		hp = 1.25, speed = 1.08, dmg = 1, reward = 1.6, hover = 0, walker = true, scale = 1, solid = true,
 		ability = { kind = "steal", cd = 6, range = 11 }, -- grabs the item in your hands, then uses it on you

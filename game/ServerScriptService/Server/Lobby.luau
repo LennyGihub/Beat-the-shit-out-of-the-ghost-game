@@ -283,6 +283,17 @@ function Lobby.start()
 		pp.Parent = vTorso
 		pp.Triggered:Connect(function(p) Remotes.Fx:FireClient(p, "OpenUltShop") end)
 	end
+	-- the quest board (lobby_forest.luau): opens the QUESTS panel
+	local qboard = lobby and lobby:FindFirstChild("QuestBoard")
+	local qpart = qboard and qboard:FindFirstChild("Board") :: BasePart?
+	if qpart then
+		local pp = Instance.new("ProximityPrompt")
+		pp.ActionText = "Quests"; pp.ObjectText = "Quest Board"; pp.HoldDuration = 0
+		pp.MaxActivationDistance = 12; pp.RequiresLineOfSight = false; pp.KeyboardKeyCode = Enum.KeyCode.F
+		pp.Style = Enum.ProximityPromptStyle.Custom
+		pp.Parent = qpart
+		pp.Triggered:Connect(function(p) Remotes.Fx:FireClient(p, "OpenQuests") end)
+	end
 	Remotes.BuyUlt.OnServerEvent:Connect(onBuyUlt)
 	Remotes.Party.OnServerEvent:Connect(onParty)
 	Players.PlayerRemoving:Connect(leaveParty)

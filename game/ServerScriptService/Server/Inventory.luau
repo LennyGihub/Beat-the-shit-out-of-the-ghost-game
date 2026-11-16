@@ -180,6 +180,7 @@ local function useMelee(p: Player, n: number, it, dir: Vector3, charge: number)
 		Remotes.Fx:FireAllClients("ItemSwing", p, it.id, true)
 		return
 	end
+	Combat.giantSmash(p, dir)
 	local hitPos = Combat.tryHit(p, dir, it.range)
 	Remotes.Fx:FireAllClients("ItemSwing", p, it.id, hitPos ~= nil)
 	if hitPos then

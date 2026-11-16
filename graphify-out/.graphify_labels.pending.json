@@ -4,7 +4,7 @@
   "2": "ItemModels.luau",
   "3": "ClientMain.client.luau",
   "4": "Data.luau",
-  "5": "Viewmodel.luau",
+  "5": "SawAudio.luau",
   "6": "Inventory.luau",
   "7": "LobbyUI.luau",
   "8": "Config.luau",
@@ -25,6 +25,5 @@
   "23": "Abilities.luau",
   "24": "Fire.luau",
   "25": "Ragdoll.luau",
-  "29": "GhostAnim.luau",
   "33": "Shared/Quests.luau"
 }

@@ -11,6 +11,7 @@ local Data = require(script.Parent.Data)
 local Furniture = require(script.Parent.Furniture)
 local Ghost = require(script.Parent.Ghost)
 local Quests = require(script.Parent.Quests)
+local Ragdoll = require(script.Parent.Ragdoll)
 local P, ST, BR, CA = Config.Punch, Config.Stamina, Config.Brutality, Config.Carry
 
 local Combat = {}
@@ -128,13 +129,41 @@ local function guard(player: Player, s, amount: number, from: Vector3?): number
 end
 Combat.guard = function(player: Player, amount: number, from: Vector3?): number return guard(player, st(player), amount, from) end
 
--- from = where the hit came from (for blocking; the monster if nil)
+-- monster hits: the second one within Knockdown.Window seconds knocks you down. Returns true when it does
+-- (the counter starts over).
+local KD = Config.Knockdown
+local function knockdownHit(player: Player, s): boolean
+	local now = os.clock()
+	if s.lastMonsterHit and now - s.lastMonsterHit <= KD.Window then
+		s.lastMonsterHit = nil
+		return true
+	end
+	s.lastMonsterHit = now
+	return false
+end
+local function knockDown(player: Player, from: Vector3?)
+	local _, hrp = alive(player)
+	if not hrp then return end
+	local src = from or (Ghost.current and Ghost.current.hrp and Ghost.current.hrp.Position) or (hrp.Position - hrp.CFrame.LookVector)
+	local away = Vector3.new(hrp.Position.X - src.X, 0, hrp.Position.Z - src.Z)
+	away = away.Magnitude > 0.1 and away.Unit or -hrp.CFrame.LookVector
+	Remotes.Fx:FireClient(player, "Fling", away * KD.Speed + Vector3.new(0, KD.Lift, 0), KD.Time, "", "knockdown")
+end
+
+-- from = where the hit came from (for blocking; the monster if nil). Vector3.zero = not a monster's blow (fire,
+-- gas, or already handled by hitPlayer): no blocking, no knockdown count.
 function Combat.damagePlayer(player: Player, amount: number, staminaDrain: number?, from: Vector3?)
 	local hum = alive(player)
 	if not hum then return end
 	local s = st(player)
-	if from ~= Vector3.zero then amount *= guard(player, s, amount, from) end -- Vector3.zero = already guarded
+	local blowFromMonster = from ~= Vector3.zero and amount > 0
+	if blowFromMonster then
+		local mult = guard(player, s, amount, from)
+		amount *= mult
+		if mult < 1 then blowFromMonster = false end -- blocked: doesn't count toward the knockdown
+	end
 	if player:GetAttribute("Warded") or player:GetAttribute("AdminGod") then return end
+	if blowFromMonster and knockdownHit(player, s) then knockDown(player, from) end
 	if s.shield > 0 then
 		local absorbed = math.min(s.shield, amount)
 		s.shield -= absorbed
@@ -289,6 +318,29 @@ function Combat.registerHit(player: Player, dir: Vector3, hitPos: Vector3, baseD
 	return dmg
 end
 
+-- a giant (an ultimate that makes you bigger) punches straight through the house's inside walls: the hit aimed at a
+-- wall in reach carves a hole the giant's size (the walls are back with the next monster, like the Demon's holes)
+function Combat.giantSmash(player: Player, dir: Vector3): boolean
+	local s = st(player)
+	if os.clock() >= (s.giantUntil or 0) then return false end
+	local ch = player.Character
+	local head = ch and ch:FindFirstChild("Head") :: BasePart?
+	local m = workspace:FindFirstChild("Mansion")
+	local structure = m and m:FindFirstChild("Structure")
+	if not ch or not head or not structure then return false end
+	local scale = math.max(1, ch:GetScale())
+	local rp = RaycastParams.new()
+	rp.FilterType = Enum.RaycastFilterType.Include
+	rp.FilterDescendantsInstances = { structure }
+	local r = workspace:Raycast(head.Position, dir * (P.Range * scale * 0.8 + 4), rp)
+	if not r or r.Normal.Y > 0.6 then return false end
+	if Ragdoll.breakWalls(r.Position, dir * 90, 6 + 2 * scale, 4 + 2 * scale) > 0 then
+		Remotes.Fx:FireAllClients("WallSmash", r.Position, 120)
+		return true
+	end
+	return false
+end
+
 local function onPunch(player: Player, look: any, rawCharge: any)
 	local dir = validDir(look)
 	local hum, hrp = alive(player)
@@ -307,6 +359,7 @@ local function onPunch(player: Player, look: any, rawCharge: any)
 		sync(player, s, true)
 		return
 	end
+	Combat.giantSmash(player, dir)
 	local hitPos = Combat.tryHit(player, dir, P.Range)
 	if hitPos then Combat.registerHit(player, dir, hitPos, P.BaseDamage, P.BaseKnock, nil, nil, charge) end
 	sync(player, s, true)
@@ -381,9 +434,12 @@ function Combat.hitPlayer(victim: Player, by: Player?, dmg: number, vel: Vector3
 		local _, h = alive(by)
 		byHrp = h
 	end
-	local mult = guard(victim, st(victim), dmg, byHrp and byHrp.Position or nil)
+	local vs = st(victim)
+	local mult = guard(victim, vs, dmg, byHrp and byHrp.Position or nil)
 	Combat.damagePlayer(victim, dmg * mult, nil, Vector3.zero)
 	if mult < 1 then vel *= Config.Block.Knock end
+	-- a monster's ability blow counts toward the knockdown (it already throws you; the 2nd one keeps you down longer)
+	if not by and mult >= 1 and knockdownHit(victim, vs) then ragT = math.max(ragT or 0, KD.Time) end
 	local fling = vel
 	if not raw then
 		local flat = Vector3.new(vel.X, 0, vel.Z)
