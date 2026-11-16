@@ -17,6 +17,7 @@ local Platform = require(script.Parent.Platform)
 local Settings = require(script.Parent.Settings)
 local SettingsUI = require(script.Parent.SettingsUI)
 local TouchControls = require(script.Parent.TouchControls)
+local Charge = require(script.Parent.Charge)
 
 local Input = {}
 Input.openPlay = nil :: (() -> ())? -- set by ClientMain (lobby PLAY window)
@@ -62,7 +63,15 @@ local function aimedFurniture(): Model?
 	return best
 end
 
-local function punch()
+local triggerHeld = false -- the hit button / key / trigger is held down (keep hitting, keep spraying)
+
+local function setHeld(on: boolean)
+	triggerHeld = on
+	Hotbar.touchHold = on
+end
+
+-- charge (0..1) = a charged punch thrown on release (Charge.luau); nil = a normal tap
+local function punch(charge: number?)
 	if shopOpen then return end
 	local hum = lp.Character and lp.Character:FindFirstChildOfClass("Humanoid")
 	if not hum or hum.Health <= 0 then return end
@@ -71,17 +80,47 @@ local function punch()
 		VM.slam()
 		return
 	end
-	if Hotbar.primary() then return end
+	if Hotbar.primary(charge) then return end
 	local now = os.clock()
 	if now - lastPunch < Config.Punch.Cooldown then return end
-	if (lp:GetAttribute("Stamina") or 100) < Config.Punch.StaminaCost then
+	local c = charge or 0
+	if (lp:GetAttribute("Stamina") or 100) < Config.Punch.StaminaCost * (1 + c * Config.Charge.StaminaBonus) then
 		HUD.flash(Color3.fromRGB(120, 110, 40), 0.2)
 		return
 	end
 	lastPunch = now
 	VM.punch((lp:GetAttribute("Combo") or 0) + 1)
-	Sfx.play("Whoosh", { PlaybackSpeed = 0.9 + math.random() * 0.3 })
-	Remotes.Punch:FireServer(look())
+	if c > 0 then
+		Sfx.play("Whoosh", { PlaybackSpeed = 0.55 - c * 0.15, Volume = 1 + c * 0.5 })
+	else
+		Sfx.play("Whoosh", { PlaybackSpeed = 0.9 + math.random() * 0.3 })
+	end
+	Remotes.Punch:FireServer(look(), charge)
+end
+
+-- what the hit button charges right now: "fist" or a melee item's id (+ its cooldown); nil = can't charge
+-- (guns, sprays, throwables, the chainsaw keep hold-to-repeat)
+local function chargeable(): (string?, number)
+	if not lp:GetAttribute("InMatch") or lp:GetAttribute("Carrying") or shopOpen then return nil, 0 end
+	local it = Hotbar.current()
+	if not it then return "fist", Config.Punch.Cooldown end
+	if it.kind == "melee" and it.id ~= "Chainsaw" and (it.cd or 0.6) >= 0.2 then return it.id, it.cd or 0.6 end
+	return nil, 0
+end
+
+-- hit button down / up: the tap hits at once, then holding charges the next hit, released on button up
+local function hitDown()
+	setHeld(true)
+	punch()
+	local k, cd = chargeable()
+	if k then Charge.begin(k, cd) end
+end
+local function hitUp()
+	setHeld(false)
+	if not Charge.active() then return end
+	local k = Charge.key()
+	local c = Charge.release()
+	if c > 0 and k == chargeable() then punch(c) end
 end
 
 local function grab()
@@ -121,19 +160,13 @@ local function liftHint(name: string?): string?
 end
 
 local ACTIONS = { "Punch", "Grab", "Ultimate", "Sprint", "Drop", "Settings", "SwapPrev", "SwapNext", "Play" }
-local triggerHeld = false -- the hit button / key / trigger is held down (keep hitting, keep spraying)
-
-local function setHeld(on: boolean)
-	triggerHeld = on
-	Hotbar.touchHold = on
-end
 
 -- (re)bind every action: keyboard keys from Settings, fixed controller buttons
 local function bindAll()
 	for _, a in ACTIONS do CAS:UnbindAction(a) end
 	CAS:BindAction("Punch", function(_, st)
-		if st == Enum.UserInputState.Begin then setHeld(true); punch()
-		elseif st == Enum.UserInputState.End or st == Enum.UserInputState.Cancel then setHeld(false) end
+		if st == Enum.UserInputState.Begin then hitDown()
+		elseif st == Enum.UserInputState.End or st == Enum.UserInputState.Cancel then hitUp() end
 		return Enum.ContextActionResult.Pass
 	end, false, Settings.input("Punch"), Enum.KeyCode.ButtonR2)
 	CAS:BindAction("Grab", function(_, st)
@@ -192,15 +225,27 @@ function Input.init()
 	allPrompts()
 	workspace.DescendantAdded:Connect(function(d) if d:IsA("ProximityPrompt") then promptKey(d) end end)
 	TouchControls.init({
-		punch = function(down: boolean) setHeld(down); if down then punch() end end,
+		punch = function(down: boolean) if down then hitDown() else hitUp() end end,
 		lift = grab, ult = ult, sprint = setSprint,
 		drop = function() if lp:GetAttribute("InMatch") then Hotbar.drop() end end,
 	})
-	-- hold to keep hitting (mouse, key, trigger or the HIT button)
-	RunService.Heartbeat:Connect(function()
+	if RunService:IsStudio() then
+		-- Studio test hook: player attribute DebugHit = true presses the hit button, false releases it
+		lp:GetAttributeChangedSignal("DebugHit"):Connect(function()
+			if lp:GetAttribute("DebugHit") then hitDown() else hitUp() end
+		end)
+	end
+	-- hold to keep hitting (mouse, key, trigger or the HIT button) with guns/sprays; fists and melee charge instead
+	RunService.Heartbeat:Connect(function(dt)
 		if shopOpen then setHeld(false) end
+		if Charge.active() then
+			-- switched weapon, picked something up, opened a shop or died: the charge is lost
+			local hum = lp.Character and lp.Character:FindFirstChildOfClass("Humanoid")
+			if Charge.key() ~= chargeable() or not hum or hum.Health <= 0 then Charge.cancel() end
+		end
+		Charge.update(dt)
 		local mouseLocked = UIS.MouseBehavior == Enum.MouseBehavior.LockCenter or Platform.mode() ~= "keyboard"
-		if triggerHeld and lp:GetAttribute("InMatch") and not lp:GetAttribute("Carrying") and not shopOpen and mouseLocked then
+		if triggerHeld and not Charge.active() and lp:GetAttribute("InMatch") and not lp:GetAttribute("Carrying") and not shopOpen and mouseLocked then
 			punch()
 		end
 		local now = os.clock()

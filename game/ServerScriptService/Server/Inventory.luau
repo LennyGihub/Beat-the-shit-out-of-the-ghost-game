@@ -4,6 +4,7 @@ local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Items = require(RS.Shared.Items)
+local Config = require(RS.Shared.Config)
 local Remotes = require(script.Parent.Remotes)
 local Ghost = require(script.Parent.Ghost)
 local Combat = require(script.Parent.Combat)
@@ -171,8 +172,8 @@ local function applyFx(p: Player, it, dmg: number, dir: Vector3)
 	end
 end
 
-local function useMelee(p: Player, n: number, it, dir: Vector3)
-	if not Combat.useStamina(p, it.stamina) then return end
+local function useMelee(p: Player, n: number, it, dir: Vector3, charge: number)
+	if not Combat.useStamina(p, it.stamina * (1 + charge * Config.Charge.StaminaBonus)) then return end
 	consume(p, n)
 	local _, _, head = alive(p)
 	if head and Ghost.hitClone(head.Position, dir, it.range) then
@@ -182,7 +183,7 @@ local function useMelee(p: Player, n: number, it, dir: Vector3)
 	local hitPos = Combat.tryHit(p, dir, it.range)
 	Remotes.Fx:FireAllClients("ItemSwing", p, it.id, hitPos ~= nil)
 	if hitPos then
-		local dmg = Combat.registerHit(p, dir, hitPos, it.dmg, it.knock, math.max(1, it.knock / 5), it.cd >= 0.2 and 1 or 0)
+		local dmg = Combat.registerHit(p, dir, hitPos, it.dmg, it.knock, math.max(1, it.knock / 5), it.cd >= 0.2 and 1 or 0, charge)
 		applyFx(p, it, dmg, dir)
 		if it.fx and it.fx.burn then Fire.ignite(hitPos, 7, p, 1) end -- burning bat: the wood around her catches fire
 	end
@@ -422,7 +423,7 @@ local function useTrap(p: Player, n: number, it)
 	Remotes.Fx:FireAllClients("ItemSwing", p, it.id, false)
 end
 
-local function onUse(p: Player, slot: any, look: any)
+local function onUse(p: Player, slot: any, look: any, rawCharge: any)
 	if type(slot) ~= "number" or typeof(look) ~= "Vector3" or look.Magnitude < 0.5 or look.Magnitude > 2 or look.X ~= look.X then return end
 	if not p:GetAttribute("InMatch") or p:GetAttribute("Carrying") then return end
 	local i = get(p)
@@ -433,9 +434,11 @@ local function onUse(p: Player, slot: any, look: any)
 	local now = os.clock()
 	local cd = it.kind == "spray" and 0.1 or (it.cd or 0.6)
 	if now - (i.last[s.id] or 0) < cd * 0.8 then return end
+	-- charged swing: melee weapons only (not the chainsaw's continuous cut)
+	local charge = (it.kind == "melee" and cd >= 0.2) and Combat.validCharge(rawCharge, i.last[s.id] or 0, cd) or 0
 	i.last[s.id] = now
 	local dir = look.Unit
-	if it.kind == "melee" then useMelee(p, slot, it, dir)
+	if it.kind == "melee" then useMelee(p, slot, it, dir, charge)
 	elseif it.kind == "gun" then useGun(p, slot, it, dir)
 	elseif it.kind == "throw" then useThrow(p, slot, it, dir)
 	elseif it.kind == "spray" then useSpray(p, slot, it, dir)

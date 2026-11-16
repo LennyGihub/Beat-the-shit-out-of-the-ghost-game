@@ -118,7 +118,8 @@ function Hotbar.confirmHit(id: string)
 end
 
 -- left click / hold with an item in hand. Returns true if an item handled it.
-function Hotbar.primary(): boolean
+-- charge (0..1): a charged melee swing released from a hold (Input / Charge.luau)
+function Hotbar.primary(charge: number?): boolean
 	local it = Hotbar.current()
 	if not it or not lp:GetAttribute("InMatch") then return false end
 	if it.kind == "spray" then return true end -- handled while held (see update)
@@ -143,7 +144,8 @@ function Hotbar.primary(): boolean
 			if p.confirmed and not p.played then p.played = true; playHit(p.id) end
 		end)
 	end
-	Remotes.Use:FireServer(sel, cam.CFrame.LookVector)
+	if charge and charge > 0 then Sfx.play("Whoosh", { PlaybackSpeed = 0.45 - charge * 0.1, Volume = 1 + charge * 0.5 }) end
+	Remotes.Use:FireServer(sel, cam.CFrame.LookVector, charge)
 	return true
 end
 

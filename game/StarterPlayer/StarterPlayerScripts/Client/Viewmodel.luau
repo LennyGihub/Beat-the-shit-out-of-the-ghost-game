@@ -199,6 +199,16 @@ end
 
 function VM.setShake(cf: CFrame) shakeOff = cf end
 
+-- charging a hit (Charge.luau): the arms and the held weapon draw back (and a little up, so they stay in view),
+-- trembling as the charge fills
+local chargeOff = CFrame.new()
+function VM.setCharge(c: number)
+	if c <= 0.001 then chargeOff = CFrame.new(); return end
+	local t = c > 0.6 and (c - 0.6) * 0.06 or 0
+	chargeOff = CFrame.new(0.06 * c + (math.random() - 0.5) * t, 0.16 * c + (math.random() - 0.5) * t, 0.3 * c)
+		* CFrame.Angles(0.1 * c, 0.12 * c, 0)
+end
+
 -- swing trail between the grip and the far end of the held item
 local function addTrail(m: Model)
 	local _, size = m:GetBoundingBox()
@@ -376,7 +386,7 @@ function VM.update(dt: number)
 	carryAlpha += ((carrying and 1 or 0) - carryAlpha) * math.min(1, dt * 10)
 	local ult = lp:GetAttribute("UltActive") == true
 	local jitter = ult and CFrame.new(math.random() * 0.03, math.random() * 0.03, 0) or CFrame.new()
-	local base = cam.CFrame * shakeOff * bob * jitter * CFrame.new(-sway.X * 1.2, sway.Y * 1.2, 0)
+	local base = cam.CFrame * shakeOff * chargeOff * bob * jitter * CFrame.new(-sway.X * 1.2, sway.Y * 1.2, 0)
 	local itemHidden = carryAlpha > 0.5 or (anim ~= nil and anim.hidden == true)
 	for _, side in { "R", "L" } do
 		local a = arms[side]

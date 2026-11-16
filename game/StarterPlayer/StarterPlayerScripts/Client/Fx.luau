@@ -123,6 +123,17 @@ function Fx.handle(kind: string, ...)
 			HUD.combo(combo, isUlt)
 			if heavy then HUD.flash(isUlt and Color3.fromRGB(200, 40, 0) or Color3.fromRGB(255, 255, 255), isUlt and 0.35 or 0.12) end
 		end
+	elseif kind == "ChargedHit" then
+		-- a charged fist / melee hit landed (on top of the normal Hit): a bigger flash, a heavy thud
+		local pos, c, by = args[1], args[2] :: number, args[3]
+		flashBall(pos, Color3.fromRGB(255, 200, 120):Lerp(Color3.fromRGB(255, 90, 30), c), 5 + c * 7, 0.28)
+		burst(pos, Color3.fromRGB(255, 180, 110), 18 + math.floor(c * 24), 28 + c * 22, 0.8 + c * 0.8)
+		Sfx.at("PunchHeavy", pos, { PlaybackSpeed = 0.7 - c * 0.15, Volume = 1.2 + c * 0.6 })
+		if by == lp then
+			Fx.shake(0.35 + c * 0.45)
+			Fx.kick(6 + c * 10)
+			HUD.flash(Color3.fromRGB(255, 230, 200), 0.08 + c * 0.14)
+		end
 	elseif kind == "Smash" then
 		local pos, size, k = args[1], args[2], args[3]
 		Sfx.at("WoodBreak", pos, { PlaybackSpeed = rng:NextNumber(0.85, 1.1), Volume = 1 })

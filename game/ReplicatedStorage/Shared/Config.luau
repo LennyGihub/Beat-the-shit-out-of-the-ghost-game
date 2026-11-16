@@ -14,6 +14,16 @@ local Config = {
 		KnockPerCombo = 8,
 		MaxKnock = 280, -- items knock harder (Items KNOCK_MULT)
 	},
+	-- charged attacks (fists and melee weapons): tap = normal hit; keep holding and the next hit charges, release to
+	-- throw it. charge = (held - max(MinHold, weapon cooldown)) / Full, from 0 to 1.
+	Charge = {
+		MinHold = 0.25, -- seconds of holding before charging starts (a tap never charges)
+		Full = 1.0, -- seconds of charging to reach full power
+		MinRelease = 0.15, -- a release below this charge throws nothing (it was just a tap)
+		DamageBonus = 1.5, -- full charge: damage x(1 + 1.5) = x2.5
+		KnockBonus = 1.0, -- full charge: knockback x2 (big enough to knock monsters out)
+		StaminaBonus = 1.5, -- full charge costs x2.5 stamina
+	},
 	Stamina = { Max = 100, Regen = 26, RegenDelay = 0.7, ThrowCost = 12, SprintPerSecond = 14 },
 	Brutality = {
 		Max = 100,

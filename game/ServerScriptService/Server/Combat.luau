@@ -184,8 +184,18 @@ function Combat.tryHit(player: Player, dir: Vector3, range: number): Vector3?
 	return nil
 end
 
+-- a charged hit's power (0..1), capped by the server's own clock: reaching charge c needs the button held
+-- max(MinHold, cooldown) + c * Full seconds since the last hit (with slack for latency)
+local CH = Config.Charge
+function Combat.validCharge(raw: any, lastHit: number, cooldown: number): number
+	if type(raw) ~= "number" or raw ~= raw or raw <= 0 then return 0 end
+	local maxC = (os.clock() - lastHit - math.max(CH.MinHold, cooldown) * 0.7) / (CH.Full * 0.8)
+	return math.clamp(math.min(raw, maxC), 0, 1)
+end
+
 -- a landed hit: combo, ultimate buffs, knockback, brutality, effects. Returns the damage dealt.
-function Combat.registerHit(player: Player, dir: Vector3, hitPos: Vector3, baseDmg: number, baseKnock: number, knockPerCombo: number?, comboStep: number?): number
+-- charge (0..1, already validated) = a charged attack: more damage and knockback
+function Combat.registerHit(player: Player, dir: Vector3, hitPos: Vector3, baseDmg: number, baseKnock: number, knockPerCombo: number?, comboStep: number?, charge: number?): number
 	local s = st(player)
 	local now = os.clock()
 	local step = comboStep or 1
@@ -206,6 +216,11 @@ function Combat.registerHit(player: Player, dir: Vector3, hitPos: Vector3, baseD
 		Remotes.Fx:FireAllClients("OnePunch", hitPos, player)
 	end
 	local knock = math.min(baseKnock + s.combo * (knockPerCombo or P.KnockPerCombo), P.MaxKnock) * bmul(s, "knock")
+	local c = charge or 0
+	if c > 0 then
+		dmg *= 1 + c * CH.DamageBonus
+		knock *= 1 + c * CH.KnockBonus
+	end
 	Ghost.hit(player, dir, knock, dmg)
 	local ls = (buff(s, "lifesteal") :: number?) or 0
 	if ls > 0 then heal(player, dmg * ls) end
@@ -215,11 +230,12 @@ function Combat.registerHit(player: Player, dir: Vector3, hitPos: Vector3, baseD
 	if ex and Combat.explode then Combat.explode(player, hitPos, ex, s.ultColor) end
 	if not isUlt then s.brut = math.min(BR.Max, s.brut + (BR.PerHit + math.min(s.combo, 20) * BR.PerCombo) * (step > 0 and 1 or 0.35)) end
 	Remotes.Fx:FireAllClients("Hit", hitPos, math.max(s.combo, 1), dmg, isUlt, player)
+	if c >= CH.MinRelease then Remotes.Fx:FireAllClients("ChargedHit", hitPos, c, player) end
 	sync(player, s, true)
 	return dmg
 end
 
-local function onPunch(player: Player, look: any)
+local function onPunch(player: Player, look: any, rawCharge: any)
 	local dir = validDir(look)
 	local hum, hrp = alive(player)
 	if not dir or not hum or not hrp then return end
@@ -227,7 +243,8 @@ local function onPunch(player: Player, look: any)
 	local now = os.clock()
 	if s.carrying then return end
 	if now - s.lastPunch < P.Cooldown * 0.8 then return end
-	if not Combat.useStamina(player, P.StaminaCost) then return end
+	local charge = Combat.validCharge(rawCharge, s.lastPunch, P.Cooldown)
+	if not Combat.useStamina(player, P.StaminaCost * (1 + charge * CH.StaminaBonus)) then return end
 	s.lastPunch = now
 	local head = (player.Character :: Model):FindFirstChild("Head") :: BasePart?
 	local clonePos = Ghost.hitClone((head or hrp).Position, dir, P.Range)
@@ -237,7 +254,7 @@ local function onPunch(player: Player, look: any)
 		return
 	end
 	local hitPos = Combat.tryHit(player, dir, P.Range)
-	if hitPos then Combat.registerHit(player, dir, hitPos, P.BaseDamage, P.BaseKnock) end
+	if hitPos then Combat.registerHit(player, dir, hitPos, P.BaseDamage, P.BaseKnock, nil, nil, charge) end
 	sync(player, s, true)
 end
 

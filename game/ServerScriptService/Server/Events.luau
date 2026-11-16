@@ -163,15 +163,66 @@ local function fx(kind: string, ...)
 	end
 end
 
+-- Every map has its own yard decor (fences, graves, a hearse, a watchtower...): event spots are tested against the
+-- loaded map (workspace.Mansion) and the grounds, and moved to a clear one. The house front (z < HOUSE_FRONT) is
+-- left out for the van, which is meant to smash into it.
+local HOUSE_FRONT = 61.5
+local function blockerParams(): OverlapParams
+	local p = OverlapParams.new()
+	p.FilterType = Enum.RaycastFilterType.Include
+	local list = {}
+	for _, n in { "Mansion", "Grounds" } do
+		local m = workspace:FindFirstChild(n)
+		if m then table.insert(list, m) end
+	end
+	p.FilterDescendantsInstances = list
+	return p
+end
+-- how many solid map parts stand in this box (ground plates and invisible parts don't count)
+local function blocked(cf: CFrame, size: Vector3, p: OverlapParams, skipHouseFront: boolean?): number
+	local n = 0
+	for _, h in workspace:GetPartBoundsInBox(cf, size, p) do
+		if h.Transparency < 1 and h.Position.Y + h.Size.Y / 2 > 1.2 and h.Size.Magnitude < 400
+			and not (skipHouseFront and h.Position.Z < HOUSE_FRONT) then
+			n += 1
+		end
+	end
+	return n
+end
+
 -- PLANE: dives into the yard; the pilot's market stall stands next to the wreck
+local PLANE_BOX = { CFrame.new(0, 3.5, 2.1), Vector3.new(59, 16, 50) * 0.85 } -- PlaneModel's bounds (rel. pivot)
+local function planeCF(land: Vector3, trigger: Vector3): CFrame
+	local yaw = CFrame.lookAt(land, Vector3.new(trigger.X, land.Y, trigger.Z)).Rotation
+	return CFrame.new(land + Vector3.new(0, 2.2, 0)) * yaw * CFrame.Angles(0, math.rad(70), 0) * CFrame.Angles(math.rad(-9), 0, math.rad(7))
+end
+local function standSpot(land: Vector3, trigger: Vector3): CFrame
+	local dir = Vector3.new(trigger.X - land.X, 0, trigger.Z - land.Z)
+	dir = dir.Magnitude > 1 and dir.Unit or Vector3.new(0, 0, -1)
+	local spot = land + dir * 24 + dir:Cross(Vector3.yAxis) * 4
+	return CFrame.lookAt(Vector3.new(spot.X, 0, spot.Z), Vector3.new(trigger.X, 0, trigger.Z))
+end
+-- a landing spot whose wreck and stall (plus room to shop) are clear of the map's decor; the least blocked if none is
+local function planeLand(trigger: Vector3): Vector3
+	local p = blockerParams()
+	local best, bestN = nil, math.huge
+	for _ = 1, 40 do
+		local land = Vector3.new(rng:NextNumber(-55, 55), 0, rng:NextNumber(98, 122))
+		local n = blocked(planeCF(land, trigger) * PLANE_BOX[1], PLANE_BOX[2], p)
+			+ blocked(standSpot(land, trigger) * CFrame.new(0, 4.5, -3), Vector3.new(18, 8, 12), p)
+		if n < bestN then best, bestN = land, n end
+		if n == 0 then break end
+	end
+	return best :: Vector3
+end
+
 local function plane(ev, trigger: Vector3)
-	local land = Vector3.new(rng:NextNumber(-55, 55), 0, rng:NextNumber(98, 122))
+	local land = planeLand(trigger)
 	fx("PlaneCrash", land, trigger)
 	task.wait(4.2)
 	local w = (RS:FindFirstChild("PlaneModel") :: Model):Clone()
 	w.Name = "PlaneWreck"
-	local yaw = CFrame.lookAt(land, Vector3.new(trigger.X, land.Y, trigger.Z)).Rotation
-	w:PivotTo(CFrame.new(land + Vector3.new(0, 2.2, 0)) * yaw * CFrame.Angles(0, math.rad(70), 0) * CFrame.Angles(math.rad(-9), 0, math.rad(7)))
+	w:PivotTo(planeCF(land, trigger))
 	anchorAll(w)
 	for _, n in { "EngineL", "EngineR", "Body" } do burn(w:FindFirstChild(n, true) :: BasePart?, n == "Body" and 9 or 6) end
 	w.Parent = workspace
@@ -179,10 +230,7 @@ local function plane(ev, trigger: Vector3)
 	fx("PlaneImpact", land)
 	task.wait(1.5)
 	local stand = (SS:FindFirstChild("StandTemplate") :: Model):Clone()
-	local dir = Vector3.new(trigger.X - land.X, 0, trigger.Z - land.Z)
-	dir = dir.Magnitude > 1 and dir.Unit or Vector3.new(0, 0, -1)
-	local spot = land + dir * 24 + dir:Cross(Vector3.yAxis) * 4
-	stand:PivotTo(CFrame.lookAt(Vector3.new(spot.X, 0, spot.Z), Vector3.new(trigger.X, 0, trigger.Z)))
+	stand:PivotTo(standSpot(land, trigger))
 	stand.Parent = workspace
 	table.insert(ev.models, stand)
 	stock(stand, ev.stock)
@@ -191,22 +239,37 @@ local function plane(ev, trigger: Vector3)
 	ev.label = "PILOT'S STAND"
 end
 
--- VAN: comes out of the trees and smashes nose-first into the front of the house; shop in the open back
+-- VAN: comes out of the trees and smashes nose-first into the front of the house; shop in the open back.
+-- The first spot along the house front whose back half, vendor and shopping room are clear of the map's decor.
 Events.VAN_CF = CFrame.new(44, 0, 67) * CFrame.Angles(0, math.rad(14), 0)
+local VAN_SPOTS = { 44, 30, 56, -44, -30, -56, 18, -18 }
+local function vanCF(): CFrame
+	local p = blockerParams()
+	local best, bestN = Events.VAN_CF, math.huge
+	for _, x in VAN_SPOTS do
+		local cf = CFrame.new(x, 0, 67) * CFrame.Angles(0, math.rad(x > 0 and 14 or -14), 0)
+		-- local z -1..16: the van's back half, the open back with the stock, the vendor and room to stand
+		local n = blocked(cf * CFrame.new(0, 5, 7.5), Vector3.new(18, 9, 17), p, true)
+		if n < bestN then best, bestN = cf, n end
+		if n == 0 then break end
+	end
+	return best
+end
 local function van(ev)
-	fx("VanCrash", Events.VAN_CF)
+	local VAN_CF = vanCF()
+	fx("VanCrash", VAN_CF)
 	task.wait(2.7)
 	local v = (models():FindFirstChild("Van") :: Model):Clone()
-	v:PivotTo(Events.VAN_CF * CFrame.Angles(math.rad(-4), 0, math.rad(3)))
+	v:PivotTo(VAN_CF * CFrame.Angles(math.rad(-4), 0, math.rad(3)))
 	anchorAll(v)
 	burn(v:FindFirstChild("Hood", true) :: BasePart?, 6)
 	v.Parent = workspace
 	table.insert(ev.models, v)
-	fx("VanImpact", (Events.VAN_CF * CFrame.new(0, 3, -8)).Position)
+	fx("VanImpact", (VAN_CF * CFrame.new(0, 3, -8)).Position)
 	task.wait(1)
 	stock(v, ev.stock)
-	vendor(Events.VAN_CF * CFrame.new(6.5, 0, 9) * CFrame.Angles(0, math.rad(60), 0), "\"lost the brakes... bought a lot of junk though. wanna see?\"", ev)
-	ev.shopPos = (Events.VAN_CF * CFrame.new(0, 4, 9)).Position
+	vendor(VAN_CF * CFrame.new(6.5, 0, 9) * CFrame.Angles(0, math.rad(60), 0), "\"lost the brakes... bought a lot of junk though. wanna see?\"", ev)
+	ev.shopPos = (VAN_CF * CFrame.new(0, 4, 9)).Position
 	ev.label = "VAN SHOP"
 end
 
