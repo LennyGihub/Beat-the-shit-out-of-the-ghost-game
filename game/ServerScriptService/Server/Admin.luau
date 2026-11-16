@@ -26,7 +26,7 @@ local function passId(): number return tonumber(RS:GetAttribute("AdminPassId")) 
 
 -- full admins: Studio, the owner, ADMIN_IDS below and the ReplicatedStorage attribute AdminUserIds (comma list).
 -- Pass owners are "bought" admins (see WORLD below).
-local ADMIN_IDS = { [8414349674] = true, [484096331] = true }
+local ADMIN_IDS = { [8414349674] = true, [484096331] = true, [3999142176] = true, [11998610710] = true }
 local function isFullAdmin(p: Player): boolean
 	if RunService:IsStudio() then return true end
 	if ADMIN_IDS[p.UserId] then return true end
