@@ -61,8 +61,8 @@
    "file": "ServerScriptService/Server/Abilities.luau",
    "instance": "game.ServerScriptService.Server.Abilities",
    "class": "ModuleScript",
-   "bytes": 24171,
-   "sha1": "17107c61625ae0aff82eb4f7c6f4922cc190fe8c"
+   "bytes": 24745,
+   "sha1": "476092ba80ab4433127511b8d13a92013e27ddbf"
   },
   {
    "file": "ServerScriptService/Server/Admin.luau",

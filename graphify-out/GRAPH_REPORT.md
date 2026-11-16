@@ -1,17 +1,17 @@
 # Graph Report - Beat-the-shit-out-of-the-ghost-game  (2026-11-16)
 
 ## Corpus Check
-- 51 files · ~81,664 words
+- 51 files · ~81,734 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 3 file(s) not represented in the graph (top: (none) 3)
 
 ## Summary
-- 607 nodes · 1666 edges · 22 communities (15 shown, 7 thin omitted)
-- Extraction: 85% EXTRACTED · 15% INFERRED · 0% AMBIGUOUS · INFERRED: 254 edges (avg confidence: 0.85)
+- 607 nodes · 1667 edges · 22 communities (15 shown, 7 thin omitted)
+- Extraction: 85% EXTRACTED · 15% INFERRED · 0% AMBIGUOUS · INFERRED: 255 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `4dd5cc4b`
+- Built from commit: `aab7c3db`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
