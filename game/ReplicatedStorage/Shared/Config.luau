@@ -14,8 +14,8 @@ local Config = {
 		KnockPerCombo = 8,
 		MaxKnock = 280, -- items knock harder (Items KNOCK_MULT)
 	},
-	-- charged attacks (fists and melee weapons): tap = normal hit; keep holding and the next hit charges, release to
-	-- throw it. charge = (held - max(MinHold, weapon cooldown)) / Full, from 0 to 1.
+	-- charged attacks (fists and melee weapons): the hit is thrown when the button is released: a tap = a normal hit,
+	-- holding longer charges it. charge = (held - MinHold) / Full, from 0 to 1.
 	Charge = {
 		MinHold = 0.25, -- seconds of holding before charging starts (a tap never charges)
 		Full = 1.0, -- seconds of charging to reach full power
@@ -24,7 +24,10 @@ local Config = {
 		KnockBonus = 1.0, -- full charge: knockback x2 (big enough to knock monsters out)
 		StaminaBonus = 1.5, -- full charge costs x2.5 stamina
 	},
-	Stamina = { Max = 100, Regen = 26, RegenDelay = 0.7, ThrowCost = 12, SprintPerSecond = 14 },
+	Stamina = { Max = 200, Regen = 52, RegenDelay = 0.7, ThrowCost = 12, SprintPerSecond = 14 }, -- twice the old 100 (same refill time)
+	-- blocking (hold right click): hits from the front do Damage x, cost Cost + hit x PerDamage stamina; out of stamina =
+	-- guard break (full hit, no blocking for BreakTime). No attacking, no sprinting, slower walk and no stamina regen.
+	Block = { Damage = 0.25, Knock = 0.35, Cost = 6, PerDamage = 0.6, FrontDot = 0.15, WalkMult = 0.55, BreakTime = 1.5 },
 	Brutality = {
 		Max = 100,
 		PerHit = 4,
@@ -64,6 +67,14 @@ local Config = {
 		HoverHeight = 4.6, -- root height above the floor
 		FurnitureHitDamagePerWeight = 4,
 		WallSlamFactor = 0.12,
+	},
+	-- Robux cash packs (Developer Products): attr = the ReplicatedStorage attribute holding the product id
+	-- (0 = not set up yet: the shop shows SOON). A good run pays ~1800-2600 cash, maps cost 1200-3200.
+	CashPacks = {
+		{ attr = "CashPack1Id", cash = 1000, name = "POCKET CHANGE" },
+		{ attr = "CashPack2Id", cash = 2500, name = "BAG OF CASH" },
+		{ attr = "CashPack3Id", cash = 6000, name = "BRIEFCASE" },
+		{ attr = "CashPack4Id", cash = 15000, name = "VAULT" },
 	},
 	Reward = { Base = 200, PerLevel = 120 }, -- RUN cash per ghost (spent on items, lost after the run)
 	Payout = { PerKill = 55, PerLevel = 22, DamageDiv = 30 }, -- real cash paid when you die or leave the run (x difficulty reward)

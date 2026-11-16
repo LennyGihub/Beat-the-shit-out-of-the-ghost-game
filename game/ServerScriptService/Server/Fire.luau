@@ -187,7 +187,7 @@ RunService.Heartbeat:Connect(function()
 			end
 			for _, p in Players:GetPlayers() do
 				local hrp = p.Character and p.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
-				if hrp and p:GetAttribute("InMatch") and (hrp.Position - pos).Magnitude < 3.2 then Combat.damagePlayer(p, 2) end
+				if hrp and p:GetAttribute("InMatch") and (hrp.Position - pos).Magnitude < 3.2 then Combat.damagePlayer(p, 2, nil, Vector3.zero) end -- burning floor: not blockable
 			end
 		end
 	end

@@ -13,7 +13,7 @@ local gui: ScreenGui
 local buttons = {} :: { [string]: { root: TextButton, base: Vector2, size: number, stroke: UIStroke, label: TextLabel } }
 local running = false
 
-type Handlers = { punch: (down: boolean) -> (), lift: () -> (), ult: () -> (), sprint: (on: boolean) -> (), drop: () -> () }
+type Handlers = { punch: (down: boolean) -> (), block: (down: boolean) -> (), lift: () -> (), ult: () -> (), sprint: (on: boolean) -> (), drop: () -> () }
 
 local function make(id: string, text: string, size: number, base: Vector2, color: Color3, onDown: () -> (), onUp: (() -> ())?)
 	local b = Instance.new("TextButton")
@@ -55,6 +55,7 @@ function TC.init(h: Handlers)
 	gui.Parent = lp:WaitForChild("PlayerGui")
 	local DARKRED, DARK = Color3.fromRGB(120, 18, 16), Color3.fromRGB(40, 34, 30)
 	make("Hit", "HIT", 124, Vector2.new(-300, -150), DARKRED, function() h.punch(true) end, function() h.punch(false) end)
+	make("Block", "BLOCK", 88, Vector2.new(-150, -170), DARK, function() h.block(true) end, function() h.block(false) end)
 	make("Lift", "LIFT", 88, Vector2.new(-190, -300), DARK, h.lift)
 	make("Ult", "ULT", 88, Vector2.new(-320, -300), DARK, h.ult)
 	make("Run", "RUN", 78, Vector2.new(-440, -120), DARK, function()

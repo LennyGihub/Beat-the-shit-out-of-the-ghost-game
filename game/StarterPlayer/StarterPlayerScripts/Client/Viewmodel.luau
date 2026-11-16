@@ -199,6 +199,10 @@ end
 
 function VM.setShake(cf: CFrame) shakeOff = cf end
 
+-- blocking (player attribute Blocking, set by the server): fists come up in front of the face, a held weapon is
+-- raised across the body
+local blockAlpha = 0
+
 -- charging a hit (Charge.luau): the arms and the held weapon draw back (and a little up, so they stay in view),
 -- trembling as the charge fills
 local chargeOff = CFrame.new()
@@ -386,12 +390,18 @@ function VM.update(dt: number)
 	carryAlpha += ((carrying and 1 or 0) - carryAlpha) * math.min(1, dt * 10)
 	local ult = lp:GetAttribute("UltActive") == true
 	local jitter = ult and CFrame.new(math.random() * 0.03, math.random() * 0.03, 0) or CFrame.new()
-	local base = cam.CFrame * shakeOff * chargeOff * bob * jitter * CFrame.new(-sway.X * 1.2, sway.Y * 1.2, 0)
+	blockAlpha += ((lp:GetAttribute("Blocking") and 1 or 0) - blockAlpha) * math.min(1, dt * 14)
+	local blockItem = (held and blockAlpha > 0.001) and (CFrame.new(-0.3 * blockAlpha, 0.28 * blockAlpha, 0.12 * blockAlpha) * A(0.2 * blockAlpha, 0, 0.85 * blockAlpha)) or CFrame.new()
+	local base = cam.CFrame * shakeOff * chargeOff * blockItem * bob * jitter * CFrame.new(-sway.X * 1.2, sway.Y * 1.2, 0)
 	local itemHidden = carryAlpha > 0.5 or (anim ~= nil and anim.hidden == true)
 	for _, side in { "R", "L" } do
 		local a = arms[side]
 		local sx = side == "R" and 1 or -1
 		local guard = CFrame.new(sx * 0.62, -0.62 + (side == "L" and -0.04 or 0), -1.5) * A(0.22, sx * -0.14, sx * -0.25)
+		if blockAlpha > 0.001 and not held then
+			-- fists up in front of the face, forearms upright
+			guard = guard:Lerp(CFrame.new(sx * 0.3, -0.42, -1.05) * A(0.85, sx * 0.35, sx * 0.25), blockAlpha)
+		end
 		local carry = CFrame.new(sx * 0.7, -2.6, -1.2) * A(0.6, 0, sx * -0.15) -- arms drop out of view while lifting
 		local fistCF
 		if side == "R" and held then

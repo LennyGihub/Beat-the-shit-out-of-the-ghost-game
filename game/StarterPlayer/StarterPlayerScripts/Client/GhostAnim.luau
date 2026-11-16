@@ -384,6 +384,7 @@ local function target(state: string, t: number, sinceState: number): { [string]:
 end
 
 local stateSeen, stateT = "", 0
+local warned = false
 function GA.update(dt: number)
 	local g = workspace:FindFirstChild("Ghost") :: Model?
 	if g ~= current then
@@ -396,26 +397,6 @@ function GA.update(dt: number)
 		stateSeen = state; stateT = t
 		if state == "WindUp" then gobVariant = gobVariant % 3 + 1 end
 	end
-	local frozen = current:GetAttribute("Frozen") == true
-	if highlight then
-		if frozen then
-			highlight.FillColor = Color3.fromRGB(150, 210, 255)
-			if highlight.FillTransparency > 0.55 then highlight.FillTransparency = 0.55 end
-		elseif highlight.FillColor ~= Color3.new(1, 1, 1) then
-			highlight.FillColor = Color3.new(1, 1, 1)
-			highlight.FillTransparency = 1
-		end
-	end
-	if swirl then swirl.Enabled = current:GetAttribute("Vortex") == true end
-	local tp = target(state, t, t - stateT)
-	local speed = (state == "Swipe" or state == "Knocked" or state == "Ability") and 22 or 12
-	local a = 1 - math.exp(-speed * dt)
-	for name, m in joints do
-		if frozen then m.Transform = pose[name]; continue end
-		local want = tp[name] or CFrame.new()
-		pose[name] = pose[name]:Lerp(want, a)
-		m.Transform = pose[name]
-	end
 	-- vanish / spawn / death fade
 	local want = 0
 	if current:GetAttribute("Vanish") then want = 1 end
@@ -425,6 +406,7 @@ function GA.update(dt: number)
 	if state == "Dead" then want = math.min(1, (t - stateT) / 2.5) end
 	if state == "Spawn" then want = 1 - math.min(1, (t - stateT) / 1.8) end
 	fade += (want - fade) * math.min(1, dt * (state == "Dead" and 3 or 6))
+	if shadow and want >= 1 then fade = 1 end -- the lights cut: the Party Bear is gone at once
 	local neonEyes = shadow and state ~= "Dead"
 	for _, d in current:GetDescendants() do
 		-- parts with the Glow attribute (the Party Bear's eyes) stay visible in the dark; DarkNeon parts light up there
@@ -439,6 +421,33 @@ function GA.update(dt: number)
 		elseif d:IsA("BillboardGui") and d.Name == "EyeHalo" then
 			d.Enabled = neonEyes
 		end
+	end
+	-- the pose (in a pcall: an error here must never skip the fade above, which hides the Party Bear in the dark)
+	local ok, err = pcall(function()
+		local frozen = current:GetAttribute("Frozen") == true
+		if highlight then
+			if frozen then
+				highlight.FillColor = Color3.fromRGB(150, 210, 255)
+				if highlight.FillTransparency > 0.55 then highlight.FillTransparency = 0.55 end
+			elseif highlight.FillColor ~= Color3.new(1, 1, 1) then
+				highlight.FillColor = Color3.new(1, 1, 1)
+				highlight.FillTransparency = 1
+			end
+		end
+		if swirl then swirl.Enabled = current:GetAttribute("Vortex") == true end
+		local tp = target(state, t, t - stateT)
+		local speed = (state == "Swipe" or state == "Knocked" or state == "Ability") and 22 or 12
+		local a = 1 - math.exp(-speed * dt)
+		for name, m in joints do
+			if frozen then m.Transform = pose[name]; continue end
+			local want = tp[name] or CFrame.new()
+			pose[name] = pose[name]:Lerp(want, a)
+			m.Transform = pose[name]
+		end
+	end)
+	if not ok and not warned then
+		warned = true
+		warn("[GhostAnim] pose failed: " .. tostring(err))
 	end
 end
 

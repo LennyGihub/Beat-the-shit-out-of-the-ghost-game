@@ -1,10 +1,12 @@
--- Lobby shop (grunge) at the Hooded Dealer: 50 ultimates by rarity (buy with cash, equip one) + MAPS + ROBUX tabs.
+-- Lobby shop (grunge) at the Hooded Dealer: three tabs: ULTIMATES (50, buy with cash, equip one), MAPS, ROBUX
+-- (cash packs, game passes, admin panel).
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local Ultimates = require(RS.Shared.Ultimates)
 local Items = require(RS.Shared.Items)
 local Maps = require(RS.Shared.Maps)
+local Config = require(RS.Shared.Config)
 local Grunge = require(script.Parent.Grunge)
 local Platform = require(script.Parent.Platform)
 local registered = false
@@ -19,10 +21,11 @@ local cashText: TextLabel
 local statusText: TextLabel
 local rows = {} :: { [string]: { btn: TextButton, row: Frame } }
 local mapRows = {} :: { [string]: { btn: TextButton, row: Frame } }
-local filter = 0 -- 0 = all ultimates, 1..5 = a rarity, -1 = maps, -2 = robux
+local filter = 0 -- 0 = ultimates, -1 = maps, -2 = robux
 local MarketplaceService = game:GetService("MarketplaceService")
-local robuxRows = {} :: { { btn: TextButton, row: Frame, kind: string } }
+local robuxRows = {} :: { { btn: TextButton, row: Frame, kind: string, pack: any? } }
 local passPrice: number? = nil
+local robuxHeaders = {} :: { Frame } -- CURRENCY / PASSES titles in the ROBUX tab
 local onToggle: ((boolean) -> ())? = nil
 
 local function button(parent: Instance, text: string, props: { [string]: any }): TextButton
@@ -58,6 +61,7 @@ local prices = {} :: { [string]: number }
 
 local function refresh()
 	if not gui then return end
+	for _, h in robuxHeaders do h.Visible = filter == -2 end
 	for _, r in robuxRows do
 		r.row.Visible = filter == -2
 		if r.kind == "money2" then
@@ -75,6 +79,12 @@ local function refresh()
 				r.btn.Text = "SOON"; r.btn.BackgroundColor3 = Color3.fromRGB(70, 64, 58)
 			else
 				r.btn.Text = "R$ " .. tostring(prices.glock or "?"); r.btn.BackgroundColor3 = Color3.fromRGB(30, 120, 60)
+			end
+		elseif r.kind == "cash" and r.pack then
+			if (tonumber(RS:GetAttribute(r.pack.attr)) or 0) == 0 then
+				r.btn.Text = "SOON"; r.btn.BackgroundColor3 = Color3.fromRGB(70, 64, 58)
+			else
+				r.btn.Text = "R$ " .. tostring(prices[r.pack.attr] or "?"); r.btn.BackgroundColor3 = Color3.fromRGB(30, 120, 60)
 			end
 		elseif r.kind == "revive" then
 			r.btn.Text = "ON DEATH"; r.btn.BackgroundColor3 = Color3.fromRGB(70, 64, 58)
@@ -103,7 +113,7 @@ local function refresh()
 	local eq = lp:GetAttribute("EquippedUlt") or "Rage"
 	for _, u in Ultimates.list do
 		local r = rows[u.id]
-		r.row.Visible = filter == 0 or u.rarity == filter
+		r.row.Visible = filter == 0
 		if eq == u.id then
 			r.btn.Text = "EQUIPPED"; r.btn.BackgroundColor3 = Color3.fromRGB(60, 110, 50)
 		elseif o[u.id] then
@@ -124,19 +134,12 @@ function Shop.init(toggle: (boolean) -> ())
 	Grunge.text(panel, { Text = "THE HOODED DEALER", Font = Grunge.HORROR, Position = UDim2.fromScale(0.04, 0.02), Size = UDim2.fromScale(0.6, 0.08), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(255, 110, 60), ZIndex = 10 })
 	Grunge.text(panel, { Text = "\"Ultimates. Fill your brutality bar, press Q, make her regret dying.\"", Font = Grunge.TYPE, Position = UDim2.fromScale(0.04, 0.1), Size = UDim2.fromScale(0.66, 0.035), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(190, 180, 160), ZIndex = 10 })
 	cashText = Grunge.text(panel, { Text = "$0", AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(0.96, 0.025), Size = UDim2.fromScale(0.24, 0.07), TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = Color3.fromRGB(150, 220, 110), ZIndex = 10, Rotation = 2 })
-	-- rarity tabs
+	-- tabs: ultimates, maps, robux
 	local tabs = Grunge.frame(panel, { Position = UDim2.fromScale(0.04, 0.155), Size = UDim2.fromScale(0.92, 0.055), ZIndex = 10 })
 	local tl = Instance.new("UIListLayout"); tl.FillDirection = Enum.FillDirection.Horizontal; tl.Padding = UDim.new(0.01, 0); tl.Parent = tabs
-	local names = { "ALL" }
-	for _, r in Items.rarity do table.insert(names, r.name) end
-	table.insert(names, "MAPS")
-	table.insert(names, "ROBUX")
-	for i, n in names do
-		local isMaps, isRobux = n == "MAPS", n == "ROBUX"
-		local col = i == 1 and Color3.fromRGB(60, 50, 44) or (isMaps and Color3.fromRGB(40, 70, 90))
-			or (isRobux and Color3.fromRGB(30, 110, 55)) or Items.rarity[i - 1].color:Lerp(Color3.new(0, 0, 0), 0.45)
-		local b = button(tabs, n, { Size = UDim2.fromScale(1 / 8 - 0.01, 1), BackgroundColor3 = col, ZIndex = 11, LayoutOrder = i })
-		b.MouseButton1Click:Connect(function() Sfx.play("Click"); filter = isRobux and -2 or (isMaps and -1 or i - 1); refresh() end)
+	for i, t in { { "ULTIMATES", 0, Color3.fromRGB(110, 30, 24) }, { "MAPS", -1, Color3.fromRGB(40, 70, 90) }, { "ROBUX", -2, Color3.fromRGB(30, 110, 55) } } do
+		local b = button(tabs, t[1], { Size = UDim2.fromScale(1 / 3 - 0.01, 1), BackgroundColor3 = t[3], ZIndex = 11, LayoutOrder = i })
+		b.MouseButton1Click:Connect(function() Sfx.play("Click"); filter = t[2]; refresh() end)
 	end
 	local list = Instance.new("ScrollingFrame")
 	list.BackgroundTransparency = 1; list.BorderSizePixel = 0; list.Position = UDim2.fromScale(0.04, 0.225); list.Size = UDim2.fromScale(0.92, 0.68)
@@ -144,11 +147,9 @@ function Shop.init(toggle: (boolean) -> ())
 	list.CanvasSize = UDim2.new(); list.ZIndex = 10; list.Parent = panel
 	local layout = Instance.new("UIListLayout"); layout.Padding = UDim.new(0, 6); layout.SortOrder = Enum.SortOrder.LayoutOrder; layout.Parent = list
 	for i, u in Ultimates.list do
-		local rar = Items.rarity[u.rarity]
 		local row = Grunge.frame(list, { Size = UDim2.new(1, -12, 0, 64), BackgroundTransparency = 0.55, BackgroundColor3 = Color3.fromRGB(10, 8, 7), ZIndex = 10, LayoutOrder = i })
 		Grunge.frame(row, { BackgroundTransparency = 0, BackgroundColor3 = u.color, Size = UDim2.new(0, 8, 1, 0), ZIndex = 11 })
-		Grunge.text(row, { Text = string.upper(u.name), Position = UDim2.new(0, 18, 0.04, 0), Size = UDim2.new(0.5, 0, 0.5, 0), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 11 })
-		Grunge.text(row, { Text = rar.name, Font = Grunge.TYPE, Position = UDim2.new(0.55, 0, 0.08, 0), Size = UDim2.new(0.2, 0, 0.36, 0), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = rar.color, ZIndex = 11 })
+		Grunge.text(row, { Text = string.upper(u.name), Position = UDim2.new(0, 18, 0.04, 0), Size = UDim2.new(0.6, 0, 0.5, 0), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 11 })
 		Grunge.text(row, { Text = u.desc, Font = Grunge.TYPE, Position = UDim2.new(0, 18, 0.56, 0), Size = UDim2.new(0.72, 0, 0.38, 0), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(190, 180, 160), ZIndex = 11 })
 		local btn = button(row, "", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0), Size = UDim2.new(0.2, 0, 0.7, 0), ZIndex = 12 })
 		btn.MouseButton1Click:Connect(function()
@@ -172,7 +173,7 @@ function Shop.init(toggle: (boolean) -> ())
 		mapRows[m.id] = { btn = btn, row = row }
 	end
 	-- ROBUX: 2X MONEY pass, REVIVE (bought on the death screen), admin panel
-	local function robuxRow(order: number, title: string, color: Color3, desc: string, kind: string, onBuy: () -> ())
+	local function robuxRow(order: number, title: string, color: Color3, desc: string, kind: string, onBuy: () -> ()): TextButton
 		local row = Grunge.frame(list, { Size = UDim2.new(1, -12, 0, 84), BackgroundTransparency = 0.45, BackgroundColor3 = Color3.fromRGB(10, 8, 7), ZIndex = 10, LayoutOrder = order, Visible = false })
 		Grunge.frame(row, { BackgroundTransparency = 0, BackgroundColor3 = color, Size = UDim2.new(0, 8, 1, 0), ZIndex = 11 })
 		Grunge.text(row, { Text = title, Font = Grunge.HORROR, Position = UDim2.new(0, 18, 0.04, 0), Size = UDim2.new(0.5, 0, 0.42, 0), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = color, ZIndex = 11 })
@@ -180,6 +181,23 @@ function Shop.init(toggle: (boolean) -> ())
 		local b = button(row, "", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0), Size = UDim2.new(0.2, 0, 0.55, 0), ZIndex = 12 })
 		b.MouseButton1Click:Connect(function() Sfx.play("Click"); onBuy() end)
 		table.insert(robuxRows, { btn = b, row = row, kind = kind })
+		return b
+	end
+	local function header(order: number, text: string)
+		local h = Grunge.frame(list, { Size = UDim2.new(1, -12, 0, 34), BackgroundTransparency = 1, ZIndex = 10, LayoutOrder = order, Visible = false })
+		Grunge.text(h, { Text = text, Font = Grunge.HORROR, Position = UDim2.new(0, 6, 0, 0), Size = UDim2.new(0.6, 0, 1, 0), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(255, 110, 60), ZIndex = 11 })
+		table.insert(robuxHeaders, h)
+	end
+	header(1900, "CURRENCY")
+	header(1989, "PASSES")
+	-- CASH packs (Developer Products, top of the ROBUX tab)
+	for i, pack in Config.CashPacks do
+		robuxRow(1900 + i, pack.name .. "  -  $" .. pack.cash, Color3.fromRGB(150, 220, 110), "Adds $" .. pack.cash .. " cash to spend on ultimates and maps. Delivered instantly.", "cash", function()
+			local pid = tonumber(RS:GetAttribute(pack.attr)) or 0
+			if pid == 0 then Shop.result(false, "Cash packs are not on sale yet") return end
+			MarketplaceService:PromptProductPurchase(lp, pid)
+		end)
+		robuxRows[#robuxRows].pack = pack
 	end
 	robuxRow(1990, "2X MONEY", Color3.fromRGB(240, 200, 60), "Forever: every run pays double - ghost kill cash and the payout when your run ends.", "money2", function()
 		if lp:GetAttribute("Money2") then return end
@@ -199,6 +217,13 @@ function Shop.init(toggle: (boolean) -> ())
 			if id > 0 then
 				local ok, info = pcall(function() return MarketplaceService:GetProductInfo(id, Enum.InfoType.GamePass) end)
 				if ok and info and info.PriceInRobux then prices[key] = info.PriceInRobux; refresh() end
+			end
+		end
+		for _, pack in Config.CashPacks do
+			local pid = tonumber(RS:GetAttribute(pack.attr)) or 0
+			if pid > 0 then
+				local ok, info = pcall(function() return MarketplaceService:GetProductInfo(pid, Enum.InfoType.Product) end)
+				if ok and info and info.PriceInRobux then prices[pack.attr] = info.PriceInRobux; refresh() end
 			end
 		end
 	end)

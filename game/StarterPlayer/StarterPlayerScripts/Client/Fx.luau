@@ -123,6 +123,19 @@ function Fx.handle(kind: string, ...)
 			HUD.combo(combo, isUlt)
 			if heavy then HUD.flash(isUlt and Color3.fromRGB(200, 40, 0) or Color3.fromRGB(255, 255, 255), isUlt and 0.35 or 0.12) end
 		end
+	elseif kind == "Blocked" then
+		-- your block stopped a hit (broke = out of stamina: the guard broke and the hit landed)
+		local amount, broke = args[1] :: number, args[2] == true
+		if broke then
+			Sfx.play("PunchHeavy", { PlaybackSpeed = 0.6, Volume = 1.3 })
+			Fx.shake(0.6)
+			HUD.flash(Color3.fromRGB(200, 30, 20), 0.3)
+			HUD.toast("GUARD BROKEN", false)
+		else
+			Sfx.play("ShieldBlock", { PlaybackSpeed = 0.9 + math.random() * 0.2, Volume = 0.9 })
+			Fx.shake(0.12 + math.min(amount, 40) * 0.006)
+			HUD.flash(Color3.fromRGB(170, 200, 255), 0.1)
+		end
 	elseif kind == "ChargedHit" then
 		-- a charged fist / melee hit landed (on top of the normal Hit): a bigger flash, a heavy thud
 		local pos, c, by = args[1], args[2] :: number, args[3]

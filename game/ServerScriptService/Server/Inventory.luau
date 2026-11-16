@@ -435,7 +435,8 @@ local function onUse(p: Player, slot: any, look: any, rawCharge: any)
 	local cd = it.kind == "spray" and 0.1 or (it.cd or 0.6)
 	if now - (i.last[s.id] or 0) < cd * 0.8 then return end
 	-- charged swing: melee weapons only (not the chainsaw's continuous cut)
-	local charge = (it.kind == "melee" and cd >= 0.2) and Combat.validCharge(rawCharge, i.last[s.id] or 0, cd) or 0
+	if p:GetAttribute("Blocking") then return end -- no attacking while blocking
+	local charge = (it.kind == "melee" and cd >= 0.2) and Combat.validCharge(p, rawCharge) or 0
 	i.last[s.id] = now
 	local dir = look.Unit
 	if it.kind == "melee" then useMelee(p, slot, it, dir, charge)

@@ -18,7 +18,7 @@ local C = Config.Ghost
 local Ghost = {}
 Ghost.current = nil :: any
 Ghost.onDeath = nil :: ((g: any) -> ())?
-Ghost.damagePlayer = nil :: ((p: Player, n: number, staminaDrain: number?) -> ())?
+Ghost.damagePlayer = nil :: ((p: Player, n: number, staminaDrain: number?, from: Vector3?) -> ())?
 -- injected by Combat: damage + fling a player, and pin a player in place
 Ghost.hitPlayer = nil :: any
 Ghost.rootPlayer = nil :: any

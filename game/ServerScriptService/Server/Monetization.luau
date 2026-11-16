@@ -1,12 +1,15 @@
 --!strict
--- Robux: the 2X MONEY Game Pass (ReplicatedStorage attribute Money2PassId) and the REVIVE Developer Product
--- (attribute ReviveProductId). 0 = not set up yet (the shop shows SOON). The only ProcessReceipt of the game lives here.
+-- Robux: the 2X MONEY Game Pass (ReplicatedStorage attribute Money2PassId), the REVIVE Developer Product
+-- (attribute ReviveProductId) and the cash packs (Config.CashPacks, attributes CashPack1Id..). 0 = not set up yet
+-- (the shop shows SOON). The only ProcessReceipt of the game lives here.
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local MarketplaceService = game:GetService("MarketplaceService")
 local Remotes = require(script.Parent.Remotes)
 local Run = require(script.Parent.Run)
 local Inventory = require(script.Parent.Inventory)
+local Data = require(script.Parent.Data)
+local Config = require(RS.Shared.Config)
 
 local Monetization = {}
 local granted = {} :: { [string]: boolean } -- PurchaseId -> done (this server)
@@ -29,6 +32,9 @@ function Monetization.start()
 	for _, a in { "Money2PassId", "ReviveProductId", "GlockPassId" } do
 		if RS:GetAttribute(a) == nil then RS:SetAttribute(a, 0) end
 	end
+	for _, pack in Config.CashPacks do
+		if RS:GetAttribute(pack.attr) == nil then RS:SetAttribute(pack.attr, 0) end
+	end
 	Players.PlayerAdded:Connect(function(p) task.spawn(checkPass, p) end)
 	for _, p in Players:GetPlayers() do task.spawn(checkPass, p) end
 	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(p, pass, bought)
@@ -45,6 +51,16 @@ function Monetization.start()
 		if granted[info.PurchaseId] then return Enum.ProductPurchaseDecision.PurchaseGranted end
 		local p = Players:GetPlayerByUserId(info.PlayerId)
 		if not p then return Enum.ProductPurchaseDecision.NotProcessedYet end
+		-- cash packs: granted only once it is saved with the purchase id (never twice, even across servers)
+		for _, pack in Config.CashPacks do
+			if id(pack.attr) > 0 and info.ProductId == id(pack.attr) then
+				local res = Data.grantCashReceipt(p, info.PurchaseId, pack.cash)
+				if res == "wait" then return Enum.ProductPurchaseDecision.NotProcessedYet end
+				granted[info.PurchaseId] = true
+				if res == "saved" then Remotes.Fx:FireClient(p, "Toast", "+$" .. pack.cash .. " CASH - thanks for the support!") end
+				return Enum.ProductPurchaseDecision.PurchaseGranted
+			end
+		end
 		if info.ProductId == id("ReviveProductId") then
 			granted[info.PurchaseId] = true
 			if not Run.revive(p) then

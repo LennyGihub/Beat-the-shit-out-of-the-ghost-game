@@ -108,19 +108,42 @@ local function chargeable(): (string?, number)
 	return nil, 0
 end
 
--- hit button down / up: the tap hits at once, then holding charges the next hit, released on button up
+local function setSprint(on: boolean)
+	if on == sprinting then return end
+	sprinting = on
+	Remotes.Sprint:FireServer(on)
+end
+
+-- hit button down / up. Fists and melee weapons hit on RELEASE: a tap = a normal hit, holding charges it (the
+-- server is told when the button went down, to check the charge). Guns, sprays and throwables fire on press.
 local function hitDown()
+	if lp:GetAttribute("Blocking") then return end
+	local k = chargeable()
+	if k then
+		setHeld(true)
+		Charge.begin(k, 0)
+		Remotes.Charge:FireServer()
+		return
+	end
 	setHeld(true)
 	punch()
-	local k, cd = chargeable()
-	if k then Charge.begin(k, cd) end
 end
 local function hitUp()
 	setHeld(false)
 	if not Charge.active() then return end
 	local k = Charge.key()
 	local c = Charge.release()
-	if c > 0 and k == chargeable() then punch(c) end
+	if k == chargeable() and not lp:GetAttribute("Blocking") then punch(c > 0 and c or nil) end
+end
+
+-- block (hold right click / B / the BLOCK button): the server decides (stamina, guard break); held = keep asking
+local blockHeld = false
+local lastBlockAsk = 0
+local function setBlock(on: boolean)
+	blockHeld = on
+	lastBlockAsk = os.clock()
+	if on then Charge.cancel(); setSprint(false) end
+	Remotes.Block:FireServer(on)
 end
 
 local function grab()
@@ -140,11 +163,6 @@ local function ult()
 	end
 end
 
-local function setSprint(on: boolean)
-	if on == sprinting then return end
-	sprinting = on
-	Remotes.Sprint:FireServer(on)
-end
 
 -- the hint under the crosshair, in the player's controls
 local function liftHint(name: string?): string?
@@ -159,7 +177,7 @@ local function liftHint(name: string?): string?
 	return Platform.label("Lift") .. "  LIFT " .. name
 end
 
-local ACTIONS = { "Punch", "Grab", "Ultimate", "Sprint", "Drop", "Settings", "SwapPrev", "SwapNext", "Play" }
+local ACTIONS = { "Punch", "Block", "Grab", "Ultimate", "Sprint", "Drop", "Settings", "SwapPrev", "SwapNext", "Play" }
 
 -- (re)bind every action: keyboard keys from Settings, fixed controller buttons
 local function bindAll()
@@ -169,6 +187,14 @@ local function bindAll()
 		elseif st == Enum.UserInputState.End or st == Enum.UserInputState.Cancel then hitUp() end
 		return Enum.ContextActionResult.Pass
 	end, false, Settings.input("Punch"), Enum.KeyCode.ButtonR2)
+	CAS:BindAction("Block", function(_, st)
+		if st == Enum.UserInputState.Begin then
+			if lp:GetAttribute("InMatch") and not shopOpen then setBlock(true) end
+		elseif st == Enum.UserInputState.End or st == Enum.UserInputState.Cancel then
+			if blockHeld then setBlock(false) end
+		end
+		return Enum.ContextActionResult.Pass
+	end, false, Settings.input("Block"), Enum.KeyCode.ButtonB)
 	CAS:BindAction("Grab", function(_, st)
 		if st == Enum.UserInputState.Begin then grab() end
 		return Enum.ContextActionResult.Pass
@@ -226,6 +252,7 @@ function Input.init()
 	workspace.DescendantAdded:Connect(function(d) if d:IsA("ProximityPrompt") then promptKey(d) end end)
 	TouchControls.init({
 		punch = function(down: boolean) if down then hitDown() else hitUp() end end,
+		block = function(down: boolean) if down then setBlock(true) elseif blockHeld then setBlock(false) end end,
 		lift = grab, ult = ult, sprint = setSprint,
 		drop = function() if lp:GetAttribute("InMatch") then Hotbar.drop() end end,
 	})
@@ -233,6 +260,10 @@ function Input.init()
 		-- Studio test hook: player attribute DebugHit = true presses the hit button, false releases it
 		lp:GetAttributeChangedSignal("DebugHit"):Connect(function()
 			if lp:GetAttribute("DebugHit") then hitDown() else hitUp() end
+		end)
+		-- DebugBlock = true / false: hold / release block
+		lp:GetAttributeChangedSignal("DebugBlock"):Connect(function()
+			setBlock(lp:GetAttribute("DebugBlock") == true)
 		end)
 	end
 	-- hold to keep hitting (mouse, key, trigger or the HIT button) with guns/sprays; fists and melee charge instead
@@ -244,6 +275,10 @@ function Input.init()
 			if Charge.key() ~= chargeable() or not hum or hum.Health <= 0 then Charge.cancel() end
 		end
 		Charge.update(dt)
+		-- still holding block after a guard break: ask again (the server refuses until the break is over)
+		if blockHeld and not lp:GetAttribute("Blocking") and os.clock() - lastBlockAsk > 0.5 then
+			if lp:GetAttribute("InMatch") and not shopOpen then lastBlockAsk = os.clock(); Remotes.Block:FireServer(true) end
+		end
 		local mouseLocked = UIS.MouseBehavior == Enum.MouseBehavior.LockCenter or Platform.mode() ~= "keyboard"
 		if triggerHeld and not Charge.active() and lp:GetAttribute("InMatch") and not lp:GetAttribute("Carrying") and not shopOpen and mouseLocked then
 			punch()

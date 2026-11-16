@@ -1,4 +1,5 @@
--- Player save data: Cash, owned items, next ghost level, kills, settings (volumes + keybinds).
+-- Player save data: Cash, owned items, next ghost level, kills, settings (volumes + keybinds), and the Robux
+-- purchases already granted (Receipts: the last 100 PurchaseIds, so a cash pack is never given twice).
 -- Never overwrites a save that failed to load; saves on leave, every 90 s and on shutdown.
 local DSS = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
@@ -9,10 +10,11 @@ local Data = {}
 local okStore, store = pcall(function() return DSS:GetDataStore("GhostBrawl_v1") end)
 local profiles = {} -- [Player] = { loaded = bool, data = table }
 
-local function fresh() return { Cash = 0, Owned = {}, GhostLevel = 1, Kills = 0, Ults = { Rage = true }, Equipped = "Rage" } end
+local function fresh() return { Cash = 0, Owned = {}, GhostLevel = 1, Kills = 0, Ults = { Rage = true }, Equipped = "Rage", Receipts = {} } end
+local MAX_RECEIPTS = 100
 
 -- settings sent by the client: volumes 0..1 and keyboard keybinds (action -> KeyCode / mouse button name)
-local BIND_ACTIONS = { Punch = true, Lift = true, Ultimate = true, Sprint = true, Drop = true, Use = true, Settings = true }
+local BIND_ACTIONS = { Punch = true, Block = true, Lift = true, Ultimate = true, Sprint = true, Drop = true, Use = true, Settings = true }
 local MOUSE = { MouseButton1 = true, MouseButton2 = true, MouseButton3 = true }
 local function cleanSettings(s: any): { [string]: any }?
 	if type(s) ~= "table" then return nil end
@@ -82,6 +84,9 @@ function Data.load(player: Player)
 					if type(res.Owned) == "table" then
 						for id, v in res.Owned do if type(id) == "string" and v == true then prof.data.Owned[id] = true end end
 					end
+					if type(res.Receipts) == "table" then
+						for _, id in res.Receipts do if type(id) == "string" then table.insert(prof.data.Receipts, id) end end
+					end
 				end
 				break
 			end
@@ -94,18 +99,39 @@ function Data.load(player: Player)
 	return prof
 end
 
-function Data.save(player: Player)
+-- returns true once the save went through
+function Data.save(player: Player): boolean
 	local prof = profiles[player]
-	if not prof or not prof.loaded or not okStore then return end
-	local snap = { Cash = prof.data.Cash, GhostLevel = prof.data.GhostLevel, Kills = prof.data.Kills, Owned = table.clone(prof.data.Owned), Ults = table.clone(prof.data.Ults), Equipped = prof.data.Equipped, Settings = prof.data.Settings }
+	if not prof or not prof.loaded or not okStore then return false end
+	local snap = { Cash = prof.data.Cash, GhostLevel = prof.data.GhostLevel, Kills = prof.data.Kills, Owned = table.clone(prof.data.Owned), Ults = table.clone(prof.data.Ults), Equipped = prof.data.Equipped, Settings = prof.data.Settings, Receipts = table.clone(prof.data.Receipts) }
 	for i = 1, 3 do
 		local ok, err = pcall(function()
 			store:UpdateAsync("u_" .. player.UserId, function() return snap end)
 		end)
-		if ok then return end
+		if ok then return true end
 		warn("[Data] save failed (" .. i .. "): " .. tostring(err))
 		task.wait(1.5 * i)
 	end
+	return false
+end
+
+-- Robux cash pack (Monetization's ProcessReceipt). "granted" = already given (now or in an earlier session),
+-- "saved" = given now and saved, "wait" = can't be done safely yet (save not loaded / save failed): Roblox will
+-- retry the receipt later. In Studio (no DataStore) the cash is given without saving, for testing.
+function Data.grantCashReceipt(player: Player, purchaseId: string, cash: number): string
+	local prof = profiles[player]
+	if not prof then return "wait" end
+	if table.find(prof.data.Receipts, purchaseId) then return "granted" end
+	local studio = game:GetService("RunService"):IsStudio()
+	if not prof.loaded and not studio then return "wait" end
+	prof.data.Cash += math.floor(cash)
+	table.insert(prof.data.Receipts, purchaseId)
+	while #prof.data.Receipts > MAX_RECEIPTS do table.remove(prof.data.Receipts, 1) end
+	publish(player)
+	if studio and not prof.loaded then return "saved" end
+	-- the cash and the receipt are saved together: if this fails, the next autosave still carries both, and a
+	-- retried receipt finds the PurchaseId and is not given twice
+	return Data.save(player) and "saved" or "wait"
 end
 
 function Data.get(player: Player) local p = profiles[player]; return p and p.data end

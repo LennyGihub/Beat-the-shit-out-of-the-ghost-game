@@ -522,7 +522,7 @@ function Abilities.tick(G, dt: number, now: number)
 			for _, p in matchPlayers() do
 				local hrp = hrpOf(p)
 				if hrp and Vector3.new(hrp.Position.X - c.pos.X, 0, hrp.Position.Z - c.pos.Z).Magnitude <= c.r and math.abs(hrp.Position.Y - c.pos.Y) < 10 and not warded(p) then
-					G.damagePlayer(p, c.dps * 0.5, 4)
+					G.damagePlayer(p, c.dps * 0.5, 4, Vector3.zero) -- gas: not blockable
 					Remotes.Fx:FireClient(p, "Gassed")
 				end
 			end

@@ -68,11 +68,12 @@ end
 local function setWalk(player: Player, s)
 	local hum = alive(player)
 	if not hum then return end
-	local base = s.sprinting and s.stamina > 2 and Config.Player.SprintSpeed or Config.Player.WalkSpeed
+	local base = s.sprinting and not s.blocking and s.stamina > 2 and Config.Player.SprintSpeed or Config.Player.WalkSpeed
 	base *= bmul(s, "speed") * (os.clock() < s.speedUntil and s.speedMult or 1)
 	if s.carrying and s.carrying.Parent then
 		base = math.max(8, base - Furniture.weight(s.carrying) * CA.SlowPerWeight * (ult(s) and 0.3 or 1))
 	end
+	if s.blocking then base = math.min(base, Config.Player.WalkSpeed * Config.Block.WalkMult) end
 	if os.clock() < (s.rootUntil or 0) then base = 0 end
 	hum.WalkSpeed = base
 end
@@ -89,10 +90,49 @@ local function dropCarried(player: Player, s)
 	setWalk(player, s)
 end
 
-function Combat.damagePlayer(player: Player, amount: number, staminaDrain: number?)
+-- blocking (right click): a hit from the front (from = where it came from; the monster if nil) is mostly stopped and
+-- costs stamina; without enough stamina the guard breaks. Returns the damage multiplier (1 = not blocked).
+local BL = Config.Block
+local function setBlocking(player: Player, s, on: boolean)
+	s.blocking = on
+	player:SetAttribute("Blocking", on)
+	setWalk(player, s)
+end
+local function guard(player: Player, s, amount: number, from: Vector3?): number
+	if not s.blocking or amount <= 0 then return 1 end
+	local _, hrp = alive(player)
+	if not hrp then return 1 end
+	local src = from or (Ghost.current and Ghost.current.hrp and Ghost.current.hrp.Position)
+	if src then
+		local to = Vector3.new(src.X - hrp.Position.X, 0, src.Z - hrp.Position.Z)
+		local look = Vector3.new(hrp.CFrame.LookVector.X, 0, hrp.CFrame.LookVector.Z)
+		if to.Magnitude > 0.1 and look.Magnitude > 0.1 and look.Unit:Dot(to.Unit) < BL.FrontDot then return 1 end -- from behind
+	end
+	local cost = BL.Cost + amount * BL.PerDamage
+	s.lastUse = os.clock()
+	if s.stamina >= cost then
+		s.stamina -= cost
+		sync(player, s, true)
+		Remotes.Fx:FireClient(player, "Blocked", amount, false)
+		return BL.Damage
+	end
+	-- out of stamina: the guard breaks, the hit lands in full
+	s.stamina = 0
+	s.blockBrokenUntil = os.clock() + BL.BreakTime
+	setBlocking(player, s, false)
+	sync(player, s, true)
+	Remotes.Fx:FireClient(player, "Blocked", amount, true)
+	return 1
+end
+Combat.guard = function(player: Player, amount: number, from: Vector3?): number return guard(player, st(player), amount, from) end
+
+-- from = where the hit came from (for blocking; the monster if nil)
+function Combat.damagePlayer(player: Player, amount: number, staminaDrain: number?, from: Vector3?)
 	local hum = alive(player)
-	if not hum or player:GetAttribute("Warded") or player:GetAttribute("AdminGod") then return end
+	if not hum then return end
 	local s = st(player)
+	if from ~= Vector3.zero then amount *= guard(player, s, amount, from) end -- Vector3.zero = already guarded
+	if player:GetAttribute("Warded") or player:GetAttribute("AdminGod") then return end
 	if s.shield > 0 then
 		local absorbed = math.min(s.shield, amount)
 		s.shield -= absorbed
@@ -184,12 +224,19 @@ function Combat.tryHit(player: Player, dir: Vector3, range: number): Vector3?
 	return nil
 end
 
--- a charged hit's power (0..1), capped by the server's own clock: reaching charge c needs the button held
--- max(MinHold, cooldown) + c * Full seconds since the last hit (with slack for latency)
+-- a charged hit's power (0..1), capped by the server's own clock: the client tells the server when the button went
+-- down (Remotes.Charge); reaching charge c needs it held MinHold + c * Full seconds (with slack for latency).
+-- One press = one charged hit.
 local CH = Config.Charge
-function Combat.validCharge(raw: any, lastHit: number, cooldown: number): number
-	if type(raw) ~= "number" or raw ~= raw or raw <= 0 then return 0 end
-	local maxC = (os.clock() - lastHit - math.max(CH.MinHold, cooldown) * 0.7) / (CH.Full * 0.8)
+function Combat.chargeStart(player: Player)
+	st(player).holdStart = os.clock()
+end
+function Combat.validCharge(player: Player, raw: any): number
+	local s = st(player)
+	local since = s.holdStart
+	s.holdStart = nil
+	if not since or type(raw) ~= "number" or raw ~= raw or raw <= 0 then return 0 end
+	local maxC = (os.clock() - since - CH.MinHold * 0.7) / (CH.Full * 0.8)
 	return math.clamp(math.min(raw, maxC), 0, 1)
 end
 
@@ -242,9 +289,9 @@ local function onPunch(player: Player, look: any, rawCharge: any)
 	if not dir or not hum or not hrp then return end
 	local s = st(player)
 	local now = os.clock()
-	if s.carrying then return end
+	if s.carrying or s.blocking then return end
 	if now - s.lastPunch < P.Cooldown * 0.8 then return end
-	local charge = Combat.validCharge(rawCharge, s.lastPunch, P.Cooldown)
+	local charge = Combat.validCharge(player, rawCharge)
 	if not Combat.useStamina(player, P.StaminaCost * (1 + charge * CH.StaminaBonus)) then return end
 	s.lastPunch = now
 	local head = (player.Character :: Model):FindFirstChild("Head") :: BasePart?
@@ -322,7 +369,15 @@ function Combat.hitPlayer(victim: Player, by: Player?, dmg: number, vel: Vector3
 	if not by and victim:GetAttribute("Warded") then return end
 	local hum, hrp = alive(victim)
 	if not hum or not hrp then return end
-	Combat.damagePlayer(victim, dmg)
+	-- blocking: from the attacker (a player) or the monster; a blocked hit also barely moves you
+	local byHrp: BasePart? = nil
+	if by then
+		local _, h = alive(by)
+		byHrp = h
+	end
+	local mult = guard(victim, st(victim), dmg, byHrp and byHrp.Position or nil)
+	Combat.damagePlayer(victim, dmg * mult, nil, Vector3.zero)
+	if mult < 1 then vel *= Config.Block.Knock end
 	local fling = vel
 	if not raw then
 		local flat = Vector3.new(vel.X, 0, vel.Z)
@@ -472,6 +527,12 @@ function Combat.start()
 		s.sprinting = on == true
 		setWalk(player, s)
 	end)
+	Remotes.Charge.OnServerEvent:Connect(function(player) Combat.chargeStart(player) end)
+	Remotes.Block.OnServerEvent:Connect(function(player, on)
+		local s = st(player)
+		local want = on == true and player:GetAttribute("InMatch") == true and not s.carrying and os.clock() >= (s.blockBrokenUntil or 0)
+		if want ~= (s.blocking == true) then setBlocking(player, s, want) end
+	end)
 	local function onPlayer(p: Player)
 		st(p)
 		if RunService:IsStudio() then
@@ -503,7 +564,7 @@ function Combat.start()
 				s.stamina = math.max(0, s.stamina - ST.SprintPerSecond * dt)
 				s.lastUse = now
 				if s.stamina <= 0 then setWalk(p, s) end
-			elseif now - s.lastUse > ST.RegenDelay and s.stamina < ST.Max then
+			elseif not s.blocking and now - s.lastUse > ST.RegenDelay and s.stamina < ST.Max then
 				s.stamina = math.min(ST.Max, s.stamina + ST.Regen * Combat.stat(p, "stamina") * dt)
 			end
 			if ult(s) then

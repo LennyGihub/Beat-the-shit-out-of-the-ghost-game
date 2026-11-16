@@ -16,6 +16,7 @@ Settings.changed = changed.Event -- (key: "sfx" | "music" | "binds")
 -- rebindable keyboard actions, in the order the Settings panel lists them
 Settings.ACTIONS = {
 	{ id = "Punch", name = "HIT / USE ITEM" },
+	{ id = "Block", name = "BLOCK (HOLD)" },
 	{ id = "Lift", name = "LIFT / THROW" },
 	{ id = "Ultimate", name = "ULTIMATE" },
 	{ id = "Sprint", name = "SPRINT" },
@@ -23,7 +24,7 @@ Settings.ACTIONS = {
 	{ id = "Use", name = "INTERACT / BUY" },
 	{ id = "Settings", name = "SETTINGS" },
 }
-Settings.DEFAULT_BINDS = { Punch = "MouseButton1", Lift = "E", Ultimate = "Q", Sprint = "LeftShift", Drop = "X", Use = "F", Settings = "P" }
+Settings.DEFAULT_BINDS = { Punch = "MouseButton1", Block = "MouseButton2", Lift = "E", Ultimate = "Q", Sprint = "LeftShift", Drop = "X", Use = "F", Settings = "P" }
 local MUSIC = { FightMusic = true }
 
 local state = { sfx = 1, music = 1, binds = table.clone(Settings.DEFAULT_BINDS) }
