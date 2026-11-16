@@ -128,10 +128,37 @@ local function evolved(id: string, tier: number): Monster
 end
 -- every 3rd ghost is evolved
 local function isEvolvedWave(wave: number): boolean return wave >= 3 and wave % 3 == 0 end
-local function pickEvolved(last: string?, rng: Random): string
-	local pool = {}
-	for _, d in List do if d.id ~= last then table.insert(pool, d.id) end end
-	return pool[rng:NextInteger(1, #pool)]
+
+-- NO MONSTER TWICE: a run keeps a set of the monsters it has already met (`seen`, one for the normal ones and one
+-- for the evolved ones). A monster is only picked again once every one of them has come (the set then starts over).
+-- `avoid` = ids that must not come right now (the previous ghost), when anything else is left.
+-- weighted = rarer monsters come later on average (normal ghosts); evolved ones are picked evenly.
+local WEIGHT = { [0] = 60, [1] = 30, [2] = 15 }
+local function pickFresh(seen: { [string]: boolean }, avoid: { string? }, rng: Random, weighted: boolean): Monster
+	local function pool(): { Monster }
+		local out = {}
+		for _, d in List do
+			if not seen[d.id] and d.id ~= avoid[1] and d.id ~= avoid[2] then table.insert(out, d) end
+		end
+		return out
+	end
+	local list = pool()
+	if #list == 0 then
+		-- everyone has come (or only the one to avoid is left): start the set over
+		table.clear(seen)
+		list = pool()
+	end
+	if #list == 0 then list = List end
+	local total = 0
+	for _, d in list do total += weighted and (WEIGHT[d.rarity] or 15) or 1 end
+	local x = rng:NextNumber(0, total)
+	local choice = list[#list]
+	for _, d in list do
+		x -= weighted and (WEIGHT[d.rarity] or 15) or 1
+		if x <= 0 then choice = d; break end
+	end
+	seen[choice.id] = true
+	return choice
 end
 
-return { list = List, byId = byId, rarity = RARITY, pick = pick, evolved = evolved, isEvolvedWave = isEvolvedWave, pickEvolved = pickEvolved, evo = EVO }
+return { list = List, byId = byId, rarity = RARITY, pick = pick, pickFresh = pickFresh, evolved = evolved, isEvolvedWave = isEvolvedWave, evo = EVO }

@@ -30,6 +30,9 @@ local beam: Beam? = nil
 local core: Beam? = nil
 local spot: SpotLight? = nil
 local vacSound: Sound? = nil
+-- the flamethrower's voice: a pitched-up fire loop (the hiss) over a low engine loop (the roar)
+local flameHiss: Sound? = nil
+local flameRoar: Sound? = nil
 local FIRE_COLORS = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 245, 190)), ColorSequenceKeypoint.new(0.25, Color3.fromRGB(255, 170, 40)),
 	ColorSequenceKeypoint.new(0.6, Color3.fromRGB(230, 70, 20)), ColorSequenceKeypoint.new(1, Color3.fromRGB(60, 30, 25)) })
 
@@ -209,6 +212,13 @@ local function setSpray(on: boolean, it)
 			if core then core.Enabled = false end
 			if spot then spot.Enabled = false end
 		end
+		-- the flamethrower: a whump when it lights, then a hissing roar for as long as the trigger is held
+		if fire and not flameHiss then
+			Sfx.play("Whoosh", { PlaybackSpeed = 0.55, Volume = 1.6 })
+			Sfx.play("Breaker", { PlaybackSpeed = 1.6, Volume = 0.5 })
+			flameHiss = Sfx.loop("Flamethrower", { PlaybackSpeed = 1.9, Volume = 1.5 })
+			flameRoar = Sfx.loop("PlaneEngine", { PlaybackSpeed = 0.5, Volume = 0.4 })
+		end
 		-- wind items sound like a vacuum
 		if (it.id == "LeafBlower" or it.id == "ShopVac") and not vacSound then
 			vacSound = Sfx.loop("Vacuum", { PlaybackSpeed = it.id == "LeafBlower" and 1.15 or 0.95 })
@@ -219,6 +229,11 @@ local function setSpray(on: boolean, it)
 		if core then core.Enabled = false end
 		if spot then spot.Enabled = false end
 		if vacSound then vacSound:Destroy(); vacSound = nil end
+		if flameHiss then
+			flameHiss:Destroy(); flameHiss = nil
+			if flameRoar then flameRoar:Destroy(); flameRoar = nil end
+			Sfx.play("Whoosh", { PlaybackSpeed = 1.2, Volume = 0.6 }) -- the flame cuts out
+		end
 	end
 end
 

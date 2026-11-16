@@ -147,7 +147,11 @@ local function applyFx(p: Player, it, dmg: number, dir: Vector3)
 	if fx.bleed then Ghost.burn(fx.bleed.dps, fx.bleed.t, BLOOD, p) end
 	if fx.burn then Ghost.burn(fx.burn.dps, fx.burn.t, fx.burn.color or FIRE, p) end
 	if fx.slow then Ghost.slow(fx.slow.mult, fx.slow.t) end
-	if fx.stun then Ghost.freeze(fx.stun) end
+	if fx.stun then
+		Ghost.freeze(fx.stun)
+		-- the taser: electric crackle and arcs on the monster while it is stunned (Client Fx "Tased")
+		if it.id == "Taser" then Remotes.Fx:FireAllClients("Tased", Ghost.current.model, fx.stun) end
+	end
 	if fx.freeze then
 		Ghost.freeze(fx.freeze)
 		Remotes.Fx:FireAllClients("UltFreeze", Ghost.current.hrp.Position, fx.freeze)
@@ -358,7 +362,8 @@ local function useSpray(p: Player, n: number, it, dir: Vector3)
 		if gm then table.insert(ex, gm) end
 		rp.FilterDescendantsInstances = ex
 		local r = workspace:Raycast((head :: BasePart).Position, dir.Unit * it.range, rp)
-		if r then Fire.ignite(r.Position, 2.5, p, 1) end
+		-- what the flamethrower hits catches a WILDFIRE that spreads through the whole house (Fire.wildfire)
+		if r and r.Instance:IsA("BasePart") then Fire.wildfire(r.Instance, r.Position, r.Normal, p) end
 	end
 	local g = ghostAlive()
 	if not g then return end

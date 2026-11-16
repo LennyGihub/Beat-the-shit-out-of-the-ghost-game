@@ -105,6 +105,7 @@ local SFX = {
 	SaltShotgun = { use = "ShotgunShot", after = "ShotgunPump" },
 	PotatoCannon = { use = "CannonShot", speed = 0.8 },
 	Glock18 = { use = "GlockShot" },
+	Taser = { use = "TaserZap", speed = 2.4 },
 }
 for id, s in SFX do if byId[id] then byId[id].sfx = s end end
 return { list = List, byId = byId, rarity = RARITY }

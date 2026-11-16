@@ -31,6 +31,10 @@ local eventLeft = 0
 local lastKind = ""
 local lastMonster = ""
 local lastEvolved = ""
+local prevMonster = "" -- the ghost before the last one
+-- the monsters this run has already met (no monster twice: Monsters.pickFresh)
+local seenMonsters = {} :: { [string]: boolean }
+local seenEvolved = {} :: { [string]: boolean }
 local busy = false
 local breakUntil = 0
 local stats = {} :: { [Player]: { earned: number, damage: number, kills: number, paid: boolean, revives: number? } }
@@ -130,18 +134,26 @@ function Run.startFight()
 			(p.Character :: Model):PivotTo(CFrame.new(MapLoader.spawnInside() + Vector3.new(rng:NextInteger(-6, 6), 0, 0)))
 		end
 	end
-	-- ghost 1 is always the Woman, then a random monster by rarity (Studio hook: RS attribute DebugMonster = id)
-	local def = Monsters.pick(level, lastMonster, rng)
-	-- every 3rd ghost is an EVOLVED variant of one of the monsters (tier 1 = the first one of the run, kept beatable)
+	-- ghost 1 is always the Woman; after that never the same monster twice until every one of them has come
+	-- (Monsters.pickFresh; Studio hook: RS attribute DebugMonster = id).
+	-- Every 3rd ghost is an EVOLVED variant (tier 1 = the first one of the run, kept beatable): those have their own
+	-- no-repeat set, and are never the evolved form of one of the last two monsters you fought.
+	local def
 	local evoTier: number? = nil
 	if Monsters.isEvolvedWave(level) then
 		evoTier = level // 3
-		def = Monsters.byId[Monsters.pickEvolved(lastEvolved, rng)]
+		def = Monsters.pickFresh(seenEvolved, { lastMonster, prevMonster }, rng, false) -- not the last two you fought
+	elseif level <= 1 then
+		def = Monsters.byId.Woman
+		seenMonsters.Woman = true
+	else
+		def = Monsters.pickFresh(seenMonsters, { lastMonster }, rng, true)
 	end
 	local forced = RS:GetAttribute("AdminMonster") or (RunService:IsStudio() and RS:GetAttribute("DebugMonster")) -- admin panel / Studio hook
 	if type(forced) == "string" and Monsters.byId[forced] then def = Monsters.byId[forced] end
 	local forcedEvo = RS:GetAttribute("AdminEvolved") or (RunService:IsStudio() and RS:GetAttribute("DebugEvolved")) -- admin 'evolved on'
 	if forcedEvo then evoTier = type(forcedEvo) == "number" and forcedEvo or math.max(1, level // 3) end
+	prevMonster = lastMonster
 	lastMonster = def.id
 	if evoTier then lastEvolved = def.id end
 	local shown = evoTier and Monsters.evolved(def.id, evoTier) or def
@@ -417,6 +429,9 @@ function Run.beginMatch(list: { Player }, mapId: string?, diffId: string?)
 	Run.configure(mapId, diffId)
 	kills, level, eventLeft, lastKind, lastMonster = 0, 1, 0, "", ""
 	lastEvolved = ""
+	prevMonster = ""
+	table.clear(seenMonsters)
+	table.clear(seenEvolved)
 	if event then Events.despawn(event); event = nil end
 	for _, p in list do
 		Run.addToMatch(p)

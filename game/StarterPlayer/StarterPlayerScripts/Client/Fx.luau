@@ -29,6 +29,10 @@ local music: Sound? = nil
 local rng = Random.new()
 local blur: BlurEffect
 local grade: ColorCorrectionEffect
+local fireGrade: ColorCorrectionEffect -- the wildfire's warm glow
+local fireHeat = 0
+local fireRoar: Sound? = nil
+local fireCrackle: Sound? = nil
 local slashGui: ScreenGui
 
 function Fx.shake(amount: number) trauma = math.min(1.2, trauma + amount) end
@@ -304,6 +308,51 @@ function Fx.handle(kind: string, ...)
 			Sfx.at("PunchHeavy", from, { PlaybackSpeed = 1.6, Volume = 0.7 })
 		end
 		if by == lp then Fx.shake(0.15); Fx.kick(3) end
+	elseif kind == "Tased" then
+		-- the taser bites: a rattling electric crackle, blue arcs jumping over the monster while it is stunned
+		local model, dur = args[1], tonumber(args[2]) or 1.2
+		if typeof(model) == "Instance" and model:IsA("Model") then
+			local root = (model:FindFirstChild("UpperTorso") or model:FindFirstChild("HumanoidRootPart")) :: BasePart?
+			if root then
+				local BLUE = Color3.fromRGB(150, 210, 255)
+				Sfx.at("TaserZap", root.Position, { Volume = 1.6, PlaybackSpeed = 1 })
+				Sfx.at(Sfx.voice("Hurt"), root.Position, { Volume = 1, PlaybackSpeed = 1.25 })
+				local light = Instance.new("PointLight"); light.Color = BLUE; light.Range = 18; light.Brightness = 0; light.Parent = root
+				Debris:AddItem(light, dur + 0.2)
+				local _, size = model:GetBoundingBox()
+				local t0 = os.clock()
+				local n = 0
+				task.spawn(function()
+					while os.clock() - t0 < dur and root.Parent do
+						n += 1
+						-- the crackle: quick clicks, each a little different
+						Sfx.at("TaserTick", root.Position, { Volume = 1.2, PlaybackSpeed = 2 + math.random() * 1.2 })
+						light.Brightness = 2 + math.random() * 4
+						-- an arc: a jagged line of 3 short glowing pieces between two points on the body
+						local a = root.Position + Vector3.new((math.random() - 0.5) * size.X, (math.random() - 0.5) * size.Y * 0.8, (math.random() - 0.5) * size.Z)
+						for _ = 1, 3 do
+							local b = a + Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5) * 3.2
+							local seg = Instance.new("Part")
+							seg.Anchored = true; seg.CanCollide = false; seg.CanQuery = false; seg.CanTouch = false; seg.CastShadow = false
+							seg.Material = Enum.Material.Neon; seg.Color = n % 2 == 0 and BLUE or Color3.new(1, 1, 1)
+							seg.Size = Vector3.new(0.12, 0.12, (b - a).Magnitude)
+							seg.CFrame = CFrame.lookAt((a + b) / 2, b); seg.Parent = workspace.Terrain
+							Debris:AddItem(seg, 0.07)
+							a = b
+						end
+						burst(a, BLUE, 5, 14, 0.25, "rbxasset://textures/particles/sparkles_main.dds")
+						task.wait(0.06)
+					end
+					if light.Parent then light.Brightness = 0 end
+				end)
+				local d = (cam.CFrame.Position - root.Position).Magnitude
+				if d < 40 then Fx.shake(0.18 * (1 - d / 40)) end
+			end
+		end
+	elseif kind == "HouseOnFire" then
+		HUD.banner("THE HOUSE IS ON FIRE", "IT ONLY BURNS THE MONSTER", 3)
+		Sfx.play("Whoosh", { PlaybackSpeed = 0.45, Volume = 2 })
+		Fx.shake(0.3)
 	elseif kind == "ItemBoom" then
 		local pos, radius, color, loud = args[1], args[2], args[3], args[4]
 		flashBall(pos, color, radius * 1.6, 0.35)
@@ -470,6 +519,7 @@ end
 function Fx.init()
 	blur = Instance.new("BlurEffect"); blur.Size = 0; blur.Parent = Lighting
 	grade = Instance.new("ColorCorrectionEffect"); grade.Name = "FxGrade"; grade.Parent = Lighting
+	fireGrade = Instance.new("ColorCorrectionEffect"); fireGrade.Name = "FireGrade"; fireGrade.Enabled = false; fireGrade.Parent = Lighting
 	slashGui = Instance.new("ScreenGui"); slashGui.Name = "Slashes"; slashGui.IgnoreGuiInset = true; slashGui.ResetOnSpawn = false
 	slashGui.Parent = lp:WaitForChild("PlayerGui")
 	ambience = Sfx.loop("Ambience")
@@ -489,6 +539,29 @@ function Fx.init()
 		local zone = pos.Z > 600 and "lobby" or ((pos.X > Config.House.Min.X and pos.X < Config.House.Max.X and pos.Z > Config.House.Min.Z and pos.Z < Config.House.Max.Z and pos.Y < 45) and "inside" or "yard")
 		if Fx.cine and zone == "yard" then zone = "cine" end
 		Fx.applyZone(zone, dt)
+		-- WILDFIRE (the flamethrower set the house alight; the server counts the fires in RS.WildFires): a deep roar
+		-- that grows with it and a warm, flickering glow over the picture
+		do
+			local n = RS:GetAttribute("WildFires")
+			local heat = (lp:GetAttribute("InMatch") and type(n) == "number") and math.clamp(n / 40, 0, 1) or 0
+			fireHeat += (heat - fireHeat) * math.min(1, dt * 1.5)
+			if fireHeat > 0.01 then
+				if not fireRoar then
+					fireRoar = Sfx.loop("PlaneEngine", { PlaybackSpeed = 0.38, Volume = 0 })
+					fireCrackle = Sfx.loop("FireLoop", { PlaybackSpeed = 0.75, Volume = 0 })
+				end
+				local flick = 0.85 + math.noise(os.clock() * 7, 3) * 0.3
+				if fireRoar then fireRoar.Volume = 0.55 * fireHeat * flick end
+				if fireCrackle then fireCrackle.Volume = 1.1 * fireHeat end
+				fireGrade.Enabled = true
+				fireGrade.TintColor = Color3.new(1, 1, 1):Lerp(Color3.fromRGB(255, 206, 160), fireHeat * 0.35 * flick)
+				fireGrade.Brightness = 0.015 * fireHeat * flick
+			elseif fireRoar then
+				fireRoar:Destroy(); fireRoar = nil
+				if fireCrackle then fireCrackle:Destroy(); fireCrackle = nil end
+				fireGrade.Enabled = false
+			end
+		end
 		if ambience then ambience.Volume = zone == "inside" and 0.45 or (zone == "lobby" and 0.35 or 0.15) end
 	end)
 end

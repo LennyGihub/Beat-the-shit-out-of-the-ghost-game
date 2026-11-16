@@ -110,6 +110,12 @@ local Config = {
 	},
 	Reward = { Base = 200, PerLevel = 120 }, -- RUN cash per ghost (spent on items, lost after the run)
 	Payout = { PerKill = 55, PerLevel = 22, DamageDiv = 30 }, -- real cash paid when you die or leave the run (x difficulty reward)
+	-- WILDFIRE (the flamethrower): what it sets alight keeps spreading through the whole house: across floors, up the
+	-- walls, through doorways and walls, up to the next floor. It burns the MONSTER only (players walk through it).
+	-- Max fires at once, each fire's life, seconds between a fire's spread tries, how long it keeps spreading after
+	-- the last squirt of the flamethrower, damage per second to a monster within Radius of any of it.
+	-- Clear = it never starts a fire closer than this to a player.
+	Wildfire = { Max = 70, LifeMin = 16, LifeMax = 24, SpreadMin = 0.45, SpreadMax = 1.0, Campaign = 22, Dps = 14, Radius = 6.5, Clear = 8 },
 	-- EXPLOSIVE BARRELS (red, in every map; a Furniture model with the attribute Explosive): they blow up when they
 	-- break (thrown at something, the monster knocked into them, a shockwave): inside walls open, furniture near
 	-- them flies (other barrels chain), the monster is blasted and set alight, players too close are thrown.

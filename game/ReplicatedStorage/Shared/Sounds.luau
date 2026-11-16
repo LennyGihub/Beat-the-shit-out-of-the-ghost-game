@@ -40,6 +40,13 @@ return {
 	GlockShot = { ids = { 139943212269145 }, volume = 0.6 },
 	GlockEquip = { ids = { 3606135620 }, volume = 0.8 }, -- leaf blower / shop vac loop
 	FireLoop = { ids = { 9079463756 }, volume = 0.7 }, -- burning wood crackle
+	-- the flamethrower's hiss (played pitched up, over PlaneEngine pitched down: Client/Hotbar). Its own entry so a
+	-- real flamethrower recording can be dropped in here later.
+	Flamethrower = { ids = { 9079463756 }, volume = 1 },
+	-- the taser on a monster (Client/Fx "Tased"): the first snap, then fast pitched clicks = the crackle. Own entries
+	-- so real electric recordings can be dropped in here later.
+	TaserZap = { ids = { 9116617140 }, volume = 1 },
+	TaserTick = { ids = { 9116617140 }, volume = 0.6 },
 	DemonRoar = { ids = { 136542763428450 }, volume = 1 },
 	DemonLaugh = { ids = { 6841094848 }, volume = 1 },
 	Telekinesis = { ids = { 7935048120 }, volume = 0.9 },
