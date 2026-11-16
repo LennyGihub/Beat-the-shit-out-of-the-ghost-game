@@ -89,7 +89,7 @@ function Run.payout(p: Player, reason: string): number
 	st.paid = true
 	local g = Ghost.current
 	if g and g.damageBy[p] then st.damage += g.damageBy[p]; g.damageBy[p] = 0 end
-	local cash = math.floor((st.earned + st.damage / Config.Payout.DamageDiv * diff.reward) * Friends.mult(p)) -- friend booster
+	local cash = math.floor((st.earned + st.damage / Config.Payout.DamageDiv * diff.reward) * Friends.mult(p) * (p:GetAttribute("Money2") and 2 or 1)) -- friend booster, 2X money
 	Data.addCash(p, cash)
 	task.spawn(Data.save, p)
 	Remotes.Fx:FireClient(p, "RunOver", reason, cash, st.kills)
@@ -169,7 +169,7 @@ local function onGhostDeath(g)
 			g.damageBy[p] = 0
 			p:SetAttribute("RunKills", st.kills)
 		end
-		local r = math.floor(reward * Friends.mult(p)) -- friend booster
+		local r = math.floor(reward * Friends.mult(p) * (p:GetAttribute("Money2") and 2 or 1)) -- friend booster, 2X money
 		p:SetAttribute("RunCash", (p:GetAttribute("RunCash") or 0) + r)
 		Data.winGhost(p, g.level)
 		Remotes.Fx:FireClient(p, "Victory", r)
@@ -236,12 +236,62 @@ function Run.leave(p: Player, reason: string)
 	if Run.onReturnLobby then Run.onReturnLobby(p) end
 end
 
-function Run.onDied(p: Player)
-	if not p:GetAttribute("InMatch") then return end
+-- dying in a run: a revive window opens (REVIVE product); if nobody pays, the run ends for you.
+-- Returns how long Main should wait before respawning the character.
+local REVIVE_WINDOW = 10
+local pending = {} :: { [Player]: { untilT: number, at: CFrame } }
+local function reviveOn(): boolean
+	return (tonumber(RS:GetAttribute("ReviveProductId")) or 0) > 0 or RunService:IsStudio()
+end
+local function endDeath(p: Player)
+	pending[p] = nil
+	p:SetAttribute("ReviveUntil", nil)
+	if not p.Parent or not p:GetAttribute("InMatch") then return end
 	Run.payout(p, "died")
-	task.delay(4, function()
+	task.delay(1.5, function()
 		if p.Parent and p:GetAttribute("InMatch") and Run.onReturnLobby then Run.onReturnLobby(p) end
 	end)
+end
+function Run.onDied(p: Player): number
+	if not p:GetAttribute("InMatch") then return 4 end
+	local hrp = hrpOf(p)
+	local at = hrp and hrp.CFrame or CFrame.new(MapLoader.spawnInside())
+	pending[p] = { untilT = os.clock() + REVIVE_WINDOW, at = at }
+	-- a revive bought earlier is used right away
+	local spare = p:GetAttribute("SpareRevives") or 0
+	if spare > 0 then
+		p:SetAttribute("SpareRevives", spare - 1)
+		task.delay(1.5, function() Run.revive(p) end)
+		return 99
+	end
+	if not reviveOn() then endDeath(p); return 4 end
+	p:SetAttribute("ReviveUntil", workspace:GetServerTimeNow() + REVIVE_WINDOW)
+	Remotes.Fx:FireClient(p, "ReviveOffer", REVIVE_WINDOW)
+	task.spawn(function()
+		while pending[p] and os.clock() < pending[p].untilT do task.wait(0.25) end
+		if pending[p] then endDeath(p) end
+	end)
+	return REVIVE_WINDOW + 3
+end
+-- the player paid (or used the admin panel): back on their feet where they fell, full health, same run
+function Run.revive(p: Player): boolean
+	local pd = pending[p]
+	if not pd or not p.Parent or not p:GetAttribute("InMatch") then return false end
+	pending[p] = nil
+	p:SetAttribute("ReviveUntil", nil)
+	p:LoadCharacter()
+	local ch = p.Character
+	if ch then ch:PivotTo(pd.at + Vector3.new(0, 3, 0)) end
+	Remotes.Fx:FireClient(p, "Revived")
+	return true
+end
+function Run.extendRevive(p: Player, extra: number)
+	local pd = pending[p]
+	if pd and not pd.extended then
+		pd.extended = true
+		pd.untilT += extra
+		p:SetAttribute("ReviveUntil", (p:GetAttribute("ReviveUntil") or workspace:GetServerTimeNow()) + extra)
+	end
 end
 
 -- which map and difficulty this match uses (before the first fight)

@@ -24,6 +24,7 @@ local UltRunner = require(Server.UltRunner)
 local MapLoader = require(Server.MapLoader)
 local Admin = require(Server.Admin)
 local Friends = require(Server.Friends)
+local Monetization = require(Server.Monetization)
 
 local isMatchServer = game.PrivateServerId ~= "" and game.PrivateServerOwnerId == 0
 Run.mode = isMatchServer and "Match" or "Lobby"
@@ -39,6 +40,7 @@ Run.start()
 Lobby.start()
 Admin.start()
 Friends.start()
+Monetization.start()
 
 local expected = 1
 local firstJoin = nil :: number?
@@ -61,8 +63,8 @@ local function onPlayer(p: Player)
 	p.CharacterAdded:Connect(function(ch)
 		local hum = ch:WaitForChild("Humanoid") :: Humanoid
 		hum.Died:Once(function()
-			Run.onDied(p)
-			task.delay(4, function() if p.Parent and p.Character == ch then p:LoadCharacter() end end)
+			local wait = Run.onDied(p) -- the revive window can keep the body down longer
+			task.delay(wait, function() if p.Parent and p.Character == ch then p:LoadCharacter() end end)
 		end)
 	end)
 	p:LoadCharacter()

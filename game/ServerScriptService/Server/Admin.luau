@@ -68,7 +68,7 @@ local function find(list: { any }, word: string?): any
 end
 
 local HELP = "cash <n> | runcash <n> | give <item> | clearitems | ult <id> | allults | allmaps | heal | brut | god | start [map] [diff] | "
-	.. "next | killghost | bring | ragdoll [power] | monster <id|off> | event plane|van|train | leave | endrun"
+	.. "revive | money2 | next | killghost | bring | ragdoll [power] | monster <id|off> | event plane|van|train | leave | endrun"
 
 local CMD: { [string]: (p: Player, a: string?, b: string?) -> (boolean, string) } = {}
 
@@ -126,6 +126,17 @@ CMD.heal = function(p)
 	if hum then hum.Health = hum.MaxHealth end
 	Combat.refillStamina(p)
 	return true, "Healed + full stamina"
+end
+
+CMD.revive = function(p)
+	if Run.revive(p) then return true, "Revived" end
+	return false, "You are not dead in a run"
+end
+
+CMD.money2 = function(p)
+	local on = not p:GetAttribute("Money2")
+	p:SetAttribute("Money2", on)
+	return true, "2X money " .. (on and "ON" or "OFF") .. " (this session)"
 end
 
 CMD.brut = function(p)

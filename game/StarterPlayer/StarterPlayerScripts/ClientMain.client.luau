@@ -32,6 +32,7 @@ local ThirdPersonItems = require(Client.ThirdPersonItems)
 local AdminPanel = require(Client.AdminPanel)
 local SawAudio = require(Client.SawAudio)
 local LobbyUI = require(Client.LobbyUI)
+local ReviveUI = require(Client.ReviveUI)
 
 HUD.init()
 VM.init()
@@ -53,6 +54,7 @@ UltShop.init(function(open)
 	shopOpen = open
 	camMode()
 end)
+ReviveUI.init()
 -- lobby screen: PLAY (create / join lobbies) and SHOP buttons, friend booster
 LobbyUI.init(function() UltShop.open() end, function(open) Input.setShopOpen(open) end)
 
@@ -74,6 +76,11 @@ Remotes.Fx.OnClientEvent:Connect(function(kind: string, ...)
 		local by = ...
 		if by ~= Players.LocalPlayer then ThirdPersonItems.swing(by) end
 		Fx.handle(kind, ...)
+	elseif kind == "ReviveOffer" or kind == "Revived" then
+		ReviveUI.handle(kind, ...)
+		if kind == "Revived" then Fx.handle("Toast", "BACK FROM THE DEAD") end
+	elseif kind == "PartyInvite" then
+		LobbyUI.invite(...)
 	elseif MonsterFx.handles(kind) then
 		MonsterFx.handle(kind, ...)
 	else

@@ -50,12 +50,24 @@ local function ownedMaps(): { [string]: boolean }
 end
 
 local function adminPassId(): number return tonumber(RS:GetAttribute("AdminPassId")) or 0 end
+local function money2PassId(): number return tonumber(RS:GetAttribute("Money2PassId")) or 0 end
+local prices = {} :: { [string]: number }
 
 local function refresh()
 	if not gui then return end
 	for _, r in robuxRows do
 		r.row.Visible = filter == -2
-		if r.kind == "admin" then
+		if r.kind == "money2" then
+			if lp:GetAttribute("Money2") then
+				r.btn.Text = "OWNED"; r.btn.BackgroundColor3 = Color3.fromRGB(60, 110, 50)
+			elseif money2PassId() == 0 then
+				r.btn.Text = "SOON"; r.btn.BackgroundColor3 = Color3.fromRGB(70, 64, 58)
+			else
+				r.btn.Text = "R$ " .. tostring(prices.money2 or "?"); r.btn.BackgroundColor3 = Color3.fromRGB(30, 120, 60)
+			end
+		elseif r.kind == "revive" then
+			r.btn.Text = "ON DEATH"; r.btn.BackgroundColor3 = Color3.fromRGB(70, 64, 58)
+		elseif r.kind == "admin" then
 			if lp:GetAttribute("IsAdmin") then
 				r.btn.Text = "OWNED"; r.btn.BackgroundColor3 = Color3.fromRGB(60, 110, 50)
 			elseif adminPassId() == 0 then
@@ -148,7 +160,32 @@ function Shop.init(toggle: (boolean) -> ())
 		end)
 		mapRows[m.id] = { btn = btn, row = row }
 	end
-	-- ROBUX: the admin panel (Game Pass, id in the ReplicatedStorage attribute AdminPassId)
+	-- ROBUX: 2X MONEY pass, REVIVE (bought on the death screen), admin panel
+	local function robuxRow(order: number, title: string, color: Color3, desc: string, kind: string, onBuy: () -> ())
+		local row = Grunge.frame(list, { Size = UDim2.new(1, -12, 0, 84), BackgroundTransparency = 0.45, BackgroundColor3 = Color3.fromRGB(10, 8, 7), ZIndex = 10, LayoutOrder = order, Visible = false })
+		Grunge.frame(row, { BackgroundTransparency = 0, BackgroundColor3 = color, Size = UDim2.new(0, 8, 1, 0), ZIndex = 11 })
+		Grunge.text(row, { Text = title, Font = Grunge.HORROR, Position = UDim2.new(0, 18, 0.04, 0), Size = UDim2.new(0.5, 0, 0.42, 0), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = color, ZIndex = 11 })
+		Grunge.text(row, { Text = desc, Font = Grunge.TYPE, Position = UDim2.new(0, 18, 0.5, 0), Size = UDim2.new(0.72, 0, 0.42, 0), TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true, TextColor3 = Color3.fromRGB(190, 180, 160), ZIndex = 11 })
+		local b = button(row, "", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0), Size = UDim2.new(0.2, 0, 0.55, 0), ZIndex = 12 })
+		b.MouseButton1Click:Connect(function() Sfx.play("Click"); onBuy() end)
+		table.insert(robuxRows, { btn = b, row = row, kind = kind })
+	end
+	robuxRow(1990, "2X MONEY", Color3.fromRGB(240, 200, 60), "Forever: every run pays double - ghost kill cash and the payout when your run ends.", "money2", function()
+		if lp:GetAttribute("Money2") then return end
+		local id = money2PassId()
+		if id == 0 then Shop.result(false, "2X money is not on sale yet") return end
+		MarketplaceService:PromptGamePassPurchase(lp, id)
+	end)
+	robuxRow(1995, "REVIVE", Color3.fromRGB(230, 70, 60), "Died in a run? Come back right where you fell, full health, same run. Offered on the death screen.", "revive", function()
+		Shop.result(true, "Revives are offered when you die in a run")
+	end)
+	task.spawn(function()
+		local id = money2PassId()
+		if id > 0 then
+			local ok, info = pcall(function() return MarketplaceService:GetProductInfo(id, Enum.InfoType.GamePass) end)
+			if ok and info and info.PriceInRobux then prices.money2 = info.PriceInRobux; refresh() end
+		end
+	end)
 	do
 		local row = Grunge.frame(list, { Size = UDim2.new(1, -12, 0, 96), BackgroundTransparency = 0.45, BackgroundColor3 = Color3.fromRGB(10, 8, 7), ZIndex = 10, LayoutOrder = 2000, Visible = false })
 		Grunge.frame(row, { BackgroundTransparency = 0, BackgroundColor3 = Color3.fromRGB(40, 200, 90), Size = UDim2.new(0, 8, 1, 0), ZIndex = 11 })
@@ -176,7 +213,7 @@ function Shop.init(toggle: (boolean) -> ())
 	statusText = Grunge.text(panel, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0.04, 0.92), Size = UDim2.fromScale(0.92, 0.045), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 10 })
 	local close = button(panel, "LEAVE", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(0.96, 0.095), Size = UDim2.fromScale(0.2, 0.052), ZIndex = 12, Rotation = 1.5, BackgroundColor3 = Color3.fromRGB(45, 40, 36), Modal = true })
 	close.MouseButton1Click:Connect(function() Sfx.play("Click"); Shop.close() end)
-	for _, a in { "Cash", "OwnedUlts", "EquippedUlt", "Owned", "IsAdmin" } do lp:GetAttributeChangedSignal(a):Connect(refresh) end
+	for _, a in { "Cash", "OwnedUlts", "EquippedUlt", "Owned", "IsAdmin", "Money2" } do lp:GetAttributeChangedSignal(a):Connect(refresh) end
 	-- Studio test hook: player attribute ShopTab = "robux" | "maps" | "all" opens the shop on that tab
 	if game:GetService("RunService"):IsStudio() then
 		lp:GetAttributeChangedSignal("ShopTab"):Connect(function()

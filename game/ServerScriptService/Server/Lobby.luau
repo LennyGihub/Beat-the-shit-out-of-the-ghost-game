@@ -150,7 +150,10 @@ local function publish()
 	for id, pt in parties do
 		local names = {}
 		for _, m in pt.members do table.insert(names, m.DisplayName) end
-		table.insert(list, { id = id, host = pt.host.DisplayName, hostId = pt.host.UserId, map = pt.map, diff = pt.diff, size = pt.size, names = names })
+		local inv = {}
+		for uid in pt.invited do table.insert(inv, uid) end
+		table.insert(list, { id = id, host = pt.host.DisplayName, hostId = pt.host.UserId, map = pt.map, diff = pt.diff, size = pt.size, names = names,
+			private = pt.private, invited = inv })
 	end
 	table.sort(list, function(a, b) return a.id < b.id end)
 	RS:SetAttribute("Parties", HttpService:JSONEncode(list))
@@ -172,25 +175,41 @@ local function leaveParty(p: Player)
 	end
 	publish()
 end
-local function onParty(p: Player, action: any, a: any, b: any, c: any)
+local function onParty(p: Player, action: any, a: any, b: any, c: any, d: any)
 	if type(action) ~= "string" or p:GetAttribute("InMatch") then return end
 	if action == "create" then
 		if type(a) ~= "string" or type(b) ~= "string" or type(c) ~= "number" then return end
-		local m, d = Maps.byId[a], Maps.diffById[b]
-		if not m or not d then return end
+		local private = d == true
+		local m, dd = Maps.byId[a], Maps.diffById[b]
+		if not m or not dd then return end
 		if not Data.ownsMap(p, m.id) then Remotes.Fx:FireClient(p, "Toast", "Buy " .. m.name .. " at the dealer first"); return end
 		leaveParty(p)
 		local id = tostring(p.UserId)
-		parties[id] = { id = id, host = p, members = { p }, map = m.id, diff = d.id, size = math.clamp(math.floor(c), 1, 4), map_ = m }
+		parties[id] = { id = id, host = p, members = { p }, map = m.id, diff = dd.id, size = math.clamp(math.floor(c), 1, 4), private = private, invited = {} }
 		p:SetAttribute("PartyId", id)
 		publish()
 	elseif action == "join" then
 		local pt = type(a) == "string" and parties[a] or nil
 		if not pt then Remotes.Fx:FireClient(p, "Toast", "That lobby is gone"); return end
 		if #pt.members >= pt.size then Remotes.Fx:FireClient(p, "Toast", "That lobby is full"); return end
+		if pt.private and not pt.invited[p.UserId] then Remotes.Fx:FireClient(p, "Toast", "That lobby is private - ask for an invite"); return end
 		leaveParty(p)
 		table.insert(pt.members, p)
 		p:SetAttribute("PartyId", pt.id)
+		publish()
+	elseif action == "invite" then
+		-- the host invites a player of this server (a = their UserId): they get a popup with JOIN
+		local pt = partyOf(p)
+		local who = type(a) == "number" and Players:GetPlayerByUserId(a) or nil
+		if not pt or pt.host ~= p or not who or who == p then return end
+		pt.invited[who.UserId] = true
+		publish()
+		Remotes.Fx:FireClient(who, "PartyInvite", p.DisplayName, pt.id)
+		Remotes.Fx:FireClient(p, "Toast", "INVITE SENT TO " .. string.upper(who.DisplayName))
+	elseif action == "privacy" then
+		local pt = partyOf(p)
+		if not pt or pt.host ~= p then return end
+		pt.private = a == true
 		publish()
 	elseif action == "leave" then
 		leaveParty(p)

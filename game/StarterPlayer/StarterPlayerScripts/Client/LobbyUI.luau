@@ -25,6 +25,13 @@ local mineNames: TextLabel
 local startBtn: TextButton
 local status: TextLabel
 local pickMap, pickDiff, pickSize = Maps.default, Maps.defaultDiff, 2
+local pickPrivate = false
+local privBtn: TextButton
+local minePriv: TextButton
+local inviteList: ScrollingFrame
+local invitePop: Frame
+local invitePopText: TextLabel
+local invitePartyId: string? = nil
 local mapBtns = {} :: { [string]: TextButton }
 local diffBtns = {} :: { [string]: TextButton }
 local sizeBtns = {} :: { [number]: TextButton }
@@ -90,6 +97,10 @@ local function refreshPicks()
 	end
 	for id, b in diffBtns do b.BackgroundColor3 = id == pickDiff and RED or DARK end
 	for n, b in sizeBtns do b.BackgroundColor3 = n == pickSize and RED or DARK end
+	if privBtn then
+		privBtn.Text = pickPrivate and "PRIVATE" or "PUBLIC"
+		privBtn.BackgroundColor3 = pickPrivate and Color3.fromRGB(70, 40, 90) or DARK
+	end
 end
 
 local function refreshList()
@@ -98,17 +109,22 @@ local function refreshList()
 	local myId = lp:GetAttribute("PartyId")
 	local myParty = nil
 	for _, c in listFrame:GetChildren() do if c:IsA("Frame") then c:Destroy() end end
+	local shown = 0
 	for i, pt in list do
 		if pt.id == myId then myParty = pt end
+		-- private lobbies only show to their members and to invited players
+		local invited = table.find(pt.invited or {}, lp.UserId) ~= nil
+		if pt.private and pt.id ~= myId and not invited then continue end
+		shown += 1
 		local row = Grunge.frame(listFrame, { Size = UDim2.new(1, -10, 0, 58), BackgroundTransparency = 0.5, BackgroundColor3 = Color3.fromRGB(10, 8, 7), LayoutOrder = i })
 		local m = Maps.byId[pt.map]
 		local d = Maps.diffById[pt.diff]
 		Grunge.frame(row, { BackgroundTransparency = 0, BackgroundColor3 = m and m.color or RED, Size = UDim2.new(0, 6, 1, 0) })
-		Grunge.text(row, { Text = string.upper(pt.host) .. "'S LOBBY", Position = UDim2.new(0, 14, 0.05, 0), Size = UDim2.new(0.62, 0, 0.5, 0), TextXAlignment = Enum.TextXAlignment.Left })
+		Grunge.text(row, { Text = string.upper(pt.host) .. "'S LOBBY" .. (pt.private and "  [PRIVATE]" or ""), Position = UDim2.new(0, 14, 0.05, 0), Size = UDim2.new(0.62, 0, 0.5, 0), TextXAlignment = Enum.TextXAlignment.Left })
 		Grunge.text(row, { Text = string.upper((m and m.name or pt.map) .. " - " .. (d and d.name or pt.diff)) .. "   " .. #pt.names .. "/" .. pt.size,
 			Font = Grunge.TYPE, Position = UDim2.new(0, 14, 0.56, 0), Size = UDim2.new(0.62, 0, 0.36, 0), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = d and d.color or Grunge.PAPER })
 		local full = #pt.names >= pt.size
-		local b = button(row, pt.id == myId and "YOURS" or (full and "FULL" or "JOIN"), { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -6, 0.5, 0), Size = UDim2.new(0.26, 0, 0.72, 0),
+		local b = button(row, pt.id == myId and "YOURS" or (full and "FULL" or (invited and "JOIN!" or "JOIN")), { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -6, 0.5, 0), Size = UDim2.new(0.26, 0, 0.72, 0),
 			BackgroundColor3 = (pt.id == myId or full) and DARK or GREEN })
 		b.Activated:Connect(function()
 			if pt.id ~= myId and not full then Sfx.play("Click"); Remotes.Party:FireServer("join", pt.id) end
@@ -120,11 +136,35 @@ local function refreshList()
 	if myParty then
 		local m, d = Maps.byId[myParty.map], Maps.diffById[myParty.diff]
 		mineInfo.Text = string.upper((m and m.name or myParty.map) .. " - " .. (d and d.name or myParty.diff))
-		mineNames.Text = table.concat(myParty.names, "\n") .. string.rep("\n...", math.max(0, myParty.size - #myParty.names))
+		mineNames.Text = table.concat(myParty.names, ", ") .. "   (" .. #myParty.names .. "/" .. myParty.size .. ")"
 		local host = myParty.hostId == lp.UserId
 		startBtn.Visible = host
+		minePriv.Visible = host
+		minePriv.Text = myParty.private and "PRIVATE" or "PUBLIC"
+		minePriv.BackgroundColor3 = myParty.private and Color3.fromRGB(70, 40, 90) or DARK
+		-- invite list: everyone in the server who is not in this lobby and not fighting
+		for _, c in inviteList:GetChildren() do if c:IsA("Frame") then c:Destroy() end end
+		inviteList.Visible = host
+		if host then
+			local n = 0
+			for _, other in Players:GetPlayers() do
+				if other ~= lp and not other:GetAttribute("InMatch") and other:GetAttribute("PartyId") ~= myParty.id then
+					n += 1
+					local row = Grunge.frame(inviteList, { Size = UDim2.new(1, -8, 0, 40), BackgroundTransparency = 0.5, BackgroundColor3 = Color3.fromRGB(10, 8, 7), LayoutOrder = n, ZIndex = 11 })
+					Grunge.text(row, { Text = other.DisplayName, Font = Grunge.TYPE, Position = UDim2.new(0, 8, 0.15, 0), Size = UDim2.new(0.6, 0, 0.7, 0), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 12 })
+					local sent = table.find(myParty.invited or {}, other.UserId) ~= nil
+					local ib = button(row, sent and "SENT" or "INVITE", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -4, 0.5, 0), Size = UDim2.new(0.34, 0, 0.8, 0),
+						BackgroundColor3 = sent and DARK or GREEN, ZIndex = 13 })
+					ib.Activated:Connect(function() Sfx.play("Click"); Remotes.Party:FireServer("invite", other.UserId) end)
+				end
+			end
+			if n == 0 then
+				local row = Grunge.frame(inviteList, { Size = UDim2.new(1, -8, 0, 40), ZIndex = 11 })
+				Grunge.text(row, { Text = "NOBODY ELSE IN THE PARK", Font = Grunge.TYPE, Size = UDim2.fromScale(1, 0.7), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(150, 140, 125), ZIndex = 12 })
+			end
+		end
 	end
-	status.Text = #list == 0 and "NO OPEN LOBBIES - CREATE ONE" or ""
+	status.Text = shown == 0 and "NO OPEN LOBBIES - CREATE ONE" or ""
 end
 
 local function setOpen(open: boolean)
@@ -146,6 +186,16 @@ local function refreshVisible()
 	local n = lp:GetAttribute("FriendCount") or 0
 	boostTag.Text = b > 0 and ("FRIEND BOOST +" .. math.floor(b * 100 + 0.5) .. "% CASH  (" .. n .. " FRIEND" .. (n > 1 and "S" or "") .. ")") or "FRIEND BOOST: +10% CASH PER FRIEND"
 	boostTag.TextColor3 = b > 0 and Color3.fromRGB(150, 220, 110) or Color3.fromRGB(190, 180, 160)
+end
+
+-- someone invited you (Fx "PartyInvite")
+function LobbyUI.invite(hostName: string, partyId: string)
+	if lp:GetAttribute("InMatch") then return end
+	invitePartyId = partyId
+	invitePopText.Text = string.upper(hostName) .. " INVITED YOU"
+	invitePop.Visible = true
+	Sfx.play("Cash", { PlaybackSpeed = 1.4, Volume = 0.6 })
+	task.delay(15, function() if invitePartyId == partyId then invitePop.Visible = false end end)
 end
 
 function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> ())
@@ -207,14 +257,26 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> ())
 		b.Activated:Connect(function() Sfx.play("Click"); pickSize = n; refreshPicks() end)
 		sizeBtns[n] = b
 	end
-	local create = button(createPage, "CREATE", { Position = UDim2.fromScale(0.6, 0.78), Size = UDim2.fromScale(0.4, 0.13), BackgroundColor3 = GREEN, ZIndex = 12, Rotation = -1.5 })
-	create.Activated:Connect(function() Sfx.play("Click"); Remotes.Party:FireServer("create", pickMap, pickDiff, pickSize) end)
+	privBtn = button(createPage, "PUBLIC", { Position = UDim2.fromScale(0.6, 0.745), Size = UDim2.fromScale(0.4, 0.075), BackgroundColor3 = DARK, ZIndex = 12 })
+	privBtn.Activated:Connect(function() Sfx.play("Click"); pickPrivate = not pickPrivate; refreshPicks() end)
+	local create = button(createPage, "CREATE", { Position = UDim2.fromScale(0.6, 0.84), Size = UDim2.fromScale(0.4, 0.12), BackgroundColor3 = GREEN, ZIndex = 12, Rotation = -1.5 })
+	create.Activated:Connect(function() Sfx.play("Click"); Remotes.Party:FireServer("create", pickMap, pickDiff, pickSize, pickPrivate) end)
 
 	-- left half when you are in a lobby: your lobby
 	mine = Grunge.frame(panel, { Position = UDim2.fromScale(0.04, 0.14), Size = UDim2.fromScale(0.46, 0.82), ZIndex = 10, Visible = false })
 	heading(mine, "YOUR LOBBY", 0)
 	mineInfo = Grunge.text(mine, { Text = "", Position = UDim2.fromScale(0, 0.07), Size = UDim2.fromScale(1, 0.09), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 11 })
-	mineNames = Grunge.text(mine, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0, 0.2), Size = UDim2.fromScale(1, 0.4), TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, TextScaled = false, TextSize = 24, ZIndex = 11 })
+	minePriv = button(mine, "PUBLIC", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 0), Size = UDim2.fromScale(0.32, 0.07), BackgroundColor3 = DARK, ZIndex = 12 })
+	minePriv.Activated:Connect(function()
+		Sfx.play("Click")
+		Remotes.Party:FireServer("privacy", minePriv.Text == "PUBLIC")
+	end)
+	heading(mine, "INVITE PLAYERS", 0.42)
+	inviteList = Instance.new("ScrollingFrame")
+	inviteList.BackgroundTransparency = 1; inviteList.BorderSizePixel = 0; inviteList.Position = UDim2.fromScale(0, 0.48); inviteList.Size = UDim2.fromScale(1, 0.2)
+	inviteList.ScrollBarThickness = 5; inviteList.AutomaticCanvasSize = Enum.AutomaticSize.Y; inviteList.CanvasSize = UDim2.new(); inviteList.ZIndex = 11; inviteList.Parent = mine
+	local il = Instance.new("UIListLayout"); il.Padding = UDim.new(0, 4); il.SortOrder = Enum.SortOrder.LayoutOrder; il.Parent = inviteList
+	mineNames = Grunge.text(mine, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0, 0.2), Size = UDim2.fromScale(1, 0.08), TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, ZIndex = 11 })
 	startBtn = button(mine, "START", { Position = UDim2.fromScale(0, 0.7), Size = UDim2.fromScale(0.55, 0.16), BackgroundColor3 = GREEN, ZIndex = 12, Rotation = -1.5 })
 	startBtn.Activated:Connect(function() Sfx.play("Click"); Remotes.Party:FireServer("start") end)
 	local leave = button(mine, "LEAVE", { Position = UDim2.fromScale(0.6, 0.72), Size = UDim2.fromScale(0.4, 0.12), BackgroundColor3 = DARK, ZIndex = 12 })
@@ -229,6 +291,19 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> ())
 	local ll = Instance.new("UIListLayout"); ll.Padding = UDim.new(0, 6); ll.SortOrder = Enum.SortOrder.LayoutOrder; ll.Parent = listFrame
 	status = Grunge.text(panel, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0.53, 0.88), Size = UDim2.fromScale(0.43, 0.05), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(190, 180, 160), ZIndex = 11 })
 
+	-- invite popup (top centre): "X invited you" with JOIN / NO
+	invitePop = Grunge.panel(gui, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.12), Size = UDim2.fromScale(0.34, 0.15), Rotation = -1, Visible = false }, 51)
+	local ipr = Instance.new("UIAspectRatioConstraint"); ipr.AspectRatio = 4.2; ipr.Parent = invitePop
+	invitePopText = Grunge.text(invitePop, { Text = "", Position = UDim2.fromScale(0.05, 0.1), Size = UDim2.fromScale(0.9, 0.38), ZIndex = 10 })
+	local ij = button(invitePop, "JOIN", { Position = UDim2.fromScale(0.12, 0.55), Size = UDim2.fromScale(0.36, 0.34), BackgroundColor3 = GREEN, ZIndex = 12 })
+	ij.Activated:Connect(function()
+		Sfx.play("Click"); invitePop.Visible = false
+		if invitePartyId then Remotes.Party:FireServer("join", invitePartyId) end
+	end)
+	local inn = button(invitePop, "NO", { Position = UDim2.fromScale(0.52, 0.55), Size = UDim2.fromScale(0.36, 0.34), BackgroundColor3 = DARK, ZIndex = 12 })
+	inn.Activated:Connect(function() Sfx.play("Click"); invitePop.Visible = false end)
+	Players.PlayerAdded:Connect(refreshList)
+	Players.PlayerRemoving:Connect(function() task.defer(refreshList) end)
 	RS:GetAttributeChangedSignal("Parties"):Connect(refreshList)
 	for _, a in { "PartyId", "Owned" } do lp:GetAttributeChangedSignal(a):Connect(function() refreshPicks(); refreshList() end) end
 	for _, a in { "InMatch", "FriendBoost", "FriendCount" } do lp:GetAttributeChangedSignal(a):Connect(refreshVisible) end
