@@ -287,8 +287,8 @@ function Fury.smashPunch(g, G, p: Player, thrp: BasePart)
 	Remotes.Fx:FireAllClients("FurySmash", thrp.Position, dir)
 	Fury.launch(g, G, p, vel, swipeDamage(g) * F.SmashDamage, F.SmashTime, "smash")
 end
--- does its swipe launch you through the walls? (enraged, or an evolved monster)
-function Fury.smashes(g): boolean return g.enraged == true or g.evolved == true end
+-- does its swipe launch you through the walls? (enraged, an evolved monster, or a born smasher: the Conqueror)
+function Fury.smashes(g): boolean return g.enraged == true or g.evolved == true or (g.def :: any).smasher == true end
 -- every frame: walls further along a launched player's path break too
 function Fury.tick(g)
 	local now = os.clock()

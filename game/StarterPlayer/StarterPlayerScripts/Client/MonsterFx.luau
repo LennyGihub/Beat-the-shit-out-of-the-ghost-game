@@ -15,6 +15,7 @@ local KINDS = {
 	AbilityWind = true, AbilityHit = true, Grabbed = true, Released = true, Pounce = true, Wail = true,
 	Blackout = true, BlackoutEnd = true, GasThrow = true, GasCloud = true, Gassed = true,
 	HellMark = true, HellPillar = true, Charge = true, CloneSpawn = true, CloneShatter = true, StalkerBlink = true, BlackoutExtend = true,
+	WarpWind = true, Warp = true, LaserWind = true, LaserBeam = true, LaserEnd = true, LaserHit = true, -- the Conqueror
 	GoblinSteal = true, GoblinUse = true, GoblinDrop = true,
 	ShieldBlock = true, Slammed = true, AnimJumpscare = true,
 	RoarWind = true, Roar = true, LungeWind = true, Lunge = true, Enraged = true, CounterWind = true, FuryArmor = true, FurySmash = true, -- Fury
@@ -231,6 +232,80 @@ local function enrage(model: Instance?)
 		pe.Rate = 18; pe.Acceleration = Vector3.new(0, 6, 0); pe.SpreadAngle = Vector2.new(180, 180); pe.Parent = root
 	end
 end
+
+-- THE CONQUEROR --------------------------------------------------------------------------------------------
+local PURPLE = Color3.fromRGB(190, 90, 255)
+-- a portal: a dark disc with a purple rim standing where he steps in / out, smoke pouring from it
+local function portal(pos: Vector3, facing: Vector3?, life: number)
+	local look = facing and Vector3.new(facing.X, 0, facing.Z) or Vector3.zAxis
+	look = look.Magnitude > 0.1 and look.Unit or Vector3.zAxis
+	local cf = CFrame.lookAt(pos + Vector3.new(0, 1, 0), pos + Vector3.new(0, 1, 0) + look) * CFrame.Angles(0, math.pi / 2, 0)
+	local rim = part({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.5, 1, 1), Color = PURPLE, Transparency = 0.15, CFrame = cf })
+	local hole = part({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.6, 0.8, 0.8), Color = Color3.fromRGB(8, 4, 14), Material = Enum.Material.SmoothPlastic, CFrame = cf })
+	local l = Instance.new("PointLight"); l.Color = PURPLE; l.Range = 26; l.Brightness = 3; l.Shadows = false; l.Parent = rim
+	local open = TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+	TweenService:Create(rim, open, { Size = Vector3.new(0.5, 15, 15) }):Play()
+	TweenService:Create(hole, open, { Size = Vector3.new(0.6, 13.6, 13.6) }):Play()
+	task.delay(life, function()
+		local shut = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+		TweenService:Create(rim, shut, { Size = Vector3.new(0.5, 0.2, 0.2), Transparency = 1 }):Play()
+		TweenService:Create(hole, shut, { Size = Vector3.new(0.6, 0.1, 0.1), Transparency = 1 }):Play()
+		Debris:AddItem(rim, 0.35); Debris:AddItem(hole, 0.35)
+	end)
+	emitter(pos + Vector3.new(0, 1, 0), { Color = ColorSequence.new(Color3.fromRGB(120, 50, 190), Color3.fromRGB(10, 4, 18)), LightEmission = 0.4,
+		Size = NumberSequence.new(2.5, 6), Transparency = NumberSequence.new(0.3, 1), Speed = NumberRange.new(4, 12), Lifetime = NumberRange.new(0.6, 1.2),
+		Rate = 60 }, nil, life + 1)
+end
+
+-- the Golden Conqueror's beam: one beam, moved to where the server says (eased between its 10 updates a second)
+local beam: { core: BasePart, glow: BasePart, tip: BasePart, model: Instance?, from: Vector3, to: Vector3, want: Vector3, last: number, conn: RBXScriptConnection, nextZap: number }? = nil
+local function beamOff()
+	local b = beam
+	if not b then return end
+	beam = nil
+	b.conn:Disconnect()
+	for _, p in { b.core, b.glow, b.tip } do
+		TweenService:Create(p, TweenInfo.new(0.2), { Transparency = 1 }):Play()
+		Debris:AddItem(p, 0.25)
+	end
+end
+local function beamTo(model: Instance?, from: Vector3, to: Vector3)
+	if not beam then
+		local core = part({ Shape = Enum.PartType.Cylinder, Color = Color3.fromRGB(245, 225, 255), Transparency = 0 })
+		local glowP = part({ Shape = Enum.PartType.Cylinder, Color = PURPLE, Transparency = 0.45 })
+		local tip = part({ Shape = Enum.PartType.Ball, Size = Vector3.new(5, 5, 5), Color = PURPLE, Transparency = 0.25 })
+		local l = Instance.new("PointLight"); l.Color = PURPLE; l.Range = 34; l.Brightness = 4; l.Shadows = false; l.Parent = tip
+		local sparks = Instance.new("ParticleEmitter")
+		sparks.Texture = "rbxasset://textures/particles/sparkles_main.dds"; sparks.Color = ColorSequence.new(PURPLE, Color3.fromRGB(255, 230, 255))
+		sparks.LightEmission = 1; sparks.Size = NumberSequence.new(1.6, 0); sparks.Speed = NumberRange.new(14, 30); sparks.Lifetime = NumberRange.new(0.2, 0.5)
+		sparks.SpreadAngle = Vector2.new(180, 180); sparks.Rate = 70; sparks.Parent = tip
+		local b = { core = core, glow = glowP, tip = tip, model = model, from = from, to = to, want = to, last = os.clock(), nextZap = 0, conn = nil :: any }
+		b.conn = RunService.RenderStepped:Connect(function(dt)
+			if os.clock() - b.last > 0.6 then beamOff(); return end -- the server went quiet: no beam left hanging
+			b.to = b.to:Lerp(b.want, math.min(1, dt * 14))
+			-- it leaves the gauntlet (his arm is animated on this client), or the server's start point
+			local hand = b.model and b.model:FindFirstChild("RightHand")
+			local a = (hand and hand:IsA("BasePart")) and hand.Position or b.from
+			local len = (b.to - a).Magnitude
+			if len < 0.5 then return end
+			local cf = CFrame.lookAt(a, b.to) * CFrame.new(0, 0, -len / 2) * CFrame.Angles(0, math.pi / 2, 0)
+			local pulse = 1 + math.sin(os.clock() * 40) * 0.12
+			b.core.Size = Vector3.new(len, 1.3 * pulse, 1.3 * pulse); b.core.CFrame = cf
+			b.glow.Size = Vector3.new(len, 3.4 * pulse, 3.4 * pulse); b.glow.CFrame = cf
+			b.tip.CFrame = CFrame.new(b.to)
+			Fx.shake(0.18 * near(b.to, 45) + 0.06 * near(a, 60))
+			if os.clock() >= b.nextZap then
+				b.nextZap = os.clock() + 0.35
+				Sfx.at("TaserZap", a, { PlaybackSpeed = 0.45, Volume = 1.1 })
+				Sfx.at("TaserZap", b.to, { PlaybackSpeed = 0.3, Volume = 0.8 })
+			end
+		end)
+		beam = b
+	end
+	local b = beam :: any
+	b.model = model; b.from = from; b.want = to; b.last = os.clock()
+end
+local lastLaserHit = 0
 
 function MonsterFx.handle(kind: string, ...)
 	local a = { ... }
@@ -541,6 +616,52 @@ function MonsterFx.handle(kind: string, ...)
 		Sfx.at("Whoosh", pos, { PlaybackSpeed = 0.4, Volume = 2 })
 		Sfx.at("GhostScream", pos, { PlaybackSpeed = 0.5, Volume = 1.2 })
 		Fx.shake(0.3 * near(pos, 60))
+	elseif kind == "WarpWind" then
+		-- the Conqueror tears a portal open in front of him
+		local model = a[1]
+		local root = typeof(model) == "Instance" and model:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if root then
+			portal(root.Position + root.CFrame.LookVector * 5, root.CFrame.LookVector, (a[2] or 0.9) + 0.25)
+			Sfx.at("Telekinesis", root.Position, { PlaybackSpeed = 0.6, Volume = 1.4 })
+			Sfx.at(Sfx.voice("WindUp"), root.Position, { PlaybackSpeed = 0.7, Volume = 1.2 })
+		end
+	elseif kind == "Warp" then
+		-- ...and steps out of another one, close to his victim
+		local from, to = a[1], a[2]
+		local cam = workspace.CurrentCamera
+		portal(to, cam.CFrame.Position - to, 0.9)
+		emitter(from, { Color = ColorSequence.new(PURPLE, Color3.fromRGB(20, 6, 30)), LightEmission = 0.6, Size = NumberSequence.new(3, 0),
+			Speed = NumberRange.new(6, 16), Lifetime = NumberRange.new(0.3, 0.7) }, 30, 1.5)
+		Sfx.at("Whoosh", to, { PlaybackSpeed = 0.4, Volume = 1.6 })
+		Sfx.at("Breaker", to, { PlaybackSpeed = 0.7, Volume = 1.4 })
+		Fx.shake(0.45 * near(to, 45))
+		if near(to, 30) > 0 then HUD.toast("HE'S BEHIND YOU", false) end
+	elseif kind == "LaserWind" then
+		-- purple light gathers on the gauntlet
+		local model = a[1]
+		local hand = typeof(model) == "Instance" and (model:FindFirstChild("RightHand") or model:FindFirstChild("HumanoidRootPart")) :: BasePart?
+		if hand then
+			local pe = emitter(hand.Position, { Color = ColorSequence.new(PURPLE), LightEmission = 1, Size = NumberSequence.new(2.2, 0), Speed = NumberRange.new(-18, -10),
+				Shape = Enum.ParticleEmitterShape.Sphere, ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface, Lifetime = NumberRange.new(0.4, 0.6),
+				Texture = "rbxasset://textures/particles/sparkles_main.dds", Rate = 80 }, nil, (a[2] or 1.5) + 0.5)
+			pe.Enabled = true
+			task.delay(a[2] or 1.5, function() pe.Enabled = false end)
+			Sfx.at("Telekinesis", hand.Position, { PlaybackSpeed = 1.3, Volume = 1.6 })
+			Sfx.at(Sfx.voice("Spawn"), hand.Position, { PlaybackSpeed = 0.75, Volume = 1.1 })
+		end
+	elseif kind == "LaserBeam" then
+		if typeof(a[2]) == "Vector3" and typeof(a[3]) == "Vector3" then beamTo(typeof(a[1]) == "Instance" and a[1] or nil, a[2], a[3]) end
+	elseif kind == "LaserEnd" then
+		beamOff()
+	elseif kind == "LaserHit" then
+		-- standing in the beam
+		if os.clock() - lastLaserHit > 0.3 then
+			lastLaserHit = os.clock()
+			HUD.flash(Color3.fromRGB(150, 40, 220), 0.45)
+			Sfx.play("TaserZap", { PlaybackSpeed = 0.7, Volume = 0.8 })
+			HUD.toast("YOU'RE IN THE BEAM - MOVE!", false)
+		end
+		Fx.shake(0.25)
 	elseif kind == "BlackoutExtend" then
 		-- the hunt goes on a little longer (the Party Bear found you again): the dark stays, no new banner
 		blackoutId += 1

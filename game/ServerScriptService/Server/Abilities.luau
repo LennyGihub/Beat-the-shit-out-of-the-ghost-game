@@ -85,6 +85,7 @@ function Abilities.interrupt(g)
 		Remotes.Fx:FireClient(g.ab.victim, "Released") -- knocked out of his grip: the victim drops
 	end
 	if g.ab.kind == "blackout" then fx("BlackoutEnd"); g.model:SetAttribute("Shadow", false) end
+	if g.ab.kind == "warp" then g.model:SetAttribute("Vanish", false) end
 	if g.ab.kind == "steal" then Remotes.Fx:FireAllClients("GoblinUse", g.model, "", "stop", 0) end
 	if g.ab.kind == "levitateThrow" and g.ab.obj then Abilities.dropLevitated(g.ab) end
 	g.ab = nil
@@ -231,6 +232,11 @@ function Abilities.try(g, G, now: number, target: Player?, thrp: BasePart?, dist
 		if dist < a.min or dist > a.max then return false end
 		start(g, G, "wind", a.wind, { dir = flat(thrp.Position - g.hrp.Position), hit = {} })
 		fx("AbilityWind", g.hrp.Position, k)
+	elseif k == "warp" then
+		-- the Conqueror is slow: from far enough he opens a portal, steps in, and comes out a few strides from you
+		if dist < a.min or warded(target) then return false end
+		start(g, G, "wind", a.wind, { victim = target })
+		fx("WarpWind", g.model, a.wind)
 	elseif k == "clones" then
 		if #clones > 0 then return false end
 		start(g, G, "cast", 0.9, {})
@@ -353,6 +359,39 @@ function Abilities.step(g, G, dt: number, now: number, target: Player?, thrp: Ba
 	local function face(p: Vector3)
 		local f = Vector3.new(p.X, pos.Y, p.Z)
 		if (f - pos).Magnitude > 0.1 then g.ao.CFrame = CFrame.lookAt(pos, f).Rotation end
+	end
+	if k == "warp" then
+		g.lv.VectorVelocity = hover(g, hoverY, Vector3.zero)
+		if ab.phase == "wind" then
+			if thrp then face(thrp.Position) end
+			-- he fades into the portal just before the jump and out of the other one just after it
+			if not ab.faded and now >= ab.untilT - 0.3 then
+				ab.faded = true
+				g.model:SetAttribute("Vanish", true)
+			end
+			if now >= ab.untilT then
+				-- out of the portal near his victim: never on top of them, behind their back when there is room
+				local vh = (ab.victim and hrpOf(ab.victim)) or thrp
+				local at = vh and stalkSpot(g, G, vh)
+				if vh and at then
+					local cf = CFrame.lookAt(at, Vector3.new(vh.Position.X, at.Y, vh.Position.Z))
+					g.model:PivotTo(cf)
+					g.ao.CFrame = cf.Rotation
+					g.hrp.AssemblyLinearVelocity = Vector3.zero
+					g.hrp.AssemblyAngularVelocity = Vector3.zero
+					g.path = nil
+					fx("Warp", pos, at)
+					setPhase(g, "out", 0.8) -- he stands there for a moment: time to turn round
+				else
+					g.model:SetAttribute("Vanish", false)
+					finish(g, G, 0.3) -- no room near them right now
+				end
+			end
+		else
+			if now >= ab.untilT - 0.55 then g.model:SetAttribute("Vanish", false) end
+			if now >= ab.untilT then finish(g, G, 0.15) end
+		end
+		return
 	end
 	if k == "titanGrab" then
 		-- the Flayed Giant: grab, then (another player standing) carry the victim over and swing them into that

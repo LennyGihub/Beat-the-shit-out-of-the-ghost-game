@@ -6,7 +6,7 @@
 --   Evolved.step(g, G, ...)     while g.state == "Evo"
 --   Evolved.interrupt(g)        the power was cut short (knocked back, frozen)
 -- Powers (def.power.kind): doubles (Violet Widow), army (Burning Captain), snap (Golden Bear), eat (Bone Giant),
--- armed (Goblin King). The Demon Lord's is his own ability with count = 3 (Abilities levitateThrow).
+-- armed (Goblin King), laser (Golden Conqueror). The Demon Lord's is his own ability with count = 3 (Abilities levitateThrow).
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local Config = require(RS.Shared.Config)
@@ -233,6 +233,61 @@ DRESS.Titan = function(m)
 	end
 end
 
+-- the Golden Conqueror: his war armour. Gold plate over the chest, shoulders, arms and legs, a crested helmet
+-- that leaves the face open, and the gauntlet's stone burning bright.
+DRESS.Conqueror = function(m)
+	local GOLD, GOLD_D, DARK = rgb(190, 140, 40), rgb(118, 84, 26), rgb(30, 24, 30)
+	local METAL = Enum.Material.Metal
+	paint(m, { "UpperTorso", "UpperTorsoRound", "ChestPlate", "ChestPlateRound" }, GOLD, METAL)
+	paint(m, { "LowerTorso", "LowerTorsoRound", "LeftUpperLeg", "LeftUpperLegRound", "RightUpperLeg", "RightUpperLegRound" }, DARK)
+	paint(m, { "LeftLowerLeg", "LeftLowerLegRound", "RightLowerLeg", "RightLowerLegRound", "LeftFoot", "LeftFootRound", "RightFoot", "RightFootRound", "Bracer", "BracerRound" }, GOLD, METAL)
+	paint(m, { "Trim", "ChestBand", "Belt", "BeltRound", "BootCuff", "BootToe", "ShoulderStrap" }, GOLD_D, METAL)
+	paint(m, { "Stitch" }, GOLD_D, METAL)
+	paint(m, { "Eye" }, rgb(200, 150, 255), Enum.Material.Neon)
+	local ut, head = body(m, "UpperTorso"), body(m, "Head")
+	if ut then
+		local w, h, d = ut.Size.X, ut.Size.Y, ut.Size.Z
+		for i = 0, 2 do -- layered chest plates, a point down the middle
+			for _, sx in { -1, 1 } do
+				add(ut, "EvoPlate", Vector3.new(w * 0.52, h * 0.24, 0.3), CFrame.new(sx * w * 0.24, h * 0.3 - i * h * 0.26, -d / 2 - 0.2 - (2 - i) * 0.08) * CFrame.Angles(0, 0, sx * -0.3), i == 1 and GOLD_D or GOLD, METAL)
+			end
+		end
+		add(ut, "EvoSpineGuard", Vector3.new(w * 0.3, h * 0.9, 0.35), CFrame.new(0, 0, d / 2 + 0.2), GOLD_D, METAL)
+	end
+	for _, n in { "LeftUpperArm", "RightUpperArm" } do -- big layered pauldrons
+		local p = body(m, n)
+		if p then
+			local sx = string.find(n, "Left") and -1 or 1
+			add(p, "EvoPauldron", Vector3.new(p.Size.X * 1.55, 0.75, p.Size.Z * 1.6), CFrame.new(sx * 0.15, p.Size.Y / 2 + 0.2, 0) * CFrame.Angles(0, 0, sx * -0.22), GOLD, METAL)
+			add(p, "EvoPauldron", Vector3.new(p.Size.X * 1.35, 0.6, p.Size.Z * 1.45), CFrame.new(sx * 0.4, p.Size.Y / 2 - 0.35, 0) * CFrame.Angles(0, 0, sx * -0.4), GOLD_D, METAL)
+			add(p, "EvoArmBand", Vector3.new(p.Size.X * 1.12, 0.5, p.Size.Z * 1.12), CFrame.new(0, -p.Size.Y * 0.25, 0), GOLD, METAL)
+		end
+	end
+	for _, n in { "LeftUpperLeg", "RightUpperLeg" } do -- thigh plates
+		local p = body(m, n)
+		if p then add(p, "EvoThigh", Vector3.new(p.Size.X * 1.1, p.Size.Y * 0.7, 0.3), CFrame.new(0, 0.1, -p.Size.Z / 2 - 0.1), GOLD, METAL) end
+	end
+	for _, n in { "LeftLowerLeg", "RightLowerLeg" } do -- knee caps
+		local p = body(m, n)
+		if p then add(p, "EvoKnee", Vector3.new(p.Size.X * 1.15, 0.7, 0.5), CFrame.new(0, p.Size.Y / 2 - 0.1, -p.Size.Z / 2 - 0.15), GOLD_D, METAL) end
+	end
+	if head then
+		local w, h, d = head.Size.X, head.Size.Y, head.Size.Z
+		add(head, "EvoHelm", Vector3.new(w * 1.14, h * 0.5, d * 1.14), CFrame.new(0, h * 0.34, 0.05), GOLD, METAL)
+		add(head, "EvoHelmBrow", Vector3.new(w * 1.2, 0.3, 0.4), CFrame.new(0, h * 0.13, -d / 2 - 0.1), GOLD_D, METAL)
+		add(head, "EvoHelmBack", Vector3.new(w * 1.1, h * 0.75, 0.4), CFrame.new(0, -h * 0.05, d / 2 + 0.1), GOLD, METAL)
+		for _, sx in { -1, 1 } do
+			add(head, "EvoCheekGuard", Vector3.new(0.35, h * 0.72, d * 0.62), CFrame.new(sx * (w / 2 + 0.1), -h * 0.12, 0.1), GOLD, METAL)
+			add(head, "EvoFin", Vector3.new(0.25, h * 0.75, d * 0.5), CFrame.new(sx * w * 0.42, h * 0.72, 0.15) * CFrame.Angles(-0.25, 0, sx * -0.28), GOLD_D, METAL)
+		end
+		add(head, "EvoCrest", Vector3.new(0.4, h * 0.42, d * 1.05), CFrame.new(0, h * 0.68, 0.1), GOLD_D, METAL)
+	end
+	for _, g in named(m, { "Gem" }) do
+		g.Size *= 1.35
+		for _, l in g:GetChildren() do if l:IsA("PointLight") then l.Range = 15; l.Brightness = 1.8 end end
+	end
+end
+
 function Evolved.dress(m: Model, def: any)
 	local f = DRESS[def.id]
 	if f then
@@ -298,6 +353,7 @@ function Evolved.interrupt(g)
 		if e and e.kind == "doubles" then g.model:SetAttribute("Vanish", false) end
 	end
 	if e and e.obj then Abilities.ungrip(e.obj) end
+	if e and e.kind == "laser" then Remotes.Fx:FireAllClients("LaserEnd") end -- knocked back: the beam cuts out
 	g.nextPower = os.clock() + 4
 end
 
@@ -321,6 +377,12 @@ function Evolved.chase(g, G, now: number, target: Player?, thrp: BasePart?, dist
 		begin(g, G, k, 0.8)
 		Remotes.Fx:FireAllClients("AbilityWind", g.hrp.Position, "army")
 		toastAll("THE CAPTAIN THROWS HIS CREW AT YOU - PUNCH THEM APART!")
+		return true
+	elseif k == "laser" then
+		if dist < 9 or dist > P.range * 0.7 or target:GetAttribute("Warded") then return false end
+		begin(g, G, k, P.wind, { phase = "charge" })
+		Remotes.Fx:FireAllClients("LaserWind", g.model, P.wind)
+		toastAll("THE GAUNTLET IS CHARGING - STAY OUT OF THE BEAM!")
 		return true
 	elseif k == "snap" then
 		if dist < P.min or dist > P.max or target:GetAttribute("Warded") or Fury.inGrace(target) then return false end
@@ -452,6 +514,73 @@ function Evolved.step(g, G, dt: number, now: number, target: Player?, thrp: Base
 			end)
 		end
 		done(g, G, P, 0.5)
+	elseif k == "laser" then
+		-- THE GAUNTLET'S BEAM: charged for P.wind, then fired for P.t. It swings after the target slowly (P.turn
+		-- degrees a second), cuts the inside walls and the furniture in its way, and burns whoever stands in it.
+		if e.phase == "charge" then
+			if thrp then face(thrp.Position) end
+			if now < g.stateUntil then return end
+			e.phase = "fire"
+			e.untilT = now + P.t
+			e.dir = thrp and flat(thrp.Position - pos) or flat(g.hrp.CFrame.LookVector)
+			e.nextTick = 0
+			g.stateUntil = now + P.t + 2
+		end
+		if thrp then
+			local want = flat(thrp.Position - pos)
+			local ang = math.atan2(e.dir:Cross(want).Y, e.dir:Dot(want))
+			local lim = math.rad(P.turn) * dt
+			e.dir = CFrame.Angles(0, math.clamp(ang, -lim, lim), 0):VectorToWorldSpace(e.dir)
+			-- its height follows the target at once (stairs, a knocked-down player): only the sweep is slow
+			e.aimY = thrp.Position.Y
+			e.aimD = math.max(8, Vector3.new(thrp.Position.X - pos.X, 0, thrp.Position.Z - pos.Z).Magnitude)
+		end
+		face(pos + e.dir)
+		if now >= e.nextTick then
+			local tick = 0.1
+			e.nextTick = now + tick
+			local from = pos + e.dir * 3 + Vector3.new(0, 1.2, 0)
+			local dir3 = e.dir
+			if e.aimY then dir3 = (e.dir * e.aimD + Vector3.new(0, e.aimY - from.Y, 0)).Unit end
+			-- through the house: an inside wall in its way is cut open and it goes on; the first thing that holds
+			-- (an outside wall, a floor, the stairs) ends it
+			local cur, left = from, P.range
+			local endPt = from + dir3 * left
+			for _ = 1, 8 do
+				local r = workspace:Raycast(cur, dir3 * left, g.rp)
+				if not r then endPt = cur + dir3 * left; break end
+				if Ragdoll.breakWalls(r.Position + dir3 * 0.6, dir3 * 60, 5, 5) > 0 then
+					Remotes.Fx:FireAllClients("WallSmash", r.Position, 90)
+					left -= r.Distance + 1.4
+					cur = r.Position + dir3 * 1.4
+					endPt = cur + dir3 * math.max(0, left)
+					if left <= 1 then break end
+				else
+					endPt = r.Position
+					break
+				end
+			end
+			local len = (endPt - from).Magnitude
+			for d = 3, len, 6 do
+				for _, f in Furniture.near(from + dir3 * d, 3.5) do Furniture.smash(f, dir3 * 70 + Vector3.new(0, 25, 0), 100) end
+			end
+			-- no block, no knockback, no instant kill: it just burns while you stand in it
+			for _, p in Players:GetPlayers() do
+				local hrp = p:GetAttribute("InMatch") and hrpOf(p)
+				if hrp and not p:GetAttribute("Warded") then
+					local along = math.clamp((hrp.Position - from):Dot(dir3), 0, len)
+					if (hrp.Position - (from + dir3 * along)).Magnitude <= P.width then
+						G.damagePlayer(p, P.dps * g.dmgMult * tick, nil, Vector3.zero)
+						Remotes.Fx:FireClient(p, "LaserHit")
+					end
+				end
+			end
+			Remotes.Fx:FireAllClients("LaserBeam", g.model, from, endPt)
+		end
+		if now >= e.untilT then
+			Remotes.Fx:FireAllClients("LaserEnd")
+			done(g, G, P, 0.9)
+		end
 	elseif k == "snap" then
 		local victim = e.victim :: Player
 		local vh = hrpOf(victim)

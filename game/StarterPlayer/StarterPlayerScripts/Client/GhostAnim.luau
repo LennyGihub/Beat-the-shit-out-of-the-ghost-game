@@ -75,7 +75,19 @@ local function abilityPose(ab: string, phase: string, t: number, since: number):
 	local s = math.sin
 	local p = {}
 	local a = math.min(1, since / 0.35)
-	if ab == "blackout" then -- stalking in the dark: hunched, arms reaching, head cocked
+	if ab == "warp" then
+		if phase == "wind" then -- the gauntlet raised in front of him, tearing a portal open
+			p.Root = A(-0.08 * a, 0, 0); p.Waist = A(-0.1 * a, -0.25 * a, 0); p.Neck = A(0.1, 0.2 * a, 0)
+			p.RightShoulder = A(1.75 * a, 0, -0.15 * a); p.RightElbow = A(0.2, 0, 0); p.RightWrist = A(-0.5 * a + s(t * 30) * 0.06, 0, 0)
+			p.LeftShoulder = A(-0.25, 0, -0.2); p.LeftElbow = A(0.5, 0, 0)
+			p.RightHip = A(-0.2, 0, 0.1); p.LeftHip = A(0.25, 0, -0.1)
+		else -- stepping out: one stride, arms loose, looking down at you
+			p.Root = A(0.1, 0, 0); p.Waist = A(0.12, 0, 0); p.Neck = A(0.2, 0, 0)
+			p.RightShoulder = A(0.3, 0, 0.15); p.LeftShoulder = A(-0.2, 0, -0.15)
+			p.RightElbow = A(0.5, 0, 0); p.LeftElbow = A(0.5, 0, 0)
+			p.RightHip = A(0.55, 0, 0); p.LeftHip = A(-0.35, 0, 0); p.RightKnee = A(-0.4, 0, 0)
+		end
+	elseif ab == "blackout" then -- stalking in the dark: hunched, arms reaching, head cocked
 		p.Root = A(0.15, 0, 0); p.Waist = A(0.25, 0, 0); p.Neck = A(-0.3, 0, 0.35 + s(t * 0.7) * 0.1)
 		p.RightShoulder = A(1.2, 0, -0.15); p.LeftShoulder = A(1.2, 0, 0.15)
 		p.RightElbow = A(0.4, 0, 0); p.LeftElbow = A(0.4, 0, 0)
@@ -315,7 +327,17 @@ local function target(state: string, t: number, sinceState: number): { [string]:
 	if state == "Ability" then
 		return abilityPose(g:GetAttribute("Ability") or "", g:GetAttribute("AbilityPhase") or "", t, sinceState)
 	end
-	if (state == "WindUp" or state == "Swipe") and g:GetAttribute("MonsterId") == "Goblin" then
+	-- the Golden Conqueror's beam: braced, the gauntlet held straight out (a little shake from the recoil)
+	if state == "Laser" then
+		local a = math.min(1, sinceState / 0.5)
+		p.Root = A(-0.06, 0, 0); p.Waist = A(-0.08, -0.3 * a, 0); p.Neck = A(0.05, 0.3 * a, 0)
+		p.RightShoulder = A(1.55 * a + s(t * 38) * 0.02, 0, -0.1); p.RightElbow = A(0.05, 0, 0); p.RightWrist = A(-0.35 * a, 0, 0)
+		p.LeftShoulder = A(0.9 * a, 0, 0.7 * a); p.LeftElbow = A(1.3 * a, 0, 0) -- left hand steadying the forearm
+		p.RightHip = A(-0.35, 0, 0.12); p.LeftHip = A(0.35, 0, -0.12); p.LeftKnee = A(-0.3, 0, 0); p.RightKnee = A(-0.15, 0, 0)
+		return p
+	end
+	-- the Goblin and the Conqueror punch (haymakers and a two-fisted slam) instead of clawing
+	if (state == "WindUp" or state == "Swipe") and (g:GetAttribute("MonsterId") == "Goblin" or g:GetAttribute("MonsterId") == "Conqueror") then
 		return goblinClaw(state, t, sinceState)
 	end
 	if (state == "WindUp" or state == "Swipe") and g:GetAttribute("MonsterId") == "Pirate" then
@@ -423,7 +445,8 @@ function GA.update(dt: number)
 	local t = os.clock()
 	local state = current:GetAttribute("State") or "Chase"
 	-- Fury moves reuse the attack poses: roar / lunge crouch = wind-up, lunge dash = swipe
-	if state == "Roar" or state == "Evo" then state = "WindUp"
+	if state == "Evo" and current:GetAttribute("EvoPower") == "laser" then state = "Laser"
+	elseif state == "Roar" or state == "Evo" then state = "WindUp"
 	elseif state == "Lunge" then state = current:GetAttribute("FuryPhase") == "dash" and "Swipe" or "WindUp" end
 	local ph = current:GetAttribute("AbilityPhase") or ""
 	if ph ~= phaseSeen then phaseSeen = ph; phaseT = t end

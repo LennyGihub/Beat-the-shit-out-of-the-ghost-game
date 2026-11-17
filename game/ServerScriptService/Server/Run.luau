@@ -155,6 +155,12 @@ function Run.startFight()
 	else
 		def = Monsters.pickFresh(seenMonsters, { lastMonster }, rng, true)
 	end
+	-- the secret monster: a small chance on any ghost after the first (it takes that ghost's place, evolved or not,
+	-- and is not part of the no-repeat sets)
+	if level > 1 then
+		local secret = Monsters.secretRoll(rng)
+		if secret and secret.id ~= lastMonster then def = secret end
+	end
 	local forced = RS:GetAttribute("AdminMonster") or (RunService:IsStudio() and RS:GetAttribute("DebugMonster")) -- admin panel / Studio hook
 	if type(forced) == "string" and Monsters.byId[forced] then def = Monsters.byId[forced] end
 	local forcedEvo = RS:GetAttribute("AdminEvolved") or (RunService:IsStudio() and RS:GetAttribute("DebugEvolved")) -- admin 'evolved on'

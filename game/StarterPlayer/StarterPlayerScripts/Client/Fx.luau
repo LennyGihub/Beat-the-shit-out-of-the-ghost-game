@@ -421,10 +421,10 @@ function Fx.handle(kind: string, ...)
 	elseif kind == "Intro" then
 		-- args: ghost number, monster title, rarity
 		local rar = args[3] or 0
-		local tag = rar == 3 and "LEGENDARY - " or (rar == 2 and "RARE - " or "")
+		local tag = rar == 4 and "SECRET MONSTER - " or (rar == 3 and "LEGENDARY - " or (rar == 2 and "RARE - " or ""))
 		if args[4] then
 			-- an EVOLVED monster (every 3rd ghost)
-			HUD.banner(args[2] or "SOMETHING WORSE", "EVOLVED MONSTER - GHOST " .. tostring(args[1]), 5)
+			HUD.banner(args[2] or "SOMETHING WORSE", (rar == 4 and "SECRET " or "") .. "EVOLVED MONSTER - GHOST " .. tostring(args[1]), 5)
 			Sfx.play("GhostWhisper", { Volume = 1.2, PlaybackSpeed = 0.6 })
 			Sfx.play("Ultimate", { Volume = 0.6, PlaybackSpeed = 0.5 })
 			Fx.shake(0.5)

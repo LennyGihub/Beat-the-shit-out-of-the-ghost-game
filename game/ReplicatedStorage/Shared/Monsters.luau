@@ -5,6 +5,9 @@
 -- hover = root height above the floor (floaters ~4.6, walkers = their hip height).
 -- ability = what the Abilities module runs (cd = seconds between uses).
 -- objTaken = damage multiplier for thrown objects (furniture, thrown items); 1 if left out.
+-- secret = never in the normal rotation: any ghost after the first has SECRET_CHANCE to be it instead (rarity 4).
+-- smasher = every last swipe of a combo launches you through the inside walls (like an enraged / evolved monster);
+-- smash = how hard.
 export type Monster = {
 	id: string, name: string, title: string, rarity: number, template: string, color: Color3,
 	hp: number, speed: number, dmg: number, reward: number, hover: number, walker: boolean, scale: number,
@@ -51,7 +54,17 @@ local List: { Monster } = {
 		hp = 1.25, speed = 1.08, dmg = 1, reward = 1.6, hover = 0, walker = true, scale = 1, solid = true,
 		ability = { kind = "steal", cd = 6, range = 11 }, -- grabs the item in your hands, then uses it on you
 		desc = "Steals the item in your hands and uses it against you. Knock him out to get it back." }),
+	-- THE SECRET ONE: a huge purple warlord with a golden gauntlet. Slow on his feet, so he steps through a portal
+	-- and comes out behind you (warp: from `min` studs away, `wind` seconds of warning); his fist sends you through
+	-- the walls, and he punches his own way through them rather than use a door.
+	m({ id = "Conqueror", name = "The Conqueror", title = "THE CONQUEROR", rarity = 4, secret = true, template = "Conqueror", color = C(150, 104, 190),
+		hp = 1.5, speed = 0.8, dmg = 1.3, reward = 2.5, hover = 0, walker = true, scale = 1, solid = false,
+		reach = 1.25, wallBreaker = true, smasher = true, smash = 1.5,
+		ability = { kind = "warp", cd = 9, min = 20, wind = 0.9 },
+		desc = "A warlord from somewhere else. Slow, but he steps out of a portal behind you, and one punch sends you through the walls." }),
 }
+-- chance that a ghost (after the first) is the secret monster: far below any other monster's
+local SECRET_CHANCE = 0.03
 
 local byId: { [string]: Monster } = {}
 for _, d in List do byId[d.id] = d end
@@ -67,7 +80,7 @@ local function pick(wave: number, last: string?, rng: Random): Monster
 		if x <= 0 then rar = i; break end
 	end
 	local pool = {}
-	for _, d in List do if d.rarity == rar and d.id ~= last then table.insert(pool, d) end end
+	for _, d in List do if d.rarity == rar and d.id ~= last and not (d :: any).secret then table.insert(pool, d) end end
 	if #pool == 0 then return byId.Woman end
 	return pool[rng:NextInteger(1, #pool)]
 end
@@ -95,6 +108,11 @@ local EVO: { [string]: { [string]: any } } = {
 	Animatronic = { title = "THE GOLDEN BEAR", color = C(240, 200, 70), scale = 1.08,
 		power = { kind = "snap", cd = 9, min = 9, max = 70, wind = 0.75, dmg = 18, wall = 118, up = 105 },
 		desc = "Golden. He snaps his fingers and you fly into the wall or up into the ceiling: break his line of sight." },
+	-- gold armour and a helmet; everything the Conqueror does, plus the gauntlet's beam: it turns after you slowly
+	-- (turn = degrees per second), cuts through furniture and inside walls, and burns for `dps` while you stand in it
+	Conqueror = { title = "THE GOLDEN CONQUEROR", color = C(232, 186, 70), scale = 1.1,
+		power = { kind = "laser", cd = 13, wind = 1.5, t = 6, range = 140, turn = 24, dps = 42, width = 3 },
+		desc = "In his golden war armour. The gauntlet fires a slow purple beam that cuts through the house: never stand in it." },
 	Titan = { title = "THE BONE GIANT", color = C(226, 214, 190), scale = 1.08,
 		power = { kind = "eat", cd = 10, below = 0.85, range = 17, t = 1.5, heal = 0.07, wallHeal = 0.04 },
 		desc = "More bone than flesh. He eats the furniture and the walls to heal: hit him while he chews." },
@@ -123,9 +141,9 @@ local function evolved(id: string, tier: number): Monster
 	d.speed = base.speed * T.speed
 	d.dmg = base.dmg * T.dmg
 	d.atk = T.atk -- attack / ability cooldown multiplier
-	d.smash = T.smash -- how much harder its punch launches you
+	d.smash = math.max(T.smash, (base :: any).smash or 0) -- how much harder its punch launches you
 	d.reward = base.reward * 2
-	d.rarity = 3
+	d.rarity = (base :: any).secret and 4 or 3
 	evoCache[key] = d
 	return d
 end
@@ -141,7 +159,7 @@ local function pickFresh(seen: { [string]: boolean }, avoid: { string? }, rng: R
 	local function pool(): { Monster }
 		local out = {}
 		for _, d in List do
-			if not seen[d.id] and d.id ~= avoid[1] and d.id ~= avoid[2] then table.insert(out, d) end
+			if not seen[d.id] and d.id ~= avoid[1] and d.id ~= avoid[2] and not (d :: any).secret then table.insert(out, d) end
 		end
 		return out
 	end
@@ -151,7 +169,7 @@ local function pickFresh(seen: { [string]: boolean }, avoid: { string? }, rng: R
 		table.clear(seen)
 		list = pool()
 	end
-	if #list == 0 then list = List end
+	if #list == 0 then list = { byId.Woman } end
 	local total = 0
 	for _, d in list do total += weighted and (WEIGHT[d.rarity] or 15) or 1 end
 	local x = rng:NextNumber(0, total)
@@ -164,4 +182,12 @@ local function pickFresh(seen: { [string]: boolean }, avoid: { string? }, rng: R
 	return choice
 end
 
-return { list = List, byId = byId, rarity = RARITY, pick = pick, pickFresh = pickFresh, evolved = evolved, isEvolvedWave = isEvolvedWave, evo = EVO }
+-- the secret monster, when this ghost is one (roll once per ghost)
+local function secretRoll(rng: Random): Monster?
+	if rng:NextNumber() >= SECRET_CHANCE then return nil end
+	for _, d in List do if (d :: any).secret then return d end end
+	return nil
+end
+
+return { list = List, byId = byId, rarity = RARITY, pick = pick, pickFresh = pickFresh, evolved = evolved, isEvolvedWave = isEvolvedWave, evo = EVO,
+	secretRoll = secretRoll, secretChance = SECRET_CHANCE }
