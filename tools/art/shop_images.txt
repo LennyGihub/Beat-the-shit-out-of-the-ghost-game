@@ -68,3 +68,6 @@ btg_cash4|512x512|an open steel bank vault door full of gold bars and stacks of 
 btg_pass_money2|512x512|two tall stacks of green dollar bills glowing with a green aura, black background
 btg_pass_glock|512x512|a black semi-automatic pistol handgun, side view, black background
 btg_pass_admin|512x512|a golden crown resting on a red velvet cushion with an old key, black background
+btg_pass_doubleult|512x512|two clenched fists side by side, one wreathed in orange fire and the other crackling with blue lightning, black background
+btg_pass_vip|512x512|a small wooden log cabin at night with warm golden light pouring from its windows and a golden star above the door, black background
+btg_pass_second|512x512|a glowing red heart with a golden halo floating above an old tombstone, black background
