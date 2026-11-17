@@ -26,8 +26,8 @@
    "file": "ReplicatedStorage/Shared/Config.luau",
    "instance": "game.ReplicatedStorage.Shared.Config",
    "class": "ModuleScript",
-   "bytes": 8412,
-   "sha1": "7573efd45a1334f9ec54eac3882d3670d8a14463"
+   "bytes": 8428,
+   "sha1": "88b4a549a189fdda20726de1bdc91f357ac5bb01"
   },
   {
    "file": "ReplicatedStorage/Shared/Entrances.luau",

@@ -24,7 +24,7 @@ local Config = {
 		KnockBonus = 1.0, -- full charge: knockback x2 (big enough to knock monsters out)
 		StaminaBonus = 1.5, -- full charge costs x2.5 stamina
 	},
-	Stamina = { Max = 200, Regen = 52, RegenDelay = 0.7, ThrowCost = 12, SprintPerSecond = 14 }, -- twice the old 100 (same refill time)
+	Stamina = { Max = 400, Regen = 104, RegenDelay = 0.7, ThrowCost = 12, SprintPerSecond = 14 }, -- doubled twice (100 -> 200 -> 400), same refill time
 	-- blocking (hold right click): hits from the front do Damage x, cost Cost + hit x PerDamage stamina; out of stamina =
 	-- guard break (full hit, no blocking for BreakTime). No attacking, no sprinting, slower walk and no stamina regen.
 	Block = { Damage = 0.25, Knock = 0.35, Cost = 6, PerDamage = 0.6, FrontDot = 0.15, WalkMult = 0.55, BreakTime = 1.5 },
