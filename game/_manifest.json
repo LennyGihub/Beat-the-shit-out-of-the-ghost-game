@@ -26,8 +26,8 @@
    "file": "ReplicatedStorage/Shared/Maps.luau",
    "instance": "game.ReplicatedStorage.Shared.Maps",
    "class": "ModuleScript",
-   "bytes": 4546,
-   "sha1": "3c0251ca4b43c1787864c2885b20275781973ead"
+   "bytes": 4601,
+   "sha1": "89d61025216329bc6a48fdbef47e8e958a4e92cf"
   },
   {
    "file": "ReplicatedStorage/Shared/Monsters.luau",
