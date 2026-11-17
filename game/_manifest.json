@@ -89,8 +89,8 @@
    "file": "ReplicatedStorage/Shared/Sounds.luau",
    "instance": "game.ReplicatedStorage.Shared.Sounds",
    "class": "ModuleScript",
-   "bytes": 6777,
-   "sha1": "bc4f8ac8e1996e5121b57f7605c8029b6a423e77"
+   "bytes": 6937,
+   "sha1": "72f87904e65e66c43d47d859867bbcff5d36afb8"
   },
   {
    "file": "ReplicatedStorage/Shared/Ultimates.luau",
