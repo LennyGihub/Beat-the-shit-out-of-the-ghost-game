@@ -288,12 +288,54 @@ local THEMES = {
 	Motel = { trim = C3(70, 40, 44), light = C3(255, 150, 190), wall = { "picture", "neon", "mirror", "poster", "stain", "vent", "cracks" }, floor = { "bottles", "cans", "papers", "stain", "suitcase" }, kit = { "chair", "side", "lamp", "crate" }, ext = "rust", beams = false },
 	Ship = { trim = C3(60, 44, 32), light = C3(255, 190, 110), wall = { "rope", "lantern", "shelf", "chains", "cracks" }, floor = { "ropecoil", "fish", "planks", "puddle", "bottles" }, kit = { "barrel", "barrel", "crate", "crate", "bench" }, ext = "none", beams = false },
 	Farm = { trim = C3(70, 50, 36), light = C3(255, 190, 110), wall = { "tools", "lantern", "shelf", "rope", "cracks" }, floor = { "hay", "hay", "planks", "sawdust", "bottles" }, kit = { "barrel", "crate", "crate", "bench", "chair" }, ext = "ivy", beams = true },
-	Asylum = { trim = C3(80, 96, 90), light = C3(200, 225, 215), wall = { "tally", "chains", "stain", "vent", "cracks", "pipes", "firstaid" }, floor = { "pills", "papers", "stain", "rubble", "puddle" }, kit = { "stool", "crate", "side" }, ext = "ivy", beams = false, stains = { BLOOD, C3(50, 60, 44), C3(60, 50, 34) } },
+	Asylum = { trim = C3(52, 42, 36), light = C3(255, 206, 140), wall = { "tally", "chains", "stain", "vent", "cracks", "pipes", "firstaid" }, floor = { "pills", "papers", "stain", "rubble", "puddle" }, kit = { "stool", "crate", "side" }, ext = "ivy", beams = false, stains = { BLOOD, C3(50, 60, 44), C3(60, 50, 34) } },
 	Hotel = { trim = C3(70, 30, 26), light = C3(255, 200, 140), wall = { "picture", "picture", "mirror", "sconce", "plaque", "clock" }, floor = { "suitcase", "papers", "shards", "stain", "bottles" }, kit = { "chair", "side", "lamp", "bust", "bench" }, ext = "ivy", beams = false, frame = C3(176, 140, 60) },
 	Prison = { trim = C3(60, 62, 66), light = C3(210, 220, 235), wall = { "pipes", "vent", "tally", "chains", "fusebox", "stain", "cracks" }, floor = { "tray", "rubble", "puddle", "stain", "cans" }, kit = { "stool", "crate", "bench", "barrel" }, ext = "rust", beams = false },
 	Factory = { trim = C3(70, 60, 50), light = C3(255, 200, 140), wall = { "pipes", "gauge", "hazard", "fusebox", "vent", "shelf", "poster" }, floor = { "gears", "sawdust", "dollparts", "stain", "planks" }, kit = { "crate", "crate", "barrel", "stool", "lamp" }, ext = "rust", beams = true, stains = { C3(30, 28, 26), C3(60, 44, 24) } },
 	Funeral = { trim = C3(50, 36, 44), light = C3(255, 190, 130), wall = { "wreath", "candles", "cross", "picture", "sconce", "mirror" }, floor = { "petals", "candlestubs", "papers", "stain" }, kit = { "chair", "bust", "side", "lamp", "bench" }, ext = "ivy", beams = false },
 }
+
+-- Where nothing may be dropped, because the monster has to get through (its pathfinding needs ~6 clear studs):
+-- every doorway (read from the wall models: a top "Frame" with no window "Sill" under it) and the map's KeepClear
+-- parts (corridors, gallery walks, the floor in front of a stair; maplib's keepClear). Returns a test (x, floorY, z).
+local function noGoTest(MP)
+	local zones = {}
+	local kc = MP:FindFirstChild("KeepClear")
+	if kc then
+		for _, p in kc:GetChildren() do
+			if p:IsA("BasePart") then
+				table.insert(zones, { p.Position.X - p.Size.X / 2, p.Position.Z - p.Size.Z / 2, p.Position.X + p.Size.X / 2, p.Position.Z + p.Size.Z / 2, p.Position.Y - p.Size.Y / 2 - 1.5, p.Position.Y + p.Size.Y / 2 })
+			end
+		end
+	end
+	local Sx = MP:FindFirstChild("Structure")
+	for _, w in (Sx and Sx:GetDescendants() or {}) do
+		if w:IsA("Model") then
+			local sills = {}
+			for _, c in w:GetChildren() do if c:IsA("BasePart") and (c.Name == "Sill" or c.Name == "Glass") then table.insert(sills, c.Position) end end
+			for _, f in w:GetChildren() do
+				if f:IsA("BasePart") and f.Name == "Frame" and f.Size.Y < 0.75 then
+					local alongX = f.Size.X > f.Size.Z
+					local half = (alongX and f.Size.X or f.Size.Z) / 2 - 0.6
+					local window = false
+					for _, sp in sills do if math.abs(sp.X - f.Position.X) < 1 and math.abs(sp.Z - f.Position.Z) < 1 then window = true; break end end
+					if not window and half >= 2 then
+						local ha, hp = half + 1.5, 6
+						local floor = f.Position.Y < 22.5 and 2 or 23
+						local x, z = f.Position.X, f.Position.Z
+						table.insert(zones, alongX and { x - ha, z - hp, x + ha, z + hp, floor - 1.5, floor + 8 } or { x - hp, z - ha, x + hp, z + ha, floor - 1.5, floor + 8 })
+					end
+				end
+			end
+		end
+	end
+	return function(x, y, z)
+		for _, zn in zones do
+			if x > zn[1] and x < zn[3] and z > zn[2] and z < zn[4] and y > zn[5] and y < zn[6] then return true end
+		end
+		return false
+	end
+end
 
 local function wipe(M)
 	local n = 0
@@ -318,6 +360,7 @@ local function detail(MP, id) -- (M is Enum.Material in lib2)
 	local rp = RaycastParams.new(); rp.FilterType = Enum.RaycastFilterType.Include; rp.FilterDescendantsInstances = { S }
 	local op = OverlapParams.new(); op.FilterType = Enum.RaycastFilterType.Include; op.FilterDescendantsInstances = { S, FURN, DEC }
 
+	local noGo = noGoTest(MP)
 	-- the play area = where the furniture stands
 	local mn, mx = Vector3.new(1e9, 1e9, 1e9), Vector3.new(-1e9, -1e9, -1e9)
 	for _, f in FURN:GetChildren() do
@@ -388,7 +431,8 @@ local function detail(MP, id) -- (M is Enum.Material in lib2)
 			local x, z = R(mn.X - 2, mx.X + 2), R(mn.Z - 2, mx.Z + 2)
 			local y0 = R(mn.Y, mx.Y + 1) + 6
 			local down = workspace:Raycast(Vector3.new(x, y0, z), Vector3.new(0, -14, 0), rp)
-			if down and down.Normal.Y > 0.9 then
+			if down and down.Instance:FindFirstAncestor("Stairs") then down = nil end -- nothing on the steps
+			if down and down.Normal.Y > 0.9 and not (room >= 4 and noGo(x, down.Position.Y, z)) then -- (flat clutter may lie anywhere)
 				local fy = down.Position.Y
 				if workspace:Raycast(Vector3.new(x, fy + 2, z), Vector3.new(0, 60, 0), rp) then
 					local clear = true
@@ -469,21 +513,41 @@ local function detail(MP, id) -- (M is Enum.Material in lib2)
 		for _, f in faces do
 			local n, depth, half = f[1], f[2], f[3]
 			local right = Vector3.yAxis:Cross(n)
+			-- a w x h patch only goes where solid outside wall is behind its whole face (never across a doorway or a
+			-- window): returns its centre flush on the wall, or nil
+			local function onWall(p0, w, h)
+				local centre = nil
+				for _, o in { { 0, 0 }, { -w / 2, -h / 2 }, { w / 2, -h / 2 }, { -w / 2, h / 2 }, { w / 2, h / 2 } } do
+					local from = p0 + right * (o[1] * 0.9) + Vector3.yAxis * (o[2] * 0.9) + n * 4
+					local hit = workspace:Raycast(from, -n * 8, rp)
+					if not hit or (hit.Instance.Name ~= "Wall" and hit.Instance.Name ~= "Gable") or not hit.Instance:IsDescendantOf(EXT.Parent) then return nil end
+					centre = centre or hit.Position
+				end
+				return centre
+			end
 			for i = 1, 9 do
 				local t = R(-half + 6, half - 6)
 				local at = c + n * (depth + 0.12) + right * t
 				if TH.ext == "ivy" then
 					local hgt = R(6, esz.Y * 0.8)
 					for k = 1, 5 do
-						local ip = Vector3.new(at.X, base + R(0, hgt), at.Z) + right * R(-2.5, 2.5)
-						d(DET, "Ivy", R(1.6, 3.4), R(1.6, 3.6), 0.25, CFrame.lookAt(ip, ip + n) * CFrame.Angles(0, 0, R(-0.3, 0.3)), pick({ C3(40, 70, 40), C3(32, 58, 36), C3(52, 82, 44) }), M.Sand)
+						local w, h = R(1.6, 3.4), R(1.6, 3.6)
+						local ip = onWall(Vector3.new(at.X, base + R(0, hgt), at.Z) + right * R(-2.5, 2.5), w, h)
+						if ip then
+							ip += n * 0.13
+							d(DET, "Ivy", w, h, 0.25, CFrame.lookAt(ip, ip + n) * CFrame.Angles(0, 0, R(-0.3, 0.3)), pick({ C3(40, 70, 40), C3(32, 58, 36), C3(52, 82, 44) }), M.Sand)
+							counts.ext += 1
+						end
 					end
-					counts.ext += 5
 				else
-					local rp2 = Vector3.new(at.X, top - R(5, 11), at.Z)
-					local s = d(DET, "RustStreak", R(0.8, 2), R(5, esz.Y * 0.5), 0.1, CFrame.lookAt(rp2, rp2 + n), pick({ C3(110, 60, 30), C3(70, 50, 36), C3(50, 52, 50) }))
-					s.Transparency = 0.35
-					counts.ext += 1
+					local w, h = R(0.8, 2), R(5, esz.Y * 0.5)
+					local rp2 = onWall(Vector3.new(at.X, top - R(5, 11), at.Z), w, h)
+					if rp2 then
+						rp2 += n * 0.06
+						local s = d(DET, "RustStreak", w, h, 0.1, CFrame.lookAt(rp2, rp2 + n), pick({ C3(110, 60, 30), C3(70, 50, 36), C3(50, 52, 50) }))
+						s.Transparency = 0.35
+						counts.ext += 1
+					end
 				end
 			end
 			for _, t in { -half * 0.5, half * 0.5 } do -- a wall lamp either side of each face

@@ -34,6 +34,17 @@ local function gspawn(x, y, z)
 	p.Transparency = 1; p.Size = Vector3.one; p.Position = Vector3.new(x, y + 4.6, z); p.Parent = GSP
 end
 
+-- a floor rectangle the furnish / detail passes leave empty (a corridor, a gallery walk, the foot of a stair):
+-- an invisible marker part in MAP.KeepClear, no collision, never hit by a ray
+local function keepClear(x1, z1, x2, z2, y)
+	local kc = MAP:FindFirstChild("KeepClear")
+	if not kc then kc = Instance.new("Folder"); kc.Name = "KeepClear"; kc.Parent = MAP end
+	local p = Instance.new("Part"); p.Name = "Zone"; p.Anchored = true; p.CanCollide = false; p.CanQuery = false; p.CanTouch = false
+	p.Transparency = 1; p.CastShadow = false
+	p.Size = Vector3.new(math.abs(x2 - x1), 8, math.abs(z2 - z1)); p.Position = Vector3.new((x1 + x2) / 2, y + 4, (z1 + z2) / 2)
+	p.Parent = kc
+end
+
 ---------------------------------------------------------------- walls (same as the Mansion's)
 local function mapS(along, fixed, s, y, d) if along == "x" then return s, y, fixed + d end return fixed + d, y, s end
 local function boxS(m, name, along, fixed, s1, y1, d1, s2, y2, d2, sty, o)
@@ -201,6 +212,197 @@ local function stairs(x1, x2, zStart)
 	for _, x in { x1 - 0.3, x2 + 0.3 } do
 		part(stc, "Handrail", Vector3.new(0.4, 0.4, math.sqrt(31.5 ^ 2 + 21 ^ 2)), CFrame.new(x, F1 + 14.6, zStart - 15.75) * CFrame.Angles(th, 0, 0), T.trim, DECO)
 	end
+end
+
+---------------------------------------------------------------- stair kit
+-- Proper staircases (blocky PS2 style): solid steps with nosings, a guard on every open side (a solid half wall
+-- with a cap = S.kind "parapet", or stringer + balusters + handrail = "balusters"), chunky end posts, a handrail
+-- on the wall sides, and guards round the opening in the upper floor. maps/stairs.luau (the stair pass) puts them
+-- into the maps; `stairs` above is the old plain flight the map files still call (the pass replaces it).
+-- S = { step = style, trim = style, wall = style, kind = "parapet" | "balusters" }
+local RISE, TREAD, GUARD_H = 1, 1.5, 3.5
+
+-- n treads rising along cf's -Z. cf = the foot of the first riser (centre of the width, at the floor it starts
+-- from); the steps are solid down to `down` studs below cf.
+local function flight(m, cf, w, n, S, down)
+	for i = 1, n do
+		local h = i * RISE + down
+		b(m, cf, "Step", w, h, TREAD, 0, i * RISE - h / 2, -(i - 0.5) * TREAD, S.step)
+		b(m, cf, "Nosing", w + 0.02, 0.22, 0.5, 0, i * RISE - 0.08, -(i - 1) * TREAD + 0.1, S.trim, DECO)
+	end
+end
+
+-- an end post standing on `p` (a point on the walking surface)
+local function newel(m, p, S, sink)
+	sink = sink or 0.2
+	local body = S.kind == "parapet" and S.wall or S.trim
+	part(m, "Newel", Vector3.new(1, GUARD_H + 0.9 + sink, 1), CFrame.new(p + Vector3.new(0, (GUARD_H + 0.9 - sink) / 2, 0)), body)
+	part(m, "NewelCap", Vector3.new(1.4, 0.4, 1.4), CFrame.new(p + Vector3.new(0, GUARD_H + 1.1, 0)), S.trim)
+end
+
+-- a guard along the straight run a -> b. a and b are points on the walking surface: on a flight, the line through
+-- the tread nosings (the guard then also covers the step ends below that line).
+local function guard(m, a, bb, S)
+	local d = bb - a
+	local len = d.Magnitude
+	if len < 0.1 then return end
+	local flat = Vector3.new(d.X, 0, d.Z)
+	local cosA = flat.Magnitude / len
+	local sloped = cosA < 0.999
+	local mid = (a + bb) / 2
+	local cf = CFrame.lookAt(mid, mid + d)
+	if S.kind == "parapet" then
+		local below = sloped and 1.15 or 0
+		part(m, "Parapet", Vector3.new(0.7, (GUARD_H + below) * cosA, len), cf * CFrame.new(0, (GUARD_H - below) / 2 * cosA, 0), S.wall)
+		part(m, "Handrail", Vector3.new(1.05, 0.32, len + 0.1), cf * CFrame.new(0, (GUARD_H + 0.16) * cosA, 0), S.trim)
+	else
+		local below = sloped and 1.2 or 0
+		part(m, "Stringer", Vector3.new(0.5, (below + 0.4) * cosA, len), cf * CFrame.new(0, (0.4 - below) / 2 * cosA, 0), S.trim)
+		part(m, "Handrail", Vector3.new(0.7, 0.45, len + 0.1), cf * CFrame.new(0, GUARD_H * cosA, 0), S.trim)
+		part(m, "MidRail", Vector3.new(0.3, 0.3, len), cf * CFrame.new(0, GUARD_H * 0.5 * cosA, 0), S.trim)
+		local n = math.max(1, math.floor(flat.Magnitude / 1.5 + 0.5))
+		local yaw = CFrame.lookAt(Vector3.zero, flat.Unit)
+		for i = 1, n - 1 do
+			local p = a + d * (i / n)
+			part(m, "Baluster", Vector3.new(0.32, GUARD_H, 0.32), CFrame.new(p + Vector3.new(0, GUARD_H / 2 + 0.1, 0)) * yaw, S.trim, DECO)
+		end
+	end
+end
+
+-- a handrail on a wall along a -> b (nosing line), `out` = unit vector from the wall into the stair
+local function wallRail(m, a, bb, S, out)
+	local d = bb - a
+	local len = d.Magnitude
+	local cosA = Vector3.new(d.X, 0, d.Z).Magnitude / len
+	local mid = (a + bb) / 2 + out * 0.5
+	local cf = CFrame.lookAt(mid, mid + d)
+	part(m, "Handrail", Vector3.new(0.4, 0.4, len), cf * CFrame.new(0, 3.1 * cosA, 0), S.trim, DECO)
+	for _, t in { 0.06, 0.5, 0.94 } do
+		local p = a + d * t + Vector3.new(0, 3.1 - 0.35, 0)
+		part(m, "Bracket", Vector3.new(0.25, 0.5, 0.25), CFrame.new(p + out * 0.5), S.trim, DECO)
+		part(m, "Bracket", Vector3.new(0.25, 0.25, 0.55), CFrame.lookAt(p + out * 0.25 + Vector3.new(0, -0.2, 0), p + out), S.trim, DECO)
+	end
+end
+
+-- A HALF-TURN STAIR in its own well: flight 1 up to a landing at the far end, flight 2 back to the upper floor.
+-- o.cf = the middle of the well's entry edge on the lower floor, looking INTO the well; o.W = well width, o.L = its
+-- length (21); o.mir = 1: flight 1 on the right (looking in), -1: on the left. The upper floor is 21 above.
+-- o.low / o.up = which sides are OPEN (no wall) on the lower / upper floor: a = flight 1's side, b = flight 2's
+-- side, e = the far end. Returns the model and the opening to cut in the upper floor { x1, z1, x2, z2 }.
+local function dogleg(parent, o)
+	local m = model(parent, "Stairs")
+	local cf, W, L, mir, S = o.cf, o.W, o.L or 21, o.mir or 1, o.S
+	local low, up = o.low or {}, o.up or {}
+	local TOP = 21
+	local fw = (W - 0.7) / 2 -- flight 1; flight 2 is 0.7 wider and carries the guard between the two
+	local w2 = W - fw
+	local uA, uB = mir * W / 2, -mir * W / 2
+	local uS = mir * (W / 2 - fw - 0.35)
+	local function P(u, y, s) return (cf * CFrame.new(u, y, -s)).Position end
+	local function V(u, s) return cf:VectorToWorldSpace(Vector3.new(u, 0, -s)) end
+	flight(m, cf * CFrame.new(mir * (W / 2 - fw / 2), 0, -TREAD), fw, 9, S, 0)
+	b(m, cf, "Landing", W, 10, L - 15, 0, 5, -(15 + (L - 15) / 2), S.step)
+	flight(m, cf * CFrame.new(-mir * (W / 2 - w2 / 2), 10, -15) * CFrame.Angles(0, math.pi, 0), w2, 10, S, 10)
+	-- the solid under flight 2 and the landing is faced like a wall (S.wall, a skirting of S.wain) wherever it shows
+	local function face(u, out, skirt)
+		for j = 1, 10 do b(m, cf, "Facing", 0.12, 10 + j, TREAD, u + out * 0.06, (10 + j) / 2, -(15 - (j - 0.5) * TREAD), S.wall, DECO) end
+		b(m, cf, "Facing", 0.12, 10, L - 15, u + out * 0.06, 5, -(15 + (L - 15) / 2), S.wall, DECO)
+		if skirt then
+			b(m, cf, "Wainscot", 0.14, 4.5, L, u + out * 0.19, 2.25, -L / 2, S.wain or S.trim, DECO)
+			b(m, cf, "Skirting", 0.2, 0.9, L, u + out * 0.3, 0.45, -L / 2, S.trim, DECO)
+		end
+	end
+	face(uS + mir * 0.35, mir, false)
+	if low.b then
+		face(uB, -mir, true)
+		-- its end toward the room
+		local uc = -mir * (W / 2 - w2 / 2)
+		b(m, cf, "Facing", w2 + 0.24, 20, 0.12, uc - mir * 0.12, 10, 0.06, S.wall, DECO)
+		b(m, cf, "Wainscot", w2 + 0.4, 4.5, 0.14, uc - mir * 0.2, 2.25, 0.19, S.wain or S.trim, DECO)
+		b(m, cf, "Skirting", w2 + 0.5, 0.9, 0.2, uc - mir * 0.25, 0.45, 0.3, S.trim, DECO)
+	end
+	-- between the flights
+	guard(m, P(uS, 11, 15), P(uS, TOP, 0), S)
+	newel(m, P(uS, 10, 15.2), S)
+	newel(m, P(uS, TOP, -0.35), S, 1.4)
+	-- flight 1's outer side and the landing beside it
+	local ia = uA - mir * 0.35
+	if low.a then
+		guard(m, P(ia, 1, 1.5), P(ia, 10, 15), S)
+		guard(m, P(ia, 10, 15), P(ia, 10, L), S)
+		newel(m, P(ia, 0, 1.1), S)
+		newel(m, P(ia, 10, 15), S, 1.3)
+	else
+		wallRail(m, P(uA, 1, 1.5), P(uA, 10, 15), S, V(-mir, 0).Unit)
+	end
+	-- flight 2's outer side
+	local ib = uB + mir * 0.2 -- its outer face a hair proud of the facing below
+	if low.b then
+		guard(m, P(ib, 11, 15), P(ib, TOP, 0), S)
+		guard(m, P(ib, 10, 15), P(ib, 10, L), S)
+		newel(m, P(ib, 10, 15), S, 1.3)
+	else
+		wallRail(m, P(uB, 11, 15), P(uB, TOP, 0), S, V(mir, 0).Unit)
+	end
+	if low.e then guard(m, P(uB, 10, L - 0.35), P(uA, 10, L - 0.35), S) end
+	-- the opening in the upper floor: over flight 1's lane at the entry edge, and every open side
+	guard(m, P(uS, TOP, -0.35), P(uA, TOP, -0.35), S)
+	if up.a then
+		guard(m, P(uA + mir * 0.35, TOP, -0.35), P(uA + mir * 0.35, TOP, L + (up.e and 0.35 or 0)), S)
+		newel(m, P(uA + mir * 0.35, TOP, -0.35), S)
+	else
+		newel(m, P(uA - mir * 0.6, TOP, -0.35), S)
+	end
+	if up.b then
+		guard(m, P(uB - mir * 0.35, TOP, 0), P(uB - mir * 0.35, TOP, L + (up.e and 0.35 or 0)), S)
+		newel(m, P(uB - mir * 0.35, TOP, -0.1), S)
+	end
+	if up.e then
+		guard(m, P(uB - (up.b and mir * 0.35 or 0), TOP, L + 0.35), P(uA + (up.a and mir * 0.35 or 0), TOP, L + 0.35), S)
+		if up.b then newel(m, P(uB - mir * 0.35, TOP, L + 0.35), S) end
+		if up.a then newel(m, P(uA + mir * 0.35, TOP, L + 0.35), S) end
+	end
+	local c1, c2 = P(-W / 2, 0, 0), P(W / 2, 0, L)
+	return m, { math.min(c1.X, c2.X), math.min(c1.Z, c2.Z), math.max(c1.X, c2.X), math.max(c1.Z, c2.Z) }
+end
+
+-- A STRAIGHT GRAND STAIR with a landing half way: 10 treads, a landing, 10 treads (36 studs long, 21 up).
+-- o.cf = the foot (centre of the width), looking up the stair; o.w = width. Guards on both sides.
+local function grandStair(parent, o)
+	local m = model(parent, "Stairs")
+	local cf, w, S = o.cf, o.w, o.S
+	local LD = o.landing or 6
+	local function P(u, y, s) return (cf * CFrame.new(u, y, -s)).Position end
+	flight(m, cf, w, 10, S, 0)
+	b(m, cf, "Landing", w, 10, LD, 0, 5, -(15 + LD / 2), S.step)
+	flight(m, cf * CFrame.new(0, 10, -(15 + LD)), w, 10, S, 10)
+	for _, sx in { -1, 1 } do
+		-- the sides of the solid are panelled (S.wain), not left in the tread's material
+		local fu = sx * (w / 2 + 0.06)
+		for i = 1, 10 do
+			b(m, cf, "Facing", 0.12, i, TREAD, fu, i / 2, -(i - 0.5) * TREAD, S.wain or S.wall, DECO)
+			b(m, cf, "Facing", 0.12, 10 + i, TREAD, fu, (10 + i) / 2, -(15 + LD + (i - 0.5) * TREAD), S.wain or S.wall, DECO)
+		end
+		b(m, cf, "Facing", 0.12, 10, LD, fu, 5, -(15 + LD / 2), S.wain or S.wall, DECO)
+		b(m, cf, "Skirting", 0.2, 0.9, 30 + LD, sx * (w / 2 + 0.2), 0.45, -(30 + LD) / 2, S.trim, DECO)
+		local u = sx * (w / 2 - 0.2)
+		guard(m, P(u, 1, 0), P(u, 10, 13.5), S)
+		guard(m, P(u, 10, 13.5), P(u, 10, 15 + LD), S)
+		guard(m, P(u, 11, 15 + LD), P(u, 21, 30 + LD), S)
+		newel(m, P(u, 0, -0.4), S)
+		newel(m, P(u, 10, 13.5), S, 1.3)
+		newel(m, P(u, 10, 15 + LD), S, 1.3)
+		newel(m, P(u, 21, 30 + LD + 0.4), S, 1.4)
+	end
+	if o.runner then -- a carpet runner down the middle
+		local rw = w * 0.5
+		for i = 1, 10 do
+			b(m, cf, "Runner", rw, 0.08, TREAD + 0.05, 0, i * RISE + 0.04, -(i - 0.5) * TREAD, o.runner, DECO)
+			b(m, cf * CFrame.new(0, 10, -(15 + LD)), "Runner", rw, 0.08, TREAD + 0.05, 0, i * RISE + 0.04, -(i - 0.5) * TREAD, o.runner, DECO)
+		end
+		b(m, cf, "Runner", rw, 0.08, LD, 0, 10.04, -(15 + LD / 2), o.runner, DECO)
+	end
+	return m
 end
 
 -- a railing along a balcony edge (along "x" or "z")

@@ -1,6 +1,7 @@
 -- Extra furniture + detail for the built maps (not the Mansion, not the Factory which has its own full layout).
 -- Run after lib2 + furn_lib + maplib:
 --   cat tools/build/lib2.luau tools/build/furn_lib.luau tools/build/maplib.luau tools/build/maps/furnish.luau
+-- One map only: prepend a line `ONLY = "<MapId>"` (it adds to every map otherwise).
 -- For each map: a working copy goes into workspace, random floor spots (ground and upper floor) that are inside
 -- (a ceiling above) and clear of walls, doors and other furniture get a piece from that map's list, plus some blood;
 -- then the copy replaces ServerStorage.Maps.<id>. Re-running adds more on top (rebuild a map first to start over).
@@ -40,9 +41,52 @@ local THEMES = {
 }
 local CANDLES = { Church = true, Funeral = true }
 
+-- Where nothing may be dropped, because the monster has to get through (its pathfinding needs ~6 clear studs):
+-- every doorway (read from the wall models: a top "Frame" with no window "Sill" under it) and the map's KeepClear
+-- parts (corridors, gallery walks, the floor in front of a stair; maplib's keepClear). Returns a test (x, floorY, z).
+local function noGoTest(MP)
+	local zones = {}
+	local kc = MP:FindFirstChild("KeepClear")
+	if kc then
+		for _, p in kc:GetChildren() do
+			if p:IsA("BasePart") then
+				table.insert(zones, { p.Position.X - p.Size.X / 2, p.Position.Z - p.Size.Z / 2, p.Position.X + p.Size.X / 2, p.Position.Z + p.Size.Z / 2, p.Position.Y - p.Size.Y / 2 - 1.5, p.Position.Y + p.Size.Y / 2 })
+			end
+		end
+	end
+	local Sx = MP:FindFirstChild("Structure")
+	for _, w in (Sx and Sx:GetDescendants() or {}) do
+		if w:IsA("Model") then
+			local sills = {}
+			for _, c in w:GetChildren() do if c:IsA("BasePart") and (c.Name == "Sill" or c.Name == "Glass") then table.insert(sills, c.Position) end end
+			for _, f in w:GetChildren() do
+				if f:IsA("BasePart") and f.Name == "Frame" and f.Size.Y < 0.75 then
+					local alongX = f.Size.X > f.Size.Z
+					local half = (alongX and f.Size.X or f.Size.Z) / 2 - 0.6
+					local window = false
+					for _, sp in sills do if math.abs(sp.X - f.Position.X) < 1 and math.abs(sp.Z - f.Position.Z) < 1 then window = true; break end end
+					if not window and half >= 2 then
+						local ha, hp = half + 1.5, 6
+						local floor = f.Position.Y < 22.5 and 2 or 23
+						local x, z = f.Position.X, f.Position.Z
+						table.insert(zones, alongX and { x - ha, z - hp, x + ha, z + hp, floor - 1.5, floor + 8 } or { x - hp, z - ha, x + hp, z + ha, floor - 1.5, floor + 8 })
+					end
+				end
+			end
+		end
+	end
+	return function(x, y, z)
+		for _, zn in zones do
+			if x > zn[1] and x < zn[3] and z > zn[2] and z < zn[4] and y > zn[5] and y < zn[6] then return true end
+		end
+		return false
+	end
+end
+
 local out = {}
 local temp = Instance.new("Folder"); temp.Name = "_Furnish"; temp.Parent = workspace
 for id, list in THEMES do
+	if ONLY and id ~= ONLY then continue end
 	local src = SSf.Maps:FindFirstChild(id)
 	if not src then table.insert(out, id .. ": missing"); continue end
 	local copy = src:Clone()
@@ -51,12 +95,13 @@ for id, list in THEMES do
 	STR = copy:FindFirstChild("Structure"); DEC = copy:FindFirstChild("Decor"); FURN = copy:FindFirstChild("Furniture")
 	local rp = RaycastParams.new(); rp.FilterType = Enum.RaycastFilterType.Include; rp.FilterDescendantsInstances = { STR }
 	local op = OverlapParams.new(); op.FilterType = Enum.RaycastFilterType.Include; op.FilterDescendantsInstances = { STR, FURN, DEC }
+	local noGo = noGoTest(copy)
 	local placed, tries = 0, 0
 	while placed < PER_MAP and tries < 900 do
 		tries += 1
 		local x, z = rngF:NextNumber(-74, 74), rngF:NextNumber(-54, 54)
 		local down = workspace:Raycast(Vector3.new(x, rngF:NextNumber() < 0.55 and 18 or 40, z), Vector3.new(0, -30, 0), rp)
-		if down and down.Normal.Y > 0.9 and down.Position.Y < 30 then
+		if down and down.Normal.Y > 0.9 and down.Position.Y < 30 and not down.Instance:FindFirstAncestor("Stairs") and not noGo(x, down.Position.Y, z) then
 			local fy = down.Position.Y
 			local roof = workspace:Raycast(Vector3.new(x, fy + 3, z), Vector3.new(0, 30, 0), rp)
 			if roof then
