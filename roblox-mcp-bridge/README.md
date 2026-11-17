@@ -61,6 +61,13 @@ cannot see Studio through it (no playtest, no screenshots), so save the place an
 3. Start a **new** cloud session on this game's environment (`Ghost ahh game`).
 4. When done, close the windows: the bridge is off and nothing can reach Studio.
 
+## Getting the key when you are away from the PC
+
+`show-key-once.bat` prints a one-time code and a temporary https address (a second, throw-away dev tunnel). Open
+the address on your phone, enter the code, and the page shows the bridge key once; then the page and its address
+are gone (also after 5 wrong codes or 15 minutes). Whoever starts it on the PC only passes on the address and the
+code: the key is never shown in the window.
+
 ## Safety
 
 - Anyone with the URL **and** the key can run Luau in your open Studio. The key stays in
