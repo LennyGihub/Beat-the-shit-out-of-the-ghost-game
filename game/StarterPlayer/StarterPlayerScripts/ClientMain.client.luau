@@ -50,6 +50,8 @@ local Vip = require(Client.Vip)
 local CallerUI = require(Client.CallerUI)
 local CallerMarks = require(Client.CallerMarks)
 local SandboxUI = require(Client.SandboxUI)
+local BestiaryUI = require(Client.BestiaryUI)
+local Entrance = require(Client.Entrance)
 
 Platform.init()
 LockOn.init() -- phones: the LOCK button keeps the view on the monster
@@ -91,7 +93,15 @@ QuestUI.init(function(open)
 	shopOpen = open
 	camMode()
 end)
-LobbyUI.init(function() UltShop.open() end, function(open) Input.setShopOpen(open) end, function() QuestUI.open() end, QuestUI.claimable, QuestUI.changed)
+-- long-term goals: the bestiary (monsters beaten) and the badges
+BestiaryUI.init(function(open)
+	Input.setShopOpen(open)
+	shopOpen = open
+	camMode()
+end)
+Entrance.init(Fx, HUD) -- each monster's entrance cinematic
+LobbyUI.init(function() UltShop.open() end, function(open) Input.setShopOpen(open) end, function() QuestUI.open() end, QuestUI.claimable, QuestUI.changed,
+	function() BestiaryUI.open() end)
 Input.openPlay = LobbyUI.togglePlay
 
 -- What the server tells EVERYONE about a fight in the house. The sandbox runs in the lobby's own server, so a
@@ -102,7 +112,7 @@ for _, k in { "WallSmash", "GhostVanish", "ItemSwing", "Hit", "GoblinUse", "Wall
 	"TrapSnap", "Tracer", "TitanHeal", "TitanEat", "TimeStop", "PlayerHit", "LaserEnd", "GoblinDrop", "GhostWindUp", "GhostScream", "Ultimate",
 	"UltFling", "TimeResume", "Throw", "Tased", "SnapWind", "Smash", "ShotgunPump", "ShotgunFire", "ShotgunAim", "ShieldBlock", "RoarWind", "Roar",
 	"OnePunch", "LungeWind", "Lunge", "Lift", "LaserWind", "LaserBeam", "HouseOnFire", "GoblinSteal", "GhostSpawn", "GhostRagdoll", "GhostDeath",
-	"FurySmash", "FuryArmor", "Enraged", "CounterWind", "ChargedHit", "AmbushStrike", "AbilityWind" } do
+	"FurySmash", "FuryArmor", "Enraged", "CounterWind", "ChargedHit", "AmbushStrike", "AbilityWind", "Entrance" } do
 	FIGHT[k] = true
 end
 
@@ -136,6 +146,14 @@ Remotes.Fx.OnClientEvent:Connect(function(kind: string, ...)
 		if kind == "Revived" then Fx.handle("Toast", "BACK FROM THE DEAD") end
 	elseif kind == "OpenQuests" then
 		QuestUI.open()
+	elseif kind == "OpenBestiary" then
+		BestiaryUI.open()
+	elseif kind == "BadgeUnlocked" then
+		BestiaryUI.unlocked(...)
+	elseif kind == "BestiaryNew" then
+		BestiaryUI.discovered(...)
+	elseif kind == "Entrance" then
+		Entrance.play(...)
 	elseif kind == "BackFromSpectate" then
 		Fx.handle("Toast", "YOU'RE BACK - THE WAVE IS OVER", true)
 	elseif kind == "CallerCall" then

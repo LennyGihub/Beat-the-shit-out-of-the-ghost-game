@@ -17,6 +17,7 @@ local Grunge = require(script.Parent.Grunge)
 local UltFx = require(script.Parent.UltFx)
 local Ultimates = require(RS.Shared.Ultimates)
 local Items = require(RS.Shared.Items)
+local Sounds = require(RS.Shared.Sounds)
 
 local lastItemSfx = {} :: { [string]: number }
 local Fx = {}
@@ -98,18 +99,35 @@ local function jumpscare()
 	task.delay(0.24, function() HUD.flash(Color3.fromRGB(140, 0, 0), 0.7) end)
 end
 
-local function setMusic(fight: boolean)
+-- FIGHT MUSIC: every monster and every evolved form has its own track (Shared/Sounds Music_<id> / Music_<id>_E).
+-- It starts with the monster's entrance and fades out when it is beaten. A new monster cross-fades into its own.
+local musicName = ""
+local function setMusic(fight: boolean, monsterId: string?, evolved: boolean?)
+	local name = ""
 	if fight then
-		if not music then music = Sfx.loop("FightMusic") end
-	else
-		if music then
-			local m = music
-			music = nil
-			TweenService:Create(m, TweenInfo.new(2), { Volume = 0 }):Play()
-			task.delay(2.1, function() m:Destroy() end)
+		name = "Music_" .. (monsterId or "Woman") .. (evolved and "_E" or "")
+		if not Sounds[name] then name = "Music_" .. (monsterId or "Woman") end
+		if not Sounds[name] then name = "FightMusic" end
+	end
+	if name == musicName and (music ~= nil) == fight then return end
+	if music then
+		local m = music
+		music = nil
+		TweenService:Create(m, TweenInfo.new(fight and 0.8 or 2.5), { Volume = 0 }):Play()
+		task.delay(2.6, function() m:Destroy() end)
+	end
+	musicName = name
+	if fight then
+		local s = Sfx.loop(name)
+		music = s
+		if s then
+			local vol = s.Volume
+			s.Volume = 0
+			TweenService:Create(s, TweenInfo.new(1.2), { Volume = vol }):Play()
 		end
 	end
 end
+Fx.setMusic = setMusic
 
 function Fx.handle(kind: string, ...)
 	local args = { ... }
@@ -238,10 +256,13 @@ function Fx.handle(kind: string, ...)
 	elseif kind == "GhostVanish" then
 		Sfx.at("GhostWhisper", args[1], { Volume = 0.8 })
 	elseif kind == "GhostSpawn" then
+		-- args: position, monster id, evolved, entrance (Client/Entrance then plays its voice at the right moment)
 		local v = Sfx.voice("Spawn", args[2])
-		Sfx.at(v, args[1], { Volume = 1.2, PlaybackSpeed = v == "GhostScream" and 0.8 or 1 })
-		Fx.shake(0.4)
-		setMusic(true)
+		if not args[4] then
+			Sfx.at(v, args[1], { Volume = 1.2, PlaybackSpeed = v == "GhostScream" and 0.8 or 1 })
+			Fx.shake(0.4)
+		end
+		setMusic(true, args[2], args[3] == true)
 	elseif kind == "GhostDeath" then
 		local pos = args[1]
 		Sfx.play(Sfx.voice("Death"), { Volume = 1.2 })
@@ -416,14 +437,15 @@ function Fx.handle(kind: string, ...)
 		-- args: ghost number, monster title, rarity
 		local rar = args[3] or 0
 		local tag = rar == 4 and "SECRET MONSTER - " or (rar == 3 and "LEGENDARY - " or (rar == 2 and "RARE - " or ""))
+		-- the warning only: who it is comes with the monster's entrance (Client/Entrance shows its name card)
 		if args[4] then
 			-- an EVOLVED monster (every 3rd ghost)
-			HUD.banner(args[2] or "SOMETHING WORSE", (rar == 4 and "SECRET " or "") .. "EVOLVED MONSTER - GHOST " .. tostring(args[1]), 5)
+			HUD.banner("GHOST " .. tostring(args[1]), (rar == 4 and "SECRET " or "") .. "SOMETHING WORSE IS COMING...", 2.8)
 			Sfx.play("GhostWhisper", { Volume = 1.2, PlaybackSpeed = 0.6 })
 			Sfx.play("Ultimate", { Volume = 0.6, PlaybackSpeed = 0.5 })
 			Fx.shake(0.5)
 		else
-			HUD.banner(args[2] or "SHE IS IN THE HOUSE", tag .. "GHOST " .. tostring(args[1]), 4)
+			HUD.banner("GHOST " .. tostring(args[1]), tag .. "SOMETHING IS COMING...", 2.8)
 			Sfx.play("GhostWhisper", { Volume = 1 })
 		end
 	elseif kind == "Victory" then

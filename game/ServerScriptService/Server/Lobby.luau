@@ -313,6 +313,17 @@ function Lobby.start()
 		pp.Parent = qpart
 		pp.Triggered:Connect(function(p) Remotes.Fx:FireClient(p, "OpenQuests") end)
 	end
+	-- the bestiary altar (tools/build/lobby_detail.luau): opens the BESTIARY panel (monsters beaten, badges)
+	local altar = lobby and lobby:FindFirstChild("BestiaryAltar")
+	local apart = altar and altar:FindFirstChild("Prompt") :: BasePart?
+	if apart then
+		local pp = Instance.new("ProximityPrompt")
+		pp.ActionText = "Bestiary"; pp.ObjectText = "Monsters & Badges"; pp.HoldDuration = 0
+		pp.MaxActivationDistance = 14; pp.RequiresLineOfSight = false; pp.KeyboardKeyCode = Enum.KeyCode.F
+		pp.Style = Enum.ProximityPromptStyle.Custom
+		pp.Parent = apart
+		pp.Triggered:Connect(function(p) Remotes.Fx:FireClient(p, "OpenBestiary") end)
+	end
 	Remotes.BuyUlt.OnServerEvent:Connect(onBuyUlt)
 	Remotes.Party.OnServerEvent:Connect(onParty)
 	Players.PlayerRemoving:Connect(leaveParty)

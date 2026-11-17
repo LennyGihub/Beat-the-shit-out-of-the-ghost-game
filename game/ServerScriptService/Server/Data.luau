@@ -1,6 +1,8 @@
 -- Player save data: Cash, owned items, next ghost level, kills, the equipped ultimate (and the second one of the
 -- Double Ultimate pass, Equipped2), settings (volumes + keybinds), and the Robux
 -- purchases already granted (Receipts: the last 100 PurchaseIds, so a cash pack is never given twice).
+-- Long-term goals (Server/Bestiary): Bestiary (monster key -> times beaten), Badges (set of unlocked badge ids),
+-- Nightmare (monsters beaten on NIGHTMARE).
 -- Never overwrites a save that failed to load; saves on leave, every 90 s and on shutdown.
 local DSS = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
@@ -11,7 +13,10 @@ local Data = {}
 local okStore, store = pcall(function() return DSS:GetDataStore("GhostBrawl_v1") end)
 local profiles = {} -- [Player] = { loaded = bool, data = table }
 
-local function fresh() return { Cash = 0, Owned = {}, GhostLevel = 1, Kills = 0, Ults = { Rage = true }, Equipped = "Rage", Receipts = {} } end
+local function fresh()
+	return { Cash = 0, Owned = {}, GhostLevel = 1, Kills = 0, Ults = { Rage = true }, Equipped = "Rage", Receipts = {},
+		Bestiary = {} :: { [string]: number }, Badges = {} :: { [string]: boolean }, Nightmare = 0 }
+end
 local MAX_RECEIPTS = 100
 
 -- settings sent by the client: volumes 0..1 and keyboard keybinds (action -> KeyCode / mouse button name)
@@ -56,6 +61,14 @@ local function publish(player)
 	player:SetAttribute("OwnedUlts", table.concat(ults, ","))
 	player:SetAttribute("EquippedUlt", p.data.Equipped)
 	player:SetAttribute("EquippedUlt2", p.data.Equipped2 or "")
+	-- long-term goals: the bestiary counts (JSON) and the unlocked badges
+	player:SetAttribute("Bestiary", HttpService:JSONEncode(p.data.Bestiary))
+	local badges = {}
+	for id in p.data.Badges do table.insert(badges, id) end
+	table.sort(badges)
+	player:SetAttribute("Badges", table.concat(badges, ","))
+	player:SetAttribute("Kills", p.data.Kills)
+	player:SetAttribute("NightmareKills", p.data.Nightmare)
 	local ls = player:FindFirstChild("leaderstats")
 	if ls then
 		(ls :: any).Cash.Value = p.data.Cash;
@@ -92,6 +105,16 @@ function Data.load(player: Player)
 						for id, v in res.Owned do if type(id) == "string" and v == true then prof.data.Owned[id] = true end end
 					end
 					if type(res.Quests) == "table" then prof.data.Quests = res.Quests end -- cleaned up by Server/Quests
+					if type(res.Bestiary) == "table" then
+						for key, n in res.Bestiary do
+							local c = tonumber(n)
+							if type(key) == "string" and #key <= 40 and c and c == c and c > 0 then prof.data.Bestiary[key] = math.floor(c) end
+						end
+					end
+					if type(res.Badges) == "table" then
+						for id, v in res.Badges do if type(id) == "string" and #id <= 40 and v == true then prof.data.Badges[id] = true end end
+					end
+					prof.data.Nightmare = math.max(0, math.floor(tonumber(res.Nightmare) or 0))
 					if type(res.Receipts) == "table" then
 						for _, id in res.Receipts do if type(id) == "string" then table.insert(prof.data.Receipts, id) end end
 					end
@@ -112,6 +135,7 @@ function Data.save(player: Player): boolean
 	local prof = profiles[player]
 	if not prof or not prof.loaded or not okStore then return false end
 	local snap = { Cash = prof.data.Cash, GhostLevel = prof.data.GhostLevel, Kills = prof.data.Kills, Owned = table.clone(prof.data.Owned), Ults = table.clone(prof.data.Ults), Equipped = prof.data.Equipped, Equipped2 = prof.data.Equipped2, Settings = prof.data.Settings, Receipts = table.clone(prof.data.Receipts),
+		Bestiary = table.clone(prof.data.Bestiary), Badges = table.clone(prof.data.Badges), Nightmare = prof.data.Nightmare,
 		Quests = prof.data.Quests and HttpService:JSONDecode(HttpService:JSONEncode(prof.data.Quests)) or nil }
 	for i = 1, 3 do
 		local ok, err = pcall(function()
@@ -144,6 +168,8 @@ function Data.grantCashReceipt(player: Player, purchaseId: string, cash: number)
 end
 
 function Data.get(player: Player) local p = profiles[player]; return p and p.data end
+-- the save changed outside this module (Server/Bestiary): send the player's attributes again
+function Data.refresh(player: Player) publish(player) end
 -- the save loaded (false: playing without saving, e.g. in Studio)
 function Data.loaded(player: Player): boolean local p = profiles[player]; return p ~= nil and p.loaded end
 

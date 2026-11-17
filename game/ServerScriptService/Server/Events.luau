@@ -64,20 +64,37 @@ function Events.rollStock(n: number, avoid: { [string]: boolean }?): { any }
 	return out
 end
 
-local function label(parent: BasePart, it, high: boolean)
+-- THE PRICE BOARD: a wooden board on the stall's back wall above an item (ServerStorage.ShopStall, one bay per
+-- item, so nothing overlaps): rarity, NAME, what it does, price. Readable in the dark (it ignores the lighting).
+local function board(folder: Instance, slot: Attachment, it)
 	local rar = Items.rarity[it.rarity]
-	local bb = Instance.new("BillboardGui")
-	bb.Size = UDim2.fromOffset(150, 58); bb.StudsOffset = Vector3.new(0, high and 2.6 or 1.6, 0); bb.MaxDistance = 20
-	bb.Parent = parent
-	local function t(text: string, y: number, h: number, color: Color3, font: Enum.Font)
+	local b = Instance.new("Part")
+	b.Name = "PriceBoard"; b.Anchored = true; b.CanCollide = false; b.CanQuery = false; b.CanTouch = false
+	b.Size = Vector3.new(4.0, 3.0, 0.22); b.Material = Enum.Material.Wood; b.Color = Color3.fromRGB(26, 20, 16)
+	b.CFrame = slot.WorldCFrame * CFrame.new(0, 4.25, 1.98)
+	b.Parent = folder
+	local sg = Instance.new("SurfaceGui")
+	sg.Face = Enum.NormalId.Front; sg.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud; sg.PixelsPerStud = 60; sg.LightInfluence = 0
+	sg.Parent = b
+	local function t(text: string, y: number, h: number, color: Color3, font: Enum.Font): TextLabel
 		local l = Instance.new("TextLabel")
-		l.BackgroundTransparency = 1; l.Size = UDim2.new(1, 0, h, 0); l.Position = UDim2.new(0, 0, y, 0)
+		l.BackgroundTransparency = 1; l.Size = UDim2.new(0.92, 0, h, 0); l.Position = UDim2.new(0.04, 0, y, 0)
 		l.Text = text; l.TextScaled = true; l.Font = font; l.TextColor3 = color
-		l.TextStrokeTransparency = 0.2; l.TextStrokeColor3 = Color3.fromRGB(14, 10, 8); l.Parent = bb
+		l.TextStrokeTransparency = 0.4; l.TextStrokeColor3 = Color3.fromRGB(14, 10, 8); l.Parent = sg
+		return l
 	end
-	t(rar.name, 0, 0.26, rar.color, Enum.Font.SpecialElite)
-	t(string.upper(it.name), 0.26, 0.4, Color3.fromRGB(235, 225, 205), Enum.Font.PermanentMarker)
-	t("$" .. it.price, 0.66, 0.34, Color3.fromRGB(150, 220, 110), Enum.Font.PermanentMarker)
+	local strip = Instance.new("Frame")
+	strip.BorderSizePixel = 0; strip.BackgroundColor3 = rar.color; strip.Size = UDim2.new(1, 0, 0.15, 0); strip.Parent = sg
+	local rl = t(rar.name, 0.012, 0.126, Color3.fromRGB(16, 12, 10), Enum.Font.SpecialElite)
+	rl.TextStrokeTransparency = 1
+	t(string.upper(it.name), 0.17, 0.27, Color3.fromRGB(240, 230, 208), Enum.Font.PermanentMarker)
+	local d = t(it.desc, 0.45, 0.27, Color3.fromRGB(196, 186, 166), Enum.Font.SpecialElite)
+	local dc = Instance.new("UITextSizeConstraint"); dc.MaxTextSize = 26; dc.MinTextSize = 12; dc.Parent = d
+	t("$" .. it.price, 0.73, 0.26, Color3.fromRGB(150, 220, 110), Enum.Font.PermanentMarker)
+	local edge = Instance.new("UIStroke"); edge.Color = rar.color; edge.Thickness = 5
+	local frame = Instance.new("Frame")
+	frame.BackgroundTransparency = 1; frame.Size = UDim2.fromScale(1, 1); frame.Parent = sg
+	edge.Parent = frame
 end
 
 -- a slot marked Ground (van) sits on the ground behind the wreck: find the real ground under it, level
@@ -140,7 +157,7 @@ local function stock(shop: Instance, list: { any })
 			glowPart.Transparency = 0.55; glowPart.CFrame = base * CFrame.new(0, onGround and 0.16 or 0.05, 0) * CFrame.Angles(0, 0, math.pi / 2)
 			glowPart.Parent = m
 			local promptPart = glowPart
-			label(promptPart, it, i > 3)
+			board(folder, slot, it)
 			local pp = Events.prompt(promptPart, "Buy  $" .. it.price, it.name .. "  -  " .. it.desc, 0.3)
 			local at = base.Position
 			pp.Triggered:Connect(function(p) if Events.onBuy then Events.onBuy(p, it.id, at) end end)
@@ -203,6 +220,37 @@ local function blocked(cf: CFrame, size: Vector3, p: OverlapParams, skipHouseFro
 	return n
 end
 
+-- THE STALL (ServerStorage.ShopStall, tools/build/shop_stall.luau): every event's shop is this long counter, six
+-- roomy bays with a price board over each item. It stands by the wreck at the first of `spots` that is clear of
+-- the map's decor (the least blocked one if none is), and becomes ev.shop.
+local STALL_BOX = { CFrame.new(0, 4.5, -2.5), Vector3.new(29, 8, 13) } -- the stall and the room in front of it
+local function stall(ev, spots: { CFrame }): Model
+	local p = blockerParams()
+	local best, bestN = spots[1], math.huge
+	for _, cf in spots do
+		local n = blocked(cf * STALL_BOX[1], STALL_BOX[2], p)
+		if n < bestN then best, bestN = cf, n end
+		if n == 0 then break end
+	end
+	local s = (SS:FindFirstChild("ShopStall") or SS:FindFirstChild("StandTemplate")) :: Model
+	s = s:Clone()
+	s:PivotTo(best)
+	s.Parent = workspace
+	table.insert(ev.models, s)
+	ev.shop = s
+	ev.shopPos = (best * CFrame.new(0, 4, -3)).Position
+	return s
+end
+-- the shop's name on the stall's sign
+local function nameStall(s: Model, name: string)
+	local sign = s:FindFirstChild("Sign")
+	local gui = sign and sign:FindFirstChild("Gui")
+	local title = gui and gui:FindFirstChild("Title")
+	if title and title:IsA("TextLabel") then title.Text = name end
+end
+-- the vendor sits at the stall's right-hand end
+local function stallVendor(s: Model): CFrame return s:GetPivot() * CFrame.new(17, 0, -2.5) end
+
 -- PLANE: dives into the yard; the pilot's market stall stands next to the wreck
 local PLANE_BOX = { CFrame.new(0, 3.5, 2.1), Vector3.new(59, 16, 50) * 0.85 } -- PlaneModel's bounds (rel. pivot)
 local function planeCF(land: Vector3, trigger: Vector3): CFrame
@@ -212,7 +260,7 @@ end
 local function standSpot(land: Vector3, trigger: Vector3): CFrame
 	local dir = Vector3.new(trigger.X - land.X, 0, trigger.Z - land.Z)
 	dir = dir.Magnitude > 1 and dir.Unit or Vector3.new(0, 0, -1)
-	local spot = land + dir * 24 + dir:Cross(Vector3.yAxis) * 4
+	local spot = land + dir * 30 + dir:Cross(Vector3.yAxis) * 4
 	return CFrame.lookAt(Vector3.new(spot.X, 0, spot.Z), Vector3.new(trigger.X, 0, trigger.Z))
 end
 -- a landing spot whose wreck and stall (plus room to shop) are clear of the map's decor; the least blocked if none is
@@ -222,7 +270,7 @@ local function planeLand(trigger: Vector3): Vector3
 	for _ = 1, 40 do
 		local land = Vector3.new(rng:NextNumber(-55, 55), 0, rng:NextNumber(98, 122))
 		local n = blocked(planeCF(land, trigger) * PLANE_BOX[1], PLANE_BOX[2], p)
-			+ blocked(standSpot(land, trigger) * CFrame.new(0, 4.5, -3), Vector3.new(18, 8, 12), p)
+			+ blocked(standSpot(land, trigger) * STALL_BOX[1], STALL_BOX[2], p)
 		if n < bestN then best, bestN = land, n end
 		if n == 0 then break end
 	end
@@ -242,15 +290,11 @@ local function plane(ev, trigger: Vector3)
 	table.insert(ev.models, w)
 	fx("PlaneImpact", land)
 	task.wait(1.5)
-	local stand = (SS:FindFirstChild("StandTemplate") :: Model):Clone()
-	stand:PivotTo(standSpot(land, trigger))
-	stand.Parent = workspace
-	table.insert(ev.models, stand)
-	ev.shop = stand
-	stock(stand, ev.stock)
-	vendor(stand:GetPivot() * CFrame.new(-7.5, 0, 1.5) * CFrame.Angles(0, math.rad(-25), 0), "\"ugh... my leg... the stuff's on the table. cash first.\"", ev)
-	ev.shopPos = (stand:GetPivot() * CFrame.new(0, 4, 0)).Position
+	local stand = stall(ev, { standSpot(land, trigger) })
 	ev.label = "PILOT'S STAND"
+	nameStall(stand, ev.label)
+	stock(stand, ev.stock)
+	vendor(stallVendor(stand), "\"ugh... my leg... the stuff's on the table. cash first.\"", ev)
 end
 
 -- VAN: comes out of the trees and smashes nose-first into the front of the house; shop in the open back.
@@ -268,6 +312,7 @@ local function vanCF(): CFrame
 		-- straight box from the van's middle (z 72) to 4.5 studs past its open back (z 85.5), wide enough for the
 		-- vendor: the stock, the vendor and room to stand must be clear (yard fences further out are fine)
 		local n = blocked(CFrame.new(x, 5, 78.75), Vector3.new(20, 9, 13.5), p, true)
+			+ blocked(cf * CFrame.new(0, 0, 17) * CFrame.Angles(0, math.pi, 0) * STALL_BOX[1], STALL_BOX[2], p, true) -- room for the stall behind it
 		if n < bestN then best, bestN = cf, n end
 		if n == 0 then break end
 	end
@@ -286,11 +331,14 @@ local function van(ev)
 	v.Parent = workspace
 	table.insert(ev.models, v)
 	task.wait(1)
-	ev.shop = v
-	stock(v, ev.stock)
-	vendor(VAN_CF * CFrame.new(6.5, 0, 9) * CFrame.Angles(0, math.rad(60), 0), "\"lost the brakes... bought a lot of junk though. wanna see?\"", ev)
-	ev.shopPos = (VAN_CF * CFrame.new(0, 4, 9)).Position
+	-- the stall: behind the van (its counter toward the yard), else along one of its sides
+	local half = CFrame.Angles(0, math.pi, 0)
+	local s = stall(ev, { VAN_CF * CFrame.new(0, 0, 17) * half, VAN_CF * CFrame.new(19, 0, 12) * half, VAN_CF * CFrame.new(-19, 0, 12) * half,
+		VAN_CF * CFrame.new(0, 0, 24) * half })
 	ev.label = "VAN SHOP"
+	nameStall(s, ev.label)
+	stock(s, ev.stock)
+	vendor(stallVendor(s), "\"lost the brakes... bought a lot of junk though. wanna see?\"", ev)
 end
 
 -- TRAIN: races along the tracks from the right (toward -X), the locomotive in front; it jumps the rails and rolls
@@ -318,11 +366,14 @@ local function train(ev)
 	burn(w1:FindFirstChild("Body", true) :: BasePart?, 5)
 	fx("TrainImpact", T.loco.Position)
 	task.wait(1)
-	ev.shop = w2
-	stock(w2, ev.stock)
-	vendor(T.w2 * CFrame.new(-9, 0, 9) * CFrame.Angles(0, math.rad(70), 0), "\"conductor... ugh... the wagon's open. everything must go.\"", ev)
-	ev.shopPos = (T.w2 * CFrame.new(-7, 4, 0)).Position
+	-- the stall: in front of the shop wagon's open side (toward the house), its counter facing the house
+	local quarter = CFrame.Angles(0, math.pi / 2, 0)
+	local s = stall(ev, { T.w2 * CFrame.new(-11, 0, 0) * quarter, T.w2 * CFrame.new(-11, 0, 9) * quarter, T.w2 * CFrame.new(-11, 0, -9) * quarter,
+		T.w2 * CFrame.new(-17, 0, 0) * quarter })
 	ev.label = "TRAIN SHOP"
+	nameStall(s, ev.label)
+	stock(s, ev.stock)
+	vendor(stallVendor(s), "\"conductor... ugh... the wagon's open. everything must go.\"", ev)
 end
 
 -- start an event (yields through its cinematic). kind = "plane" | "van" | "train"
