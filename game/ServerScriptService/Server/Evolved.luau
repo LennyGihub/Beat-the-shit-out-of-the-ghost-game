@@ -234,7 +234,7 @@ DRESS.Titan = function(m)
 end
 
 -- the Golden Conqueror: his war armour. Gold plate over the chest, shoulders, arms and legs, a crested helmet
--- that leaves the face open, and the gauntlet's stone burning bright.
+-- that leaves the face open, a double-ended war blade in his left fist, and the gauntlet's stone burning bright.
 DRESS.Conqueror = function(m)
 	local GOLD, GOLD_D, DARK = rgb(190, 140, 40), rgb(118, 84, 26), rgb(30, 24, 30)
 	local METAL = Enum.Material.Metal
@@ -281,6 +281,26 @@ DRESS.Conqueror = function(m)
 			add(head, "EvoFin", Vector3.new(0.25, h * 0.75, d * 0.5), CFrame.new(sx * w * 0.42, h * 0.72, 0.15) * CFrame.Angles(-0.25, 0, sx * -0.28), GOLD_D, METAL)
 		end
 		add(head, "EvoCrest", Vector3.new(0.4, h * 0.42, d * 1.05), CFrame.new(0, h * 0.68, 0.1), GOLD_D, METAL)
+	end
+	-- his war blade, in the left fist: a long grip with a heavy cleaver blade at each end (the gauntlet hand stays free)
+	local fist = body(m, "LeftHand")
+	if fist then
+		local STEEL, EDGE = rgb(58, 54, 60), rgb(150, 146, 150)
+		-- along the fist's front-back axis, the front end dipped a little
+		local grip = add(fist, "SwordGrip", Vector3.new(0.5, 0.5, 3.4), CFrame.new(0, -0.35, -0.1) * CFrame.Angles(-0.32, 0, 0), rgb(40, 28, 22))
+		add(grip, "SwordWrap", Vector3.new(0.58, 0.58, 1.3), CFrame.new(0, 0, 0), GOLD_D, METAL)
+		for _, sz in { -1, 1 } do
+			-- one blade per end; the back one is turned over, so the two edges face opposite ways
+			local flip = sz > 0 and CFrame.Angles(0, 0, math.pi) or CFrame.new()
+			add(grip, "SwordGuard", Vector3.new(0.7, 1.9, 0.5), CFrame.new(0, 0, sz * 1.85), GOLD, METAL)
+			local blade = add(grip, "SwordBlade", Vector3.new(0.22, 1.7, 5.6), CFrame.new(0, 0, sz * 4.85) * flip * CFrame.new(0, 0.25, 0), STEEL, METAL)
+			add(blade, "SwordEdge", Vector3.new(0.1, 0.3, 5.6), CFrame.new(0, 0.95, 0), EDGE, METAL)
+			add(blade, "SwordSpine", Vector3.new(0.34, 0.4, 5.2), CFrame.new(0, -0.7, sz * -0.2), GOLD_D, METAL)
+			add(blade, "SwordTip", Vector3.new(0.2, 1.2, 1.2), CFrame.new(0, 0.2, sz * 2.9) * CFrame.Angles(math.pi / 4, 0, 0), STEEL, METAL)
+			for i = 0, 2 do -- notches along the back of the blade
+				add(blade, "SwordNotch", Vector3.new(0.26, 0.35, 0.5), CFrame.new(0, -0.95, sz * (-1.6 + i * 1.5)), STEEL, METAL)
+			end
+		end
 	end
 	for _, g in named(m, { "Gem" }) do
 		g.Size *= 1.35
