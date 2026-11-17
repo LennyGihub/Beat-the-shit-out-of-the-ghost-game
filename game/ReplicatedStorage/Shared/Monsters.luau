@@ -113,8 +113,8 @@ end
 
 -- EVOLVED monsters: every 3rd ghost is an evolved variant of one of the monsters above (same id, same voice and
 -- animations; Server/Evolved.luau dresses the model and runs the extra power). Twice the health, faster, and every
--- swipe launches you through the walls. title = its name; power = the extra ability (Evolved.luau); the other
--- fields override the base monster's.
+-- swipe launches you through the walls. title = its name; power = the extra ability (Evolved.luau); pay = x its
+-- cash (on top of the x2 every evolved monster pays); the other fields override the base monster's.
 local EVO: { [string]: { [string]: any } } = {
 	Woman = { title = "THE VIOLET WIDOW", color = C(170, 90, 230), scale = 1.1,
 		-- ring = how far from you she and her doubles appear, spread = degrees between two of them (all in front of you),
@@ -127,7 +127,7 @@ local EVO: { [string]: { [string]: any } } = {
 	Goblin = { title = "THE GOBLIN KING", color = C(34, 92, 44), scale = 1.15, solid = false, wallBreaker = true,
 		power = { kind = "armed", weapons = { "BaseballBat", "FryingPan", "Crowbar", "LeadPipe", "Shovel", "SpikedBat", "Machete", "FireAxe" } },
 		desc = "Fat, forest green, and already armed. He punches through the walls to get to you." },
-	Pirate = { title = "THE BURNING CAPTAIN", color = C(255, 90, 30), scale = 1.1,
+	Pirate = { title = "THE BURNING CAPTAIN", color = C(255, 90, 30), scale = 1.1, pay = 2, -- pays double (x4 the Pirate's reward)
 		-- his crew jumps out of him and runs at you: one hit sends them flying, and they barely scratch (dmg)
 		power = { kind = "army", cd = 15, n = 5, t = 14, dmg = 3, size = 0.42, speed = 17 },
 		desc = "A skeleton on fire. He throws an army of little skeletons at you." },
@@ -180,7 +180,7 @@ local function evolved(id: string, tier: number): Monster
 	d.dmg = base.dmg * T.dmg
 	d.atk = T.atk * ((base :: any).atk or 1) -- attack / ability cooldown multiplier
 	d.smash = math.max(T.smash, (base :: any).smash or 0) -- how much harder its punch launches you
-	d.reward = base.reward * 2
+	d.reward = base.reward * 2 * (e.pay or 1)
 	d.rarity = (base :: any).secret and 4 or 3
 	evoCache[key] = d
 	return d

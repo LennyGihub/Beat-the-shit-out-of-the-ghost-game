@@ -26,8 +26,8 @@
    "file": "ReplicatedStorage/Shared/Config.luau",
    "instance": "game.ReplicatedStorage.Shared.Config",
    "class": "ModuleScript",
-   "bytes": 8372,
-   "sha1": "a7f494417f787d9ff76a068ae01db2aa65aba1b0"
+   "bytes": 8412,
+   "sha1": "7573efd45a1334f9ec54eac3882d3670d8a14463"
   },
   {
    "file": "ReplicatedStorage/Shared/Entrances.luau",
@@ -61,8 +61,8 @@
    "file": "ReplicatedStorage/Shared/Monsters.luau",
    "instance": "game.ReplicatedStorage.Shared.Monsters",
    "class": "ModuleScript",
-   "bytes": 16732,
-   "sha1": "d09022ea62bc783b6182dbeb90d79d7870c41de7"
+   "bytes": 16860,
+   "sha1": "56f9309cd7cbbd4d0f3f4aa1d611c0d405461b02"
   },
   {
    "file": "ReplicatedStorage/Shared/Passes.luau",
