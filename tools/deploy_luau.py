@@ -68,8 +68,7 @@ def main():
         print(f"{len(files)} file(s) OK")
         return
     b = E.Bridge()
-    studios = E.json_tail(b.call("list_roblox_studios", {}))["studios"]
-    pick = [s for s in studios if not a.studio or a.studio.lower() in s["name"].lower()]
+    pick, _ = E.open_studios(b, a.studio)
     if not pick:
         sys.exit("No matching Studio open (or the bridge is off).")
     sid = pick[0]["id"]

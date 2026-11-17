@@ -110,7 +110,7 @@ def main():
     sha = git("rev-parse", "HEAD")
 
     b = E.Bridge()
-    studios = E.json_tail(b.call("list_roblox_studios", {}))["studios"]
+    studios, _ = E.open_studios(b)
     if not studios:
         sys.exit("No Studio connected to the bridge: image saved and pushed, not uploaded.")
     url = f"http://localhost:8770/{sha}/{rel}"

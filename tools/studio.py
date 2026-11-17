@@ -22,8 +22,7 @@ if args[:1] == ["--studio"]:
 if not args:
     sys.exit(__doc__)
 b = E.Bridge()
-studios = E.json_tail(b.call("list_roblox_studios", {}))["studios"]
-pick = [s for s in studios if not want or want.lower() in s["name"].lower()]
+pick, _ = E.open_studios(b, want)
 if not pick:
     sys.exit("No matching Studio open (or the bridge is off).")
 SID = pick[0]["id"]

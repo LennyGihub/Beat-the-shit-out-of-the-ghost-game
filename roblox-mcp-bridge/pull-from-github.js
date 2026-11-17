@@ -40,9 +40,23 @@ function log(...a) {
 }
 
 // ---- GitHub (public repo: nothing to log in to) ----------------------------------------------------------
+// a request to GitHub, tried again when the network hiccups
+async function get(url, options) {
+  let last;
+  for (let attempt = 1; attempt <= 4; attempt++) {
+    try {
+      return await fetch(url, options);
+    } catch (e) {
+      last = e;
+      await new Promise((r) => setTimeout(r, 1500 * attempt));
+    }
+  }
+  throw new Error("GitHub could not be reached (" + ((last && last.cause && last.cause.code) || (last && last.message)) + ")");
+}
+
 // the commit main points at, read the way `git` does (this address has no hourly limit, unlike the API)
 async function headSha() {
-  const r = await fetch(`https://github.com/${OWNER}/${REPO}.git/info/refs?service=git-upload-pack`, {
+  const r = await get(`https://github.com/${OWNER}/${REPO}.git/info/refs?service=git-upload-pack`, {
     headers: { "User-Agent": "git/2.40" },
   });
   if (!r.ok) throw new Error("GitHub answered " + r.status + " for the branch list");
@@ -53,7 +67,7 @@ async function headSha() {
 
 // every file of that commit: [{ path, sha }]  (asked only when main moved: the API allows 60 calls an hour)
 async function tree(sha) {
-  const r = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/git/trees/${sha}?recursive=1`, {
+  const r = await get(`https://api.github.com/repos/${OWNER}/${REPO}/git/trees/${sha}?recursive=1`, {
     headers: { "User-Agent": "roblox-mcp-bridge", Accept: "application/vnd.github+json" },
   });
   if (!r.ok) throw new Error("GitHub answered " + r.status + " for the file list" + (r.status === 403 ? " (hourly limit: it will work again within the hour)" : ""));
@@ -62,7 +76,7 @@ async function tree(sha) {
 }
 
 async function download(sha, file) {
-  const r = await fetch(`https://raw.githubusercontent.com/${OWNER}/${REPO}/${sha}/${file.split("/").map(encodeURIComponent).join("/")}`);
+  const r = await get(`https://raw.githubusercontent.com/${OWNER}/${REPO}/${sha}/${file.split("/").map(encodeURIComponent).join("/")}`);
   if (!r.ok) throw new Error("GitHub answered " + r.status + " for " + file);
   return (await r.text()).replace(/\r\n/g, "\n");
 }
@@ -104,11 +118,13 @@ async function pickStudio() {
   const text = await call("list_roblox_studios", {});
   const i = text.search(/[{[]/);
   const parsed = JSON.parse(i >= 0 ? text.slice(i) : text);
-  const studios = (parsed.studios || parsed || []).filter((s) => !WANT || String(s.name).toLowerCase().includes(WANT));
-  if (!studios.length) throw new Error("no Roblox Studio is open with MCP Ready" + (WANT ? ' (matching "' + WANT + '")' : ""));
-  const s = studios[0];
-  if (s.mode && String(s.mode).toLowerCase() !== "edit") throw new Error('Studio "' + s.name + '" is in a playtest: press Stop, the scripts go in right after');
-  return s;
+  // a Studio window on its home screen is listed too, without a name: only windows with a place open count
+  const open = (parsed.studios || parsed || []).filter((s) => s && s.name);
+  const studios = open.filter((s) => !WANT || String(s.name).toLowerCase().includes(WANT));
+  if (!studios.length) throw new Error("no Roblox Studio has a place open with MCP connected" + (WANT ? ' (matching "' + WANT + '")' : ""));
+  const edit = studios.filter((s) => !s.mode || String(s.mode).toLowerCase() === "edit");
+  if (!edit.length) throw new Error('Studio "' + studios[0].name + '" is in a playtest: press Stop, the scripts go in right after');
+  return edit[0];
 }
 
 // pending/src/<Service>/<Folder...>/<Name>[.server|.client].luau  ->  where it lives in the place

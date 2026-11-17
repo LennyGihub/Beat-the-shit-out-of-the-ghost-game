@@ -52,7 +52,7 @@ cloud Claude -> git push (main, folder pending/src) -> GitHub -> pull-from-githu
 `main` branch of the game's public repo and writes each new or changed script of `pending/src/` into the open
 Studio (Edit mode only: it waits while a playtest runs). Nothing to log in to, no tunnel. It is one way: Claude
 cannot see Studio through it (no playtest, no screenshots), so save the place and tell Claude what you see.
-`node pull-from-github.js --all` pushes every pending script again.
+`node pull-from-github.js --all` pushes every pending script again. `github-sync.bat` restarts the sync alone (the gateway must be running).
 
 ## Each time you want to test
 

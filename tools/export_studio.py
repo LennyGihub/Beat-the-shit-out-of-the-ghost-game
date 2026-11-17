@@ -26,7 +26,9 @@ import subprocess
 import sys
 import urllib.request
 
-URL = os.environ.get("ROBLOX_MCP_URL", "https://skinny-wages-stopped.ngrok-free.dev/mcp")
+# the PC's bridge: a Microsoft dev tunnel since 2026-11 (before: https://skinny-wages-stopped.ngrok-free.dev/mcp,
+# ngrok's free plan stops after 1 GB a month). The bridge key for this host is in the environment's network secrets.
+URL = os.environ.get("ROBLOX_MCP_URL", "https://jolly-chair-dthrxs3-8765.uks1.devtunnels.ms/mcp")
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "game")
 SERVICES = ["Workspace", "ReplicatedFirst", "ReplicatedStorage", "ServerScriptService",
@@ -85,6 +87,15 @@ class Bridge:
         return self.call("execute_luau", {"studio_id": studio, "datamodel_type": "Edit", "code": code})
 
 
+def open_studios(bridge, want=None):
+    """Studio windows that have a place open (a window on its home screen is listed without a name), filtered by
+    part of the name; a window in Edit mode comes first."""
+    studios = [s for s in json_tail(bridge.call("list_roblox_studios", {}))["studios"] if s.get("name")]
+    pick = [s for s in studios if not want or want.lower() in s["name"].lower()]
+    pick.sort(key=lambda s: str(s.get("mode", "Edit")).lower() != "edit")
+    return pick, studios
+
+
 def json_tail(text):
     """execute_luau may wrap the return value; take the JSON part."""
     i = min([p for p in (text.find("{"), text.find("[")) if p >= 0], default=-1)
@@ -140,14 +151,13 @@ def main():
     a = ap.parse_args()
 
     b = Bridge()
-    studios = json_tail(b.call("list_roblox_studios", {}))["studios"]
+    pick, studios = open_studios(b, a.studio)
     if a.list or not studios:
         for s in studios:
             print(s["name"])
         if not studios:
-            sys.exit("No Studio open (or the bridge is off).")
+            sys.exit("No Studio has a place open (or the bridge is off).")
         return
-    pick = [s for s in studios if not a.studio or a.studio.lower() in s["name"].lower()]
     if not pick:
         sys.exit(f"No open Studio matches {a.studio!r}: " + ", ".join(s["name"] for s in studios))
     st = pick[0]

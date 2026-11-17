@@ -114,11 +114,17 @@ if (-not $address) {
     if ($parts.Length -ge 2) { $address = "https://" + $parts[0] + "-" + $port + "." + $parts[1] + ".devtunnels.ms" }
 }
 
-# 7) restart the bridge so it uses the tunnel (old windows closed by their titles)
+# 7) restart the bridge so it uses the tunnel (the old gateway, relay, sync and tunnel are stopped first)
 Say "Restarting the bridge..."
-foreach ($title in @("Roblox MCP gateway", "Image relay", "ngrok tunnel", "GitHub sync", "Dev tunnel")) {
-    $null = (& taskkill /FI "WINDOWTITLE eq $title*" /T /F 2>&1 | Out-String)
+# (found by what the programs are: in Windows Terminal the windows' titles cannot be used to find them)
+$me = $PID
+$old = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object {
+    $_.ProcessId -ne $me -and $_.CommandLine -and (
+        $_.CommandLine -match "mcp-gateway\.js|image-relay\.js|pull-from-github\.js" -or
+        $_.Name -eq "ngrok.exe" -or
+        ($_.Name -eq "devtunnel.exe" -and $_.CommandLine -match " host "))
 }
+foreach ($p in $old) { $null = (& taskkill /PID $p.ProcessId /T /F 2>&1 | Out-String) }
 Start-Sleep -Seconds 2
 $bat = Join-Path $here "start-bridge.bat"
 if (-not (Test-Path $bat)) { Finish "FAILED" @("step: restart", "start-bridge.bat is not next to this script ($here)", "tunnel id: $id", "address: $address") }
