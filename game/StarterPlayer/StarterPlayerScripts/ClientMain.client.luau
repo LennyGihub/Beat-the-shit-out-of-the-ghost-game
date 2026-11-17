@@ -18,6 +18,7 @@ workspace.CurrentCamera.FieldOfView = 74
 local Remotes = RS:WaitForChild("Remotes")
 
 local Platform = require(Client.Platform)
+local LockOn = require(Client.LockOn)
 local Settings = require(Client.Settings)
 local SettingsUI = require(Client.SettingsUI)
 local HUD = require(Client.HUD)
@@ -46,6 +47,7 @@ local CallerUI = require(Client.CallerUI)
 local SandboxUI = require(Client.SandboxUI)
 
 Platform.init()
+LockOn.init() -- phones: the LOCK button keeps the view on the monster
 Settings.init()
 HUD.init()
 VM.init()

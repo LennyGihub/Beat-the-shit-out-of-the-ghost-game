@@ -352,6 +352,13 @@
    "sha1": "abb9ee808c4143cbb429b0a0d4da6eb5d69c9a80"
   },
   {
+   "file": "StarterPlayer/StarterPlayerScripts/Client/LockOn.luau",
+   "instance": "game.StarterPlayer.StarterPlayerScripts.Client.LockOn",
+   "class": "ModuleScript",
+   "bytes": 4371,
+   "sha1": "a7e14db28f8cdbf713bd34b77aa42ff1c96b6932"
+  },
+  {
    "file": "StarterPlayer/StarterPlayerScripts/Client/MonsterFx.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.MonsterFx",
    "class": "ModuleScript",
@@ -453,8 +460,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/TouchControls.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.TouchControls",
    "class": "ModuleScript",
-   "bytes": 4746,
-   "sha1": "3f1d6f13bf84c156bd0a0c377aded805262b53b6"
+   "bytes": 5306,
+   "sha1": "700422120e5f95956ff73eab91401218ebcff57e"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/UltActs.luau",
@@ -509,8 +516,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/ClientMain.client.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.ClientMain",
    "class": "LocalScript",
-   "bytes": 6699,
-   "sha1": "3df8e66cc9d7496854d1c9b310974e0d5c9839a6"
+   "bytes": 6808,
+   "sha1": "9d03392b27f8a6092af74a0e9355f548dfd98816"
   }
  ]
 }

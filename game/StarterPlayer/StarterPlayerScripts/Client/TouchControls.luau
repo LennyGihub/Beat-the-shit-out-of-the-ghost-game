@@ -1,10 +1,12 @@
 -- On-screen buttons for phones and tablets during a run: HIT (hold = keep hitting / spraying), LIFT / THROW,
--- ULT (lights up when the brutality bar is full), RUN (toggle) and DROP (when holding an item).
+-- ULT (lights up when the brutality bar is full), RUN (toggle), DROP (when holding an item) and LOCK (toggle: the
+-- view keeps turning to the monster, see LockOn).
 -- They sit left of and above Roblox's jump button, scaled to the screen. Shown only in touch mode.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Grunge = require(script.Parent.Grunge)
 local Platform = require(script.Parent.Platform)
+local LockOn = require(script.Parent.LockOn)
 local Config = require(game:GetService("ReplicatedStorage").Shared.Config)
 
 local TC = {}
@@ -64,6 +66,7 @@ function TC.init(h: Handlers)
 		h.sprint(running)
 	end)
 	make("Drop", "DROP", 66, Vector2.new(-440, -240), DARK, h.drop)
+	make("Lock", "LOCK", 70, Vector2.new(-190, -402), DARK, LockOn.toggle)
 	layout()
 	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(layout)
 	local function refresh()
@@ -81,6 +84,10 @@ function TC.init(h: Handlers)
 		ult.root.BackgroundColor3 = ready and Color3.fromRGB(230, 96, 20) or Color3.fromRGB(40, 34, 30)
 		ult.stroke.Color = ready and Color3.fromRGB(255, 200, 90) or Grunge.INK
 		buttons.Run.root.BackgroundColor3 = running and Color3.fromRGB(196, 176, 64) or Color3.fromRGB(40, 34, 30)
+		-- LOCK: bright while the view follows the monster, dim while it is on but has nothing to aim at
+		local lock = buttons.Lock
+		lock.root.BackgroundColor3 = LockOn.tracking() and Color3.fromRGB(196, 176, 64) or (LockOn.isOn() and Color3.fromRGB(104, 92, 44) or Color3.fromRGB(40, 34, 30))
+		lock.stroke.Color = LockOn.isOn() and Color3.fromRGB(255, 232, 150) or Grunge.INK
 		buttons.Lift.label.Text = lp:GetAttribute("Carrying") and "THROW" or "LIFT"
 		buttons.Drop.root.Visible = (lp:GetAttribute("Sel") or 0) > 0
 		buttons.Swap.root.Visible = lp:GetAttribute("DoubleUlt") == true and (lp:GetAttribute("EquippedUlt2") or "") ~= ""
