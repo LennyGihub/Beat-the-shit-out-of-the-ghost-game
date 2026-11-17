@@ -249,30 +249,13 @@ function Fx.handle(kind: string, ...)
 		Fx.shake(0.9)
 		setMusic(false)
 	elseif kind == "Ultimate" then
-		local pos, by, ultId = args[1], args[2], args[3]
-		local u = Ultimates.byId[ultId or "Rage"]
-		local ucolor = u and u.color or Color3.fromRGB(255, 60, 20)
-		Sfx.at("Ultimate", pos, { Volume = 1.3 })
-		Sfx.at("PunchHeavy", pos, { PlaybackSpeed = 0.5, Volume = 1.3 })
-		local ring = Instance.new("Part")
-		ring.Shape = Enum.PartType.Cylinder; ring.Material = Enum.Material.Neon; ring.Color = ucolor
-		ring.Anchored = true; ring.CanCollide = false; ring.CanQuery = false; ring.CanTouch = false
-		ring.Size = Vector3.new(0.6, 2, 2); ring.CFrame = CFrame.new(pos - Vector3.new(0, 2.6, 0)) * CFrame.Angles(0, 0, math.pi / 2)
-		ring.Transparency = 0.2; ring.Parent = workspace.Terrain
-		TweenService:Create(ring, TweenInfo.new(0.6, Enum.EasingStyle.Quad), { Size = Vector3.new(0.6, Config.Brutality.UltShockRadius * 2, Config.Brutality.UltShockRadius * 2), Transparency = 1 }):Play()
-		Debris:AddItem(ring, 0.7)
-		burst(pos, ucolor, 60, 40, 1.2)
-		if by == lp then
-			VM.slam()
-			Fx.shake(1)
-			Fx.kick(18)
-			HUD.flash(ucolor, 0.6)
-			HUD.banner(u and string.upper(u.name) or "UNLEASHED", "", 1.8)
-		end
+		UltFx.cast(args[1], args[2], args[3]) -- hands, wind-up, signature and aura of that ultimate
 	elseif kind == "UltShock" then
-		UltFx.shock(args[1], args[2], args[3])
+		UltFx.shock(args[1], args[2], args[3], args[4])
 	elseif kind == "UltStrike" then
-		UltFx.strike(args[1], args[2], args[3])
+		UltFx.strike(args[1], args[2], args[3], args[4])
+	elseif kind == "UltFling" then
+		UltFx.fling(args[1], args[2])
 	elseif kind == "UltFreeze" then
 		UltFx.freeze(args[1], args[2])
 	elseif kind == "TimeStop" then
@@ -411,6 +394,7 @@ function Fx.handle(kind: string, ...)
 		Sfx.play("Click", { PlaybackSpeed = 0.8 })
 	elseif kind == "BackInLobby" then
 		HUD.banner("BACK IN THE PARK", "", 2.5)
+		setMusic(false) -- the fight music stays in the house
 	elseif kind == "Lift" then
 		Sfx.at("PunchLight", args[1], { PlaybackSpeed = 0.5, Volume = 0.6 })
 	elseif kind == "Throw" then

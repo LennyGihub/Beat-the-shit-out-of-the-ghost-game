@@ -3,6 +3,8 @@
 -- (a PS2-style picture from Shared/ShopArt, a short name, a price tag). Click a card to select it: the strip at the
 -- bottom shows its one-line description and the BUY / EQUIP button. Same look as the lobby panel and the fight HUD.
 -- Owners of the Double Ultimate pass get a second button on an owned ultimate: EQUIP SLOT 2 (the spare ultimate).
+-- Every ultimate also has TRY NOW !: the sandbox (Server/Sandbox), where it can be fired on a training dummy
+-- before buying it. Pressed from inside the sandbox it only changes the ultimate on trial.
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -27,6 +29,7 @@ local selName: TextLabel
 local selDesc: TextLabel
 local actBtn: TextButton
 local actBtn2: TextButton -- EQUIP SLOT 2 (Double Ultimate pass)
+local tryBtn: TextButton -- TRY NOW ! (ultimates: the sandbox)
 local registered = false
 local onToggle: ((boolean) -> ())? = nil
 local tab = "ults" -- ults | maps | robux
@@ -39,6 +42,7 @@ local BLUE = Color3.fromRGB(44, 72, 120)
 local GREY = Color3.fromRGB(64, 58, 52)
 local GOLD = Color3.fromRGB(150, 104, 18)
 local ROBUX = Color3.fromRGB(30, 120, 60)
+local TRY = Color3.fromRGB(26, 104, 112)
 local ACCENT = Color3.fromRGB(255, 150, 80)
 local CARD = Color3.fromRGB(24, 19, 17)
 local RARITY = { Color3.fromRGB(200, 196, 186), Color3.fromRGB(110, 200, 90), Color3.fromRGB(80, 150, 240), Color3.fromRGB(170, 90, 230), Color3.fromRGB(255, 170, 40) }
@@ -46,7 +50,7 @@ local RARITY = { Color3.fromRGB(200, 196, 186), Color3.fromRGB(110, 200, 90), Co
 -- one thing on sale. state() = tag text, tag colour, owned?; act() = what the big button does
 -- verb2 / act2 = an optional second button (nil text = hidden)
 type Entry = { key: string, name: string, desc: string, color: Color3, state: () -> (string, Color3, boolean), act: () -> (), verb: () -> string,
-	verb2: (() -> (string?, Color3?))?, act2: (() -> ())?,
+	verb2: (() -> (string?, Color3?))?, act2: (() -> ())?, try: (() -> ())?,
 	card: TextButton?, tag: Frame?, tagText: TextLabel?, sel: UIStroke?, img: ImageLabel? }
 local entries = {} :: { [string]: { Entry } }
 local selected: Entry? = nil
@@ -96,7 +100,7 @@ local function setButton(b: TextButton, text: string, color: Color3)
 end
 
 local function refresh()
-	if not gui or not actBtn or not actBtn2 then return end -- not built yet
+	if not gui or not actBtn or not actBtn2 or not tryBtn then return end -- not built yet
 	cashText.Text = "$" .. tostring(cash())
 	for id, g in grids do g.Visible = id == tab end
 	for id, b in tabBtns do
@@ -122,6 +126,12 @@ local function refresh()
 		local _, color = s.state()
 		setButton(actBtn, s.verb(), color)
 		actBtn.Visible = true
+		-- TRY NOW ! sits left of the big button: the texts make room for it
+		local try = s.try ~= nil
+		tryBtn.Visible = try
+		selName.Size = UDim2.fromScale(try and 0.42 or 0.6, 0.06)
+		selDesc.Size = UDim2.fromScale(try and 0.43 or 0.62, 0.04)
+		statusText.Size = UDim2.fromScale(try and 0.43 or 0.62, 0.035)
 		-- the second button, when this card has one: the two share the place of the big one
 		local text2, color2 = nil, nil
 		if s.verb2 then text2, color2 = s.verb2() end
@@ -138,6 +148,7 @@ local function refresh()
 		selDesc.Text = ""
 		actBtn.Visible = false
 		actBtn2.Visible = false
+		tryBtn.Visible = false
 	end
 end
 
@@ -253,6 +264,12 @@ function Shop.init(toggle: (boolean) -> ())
 			act2 = function()
 				if second() ~= u.id then Remotes.EquipUlt:FireServer(u.id, 2) end
 			end,
+			-- the sandbox: this ultimate, owned or not, on a training dummy
+			try = function()
+				local r = Remotes:WaitForChild("Sandbox", 5) :: RemoteEvent?
+				if r then r:FireServer("enter", u.id) end
+				Shop.close()
+			end,
 		}
 		table.insert(entries.ults, e)
 		card(gu, e, i)
@@ -333,6 +350,11 @@ function Shop.init(toggle: (boolean) -> ())
 	actBtn2.Activated:Connect(function()
 		Sfx.play("Click")
 		if selected and selected.act2 then selected.act2() end
+	end)
+	tryBtn = button(panel, "TRY NOW !", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(0.675, 0.85), Size = UDim2.fromScale(0.19, 0.1), ZIndex = 12, Rotation = 1.2, Visible = false }, TRY)
+	tryBtn.Activated:Connect(function()
+		Sfx.play("Click")
+		if selected and selected.try then selected.try() end
 	end)
 
 	for _, a in { "Cash", "OwnedUlts", "EquippedUlt", "EquippedUlt2", "Owned" } do lp:GetAttributeChangedSignal(a):Connect(refresh) end

@@ -30,6 +30,7 @@ local Friends = require(Server.Friends)
 local Monetization = require(Server.Monetization)
 local Quests = require(Server.Quests)
 local Vip = require(Server.Vip)
+local Sandbox = require(Server.Sandbox)
 
 local isMatchServer = game.PrivateServerId ~= "" and game.PrivateServerOwnerId == 0
 Run.mode = isMatchServer and "Match" or "Lobby"
@@ -43,6 +44,7 @@ Combat.start()
 UltRunner.start()
 Inventory.start()
 Run.start()
+Sandbox.start() -- after Run.start: it takes over the monster's death while a sandbox is on
 Lobby.start()
 Admin.start()
 Friends.start()

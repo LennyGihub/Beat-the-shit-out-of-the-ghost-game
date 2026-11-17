@@ -7,6 +7,7 @@ local Ghost = require(script.Parent.Ghost)
 local Combat = require(script.Parent.Combat)
 local Fire = require(script.Parent.Fire)
 local Config = require(RS.Shared.Config)
+local Ultimates = require(RS.Shared.Ultimates)
 
 local Runner = {}
 local rng = Random.new()
@@ -18,8 +19,8 @@ local function ghostPos(): Vector3?
 end
 
 -- smash furniture outward and blast the ghost if she is inside the radius
-local function shock(player: Player, center: Vector3, r: number, d: number, k: number, color: Color3)
-	Remotes.Fx:FireAllClients("UltShock", center, r, color)
+local function shock(player: Player, center: Vector3, r: number, d: number, k: number, color: Color3, id: string?)
+	Remotes.Fx:FireAllClients("UltShock", center, r, color, id) -- id picks the look (Client/UltActs SHOCK)
 	for _, f in Furniture.near(center, r) do
 		local c = f:GetBoundingBox().Position
 		local out = Vector3.new(c.X - center.X, 0, c.Z - center.Z)
@@ -59,7 +60,7 @@ end
 
 -- explosive punches (buff.explode)
 function Runner.explode(player: Player, pos: Vector3, radius: number, color: Color3)
-	Remotes.Fx:FireAllClients("UltShock", pos, radius, color)
+	Remotes.Fx:FireAllClients("UltShock", pos, radius, color, "explode")
 	-- explosions blow holes in the inside walls too
 	local w = math.clamp(radius * 0.5, 3, 9)
 	if Ragdoll.breakWalls(pos, Vector3.zero, w, w * 0.6) > 0 then Remotes.Fx:FireAllClients("WallSmash", pos, 100) end
@@ -71,14 +72,14 @@ function Runner.explode(player: Player, pos: Vector3, radius: number, color: Col
 	if gp and (gp - pos).Magnitude < radius then Ghost.damage(6 * Combat.stat(player, "damage"), player) end
 end
 
-local function strike(player: Player, a, color: Color3)
+local function strike(player: Player, a, color: Color3, id: string)
 	local delayFor = { lightning = 0.08, meteor = 0.7, holy = 0.35, nuke = 1.6 }
 	for i = 1, a.n do
 		local gp = ghostPos()
 		if not gp then return end
 		local spread = a.style == "lightning" and 3 or (a.style == "nuke" and 0 or 4)
 		local pos = gp + Vector3.new(rng:NextNumber(-spread, spread), 0, rng:NextNumber(-spread, spread))
-		Remotes.Fx:FireAllClients("UltStrike", a.style, pos, color)
+		Remotes.Fx:FireAllClients("UltStrike", a.style, pos, color, id)
 		local d = a.d * Combat.stat(player, "damage")
 		task.delay(delayFor[a.style] or 0.2, function()
 			local now = ghostPos()
@@ -99,46 +100,60 @@ local function strike(player: Player, a, color: Color3)
 	end
 end
 
-local function vortex(player: Player, a)
+-- a piece of furniture an ultimate throws: the clients draw a streak behind it
+local function fling(f: Model, target: Vector3, player: Player, power: number, color: Color3)
+	Remotes.Fx:FireAllClients("UltFling", f, color)
+	Furniture.flingAt(f, target, player, power)
+end
+
+local function vortex(player: Player, a, color: Color3)
 	local t0 = os.clock()
 	Ghost.setVortex(a.t)
 	while os.clock() - t0 < a.t do
 		local gp = ghostPos()
 		if not gp then return end
 		for _, f in Furniture.nearest(gp, a.r, 2) do
-			Furniture.flingAt(f, gp, player, 115)
+			fling(f, gp, player, 115, color)
 		end
 		Ghost.damage(1.5 * Combat.stat(player, "damage"), player)
 		task.wait(0.3)
 	end
 end
 
-local function barrage(player: Player, a)
+local function barrage(player: Player, a, color: Color3)
 	local gp = ghostPos()
 	if not gp then return end
 	for _, f in Furniture.nearest(gp, 110, a.n) do
 		local now = ghostPos()
 		if not now then return end
-		Furniture.flingAt(f, now + Vector3.new(0, 1, 0), player, 130)
+		fling(f, now + Vector3.new(0, 1, 0), player, 130, color)
 		task.wait(0.08)
 	end
 end
 
 function Runner.run(player: Player, def, center: Vector3)
 	local color = def.color
+	-- the wind-up: the cast animation lands its hit castTime after the button (the buff is already running)
+	task.wait(Ultimates.castTime)
+	local function here(): Vector3
+		local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		return hrp and hrp.Position or center
+	end
+	if not player.Parent then return end
+	center = here()
 	for _, a in def.acts do
 		task.spawn(function()
 			local t = a.type
+			if a.wait then task.wait(a.wait) end
 			if t == "shock" then
-				shock(player, center, a.r, a.d, a.k, color)
+				shock(player, a.atGhost and ghostPos() or center, a.r, a.d, a.k, color, def.id)
 			elseif t == "pulses" then
 				for _ = 1, a.n do
-					local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
-					shock(player, hrp and hrp.Position or center, a.r, a.d, a.k, color)
+					shock(player, here(), a.r, a.d, a.k, color, def.id)
 					task.wait(a.gap)
 				end
 			elseif t == "strike" then
-				strike(player, a, color)
+				strike(player, a, color, def.id)
 			elseif t == "freeze" then
 				Ghost.freeze(a.t)
 				local gp = ghostPos()
@@ -149,9 +164,9 @@ function Runner.run(player: Player, def, center: Vector3)
 			elseif t == "launch" then
 				Ghost.launch(a.h, a.d * Combat.stat(player, "damage"), player)
 			elseif t == "vortex" then
-				vortex(player, a)
+				vortex(player, a, color)
 			elseif t == "barrage" then
-				barrage(player, a)
+				barrage(player, a, color)
 			elseif t == "burn" then
 				Ghost.burn(a.dps * Combat.stat(player, "damage"), a.t, a.color or color, player)
 			elseif t == "slow" then

@@ -538,7 +538,6 @@ function GA.update(dt: number)
 				highlight.FillTransparency = 1
 			end
 		end
-		if swirl then swirl.Enabled = current:GetAttribute("Vortex") == true end
 		local tp = target(state, t, t - stateT)
 		local speed = (state == "Swipe" or state == "Knocked" or state == "Ability") and 22 or 12
 		local a = 1 - math.exp(-speed * dt)

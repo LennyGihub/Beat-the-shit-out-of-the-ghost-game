@@ -76,11 +76,12 @@ local function cashMult(p: Player): number
 	return Friends.mult(p) * (p:GetAttribute("Money2") and 2 or 1) * (p:GetAttribute("VIP") and Config.Vip.CashBonus or 1)
 end
 
-function Run.addToMatch(p: Player)
+-- noPay = the sandbox (Server/Sandbox): in the house like in a run, but nothing is ever paid out
+function Run.addToMatch(p: Player, noPay: boolean?)
 	p:SetAttribute("InMatch", true)
 	p:SetAttribute("RunCash", 0)
 	p:SetAttribute("RunKills", 0)
-	stats[p] = { earned = 0, damage = 0, kills = 0, paid = false, revives = 0, secondChance = false }
+	stats[p] = { earned = 0, damage = 0, kills = 0, paid = noPay == true, revives = 0, secondChance = false }
 	Inventory.clear(p)
 	if p:GetAttribute("GlockPass") then Inventory.give(p, "Glock18") end -- Robux pass: in every run
 	local sp = workspace:FindFirstChild("MatchSpawn")
@@ -329,6 +330,7 @@ local function endDeath(p: Player)
 end
 -- nobody left standing (and no last-player revive window still open): the run is over for everyone left
 local function checkWipe()
+	if state == "Sandbox" then return end -- nobody loses in the sandbox
 	if aliveCount() > 0 then return end
 	for _, o in Run.matchPlayers() do
 		local pd = pending[o]
@@ -353,6 +355,7 @@ Run.respawnSpectators = respawnSpectators
 
 function Run.onDied(p: Player): number
 	if not p:GetAttribute("InMatch") then return 4 end
+	if p:GetAttribute("Sandbox") then return 3 end -- the sandbox: simply back on your feet in the house
 	local hrp = hrpOf(p)
 	local at = hrp and hrp.CFrame or CFrame.new(MapLoader.spawnInside())
 	local team = aliveCount(p) > 0
@@ -461,6 +464,16 @@ function Run.beginMatch(list: { Player }, mapId: string?, diffId: string?)
 	task.spawn(Run.startFight)
 end
 
+-- the sandbox (Server/Sandbox) uses the house without a run: no waves, no cash. While it is on the state is
+-- "Sandbox", so a run cannot start on top of it (Run.running) and its players are kept inside the house.
+function Run.setSandbox(on: boolean)
+	if on then
+		if state == "Idle" then setState("Sandbox", "") end
+	elseif state == "Sandbox" then
+		Run.endMatch()
+	end
+end
+
 function Run.endMatch()
 	Ghost.despawn()
 	Ghost.restoreWalls()
@@ -543,8 +556,8 @@ function Run.start()
 				end
 			end
 		end
-		if state == "Intro" or (state == "Fight" and Ghost.alive()) then
-			-- no running out to the shop while a monster is in the house: back inside
+		if state == "Intro" or state == "Sandbox" or (state == "Fight" and Ghost.alive()) then
+			-- no running out to the shop while a monster is in the house: back inside (the sandbox is the house only)
 			for _, p in Run.matchPlayers() do
 				local hrp = hrpOf(p)
 				if hrp and (hrp.Position.Z > Config.OutsideZ - 2 or not insideHouse(hrp.Position)) then
@@ -552,7 +565,7 @@ function Run.start()
 					;(p.Character :: Model):PivotTo(CFrame.new(MapLoader.spawnInside() + Vector3.new(0, 3, 0)))
 					if now - (lastWarn[p] or 0) > 2 then
 						lastWarn[p] = now
-						Remotes.Fx:FireClient(p, "Toast", "THE DOOR WON'T OPEN WHILE THE MONSTER IS HERE")
+						Remotes.Fx:FireClient(p, "Toast", state == "Sandbox" and "THE SANDBOX IS THE HOUSE - PRESS LEAVE TO GO BACK TO THE PARK" or "THE DOOR WON'T OPEN WHILE THE MONSTER IS HERE")
 					end
 				end
 			end

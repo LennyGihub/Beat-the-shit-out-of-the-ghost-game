@@ -5,6 +5,9 @@
 -- acts: shock {r,d,k} | pulses {n,r,d,k,gap} | strike {style=lightning|meteor|holy|nuke, n, d, gap} | freeze {t}
 --   timestop {t, mult} | launch {h, d} | vortex {t, r} | barrage {n} | burn {dps, t} | slow {mult, t} | heal {hp}
 --   stamina {} | giant {scale, t} | pull {}
+--   any action: wait = seconds after the cast beat, atGhost = centred on the monster (shock)
+-- castTime: the wind-up. The buff starts at once; the actions go off castTime later, when the cast animation
+-- (Client/Viewmodel CASTS, Client/UltFx) lands its hit.
 export type Ult = { id: string, name: string, rarity: number, price: number, color: Color3, desc: string, dur: number, buff: { [string]: any }, acts: { { [string]: any } } }
 
 local function C(r, g, b) return Color3.fromRGB(r, g, b) end
@@ -66,7 +69,7 @@ local List: { Ult } = {
 	u("HouseCollapse", "House Collapse", 5, 12500, C(180, 140, 100), 10, "Every piece of furniture nearby is hurled at her.", { throw = 3 }, { { type = "barrage", n = 40 } }),
 	u("Colossus", "Colossus", 5, 15000, C(255, 180, 100), 15, "Grow to a colossus: x4 damage.", { damage = 4, knock = 4 }, { { type = "giant", scale = 3.2, t = 15 }, { type = "shock", r = 40, d = 60, k = 200 } }),
 	u("InfiniteCombo", "Infinite Combo", 5, 14500, C(255, 60, 200), 15, "Your combo never drops and climbs x2 per hit.", { damage = 3, comboLock = true }, { { type = "timestop", t = 3, mult = 1.3 } }),
-	u("GhostNuke", "Ghost Nuke", 5, 18000, C(255, 255, 160), 10, "Call in a nuke.", { damage = 2 }, { { type = "strike", style = "nuke", n = 1, d = 250, gap = 0 }, { type = "shock", r = 100, d = 0, k = 300 } }),
+	u("GhostNuke", "Ghost Nuke", 5, 18000, C(255, 255, 160), 10, "Call in a nuke.", { damage = 2 }, { { type = "strike", style = "nuke", n = 1, d = 250, gap = 0 }, { type = "shock", r = 100, d = 0, k = 300, wait = 1.6, atGhost = true } }),
 	u("OnePunch", "One Punch", 5, 20000, C(255, 230, 0), 10, "Your next punch deals x20 damage.", { knock = 5, onePunch = true }, {}),
 }
 
@@ -74,4 +77,4 @@ local byId: { [string]: Ult } = {}
 for _, x in List do byId[x.id] = x end
 -- economy: ultimates cost 3x their listed price so unlocking them takes longer
 for _, u in List do u.price *= 3 end
-return { list = List, byId = byId, default = "Rage" }
+return { list = List, byId = byId, default = "Rage", castTime = 0.4 }

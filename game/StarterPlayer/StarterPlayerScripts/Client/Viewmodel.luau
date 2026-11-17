@@ -1,10 +1,12 @@
--- First-person hands: guard pose, alternating jabs, hooks on high combos, carry pose, ultimate glow,
+-- First-person hands: guard pose, alternating jabs, hooks on high combos, carry pose, the ultimates' cast
+-- animations (CASTS: one keyframed two-hand animation per kind of ultimate) and the glow and aura on the fists,
 -- and the held item with a keyframed animation per weapon style (wind-up -> strike -> follow-through),
 -- hit-stop on impact, swing trails, two-handed grips, pump/recoil for guns, drink/inject for consumables.
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local ItemModels = require(RS.Shared.ItemModels)
 local RunService = game:GetService("RunService")
+local Kit = require(script.Parent.UltKit) -- the effects' clock (a Studio test can freeze it to photograph a cast)
 
 local VM = {}
 local lp = Players.LocalPlayer
@@ -152,6 +154,164 @@ local function mirror(cf: CFrame): CFrame
 	return CFrame.new(-x * 0.6, y, z) * A(rx, -ry, -rz)
 end
 
+-- ULTIMATE CASTS ---------------------------------------------------------------------------------------------
+-- One two-hand animation per kind of ultimate (UltFx picks it). Keys are { t, where, ease, roll } with t = 0..1 of
+-- the animation; `where` = the fist in camera space (+X right, +Y up, -Z forward) and `false` = the normal guard
+-- pose. The forearm always hangs from the fist toward a point under the screen (see castPose), so a raised fist
+-- never becomes a pillar in front of the camera. No L list = the left hand mirrors the right. The hit lands
+-- at Ultimates.castTime (0.4 s): the server's effects go off on that beat. tremble = { from, to, size }.
+local G = false
+local V = Vector3.new
+local JAB, BACK = V(0.2, -0.15, -2.4), V(0.5, -0.55, -1.1)
+local JABL, BACKL = V(-0.2, -0.15, -2.4), V(-0.5, -0.55, -1.1)
+local HIGH = V(0.62, -0.4, -1.5) -- guard held a little higher, fists clenched
+type Cast = { dur: number, R: { { any } }, L: { { any } }?, tremble: { number }? }
+local CASTS: { [string]: Cast } = {
+	-- both fists over the head, then down into the floor
+	slam = { dur = 1, R = { { 0, G }, { 0.26, V(1.05, 0.9, -1.75), "out" }, { 0.34, V(1.0, 1.0, -1.7) }, { 0.42, V(0.4, -0.9, -1.8), "in" },
+		{ 0.62, V(0.4, -0.85, -1.75) }, { 1, G } }, tremble = { 0.24, 0.36, 0.02 } },
+	-- both arms wound up on the right, swept flat across the room
+	sweep = { dur = 1, R = { { 0, G }, { 0.28, V(1.6, -0.3, -1.2), "out" }, { 0.44, V(-0.6, -0.3, -1.9), "in" }, { 0.62, V(-1.0, -0.4, -1.5) }, { 1, G } },
+		L = { { 0, G }, { 0.28, V(0.5, -0.55, -1.4), "out" }, { 0.44, V(-1.4, -0.4, -1.4), "in" }, { 0.62, V(-1.6, -0.5, -1.1) }, { 1, G } } },
+	-- the right fist drops out of sight and comes up through the roof
+	uppercut = { dur = 1, R = { { 0, G }, { 0.26, V(0.8, -1.3, -1.1), "out" }, { 0.42, V(0.3, 0.8, -1.8), "in" }, { 0.6, V(0.25, 0.95, -1.7) }, { 1, G } },
+		L = { { 0, G }, { 0.26, V(-0.5, -0.45, -1.3) }, { 0.6, V(-0.5, -0.45, -1.3) }, { 1, G } } },
+	-- hands under the edge, and heave
+	flip = { dur = 1, R = { { 0, G }, { 0.26, V(0.7, -1.2, -1.5), "out" }, { 0.42, V(0.75, 0.7, -1.6), "in" }, { 0.6, V(0.85, 0.9, -1.4) }, { 1, G } } },
+	-- hands rise, shaking, holding the room; then throw it forward
+	tele = { dur = 1.1, R = { { 0, G }, { 0.27, V(1.0, 0.2, -1.5), "out" }, { 0.36, V(0.8, 0.35, -1.4) }, { 0.44, V(0.5, 0.05, -2.2), "in" },
+		{ 0.62, V(0.5, 0.05, -2.15) }, { 1, G } }, tremble = { 0.1, 0.36, 0.03 } },
+	-- one fist punched at the sky, then dragged down
+	sky = { dur = 1, R = { { 0, G }, { 0.22, V(0.5, 0.9, -1.5), "out" }, { 0.38, V(0.5, 1.0, -1.45) }, { 0.46, V(0.45, -0.75, -1.8), "in" },
+		{ 0.64, V(0.45, -0.7, -1.75) }, { 1, G } },
+		L = { { 0, G }, { 0.22, V(-0.6, -0.5, -1.35) }, { 0.64, V(-0.6, -0.5, -1.35) }, { 1, G } }, tremble = { 0.22, 0.38, 0.03 } },
+	-- arms wide, then a clap
+	clap = { dur = 1, R = { { 0, G }, { 0.28, V(1.7, -0.1, -1.4), "out" }, { 0.4, V(0.22, -0.15, -1.7), "in" }, { 0.56, V(0.26, -0.15, -1.65) }, { 1, G } } },
+	-- hands together, then the air is torn open
+	pull = { dur = 1.1, R = { { 0, G }, { 0.22, V(0.18, -0.2, -1.6), "out" }, { 0.34, V(0.18, -0.2, -1.6) }, { 0.42, V(1.55, -0.05, -1.4), "in" },
+		{ 0.68, V(1.65, 0, -1.35) }, { 1, G } }, tremble = { 0.2, 0.7, 0.03 } },
+	-- fists crossed on the chest, then flung wide
+	flex = { dur = 1.1, R = { { 0, G }, { 0.22, V(-0.25, -0.2, -1.3), "out" }, { 0.33, V(-0.25, -0.2, -1.3) }, { 0.4, V(1.4, 0.15, -1.4), "in" },
+		{ 0.72, V(1.45, 0.2, -1.4) }, { 1, G } }, tremble = { 0.2, 0.74, 0.035 } },
+	-- both fists drawn to the chest and driven straight out
+	push = { dur = 1, R = { { 0, G }, { 0.26, V(0.5, -0.6, -1.0), "out" }, { 0.42, V(0.38, -0.1, -2.3), "in" }, { 0.62, V(0.38, -0.1, -2.25) }, { 1, G } } },
+	-- drink it, toss the can, shake
+	chug = { dur = 1.3, R = { { 0, G }, { 0.18, V(0.25, -0.1, -0.85), "out" }, { 0.36, V(0.2, 0.02, -0.8), nil, 0.6 }, { 0.46, V(1.0, -0.5, -1.5), "in" },
+		{ 0.62, HIGH }, { 0.85, HIGH }, { 1, G } },
+		L = { { 0, G }, { 0.46, G }, { 0.62, V(-0.62, -0.4, -1.5) }, { 0.85, V(-0.62, -0.4, -1.5) }, { 1, G } }, tremble = { 0.5, 0.88, 0.04 } },
+	-- hands together, then opened to the sky
+	pray = { dur = 1.1, R = { { 0, G }, { 0.24, V(0.15, -0.25, -1.4), "out" }, { 0.36, V(0.15, -0.05, -1.4) }, { 0.46, V(1.1, 0.55, -1.5), "out" },
+		{ 0.75, V(1.15, 0.6, -1.5) }, { 1, G } } },
+	-- the right fist drawn far back, the left hand taking aim
+	windup = { dur = 1.4, R = { { 0, G }, { 0.25, V(1.15, -0.55, -0.75), "out" }, { 0.7, V(1.17, -0.55, -0.7) }, { 1, G } },
+		L = { { 0, G }, { 0.25, V(-0.25, -0.3, -2.0), "out" }, { 0.7, V(-0.25, -0.3, -2.0) }, { 1, G } }, tremble = { 0.2, 0.72, 0.045 } },
+	-- knuckles knocked together
+	bump = { dur = 0.95, R = { { 0, G }, { 0.24, V(1.05, -0.35, -1.5), "out" }, { 0.4, V(0.24, -0.3, -1.6), "in" }, { 0.48, V(0.44, -0.3, -1.6), "out" },
+		{ 0.66, HIGH }, { 1, G } }, tremble = { 0.48, 0.8, 0.03 } },
+	-- a hand held up, and a snap
+	snap = { dur = 1, R = { { 0, G }, { 0.3, V(0.4, 0.4, -1.5), "out" }, { 0.36, V(0.4, 0.43, -1.5) }, { 0.41, V(0.4, 0.45, -1.5), "in", -1.3 },
+		{ 0.7, V(0.4, 0.45, -1.5), nil, -1.3 }, { 1, G } },
+		L = { { 0, G }, { 0.3, V(-0.7, -0.8, -1.4) }, { 0.7, V(-0.7, -0.8, -1.4) }, { 1, G } } },
+	-- two crossing claw slashes
+	claw = { dur = 1, R = { { 0, G }, { 0.24, V(1.2, 0.6, -1.3), "out" }, { 0.4, V(-0.45, -0.65, -1.8), "in" }, { 0.5, V(-0.5, -0.7, -1.75) }, { 0.72, G }, { 1, G } },
+		L = { { 0, G }, { 0.36, V(-1.2, 0.6, -1.3), "out" }, { 0.52, V(0.45, -0.65, -1.8), "in" }, { 0.64, V(0.5, -0.7, -1.75) }, { 1, G } } },
+	-- arms open on a deep breath, then the fists close
+	breath = { dur = 1.1, R = { { 0, G }, { 0.36, V(1.45, 0.3, -1.3), "out" }, { 0.5, V(1.5, 0.4, -1.3) }, { 0.64, HIGH, "in" }, { 0.8, HIGH }, { 1, G } } },
+	-- six jabs faster than the eye
+	flurry = { dur = 1, R = { { 0, G }, { 0.3, BACK, "out" }, { 0.36, BACK }, { 0.4, JAB, "in" }, { 0.47, BACK }, { 0.53, BACK }, { 0.57, JAB, "in" },
+		{ 0.64, BACK }, { 0.7, BACK }, { 0.74, JAB, "in" }, { 0.82, BACK }, { 1, G } },
+		L = { { 0, G }, { 0.3, BACKL, "out" }, { 0.445, BACKL }, { 0.485, JABL, "in" }, { 0.555, BACKL }, { 0.615, BACKL }, { 0.655, JABL, "in" },
+			{ 0.725, BACKL }, { 0.785, BACKL }, { 0.825, JABL, "in" }, { 0.9, BACKL }, { 1, G } } },
+	-- a hand to the ear, the other raised, then pointed at the target
+	point = { dur = 1.2, R = { { 0, G }, { 0.2, V(0.45, 0.85, -1.5), "out" }, { 0.3, V(0.45, 0.9, -1.5) }, { 0.38, V(0.3, -0.2, -2.3), "in" },
+		{ 0.75, V(0.3, -0.2, -2.25) }, { 1, G } },
+		L = { { 0, G }, { 0.2, V(-0.55, -0.3, -1.0), "out" }, { 0.75, V(-0.55, -0.3, -1.0) }, { 1, G } } },
+	-- crouch, then the arms burst up and out as you grow
+	stomp = { dur = 1.1, R = { { 0, G }, { 0.27, V(0.85, -1.0, -1.3), "out" }, { 0.4, V(1.35, 0.6, -1.4), "in" }, { 0.72, V(1.4, 0.65, -1.4) }, { 1, G } },
+		tremble = { 0.4, 0.74, 0.035 } },
+}
+local cast: { name: string, t0: number }? = nil
+local ultColor = Color3.fromRGB(255, 70, 30)
+local auraKind = "rise"
+local auras = {} :: { [string]: { BasePart } }
+local arcT = 0
+
+-- the fist's pose (camera space) at fraction a of the running cast
+local function castPose(side: string, a: number, guard: CFrame): CFrame
+	local c = CASTS[(cast :: any).name]
+	local keys = (side == "L" and c.L) or c.R
+	local sx = (side == "L" and c.L == nil) and -1 or 1 -- mirrored
+	local pos, roll = guard.Position, 0
+	local function at(k: { any }): (Vector3, number)
+		local v = k[2]
+		if not v then return guard.Position, 0 end
+		return Vector3.new(v.X * sx, v.Y, v.Z), (k[4] or 0) * sx
+	end
+	for i = 1, #keys - 1 do
+		local k0, k1 = keys[i], keys[i + 1]
+		if a <= k1[1] then
+			local f = math.clamp((a - k0[1]) / math.max(1e-3, k1[1] - k0[1]), 0, 1)
+			local e = k1[3]
+			f = e == "in" and f * f * f or (e == "out" and 1 - (1 - f) ^ 3 or ease(f))
+			local p0, r0 = at(k0)
+			local p1, r1 = at(k1)
+			pos, roll = p0:Lerp(p1, f), r0 + (r1 - r0) * f
+			break
+		end
+	end
+	local tr = c.tremble
+	if tr and a > tr[1] and a < tr[2] then
+		pos += Vector3.new((math.random() - 0.5) * tr[3], (math.random() - 0.5) * tr[3], 0)
+	end
+	-- the fist points away from the shoulder; blend out of / back into the guard's own angle at both ends
+	local w = ease(math.clamp(math.min(a / keys[2][1], (1 - a) / (1 - keys[#keys - 1][1])), 0, 1))
+	-- the forearm hangs from the fist toward a point under the screen, at about the fist's own depth: it never
+	-- comes at the camera, so it stays a limb and not a wall
+	local away = pos - Vector3.new(side == "R" and 1.5 or -1.5, -2.6, -0.9)
+	local rot = guard.Rotation:Lerp(CFrame.lookAt(Vector3.zero, away, Vector3.new(0, 0, -1)).Rotation, w)
+	return CFrame.new(pos) * rot * A(0, 0, roll)
+end
+
+-- play an ultimate's cast: hands = a CASTS name, color = the ultimate's colour (the fists glow in it while it is
+-- active), aura = rise | fall | orbit | arc (what hangs round the fists)
+function VM.cast(hands: string, color: Color3, aura: string?)
+	cast = { name = CASTS[hands] and hands or "slam", t0 = Kit.now() }
+	ultColor = color
+	auraKind = aura or "rise"
+end
+-- seconds the named cast takes
+function VM.castTime(hands: string): number return (CASTS[hands] or CASTS.slam).dur end
+
+-- the aura round a glowing fist: small blocks that rise like embers, drip, circle it or crackle
+local function auraStep(side: string, fistCF: CFrame, base: CFrame, on: boolean, now: number, jump: boolean)
+	for i, p in auras[side] do
+		p.LocalTransparencyModifier = on and 0 or 1
+		if not on then continue end
+		local sd = i * 1.7 + (side == "R" and 0 or 0.9)
+		if auraKind == "rise" then
+			local ph = (now * 1.5 + i / 6) % 1
+			p.Size = Vector3.one * 0.17 * (1.15 - ph)
+			p.CFrame = CFrame.new(fistCF.Position + base:VectorToWorldSpace(Vector3.new(math.sin(sd) * 0.24, 0.12 + ph * 0.8, math.cos(sd) * 0.25 - 0.1))) * A(now * 3 + i, now * 2, 0)
+			p.Color = Kit.dim(ultColor:Lerp(Color3.new(1, 1, 1), (1 - ph) * 0.4), 0.45)
+		elseif auraKind == "fall" then
+			local ph = (now * 1.1 + i / 6) % 1
+			p.Size = Vector3.new(0.07, 0.17, 0.07)
+			p.CFrame = CFrame.new(fistCF.Position + base:VectorToWorldSpace(Vector3.new(math.sin(sd) * 0.22, -0.18 - ph * ph * 0.9, math.cos(sd) * 0.22 - 0.1)))
+			p.Color = Kit.dim(ultColor:Lerp(Color3.new(1, 1, 1), 0.25), 0.45)
+		elseif auraKind == "orbit" then
+			local ang = now * 5 + i / 6 * math.pi * 2
+			p.Size = Vector3.new(0.1, 0.1, 0.16)
+			p.CFrame = fistCF * CFrame.new(math.cos(ang) * 0.42, math.sin(ang) * 0.42, -0.05 + math.sin(now * 3 + i) * 0.12) * A(0, 0, ang)
+			p.Color = Kit.dim(i % 2 == 0 and ultColor or ultColor:Lerp(Color3.new(1, 1, 1), 0.5), 0.45)
+		elseif jump then
+			p.Size = Vector3.new(0.035, 0.035, 0.25 + math.random() * 0.45)
+			p.CFrame = fistCF * CFrame.new((math.random() - 0.5) * 0.6, (math.random() - 0.5) * 0.6, (math.random() - 0.5) * 0.7 - 0.1) * A(math.random() * 6, math.random() * 6, 0)
+			p.Color = Kit.dim(math.random() < 0.4 and Color3.new(1, 1, 1) or ultColor, 0.55)
+			p.Transparency = math.random() < 0.6 and 0 or 1
+		end
+	end
+end
+
 local function mk(name: string, size: Vector3, color: Color3, mat: Enum.Material?): BasePart
 	local p = Instance.new("Part")
 	p.Name = name; p.Size = size; p.Color = color; p.Material = mat or Enum.Material.SmoothPlastic
@@ -172,6 +332,12 @@ function VM.init()
 			sleeve = mk(side .. "Sleeve", Vector3.new(0.46, 0.46, 1.2), Color3.fromRGB(46, 42, 40), Enum.Material.Fabric),
 			brass = mk(side .. "Brass", Vector3.new(0.48, 0.12, 0.16), Color3.fromRGB(200, 160, 70), Enum.Material.Metal),
 		}
+		auras[side] = {}
+		for i = 1, 6 do
+			local p = mk(side .. "Aura", Vector3.one * 0.12, ultColor, Enum.Material.Neon)
+			p.LocalTransparencyModifier = 1
+			auras[side][i] = p
+		end
 	end
 	local function useSkin(ch: Model)
 		local bc = ch:WaitForChild("Body Colors", 5) :: BodyColors?
@@ -374,6 +540,7 @@ function VM.update(dt: number)
 	local show = hum ~= nil and hum.Health > 0 and firstPerson
 	for _, a in arms do for _, p in a do (p :: BasePart).LocalTransparencyModifier = show and 0 or 1 end end
 	if not show then
+		for _, list in auras do for _, p in list do p.LocalTransparencyModifier = 1 end end
 		lastCamCF = cam.CFrame
 		if held then for _, p in held:GetDescendants() do if p:IsA("BasePart") then p.LocalTransparencyModifier = 1 end end end
 		return
@@ -393,7 +560,17 @@ function VM.update(dt: number)
 	blockAlpha += ((lp:GetAttribute("Blocking") and 1 or 0) - blockAlpha) * math.min(1, dt * 14)
 	local blockItem = (held and blockAlpha > 0.001) and (CFrame.new(-0.3 * blockAlpha, 0.28 * blockAlpha, 0.12 * blockAlpha) * A(0.2 * blockAlpha, 0, 0.85 * blockAlpha)) or CFrame.new()
 	local base = cam.CFrame * shakeOff * chargeOff * blockItem * bob * jitter * CFrame.new(-sway.X * 1.2, sway.Y * 1.2, 0)
-	local itemHidden = carryAlpha > 0.5 or (anim ~= nil and anim.hidden == true)
+	-- an ultimate's cast takes both hands (a held item is put away for that second)
+	local castA = 0
+	if cast then
+		castA = (Kit.now() - cast.t0) / CASTS[cast.name].dur
+		if castA >= 1 then cast = nil end
+	end
+	local casting = cast ~= nil
+	local itemHidden = carryAlpha > 0.5 or (anim ~= nil and anim.hidden == true) or casting
+	arcT += dt
+	local jump = arcT > 0.05
+	if jump then arcT = 0 end
 	for _, side in { "R", "L" } do
 		local a = arms[side]
 		local sx = side == "R" and 1 or -1
@@ -404,7 +581,9 @@ function VM.update(dt: number)
 		end
 		local carry = CFrame.new(sx * 0.7, -2.6, -1.2) * A(0.6, 0, sx * -0.15) -- arms drop out of view while lifting
 		local fistCF
-		if side == "R" and held then
+		if casting then
+			fistCF = base * castPose(side, castA, guard)
+		elseif side == "R" and held then
 			local hold = holdCF
 			if STUDIO then -- tuning hooks (player attributes): DebugHold (CFrame) or DebugFist/DebugAim/DebugRoll
 				local g = lp:GetAttribute("DebugHold")
@@ -428,7 +607,9 @@ function VM.update(dt: number)
 		else
 			fistCF = base * guard:Lerp(carry, carryAlpha) * punchOffset(side, now)
 		end
-		if side == "L" and held and leftGripPart and carryAlpha < 0.5 and not itemHidden then
+		if casting then
+			-- both hands belong to the cast
+		elseif side == "L" and held and leftGripPart and carryAlpha < 0.5 and not itemHidden then
 			-- two-handed item: the left fist holds the item's LeftGrip, forearm from the lower left
 			local rot = LEFT_ROT[style] or LEFT_GRIP_ROT
 			if STUDIO then local l = lp:GetAttribute("DebugLeftRot"); if typeof(l) == "CFrame" then rot = l end end
@@ -437,7 +618,7 @@ function VM.update(dt: number)
 			fistCF = base * CFrame.new(-0.55, -0.75, -1.3) * A(0.3, 0.4, 0.2) -- offer the arm / chest
 		end
 		a.fist.CFrame = fistCF
-		if held and carryAlpha < 0.5 then
+		if held and carryAlpha < 0.5 and not casting then
 			-- holding an item: the forearm runs from the fist back to the shoulder (off the bottom corner),
 			-- so swings and throws never push the arm into the camera
 			local sh = base * SHOULDER[side]
@@ -452,7 +633,10 @@ function VM.update(dt: number)
 		a.brass.CFrame = fistCF * CFrame.new(0, 0.1, -0.22)
 		a.brass.LocalTransparencyModifier = 1
 		a.fist.Material = ult and Enum.Material.Neon or Enum.Material.SmoothPlastic
-		a.fist.Color = ult and Color3.fromRGB(255, 70, 30) or skinColor
+		a.fist.Color = ult and Kit.dim(ultColor, 0.45) or skinColor
+		-- the power runs up the arm: the skin takes a dark shade of the ultimate's colour
+		a.arm.Color = ult and skinColor:Lerp(Kit.dim(ultColor, 0.22), 0.6) or skinColor
+		auraStep(side, fistCF, base, ult or casting, now, jump)
 	end
 	if held then
 		for _, p in held:GetDescendants() do if p:IsA("BasePart") then p.LocalTransparencyModifier = itemHidden and 1 or 0 end end

@@ -254,17 +254,19 @@ function HUD.update(dt: number)
 	end
 	barsRoot.Visible = inMatch
 	crosshair.Visible = inMatch
-	local u = Ultimates.byId[lp:GetAttribute("EquippedUlt") or "Rage"]
-	local line = u and ("ULT: " .. string.upper(u.name)) or ""
+	-- the sandbox fires the ultimate on trial, not the equipped one
+	local trial = lp:GetAttribute("Sandbox") and lp:GetAttribute("TrialUlt")
+	local u = Ultimates.byId[type(trial) == "string" and trial or lp:GetAttribute("EquippedUlt") or "Rage"]
+	local line = u and ((trial and "TRYING: " or "ULT: ") .. string.upper(u.name)) or ""
 	-- Double Ultimate pass: the spare one and the key that switches to it
-	local u2 = lp:GetAttribute("DoubleUlt") and Ultimates.byId[lp:GetAttribute("EquippedUlt2") or ""]
+	local u2 = not trial and lp:GetAttribute("DoubleUlt") and Ultimates.byId[lp:GetAttribute("EquippedUlt2") or ""]
 	if u2 and line ~= "" then line ..= "   |   " .. Platform.label("SwapUlt") .. " " .. string.upper(u2.name) end
 	ultName.Text = line
 	updateWaypoint()
 	local showCash = not inMatch or (roundState ~= "Fight" and roundState ~= "Intro")
 	cashLabel.Visible = showCash
 	if inMatch then
-		cashLabel.Text = "RUN $" .. tostring(lp:GetAttribute("RunCash") or 0)
+		cashLabel.Text = lp:GetAttribute("Sandbox") and "SANDBOX" or ("RUN $" .. tostring(lp:GetAttribute("RunCash") or 0))
 		cashLabel.Visible = true
 	else
 		cashLabel.Text = "$" .. tostring(lp:GetAttribute("Cash") or 0)

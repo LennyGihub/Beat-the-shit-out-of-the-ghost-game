@@ -43,6 +43,7 @@ local KeyHints = require(Client.KeyHints)
 local CrewAnim = require(Client.CrewAnim)
 local Vip = require(Client.Vip)
 local CallerUI = require(Client.CallerUI)
+local SandboxUI = require(Client.SandboxUI)
 
 Platform.init()
 Settings.init()
@@ -67,7 +68,9 @@ UltShop.init(function(open)
 	Input.setShopOpen(open)
 	shopOpen = open
 	camMode()
+	SandboxUI.setShopOpen(open)
 end)
+SandboxUI.init(function() UltShop.open() end) -- the sandbox's LEAVE and ULTIMATES buttons
 ReviveUI.init()
 Spectate.init()
 KeyHints.init() -- the small controls reminder (H hides it)
@@ -83,7 +86,20 @@ end)
 LobbyUI.init(function() UltShop.open() end, function(open) Input.setShopOpen(open) end, function() QuestUI.open() end, QuestUI.claimable, QuestUI.changed)
 Input.openPlay = LobbyUI.togglePlay
 
+-- What the server tells EVERYONE about a fight in the house. The sandbox runs in the lobby's own server, so a
+-- player standing in the park (not InMatch) gets these too: they are dropped there (no screams, shakes, flashes
+-- or fight music for somebody else's training).
+local FIGHT = {} :: { [string]: boolean }
+for _, k in { "WallSmash", "GhostVanish", "ItemSwing", "Hit", "GoblinUse", "WallSlam", "UltFreeze", "Snap", "ItemBoom", "UltStrike", "UltShock",
+	"TrapSnap", "Tracer", "TitanHeal", "TitanEat", "TimeStop", "PlayerHit", "LaserEnd", "GoblinDrop", "GhostWindUp", "GhostScream", "Ultimate",
+	"UltFling", "TimeResume", "Throw", "Tased", "SnapWind", "Smash", "ShotgunPump", "ShotgunFire", "ShotgunAim", "ShieldBlock", "RoarWind", "Roar",
+	"OnePunch", "LungeWind", "Lunge", "Lift", "LaserWind", "LaserBeam", "HouseOnFire", "GoblinSteal", "GhostSpawn", "GhostRagdoll", "GhostDeath",
+	"FurySmash", "FuryArmor", "Enraged", "CounterWind", "ChargedHit", "AmbushStrike", "AbilityWind" } do
+	FIGHT[k] = true
+end
+
 Remotes.Fx.OnClientEvent:Connect(function(kind: string, ...)
+	if FIGHT[kind] and not lp:GetAttribute("InMatch") then return end
 	if kind == "OpenUltShop" then
 		UltShop.open()
 	elseif kind == "UltResult" then

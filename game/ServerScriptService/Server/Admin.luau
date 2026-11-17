@@ -110,6 +110,7 @@ CMD.ult = function(p, a)
 	if not u then return false, "No ultimate called '" .. tostring(a) .. "'" end
 	Data.ownUlt(p, u.id)
 	Data.equipUlt(p, u.id)
+	Combat.endUltimate(p) -- a running ultimate stops, so the new one can be tried right away
 	Combat.fillBrutality(p)
 	return true, "Equipped " .. u.name .. " (brutality full, press Q)"
 end

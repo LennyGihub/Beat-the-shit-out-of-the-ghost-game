@@ -84,7 +84,7 @@ end
 -- count something the player did (n = how many, or the value for max-type stats)
 function Quests.add(p: Player, stat: string, n: number?)
 	local s = state(p)
-	if not s or not p:GetAttribute("InMatch") then return end
+	if not s or not p:GetAttribute("InMatch") or p:GetAttribute("Sandbox") then return end -- nothing counts in the sandbox
 	local v = n or 1
 	local isMax = Q.maxStats[stat] == true
 	local before = tonumber(s.life[stat]) or 0
