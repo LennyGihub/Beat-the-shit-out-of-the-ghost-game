@@ -6,7 +6,7 @@
 --   Evolved.step(g, G, ...)     while g.state == "Evo"
 --   Evolved.interrupt(g)        the power was cut short (knocked back, frozen)
 -- Powers (def.power.kind): doubles (Violet Widow), army (Burning Captain), snap (Golden Bear), eat (Bone Giant),
--- armed (Goblin King), laser (Golden Conqueror). The Demon Lord's is his own ability with count = 3 (Abilities levitateThrow).
+-- armed (Goblin King), laser (Golden Conqueror), shotgun (the Last Call). The Demon Lord's is his own ability with count = 3 (Abilities levitateThrow).
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local Config = require(RS.Shared.Config)
@@ -233,6 +233,52 @@ DRESS.Titan = function(m)
 	end
 end
 
+-- the Last Call: the same robe and mask, soaked in blood, the knife red, and a pump shotgun in his left hand
+-- (carried muzzle down along the arm, so it points where the arm points when he aims)
+DRESS.Caller = function(m)
+	local BLOOD, BLOOD_D = rgb(140, 8, 12), rgb(84, 4, 8)
+	local function splat(on: BasePart?, n: number, seed: number)
+		if not on then return end
+		local r = Random.new(seed)
+		local sx, sy, sz = on.Size.X, on.Size.Y, on.Size.Z
+		for i = 1, n do
+			local front = r:NextNumber() < 0.7 and -1 or 1
+			local w, h = r:NextNumber(0.25, 0.7) * math.min(sx, 1.6), r:NextNumber(0.2, 0.75) * math.min(sy, 1.6)
+			add(on, "EvoBlood", Vector3.new(w, h, 0.08), CFrame.new(r:NextNumber(-0.4, 0.4) * sx, r:NextNumber(-0.42, 0.42) * sy, front * (sz / 2 + 0.07)) * CFrame.Angles(0, 0, r:NextNumber(-0.6, 0.6)),
+				i % 3 == 0 and BLOOD_D or BLOOD)
+			if r:NextNumber() < 0.6 then -- a drip running down from it
+				add(on, "EvoBlood", Vector3.new(0.1, h * 1.4, 0.07), CFrame.new(r:NextNumber(-0.4, 0.4) * sx, r:NextNumber(-0.42, 0.1) * sy, front * (sz / 2 + 0.06)), BLOOD)
+			end
+		end
+	end
+	splat(body(m, "UpperTorso"), 7, 11)
+	splat(body(m, "LowerTorso"), 3, 12)
+	splat(body(m, "LeftUpperLeg"), 3, 13); splat(body(m, "RightUpperLeg"), 3, 14)
+	splat(body(m, "LeftLowerLeg"), 2, 15); splat(body(m, "RightLowerLeg"), 2, 16)
+	splat(body(m, "LeftLowerArm"), 2, 17); splat(body(m, "RightLowerArm"), 3, 18)
+	-- the mask: a red hand's smear across it, red running from the eyes
+	for _, mask in named(m, { "Mask" }) do
+		local w, h, d = mask.Size.X, mask.Size.Y, mask.Size.Z
+		add(mask, "EvoBlood", Vector3.new(w * 0.75, h * 0.2, 0.05), CFrame.new(w * 0.05, h * 0.3, -d / 2 - 0.03) * CFrame.Angles(0, 0, 0.35), BLOOD)
+		add(mask, "EvoBlood", Vector3.new(w * 0.3, h * 0.28, 0.05), CFrame.new(-w * 0.28, -h * 0.3, -d / 2 - 0.03) * CFrame.Angles(0, 0, -0.3), BLOOD_D)
+		for _, sx in { -1, 1 } do
+			add(mask, "EvoBlood", Vector3.new(0.07, h * 0.42, 0.05), CFrame.new(sx * w * 0.24, -h * 0.08, -d / 2 - 0.035), BLOOD)
+		end
+	end
+	paint(m, { "KnifeBlade" }, rgb(150, 20, 24), Enum.Material.Metal)
+	paint(m, { "MaskEye", "MaskMouth" }, rgb(40, 0, 0))
+	local hand = body(m, "LeftHand")
+	if hand then
+		local STEEL, WOOD = rgb(34, 34, 38), rgb(92, 54, 30)
+		local gun = add(hand, "Shotgun", Vector3.new(0.5, 2.4, 0.5), CFrame.new(0, -1.0, -0.25), STEEL, Enum.Material.Metal) -- receiver
+		add(gun, "ShotgunBarrel", Vector3.new(0.3, 3.4, 0.3), CFrame.new(0, -2.8, -0.06), STEEL, Enum.Material.Metal)
+		add(gun, "ShotgunTube", Vector3.new(0.26, 2.9, 0.26), CFrame.new(0, -2.55, 0.26), STEEL, Enum.Material.Metal)
+		add(gun, "ShotgunPump", Vector3.new(0.48, 1.3, 0.5), CFrame.new(0, -2.2, 0.24), WOOD, Enum.Material.Wood)
+		add(gun, "ShotgunStock", Vector3.new(0.45, 2.1, 0.75), CFrame.new(0, 2.0, 0.18) * CFrame.Angles(0.12, 0, 0), WOOD, Enum.Material.Wood)
+		add(gun, "ShotgunMuzzle", Vector3.new(0.36, 0.2, 0.36), CFrame.new(0, -4.5, -0.06), rgb(12, 12, 14), Enum.Material.Metal)
+	end
+end
+
 -- the Golden Conqueror: his war armour. Gold plate over the chest, shoulders, arms and legs, a crested helmet
 -- that leaves the face open, a double-ended war blade in his left fist, and the gauntlet's stone burning bright.
 DRESS.Conqueror = function(m)
@@ -400,6 +446,15 @@ function Evolved.chase(g, G, now: number, target: Player?, thrp: BasePart?, dist
 		Remotes.Fx:FireAllClients("AbilityWind", g.hrp.Position, "army")
 		toastAll("THE CAPTAIN THROWS HIS CREW AT YOU - PUNCH THEM APART!")
 		return true
+	elseif k == "shotgun" then
+		if dist < P.min or dist > P.range or target:GetAttribute("Warded") or Fury.inGrace(target) then return false end
+		-- he only brings it up when he can see his victim (they then have the wind-up to get behind something)
+		local eye = g.hrp.Position + Vector3.new(0, 1.2, 0)
+		if workspace:Raycast(eye, thrp.Position - eye, g.rp) then return false end
+		begin(g, G, k, P.wind, { victim = target, shots = 0 })
+		Remotes.Fx:FireAllClients("ShotgunAim", g.model, P.wind)
+		toastAll("HE'S RAISING A SHOTGUN - TAKE COVER! (IT BLOWS THROUGH WALLS)")
+		return true
 	elseif k == "laser" then
 		if dist < 9 or dist > P.range * 0.7 or target:GetAttribute("Warded") then return false end
 		begin(g, G, k, P.wind, { phase = "charge" })
@@ -536,6 +591,59 @@ function Evolved.step(g, G, dt: number, now: number, target: Player?, thrp: Base
 			end)
 		end
 		done(g, G, P, 0.5)
+	elseif k == "shotgun" then
+		-- THE LAST CALL'S 12 GAUGE: he aims at his victim for P.wind, fires, pumps for P.gap and fires again.
+		-- Something solid between you and the muzzle takes the shot, and pays for it: furniture is blown apart and
+		-- an inside wall gets a hole blasted through it, so the same cover never saves you twice (only the outside
+		-- walls, the floors and the stairs hold). In the open, everyone in the narrow blast cone is hit, harder from close.
+		local victim = e.victim :: Player
+		local vh = hrpOf(victim) or thrp
+		if vh then face(vh.Position) end
+		if now < g.stateUntil then return end
+		e.shots += 1
+		local from = pos + flat(g.hrp.CFrame.LookVector) * 2.5 + Vector3.new(0, 1.2, 0)
+		if vh then
+			local rp = RaycastParams.new()
+			rp.FilterType = Enum.RaycastFilterType.Include
+			local list = table.clone(g.rp.FilterDescendantsInstances)
+			local fur = Furniture.folder()
+			if fur then table.insert(list, fur) end
+			rp.FilterDescendantsInstances = list
+			local to = vh.Position - from
+			local r = workspace:Raycast(from, to, rp)
+			local covered = r ~= nil and r.Distance < to.Magnitude - 2
+			local endPt = (covered and r) and r.Position or (from + to.Unit * math.min(P.range, to.Magnitude + 6))
+			if covered and r then
+				if fur and r.Instance:IsDescendantOf(fur) then
+					local m: Instance? = r.Instance
+					while m and m.Parent ~= fur do m = m.Parent end
+					if m and m:IsA("Model") then Furniture.smash(m, to.Unit * 80 + Vector3.new(0, 25, 0), 120) end
+				elseif Ragdoll.breakWalls(r.Position + to.Unit * 0.6, to.Unit * 70, 7, 5) > 0 then
+					Remotes.Fx:FireAllClients("WallSmash", r.Position, 110)
+				end
+			else
+				for _, p in Players:GetPlayers() do
+					local hrp = p:GetAttribute("InMatch") and hrpOf(p)
+					if hrp and not p:GetAttribute("Warded") then
+						local tp = hrp.Position - from
+						if tp.Magnitude <= P.range and to.Unit:Dot(tp.Unit) > 0.965 then
+							local pr = workspace:Raycast(from, tp, rp)
+							if not pr or pr.Distance >= tp.Magnitude - 2 then
+								local near = math.clamp(1.25 - tp.Magnitude / P.range, 0.45, 1)
+								G.hitPlayer(p, nil, P.dmg * g.dmgMult * near, flat(tp) * P.power + Vector3.new(0, 18, 0), "shotgun", true, 1.2)
+							end
+						end
+					end
+				end
+			end
+			Remotes.Fx:FireAllClients("ShotgunFire", g.model, from, endPt, not covered)
+		end
+		if e.shots >= P.shots then
+			done(g, G, P, 0.8)
+		else
+			g.stateUntil = now + P.gap
+			Remotes.Fx:FireAllClients("ShotgunPump", g.model)
+		end
 	elseif k == "laser" then
 		-- THE GAUNTLET'S BEAM: charged for P.wind, then fired for P.t. It swings after the target slowly (P.turn
 		-- degrees a second), cuts the inside walls and the furniture in its way, and burns whoever stands in it.

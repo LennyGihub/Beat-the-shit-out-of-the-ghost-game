@@ -385,6 +385,9 @@ function Ghost.hit(by: Player?, dir: Vector3, knock: number, damage: number, obj
 	if not g or g.state == "Dead" or g.state == "Spawn" then return end
 	if g.model:GetAttribute("Vanish") then g.model:SetAttribute("Vanish", false) end
 	if obj then damage *= (g.def :: any).objTaken or 1 end
+	-- the Caller, found in his corner before he could strike: this hit counts several times and staggers him
+	local found = Abilities.ambushHit(g, by)
+	damage *= found
 	-- the Pirate's raised shield blocks hits from the front: punches and swings almost fully, thrown objects by half
 	if Abilities.blocks and Abilities.blocks(g, dir) then
 		if obj then
@@ -402,6 +405,7 @@ function Ghost.hit(by: Player?, dir: Vector3, knock: number, damage: number, obj
 	if g.state == "Ability" and g.ab and g.ab.kind == "blackout" and g.def.ability.lightsOut then
 		setState(g, "Recover", 0.6)
 	end
+	if found > 1 and g.state == "Ability" then setState(g, "Recover", 1.3) end -- caught: out of his corner, dazed
 	if knock <= 0 then return end
 	if g.state == "Dead" then return end
 	Fury.onHit(g, knock, knock >= Ragdoll.MIN_KNOCK and g.state ~= "Ragdoll")
@@ -672,7 +676,10 @@ function Ghost.step(dt: number)
 		-- creepy rhythm: she sometimes freezes for a moment, then lunges
 		local phase = (now * 0.6) % 1
 		if phase < 0.12 and dist > 14 then speed *= 0.1 elseif phase < 0.3 and dist > 14 then speed *= 1.8 end
-		moveToward(g.def.solid and pathPoint(g, thrp.Position) or thrp.Position, speed)
+		-- the Caller goes round to the back of a player who is facing him
+		local goal = thrp.Position
+		if (g.def :: any).flank then goal = Abilities.flankGoal(g, thrp, dist, now) end
+		moveToward(g.def.solid and pathPoint(g, goal) or goal, speed)
 		if Fury.roarCheck(g, Ghost, now, target) then return end
 		if g.evolved and Evolved.chase(g, Ghost, now, target, thrp, dist) then return end
 		if now >= g.slowUntil and Abilities.try(g, Ghost, now, target, thrp, dist) then return end

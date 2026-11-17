@@ -54,6 +54,16 @@ local List: { Monster } = {
 		hp = 1.25, speed = 1.08, dmg = 1, reward = 1.6, hover = 0, walker = true, scale = 1, solid = true,
 		ability = { kind = "steal", cd = 6, range = 11 }, -- grabs the item in your hands, then uses it on you
 		desc = "Steals the item in your hands and uses it against you. Knock him out to get it back." }),
+	-- a masked killer with a knife: quick, goes round to your back (flank), stabs fast (atk = attack cooldown
+	-- multiplier). His ambush (Server/Caller): he hides, a phone rings, the call hints at the room he is in. Find him
+	-- and hit first = that hit x bonus; walk into it = a stab for dmg. first = seconds before his first ambush,
+	-- hide = how long he waits in his corner, trigger = how close you can come in front of him before he springs,
+	-- react = the moment he needs to spring (hit him in it and you were first).
+	m({ id = "Caller", name = "The Caller", title = "THE CALLER", rarity = 2, template = "Caller", color = C(232, 230, 222),
+		hp = 0.9, speed = 1.25, dmg = 0.8, reward = 1.7, hover = 0, walker = true, scale = 1, solid = true,
+		atk = 0.7, flank = true,
+		ability = { kind = "ambush", cd = 30, first = 10, hide = 30, trigger = 9, react = 0.45, dmg = 46, bonus = 2.5, lunge = 70 },
+		desc = "A masked killer with a knife. He hides and phones you to lure you in: find him first and he pays for it." }),
 	-- THE SECRET ONE: a huge purple warlord with a golden gauntlet. Slow on his feet, so he steps through a portal
 	-- and comes out behind you (warp: from `min` studs away, `wind` seconds of warning); his fist sends you through
 	-- the walls, and he punches his own way through them rather than use a door.
@@ -108,6 +118,12 @@ local EVO: { [string]: { [string]: any } } = {
 	Animatronic = { title = "THE GOLDEN BEAR", color = C(240, 200, 70), scale = 1.08,
 		power = { kind = "snap", cd = 9, min = 9, max = 70, wind = 0.75, dmg = 18, wall = 118, up = 105 },
 		desc = "Golden. He snaps his fingers and you fly into the wall or up into the ceiling: break his line of sight." },
+	-- soaked in blood, and he brought a 12 gauge: he aims (wind), fires, pumps (gap) and fires again. Cover takes
+	-- a shot once: furniture is blown apart, an inside wall gets a hole in it. His ambush is quicker and hits harder.
+	Caller = { title = "THE LAST CALL", color = C(170, 16, 20), scale = 1.06,
+		ability = { kind = "ambush", cd = 30, first = 8, hide = 26, trigger = 10, react = 0.3, dmg = 58, bonus = 2.5, lunge = 82 },
+		power = { kind = "shotgun", cd = 10, wind = 1.2, gap = 1.0, shots = 2, dmg = 46, range = 95, power = 70, min = 5 },
+		desc = "The same mask, red now, and a shotgun. Two shots, and each one blows your cover away." },
 	-- gold armour and a helmet; everything the Conqueror does, plus the gauntlet's beam: it turns after you slowly
 	-- (turn = degrees per second), cuts through furniture and inside walls, and burns for `dps` while you stand in it
 	Conqueror = { title = "THE GOLDEN CONQUEROR", color = C(232, 186, 70), scale = 1.1,
@@ -140,7 +156,7 @@ local function evolved(id: string, tier: number): Monster
 	d.hp = base.hp * T.hp
 	d.speed = base.speed * T.speed
 	d.dmg = base.dmg * T.dmg
-	d.atk = T.atk -- attack / ability cooldown multiplier
+	d.atk = T.atk * ((base :: any).atk or 1) -- attack / ability cooldown multiplier
 	d.smash = math.max(T.smash, (base :: any).smash or 0) -- how much harder its punch launches you
 	d.reward = base.reward * 2
 	d.rarity = (base :: any).secret and 4 or 3

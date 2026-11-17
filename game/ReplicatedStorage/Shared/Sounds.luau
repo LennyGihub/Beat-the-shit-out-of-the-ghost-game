@@ -71,4 +71,6 @@ return {
 	AnimDeath = { ids = { 9125861915 }, volume = 1 },
 	MusicBox = { ids = { 9117043866 }, volume = 0.7 },
 	Breaker = { ids = { 9116617140 }, volume = 1 },
+	-- the Caller's phone (the ring itself is a Sound on the phone, Server/Caller)
+	PhoneRing = { ids = { 9117304268 }, volume = 1 },
 }

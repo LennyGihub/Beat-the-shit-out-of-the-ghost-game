@@ -42,6 +42,7 @@ local Spectate = require(Client.Spectate)
 local KeyHints = require(Client.KeyHints)
 local CrewAnim = require(Client.CrewAnim)
 local Vip = require(Client.Vip)
+local CallerUI = require(Client.CallerUI)
 
 Platform.init()
 Settings.init()
@@ -72,6 +73,7 @@ Spectate.init()
 KeyHints.init() -- the small controls reminder (H hides it)
 CrewAnim.init() -- the Burning Captain's little skeletons run
 Vip.init() -- VIP pass: chat tag, the VIP cabin's door
+CallerUI.init() -- the Caller's phone call
 -- lobby screen: PLAY (create / join lobbies) and SHOP buttons, friend booster
 QuestUI.init(function(open)
 	Input.setShopOpen(open)
@@ -108,6 +110,8 @@ Remotes.Fx.OnClientEvent:Connect(function(kind: string, ...)
 		QuestUI.open()
 	elseif kind == "BackFromSpectate" then
 		Fx.handle("Toast", "YOU'RE BACK - THE WAVE IS OVER", true)
+	elseif kind == "CallerCall" then
+		CallerUI.call(...)
 	elseif kind == "PartyInvite" then
 		LobbyUI.invite(...)
 	elseif MonsterFx.handles(kind) then

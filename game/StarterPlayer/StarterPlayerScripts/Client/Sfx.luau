@@ -27,6 +27,7 @@ local VOICES = {
 	Titan = { Spawn = "DemonRoar", WindUp = "DemonGrowl", Claw = "DemonHit", Hurt = "DemonHurt", Death = "DemonDeath" },
 	Animatronic = { Spawn = "AnimSpawn", WindUp = "AnimGrowl", Claw = "AnimGrowl", Hurt = "AnimHurt", Death = "AnimDeath" },
 	Goblin = { Spawn = "GoblinSpawn", WindUp = "GoblinGrowl", Claw = "GoblinCackle", Hurt = "GoblinHurt", Death = "GoblinDeath" },
+	Caller = { Spawn = "DemonLaugh", WindUp = "PirateSwing", Claw = "PirateSwing", Hurt = "PirateHurt", Death = "GhostDeath" },
 	Conqueror = { Spawn = "DemonRoar", WindUp = "DemonGrowl", Claw = "DemonHit", Hurt = "DemonHurt", Death = "DemonDeath" },
 }
 local lastMonster = "Woman"

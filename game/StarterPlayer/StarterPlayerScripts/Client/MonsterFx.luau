@@ -16,6 +16,7 @@ local KINDS = {
 	Blackout = true, BlackoutEnd = true, GasThrow = true, GasCloud = true, Gassed = true,
 	HellMark = true, HellPillar = true, Charge = true, CloneSpawn = true, CloneShatter = true, StalkerBlink = true, BlackoutExtend = true,
 	WarpWind = true, Warp = true, LaserWind = true, LaserBeam = true, LaserEnd = true, LaserHit = true, -- the Conqueror
+	AmbushBreath = true, AmbushStrike = true, AmbushStab = true, AmbushFound = true, ShotgunAim = true, ShotgunFire = true, ShotgunPump = true, -- the Caller
 	GoblinSteal = true, GoblinUse = true, GoblinDrop = true,
 	ShieldBlock = true, Slammed = true, AnimJumpscare = true,
 	RoarWind = true, Roar = true, LungeWind = true, Lunge = true, Enraged = true, CounterWind = true, FuryArmor = true, FurySmash = true, -- Fury
@@ -616,6 +617,70 @@ function MonsterFx.handle(kind: string, ...)
 		Sfx.at("Whoosh", pos, { PlaybackSpeed = 0.4, Volume = 2 })
 		Sfx.at("GhostScream", pos, { PlaybackSpeed = 0.5, Volume = 1.2 })
 		Fx.shake(0.3 * near(pos, 60))
+	elseif kind == "AmbushBreath" then
+		-- the Caller, hidden in his corner: a breath you can only just hear, and only from close
+		Sfx.at("GhostWhisper", a[1], { PlaybackSpeed = 1.5, Volume = 0.35, RollOffMaxDistance = 55 })
+	elseif kind == "AmbushStrike" then
+		-- he comes out of his corner at you
+		local model = a[1]
+		local root = typeof(model) == "Instance" and model:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if root then
+			Sfx.at("Jumpscare", root.Position, { Volume = 0.55, PlaybackSpeed = 1.2 })
+			Sfx.at("PirateSwing", root.Position, { Volume = 1.6, PlaybackSpeed = 0.8 })
+			Fx.shake(0.5 * near(root.Position, 40))
+		end
+	elseif kind == "AmbushStab" then
+		local pos = a[1]
+		emitter(pos, { Color = ColorSequence.new(Color3.fromRGB(150, 10, 14)), Size = NumberSequence.new(0.5, 0.1), Speed = NumberRange.new(10, 26),
+			Lifetime = NumberRange.new(0.3, 0.6), Acceleration = Vector3.new(0, -60, 0), SpreadAngle = Vector2.new(60, 60) }, 26, 1.5)
+		Sfx.at("DemonHit", pos, { PlaybackSpeed = 1.3, Volume = 1.5 })
+		Fx.shake(0.6 * near(pos, 30))
+	elseif kind == "AmbushFound" then
+		-- somebody found him first: he yelps, a white flash where he hid
+		local pos = a[1]
+		emitter(pos, { Color = ColorSequence.new(Color3.fromRGB(255, 240, 200)), LightEmission = 1, Size = NumberSequence.new(2.4, 0), Speed = NumberRange.new(14, 30),
+			Lifetime = NumberRange.new(0.2, 0.45), Texture = "rbxasset://textures/particles/sparkles_main.dds" }, 34, 1)
+		Sfx.at(Sfx.voice("Hurt"), pos, { PlaybackSpeed = 1.25, Volume = 1.6 })
+		Sfx.at("PunchHeavy", pos, { PlaybackSpeed = 0.8, Volume = 1.3 })
+	elseif kind == "ShotgunAim" then
+		-- the Last Call brings the shotgun up: the pump, and a red line from the muzzle to where it points
+		local model = a[1]
+		local root = typeof(model) == "Instance" and model:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if root then Sfx.at("ShotgunPump", root.Position, { Volume = 1.8, PlaybackSpeed = 0.85 }) end
+	elseif kind == "ShotgunPump" then
+		local model = a[1]
+		local root = typeof(model) == "Instance" and model:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if root then Sfx.at("ShotgunPump", root.Position, { Volume = 1.8 }) end
+	elseif kind == "ShotgunFire" then
+		local model, from, to, open = a[1], a[2], a[3], a[4]
+		if typeof(from) ~= "Vector3" or typeof(to) ~= "Vector3" then return end
+		-- it leaves the gun he is holding (his arm is animated on this client)
+		local gun = typeof(model) == "Instance" and model:FindFirstChild("ShotgunMuzzle")
+		local muzzle = (gun and gun:IsA("BasePart")) and gun.Position or from
+		Sfx.at("ShotgunShot", muzzle, { Volume = 2.4, PlaybackSpeed = 0.9 })
+		local flash = part({ Shape = Enum.PartType.Ball, Size = Vector3.new(3.5, 3.5, 3.5), Color = Color3.fromRGB(255, 210, 120), Transparency = 0.2, CFrame = CFrame.new(muzzle) })
+		local fl = Instance.new("PointLight"); fl.Color = Color3.fromRGB(255, 200, 110); fl.Range = 40; fl.Brightness = 6; fl.Shadows = false; fl.Parent = flash
+		Debris:AddItem(flash, 0.07)
+		emitter(muzzle, { Color = ColorSequence.new(Color3.fromRGB(200, 200, 200)), Size = NumberSequence.new(1, 3.5), Transparency = NumberSequence.new(0.5, 1),
+			Speed = NumberRange.new(3, 9), Lifetime = NumberRange.new(0.5, 1) }, 12, 1.5)
+		-- pellet tracers in a narrow spread
+		local dir = to - muzzle
+		local len = dir.Magnitude
+		if len > 1 then
+			for _ = 1, 7 do
+				local endP = to + Vector3.new(rng:NextNumber(-1, 1), rng:NextNumber(-1, 1), rng:NextNumber(-1, 1)) * math.min(3.5, len * 0.07)
+				local d = endP - muzzle
+				local tr = part({ Size = Vector3.new(0.09, 0.09, d.Magnitude), Color = Color3.fromRGB(255, 230, 160), Transparency = 0.25,
+					CFrame = CFrame.lookAt(muzzle, endP) * CFrame.new(0, 0, -d.Magnitude / 2) })
+				TweenService:Create(tr, TweenInfo.new(0.14), { Transparency = 1 }):Play()
+				Debris:AddItem(tr, 0.16)
+			end
+		end
+		-- what it hit
+		emitter(to, { Color = ColorSequence.new(open and Color3.fromRGB(150, 10, 14) or Color3.fromRGB(190, 170, 140)), Size = NumberSequence.new(0.6, 0.1), Speed = NumberRange.new(10, 28),
+			Lifetime = NumberRange.new(0.25, 0.6), Acceleration = Vector3.new(0, -50, 0) }, 22, 1.2)
+		Fx.shake(0.55 * near(muzzle, 60) + 0.3 * near(to, 25))
+		if not open and near(to, 14) > 0 then HUD.toast("YOUR COVER TOOK THAT ONE - MOVE!", true) end
 	elseif kind == "WarpWind" then
 		-- the Conqueror tears a portal open in front of him
 		local model = a[1]

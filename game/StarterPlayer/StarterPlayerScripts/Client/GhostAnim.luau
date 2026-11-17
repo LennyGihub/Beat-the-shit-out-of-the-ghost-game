@@ -75,7 +75,23 @@ local function abilityPose(ab: string, phase: string, t: number, since: number):
 	local s = math.sin
 	local p = {}
 	local a = math.min(1, since / 0.35)
-	if ab == "warp" then
+	if ab == "ambush" then
+		if phase == "hide" or phase == "spring" then -- crouched in his corner, knife held ready by his cheek, head turning slowly
+			p.Root = A(0.25, 0, 0) * CFrame.new(0, -1.9, 0); p.Waist = A(0.45, 0, 0); p.Neck = A(-0.55, s(t * 0.9) * 0.45, 0)
+			p.RightHip = A(1.35, 0, 0.12); p.LeftHip = A(1.5, 0, -0.12); p.RightKnee = A(-2.1, 0, 0); p.LeftKnee = A(-2.2, 0, 0)
+			p.RightAnkle = A(0.6, 0, 0); p.LeftAnkle = A(0.6, 0, 0)
+			p.RightShoulder = A(1.3, 0, 0.35); p.RightElbow = A(1.5, 0, 0); p.RightWrist = A(0.1 + s(t * 2.2) * 0.08, 0, 0)
+			p.LeftShoulder = A(0.5, 0, -0.3); p.LeftElbow = A(1.1, 0, 0)
+		elseif phase == "strike" then -- out of the corner in one bound, the knife coming down
+			p.Root = A(0.5, 0, 0) * CFrame.new(0, -0.3, -1.2); p.Waist = A(0.35, -0.3, 0); p.Neck = A(-0.5, 0.2, 0)
+			p.RightShoulder = A(2.3 - a * 1.5, 0, 0.2); p.RightElbow = A(0.5, 0, 0)
+			p.LeftShoulder = A(1.4, 0, -0.5); p.LeftElbow = A(0.4, 0, 0)
+			p.RightHip = A(-0.7, 0, 0); p.LeftHip = A(0.9, 0, 0); p.LeftKnee = A(-0.9, 0, 0); p.RightKnee = A(-0.3, 0, 0)
+		else -- slipping away: turned, shoulders in
+			p.Root = A(0.15, 0, 0); p.Waist = A(0.25, 0.4, 0); p.Neck = A(-0.1, -0.6, 0)
+			p.RightShoulder = A(0.9, 0, 0.3); p.RightElbow = A(1.5, 0, 0); p.LeftShoulder = A(0.2, 0, -0.2)
+		end
+	elseif ab == "warp" then
 		if phase == "wind" then -- the gauntlet raised in front of him, tearing a portal open
 			p.Root = A(-0.08 * a, 0, 0); p.Waist = A(-0.1 * a, -0.25 * a, 0); p.Neck = A(0.1, 0.2 * a, 0)
 			p.RightShoulder = A(1.75 * a, 0, -0.15 * a); p.RightElbow = A(0.2, 0, 0); p.RightWrist = A(-0.5 * a + s(t * 30) * 0.06, 0, 0)
@@ -336,6 +352,31 @@ local function target(state: string, t: number, sinceState: number): { [string]:
 		p.RightHip = A(-0.35, 0, 0.12); p.LeftHip = A(0.35, 0, -0.12); p.LeftKnee = A(-0.3, 0, 0); p.RightKnee = A(-0.15, 0, 0)
 		return p
 	end
+	-- the Last Call's shotgun: side on, the gun arm (left) straight out along the barrel, the knife hand under it
+	if state == "Shotgun" then
+		local a = math.min(1, sinceState / 0.45)
+		p.Root = A(-0.05, 0, 0); p.Waist = A(-0.05, 0.35 * a, 0); p.Neck = A(0.05, -0.35 * a, 0.15 * a)
+		p.LeftShoulder = A(1.57 * a, 0, 0.12 * a); p.LeftElbow = A(0.04, 0, 0); p.LeftWrist = A(0, 0, 0)
+		p.RightShoulder = A(1.25 * a, 0, -0.75 * a); p.RightElbow = A(0.9 * a, 0, 0)
+		p.RightHip = A(-0.3, 0, 0.1); p.LeftHip = A(0.3, 0, -0.1); p.LeftKnee = A(-0.25, 0, 0)
+		return p
+	end
+	-- the Caller's knife: raised by his ear, then driven down and in (WindUp -> Swipe)
+	if (state == "WindUp" or state == "Swipe") and g:GetAttribute("MonsterId") == "Caller" then
+		local a = math.min(1, sinceState / 0.3)
+		if state == "WindUp" then
+			p.Root = A(-0.12 * a, 0, 0); p.Waist = A(-0.2 * a, -0.35 * a, 0); p.Neck = A(0.15, 0.3 * a, 0)
+			p.RightShoulder = A(2.25 * a, 0, 0.25 * a); p.RightElbow = A(0.6 * a, 0, 0); p.RightWrist = A(0.1, 0, 0)
+			p.LeftShoulder = A(0.9 * a, 0, -0.5 * a); p.LeftElbow = A(0.8, 0, 0)
+			p.RightHip = A(-0.3, 0, 0.1); p.LeftHip = A(0.35, 0, -0.1); p.LeftKnee = A(-0.3, 0, 0)
+		else
+			p.Root = A(0.35, 0, 0) * CFrame.new(0, -0.3, -0.9); p.Waist = A(0.4, 0.45, 0); p.Neck = A(-0.35, -0.35, 0)
+			p.RightShoulder = A(0.85, 0, -0.25); p.RightElbow = A(0.15, 0, 0); p.RightWrist = A(-0.3, 0, 0)
+			p.LeftShoulder = A(-0.5, 0, -0.4); p.LeftElbow = A(0.5, 0, 0)
+			p.LeftHip = A(0.7, 0, 0); p.RightHip = A(-0.5, 0, 0); p.LeftKnee = A(-0.6, 0, 0)
+		end
+		return p
+	end
 	-- the Goblin and the Conqueror punch (haymakers and a two-fisted slam) instead of clawing
 	if (state == "WindUp" or state == "Swipe") and (g:GetAttribute("MonsterId") == "Goblin" or g:GetAttribute("MonsterId") == "Conqueror") then
 		return goblinClaw(state, t, sinceState)
@@ -403,6 +444,11 @@ local function target(state: string, t: number, sinceState: number): { [string]:
 				p[k] = CFrame.new(v.Position) * A(math.floor(rx / q + 0.5) * q, math.floor(ry / q + 0.5) * q, math.floor(rz / q + 0.5) * q)
 			end
 			p.Neck = A(-0.1, (math.floor(t * 0.8) % 3 - 1) * 0.35, (math.floor(t * 1.3) % 2) * 0.25)
+		elseif g:GetAttribute("MonsterId") == "Caller" then
+			-- leaning into his run, the knife held up by his shoulder, head tilted
+			p.Waist = (p.Waist or CFrame.new()) * A(0.28, 0, 0)
+			p.Neck = A(-0.22, s(t * 1.3) * 0.12, 0.22)
+			p.RightShoulder = A(1.35 + s(t * 9) * 0.08, 0, 0.3); p.RightElbow = A(1.55, 0, 0); p.RightWrist = A(0.15, 0, 0)
 		elseif g:GetAttribute("MonsterId") == "Pirate" then
 			p.Waist = (p.Waist or CFrame.new()) * A(0.18, 0, 0) -- a crooked skeleton walk, shield up, cutlass low
 			p.Neck = A(-0.15, s(t * 1.1) * 0.15, s(t * 2.7) * 0.1)
@@ -446,6 +492,7 @@ function GA.update(dt: number)
 	local state = current:GetAttribute("State") or "Chase"
 	-- Fury moves reuse the attack poses: roar / lunge crouch = wind-up, lunge dash = swipe
 	if state == "Evo" and current:GetAttribute("EvoPower") == "laser" then state = "Laser"
+	elseif state == "Evo" and current:GetAttribute("EvoPower") == "shotgun" then state = "Shotgun"
 	elseif state == "Roar" or state == "Evo" then state = "WindUp"
 	elseif state == "Lunge" then state = current:GetAttribute("FuryPhase") == "dash" and "Swipe" or "WindUp" end
 	local ph = current:GetAttribute("AbilityPhase") or ""
