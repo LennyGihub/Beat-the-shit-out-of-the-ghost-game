@@ -226,7 +226,7 @@ function shocks.pop(center, _floor, r, color)
 	Kit.ring(CFrame.new(center) * CFrame.Angles(rand(-0.5, 0.5), 0, rand(-0.5, 0.5)), { r0 = 0.5, r1 = r * 0.7, n = 12, h = 0.5, w = 0.5, color = color, dur = 0.3, lift = false })
 	Kit.chunks(center, 9, { colors = { FIRE[1], color, SMOKE[1] }, smin = 0.25, smax = 0.6, speed = 26, up = 18, life = 0.6 })
 	Kit.light(center, color, 24, 4, 0.25)
-	Sfx.at("Explosion", center, { PlaybackSpeed = 1.6, Volume = 0.5 })
+	Sfx.at("Explosion", center, { PlaybackSpeed = 1.15, Volume = 0.5 })
 	Kit.near(center, 0.25, 50)
 end
 
@@ -272,7 +272,7 @@ local function lightning(to: Vector3, color: Color3, big: boolean)
 	scorch(floor, big and 5 or 3.5)
 	Kit.light(floor + UP * 2, color, 45, 4, 0.25)
 	Sfx.at("TaserZap", floor, { PlaybackSpeed = rand(0.7, 1.1), Volume = 0.8 })
-	Sfx.at("Explosion", floor, { PlaybackSpeed = rand(1.6, 2), Volume = big and 0.75 or 0.55 })
+	Sfx.at("Explosion", floor, { PlaybackSpeed = rand(1, 1.25), Volume = big and 0.75 or 0.55 })
 	Kit.near(floor, big and 0.45 or 0.35, 60)
 end
 
@@ -340,7 +340,7 @@ local function holy(to: Vector3, color: Color3, grand: boolean)
 		end
 		Kit.chunks(floor + UP * 0.5, grand and 20 or 12, { colors = { pale, WHITE }, smin = 0.15, smax = 0.4, speed = 5, up = 14, g = -10, life = 1.1, spread = w * 0.6 })
 		Kit.light(floor + UP * 5, color, 50, 8, 0.7)
-		Sfx.at("Ultimate", floor, { PlaybackSpeed = 1.6, Volume = 0.7 })
+		Sfx.at("Ultimate", floor, { PlaybackSpeed = 1.1, Volume = 0.7 })
 		Sfx.at("PunchHeavy", floor, { PlaybackSpeed = 0.8, Volume = 0.7 })
 		Kit.near(floor, grand and 0.45 or 0.3, 55)
 	end)
@@ -365,13 +365,14 @@ local function nuke(to: Vector3, color: Color3)
 	local parts: { Part } = {}
 	local from = floor + UP * 150
 	for i, s in shapes do parts[i] = Kit.part(s[2] :: Vector3, CFrame.new(from), s[3] :: Color3, SP) end
-	local whistle = Sfx.at("PlaneEngine", floor, { PlaybackSpeed = 1.5, Volume = 0.7 })
+	-- the bomb coming down: a low rush of air (it used to be an engine sound pitched up to a rising whine)
+	local whistle = Sfx.at("Whoosh", floor, { PlaybackSpeed = 0.55, Volume = 1.3 })
 	local acc = 0
 	Kit.loop(dur, function(a, dt)
 		local pos = from:Lerp(floor + UP * 5, a * a)
 		local rot = CFrame.new(pos) * CFrame.Angles(0, a * 5, 0)
 		for i, p in parts do p.CFrame = rot * (shapes[i][1] :: CFrame) end
-		if whistle then whistle.PlaybackSpeed = 1.5 + a * 1.2 end
+		if whistle then whistle.PlaybackSpeed = 0.55 + a * 0.3 end
 		acc += dt
 		if acc > 0.04 then
 			acc = 0

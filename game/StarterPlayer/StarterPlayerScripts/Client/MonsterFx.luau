@@ -16,7 +16,7 @@ local KINDS = {
 	Blackout = true, BlackoutEnd = true, GasThrow = true, GasCloud = true, Gassed = true,
 	HellMark = true, HellPillar = true, Charge = true, CloneSpawn = true, CloneShatter = true, StalkerBlink = true, BlackoutExtend = true,
 	WarpWind = true, Warp = true, LaserWind = true, LaserBeam = true, LaserEnd = true, LaserHit = true, -- the Conqueror
-	AmbushBreath = true, AmbushStrike = true, AmbushStab = true, AmbushFound = true, ShotgunAim = true, ShotgunFire = true, ShotgunPump = true, -- the Caller
+	AmbushBreath = true, AmbushStrike = true, AmbushStab = true, AmbushFound = true, AmbushWake = true, ShotgunAim = true, ShotgunFire = true, ShotgunPump = true, -- the Caller
 	GoblinSteal = true, GoblinUse = true, GoblinDrop = true,
 	ShieldBlock = true, Slammed = true, AnimJumpscare = true,
 	RoarWind = true, Roar = true, LungeWind = true, Lunge = true, Enraged = true, CounterWind = true, FuryArmor = true, FurySmash = true, -- Fury
@@ -618,8 +618,14 @@ function MonsterFx.handle(kind: string, ...)
 		Sfx.at("GhostScream", pos, { PlaybackSpeed = 0.5, Volume = 1.2 })
 		Fx.shake(0.3 * near(pos, 60))
 	elseif kind == "AmbushBreath" then
-		-- the Caller, hidden in his corner: a breath you can only just hear, and only from close
-		Sfx.at("GhostWhisper", a[1], { PlaybackSpeed = 1.5, Volume = 0.35, RollOffMaxDistance = 55 })
+		-- the Caller, asleep in his corner: a slow breath you can only just hear, and only from close
+		Sfx.at("GhostWhisper", a[1], { PlaybackSpeed = 0.8, Volume = 0.35, RollOffMaxDistance = 55 })
+	elseif kind == "AmbushWake" then
+		-- somebody looked at him: a sharp breath in, his knife scraping off the floor
+		local pos = a[1]
+		Sfx.at(Sfx.voice("WindUp"), pos, { PlaybackSpeed = 1.1, Volume = 1.3 })
+		Sfx.at("GhostWhisper", pos, { PlaybackSpeed = 1.2, Volume = 0.9 })
+		Fx.shake(0.25 * near(pos, 45))
 	elseif kind == "AmbushStrike" then
 		-- he comes out of his corner at you
 		local model = a[1]

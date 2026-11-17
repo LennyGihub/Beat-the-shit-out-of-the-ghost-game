@@ -55,15 +55,16 @@ local List: { Monster } = {
 		ability = { kind = "steal", cd = 6, range = 11 }, -- grabs the item in your hands, then uses it on you
 		desc = "Steals the item in your hands and uses it against you. Knock him out to get it back." }),
 	-- a masked killer with a knife: quick, goes round to your back (flank), stabs fast (atk = attack cooldown
-	-- multiplier). His ambush (Server/Caller): he hides, a phone rings, the call hints at the room he is in. Find him
-	-- and hit first = that hit x bonus; walk into it = a stab for dmg. first = seconds before his first ambush,
-	-- hide = how long he waits in his corner, trigger = how close you can come in front of him before he springs,
-	-- react = the moment he needs to spring (hit him in it and you were first).
+	-- multiplier). His ambush (Server/Caller): he sits down in a corner, a phone rings, the call hints at the room he
+	-- is in. Look at him = he wakes and rushes (rush seconds, no extra damage); come into his room without looking
+	-- = a stab from behind for dmg; hit him while he sits or gets up = that hit x bonus. first = seconds before his
+	-- first ambush, hide = how long he waits, wake = from how far a look wakes him, enter = how deep into his room
+	-- an unseeing player sets him off, react = the moment he needs to get off the floor, rise = to stand up.
 	m({ id = "Caller", name = "The Caller", title = "THE CALLER", rarity = 2, template = "Caller", color = C(232, 230, 222),
 		hp = 0.9, speed = 1.25, dmg = 0.8, reward = 1.7, hover = 0, walker = true, scale = 1, solid = true,
 		atk = 0.7, flank = true,
-		ability = { kind = "ambush", cd = 30, first = 10, hide = 30, trigger = 9, react = 0.45, dmg = 46, bonus = 2.5, lunge = 70 },
-		desc = "A masked killer with a knife. He hides and phones you to lure you in: find him first and he pays for it." }),
+		ability = { kind = "ambush", cd = 30, first = 10, hide = 30, wake = 45, enter = 34, react = 0.45, rise = 0.7, rush = 4, dmg = 46, bonus = 2.5, lunge = 70 },
+		desc = "A masked killer with a knife. He sits in a corner and phones you to lure you in: walk in without seeing him and he stabs you in the back. Spot him and he just comes at you." }),
 	-- THE SECRET ONE: a huge purple warlord with a golden gauntlet. Slow on his feet, so he steps through a portal
 	-- and comes out behind you (warp: from `min` studs away, `wind` seconds of warning); his fist sends you through
 	-- the walls, and he punches his own way through them rather than use a door.
@@ -121,7 +122,7 @@ local EVO: { [string]: { [string]: any } } = {
 	-- soaked in blood, and he brought a 12 gauge: he aims (wind), fires, pumps (gap) and fires again. Cover takes
 	-- a shot once: furniture is blown apart, an inside wall gets a hole in it. His ambush is quicker and hits harder.
 	Caller = { title = "THE LAST CALL", color = C(170, 16, 20), scale = 1.06,
-		ability = { kind = "ambush", cd = 30, first = 8, hide = 26, trigger = 10, react = 0.3, dmg = 58, bonus = 2.5, lunge = 82 },
+		ability = { kind = "ambush", cd = 30, first = 8, hide = 26, wake = 45, enter = 38, react = 0.3, rise = 0.55, rush = 5, dmg = 58, bonus = 2.5, lunge = 82 },
 		power = { kind = "shotgun", cd = 10, wind = 1.2, gap = 1.0, shots = 2, dmg = 46, range = 95, power = 70, min = 5 },
 		desc = "The same mask, red now, and a shotgun. Two shots, and each one blows your cover away." },
 	-- gold armour and a helmet; everything the Conqueror does, plus the gauntlet's beam: it turns after you slowly

@@ -682,9 +682,13 @@ function Ghost.step(dt: number)
 		face(thrp.Position)
 		local dist = (Vector3.new(thrp.Position.X, 0, thrp.Position.Z) - Vector3.new(pos.X, 0, pos.Z)).Magnitude
 		local speed = (C.Speed + (g.level - 1) * C.SpeedPerLevel) * g.speedMult * g.furySpeed * (now < g.slowUntil and g.slowMult or 1)
+		-- the Caller, woken in his corner (Server/Caller): a few seconds of flat-out running, no stop-and-go
+		local rushing = g.rushUntil ~= nil and now < g.rushUntil
+		if rushing then speed *= 1.45 end
 		-- creepy rhythm: she sometimes freezes for a moment, then lunges
 		local phase = (now * 0.6) % 1
-		if phase < 0.12 and dist > 14 then speed *= 0.1 elseif phase < 0.3 and dist > 14 then speed *= 1.8 end
+		if rushing then -- (no rhythm)
+		elseif phase < 0.12 and dist > 14 then speed *= 0.1 elseif phase < 0.3 and dist > 14 then speed *= 1.8 end
 		-- the Caller goes round to the back of a player who is facing him
 		local goal = thrp.Position
 		if (g.def :: any).flank then goal = Abilities.flankGoal(g, thrp, dist, now) end

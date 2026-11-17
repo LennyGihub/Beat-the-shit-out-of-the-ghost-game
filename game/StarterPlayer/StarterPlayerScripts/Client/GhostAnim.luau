@@ -76,9 +76,29 @@ local function abilityPose(ab: string, phase: string, t: number, since: number):
 	local p = {}
 	local a = math.min(1, since / 0.35)
 	if ab == "ambush" then
-		if phase == "hide" or phase == "spring" then -- crouched in his corner, knife held ready by his cheek, head turning slowly
-			p.Root = A(0.25, 0, 0) * CFrame.new(0, -1.9, 0); p.Waist = A(0.45, 0, 0); p.Neck = A(-0.55, s(t * 0.9) * 0.45, 0)
-			p.RightHip = A(1.35, 0, 0.12); p.LeftHip = A(1.5, 0, -0.12); p.RightKnee = A(-2.1, 0, 0); p.LeftKnee = A(-2.2, 0, 0)
+		local sincePhase = os.clock() - phaseT
+		-- On this rig a POSITIVE x angle tips a part's top BACK (its lower end comes forward): legs and arms swing
+		-- forward with +, the torso and the head lean back with + and bend forward / down with -.
+		-- drop = how far his hips come down to sit on the floor (his root floats at hip height; the rig is scaled)
+		local drop = 3.85 * (current and current:GetScale() or 1)
+		if phase == "hide" then -- asleep on the floor in his corner: leaning back on the wall, slumped, chin on his chest, one leg out, one knee up with the knife hand on it
+			local br = s(t * 1.3) * 0.035
+			p.Root = CFrame.new(0, -drop, 0.3) * A(0.2, 0, 0); p.Waist = A(-0.45 - br, 0, 0.06); p.Neck = A(-0.7 - br, 0.12, 0)
+			p.RightHip = A(2.1, 0, 0.15); p.RightKnee = A(-1.3, 0, 0); p.RightAnkle = A(0.3, 0, 0)
+			p.LeftHip = A(1.37, 0, -0.2); p.LeftKnee = A(-0.12, 0, 0); p.LeftAnkle = A(0.3, 0, 0)
+			p.RightShoulder = A(1.25, 0, 0.1); p.RightElbow = A(0.2, 0, 0); p.RightWrist = A(0.2, 0, 0)
+			p.LeftShoulder = A(0.4, 0, -0.3); p.LeftElbow = A(0.15, 0, 0)
+		elseif phase == "wake" then -- seen: his head snaps up, then he pushes himself off the floor, bent forward, knife out
+			local k = math.clamp((sincePhase - 0.12) / 0.5, 0, 1)
+			local d = 1 - k
+			p.Root = CFrame.new(0, -drop * d, 0.3 * d) * A(0.2 * d - 0.2 * k, 0, 0); p.Waist = A(-0.45 * d - 0.15 * k, 0, 0); p.Neck = A(0.25 * d + 0.3 * k, 0, 0)
+			p.RightHip = A(2.1 * d, 0, 0.15 * d); p.RightKnee = A(-1.3 * d, 0, 0); p.RightAnkle = A(0.3 * d, 0, 0)
+			p.LeftHip = A(1.37 * d, 0, -0.2 * d); p.LeftKnee = A(-0.12 * d, 0, 0); p.LeftAnkle = A(0.3 * d, 0, 0)
+			p.RightShoulder = A(1.25 + 0.5 * k, 0, 0.3); p.RightElbow = A(0.2 + 1.0 * k, 0, 0)
+			p.LeftShoulder = A(0.4 + 0.3 * k, 0, -0.35); p.LeftElbow = A(0.15 + 0.6 * k, 0, 0)
+		elseif phase == "spring" then -- nobody is looking: off the floor into a low crouch, bent forward, eyes on them, the knife by his cheek
+			p.Root = CFrame.new(0, -1.9, 0) * A(-0.3, 0, 0); p.Waist = A(-0.35, 0, 0); p.Neck = A(0.55, 0, 0)
+			p.RightHip = A(1.65, 0, 0.12); p.LeftHip = A(1.8, 0, -0.12); p.RightKnee = A(-2.1, 0, 0); p.LeftKnee = A(-2.2, 0, 0)
 			p.RightAnkle = A(0.6, 0, 0); p.LeftAnkle = A(0.6, 0, 0)
 			p.RightShoulder = A(1.3, 0, 0.35); p.RightElbow = A(1.5, 0, 0); p.RightWrist = A(0.1 + s(t * 2.2) * 0.08, 0, 0)
 			p.LeftShoulder = A(0.5, 0, -0.3); p.LeftElbow = A(1.1, 0, 0)

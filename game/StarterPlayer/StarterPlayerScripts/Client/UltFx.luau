@@ -153,7 +153,7 @@ function sigs.chill(_by, def, pos, floor)
 	Kit.spikes(floor, { r = own and 7 or 3.4, n = own and 12 or 8, h = own and 1.8 or 2.4, w = 0.8, tilt = 0.6, colors = ice, mat = SP, tr = 0.12, life = 1.1, crystal = true, shatter = true })
 	Kit.ring(floor, { r0 = 1, r1 = 8, n = 14, h = 1, h1 = 0.2, w = 0.5, color = def.color, dur = 0.4 })
 	Kit.chunks(pos, 14, { colors = ice, mat = Enum.Material.Ice, smin = 0.15, smax = 0.4, speed = 12, up = 10, g = 20, life = 1, slab = true })
-	Sfx.at("Glass", pos, { PlaybackSpeed = 1.5, Volume = 0.7 })
+	Sfx.at("Glass", pos, { PlaybackSpeed = 1.1, Volume = 0.7 })
 end
 
 -- the can flies off, sparks jitter round your head
@@ -167,7 +167,7 @@ function sigs.caffeine(_by, def, pos, _floor, look)
 			Kit.fade(Kit.line(a, b, 0.14, i % 2 == 0 and WHITE or rgb(255, 230, 90)), 0.03, 0.12)
 		end)
 	end
-	Sfx.at("TaserTick", pos, { PlaybackSpeed = 1.6, Volume = 0.5 })
+	Sfx.at("TaserTick", pos, { PlaybackSpeed = 1.05, Volume = 0.5 })
 	Sfx.at("Click", pos, { PlaybackSpeed = 0.7, Volume = 0.8 })
 end
 
@@ -195,7 +195,7 @@ function sigs.fuse(_by, def, pos)
 			local at = pos + Vector3.new(math.cos(a) * rr, rand(-1, 2), math.sin(a) * rr)
 			Kit.poly(at, 0.6, 3.2, rgb(255, 225, 100), 0.22, { tr = 0.05, color1 = def.color, n = 2 })
 			Kit.chunks(at, 4, { colors = { rgb(255, 225, 100), def.color }, smin = 0.15, smax = 0.35, speed = 12, up = 10, life = 0.5 })
-			Sfx.at("Explosion", at, { PlaybackSpeed = 2.2 + i * 0.05, Volume = 0.3 })
+			Sfx.at("Explosion", at, { PlaybackSpeed = 1.3 + i * 0.03, Volume = 0.3 })
 		end)
 	end
 end
@@ -290,7 +290,7 @@ function sigs.holy(_by, def, pos, floor)
 	end
 	Kit.chunks(floor + UP * 0.5, 16, { colors = { pale, WHITE }, smin = 0.12, smax = 0.3, speed = 3, up = 9, g = -6, life = 1.3, spread = 3 })
 	Kit.light(pos, def.color, 35, 4, 0.9)
-	Sfx.at("Ultimate", pos, { PlaybackSpeed = 1.8, Volume = 0.6 })
+	Sfx.at("Ultimate", pos, { PlaybackSpeed = 1.1, Volume = 0.6 })
 end
 
 -- rage with nowhere to go: the floor lifts in pebbles, red arcs crawl over the caster
