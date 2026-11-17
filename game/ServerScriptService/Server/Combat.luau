@@ -463,11 +463,16 @@ local function onThrow(player: Player, look: any)
 	sync(player, s, true)
 end
 
+-- FRIENDLY FIRE: on by default. A PLAY-window lobby can switch it off for its run (Run.configure publishes the
+-- ReplicatedStorage attribute FriendlyFire): then nothing a player throws, blows up or sets alight hurts a teammate.
+function Combat.friendlyFire(): boolean return RS:GetAttribute("FriendlyFire") ~= false end
+
 -- PvP: something a player threw hits another player in the run. Damage + a fling, no damage to the thrower.
 Combat.PVP_MULT = 0.5 -- player-vs-player damage is half of what the ghost would take
 -- raw = vel is the exact fling velocity (monster throws), otherwise it is scaled to a PvP knock; ragT = ragdoll seconds
 function Combat.hitPlayer(victim: Player, by: Player?, dmg: number, vel: Vector3, label: string?, raw: boolean?, ragT: number?)
 	if victim == by or not victim:GetAttribute("InMatch") then return end
+	if by and not Combat.friendlyFire() then return end
 	if not by and victim:GetAttribute("Warded") then return end
 	local hum, hrp = alive(victim)
 	if not hum or not hrp then return end
@@ -517,7 +522,8 @@ local function checkThrownPlayers()
 	for m, info in Furniture.thrown do
 		local prim = m.PrimaryPart
 		-- thrown by a player (PvP) or by a monster (poltergeist: info.monster = its damage)
-		if prim and m.Parent and (info.by or info.monster) and os.clock() - info.t > 0.1 then
+		-- friendly fire off: a player's throw flies on past teammates (a monster's throw still hits)
+		if prim and m.Parent and (info.monster or (info.by and Combat.friendlyFire())) and os.clock() - info.t > 0.1 then
 			local _, size = m:GetBoundingBox()
 			local victim = Combat.playerNear(prim.Position, 2.6 + size.Magnitude * 0.25, info.by)
 			if victim then

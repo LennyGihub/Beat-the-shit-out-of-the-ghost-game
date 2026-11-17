@@ -439,8 +439,10 @@ function Run.extendRevive(p: Player, extra: number)
 	end
 end
 
--- which map and difficulty this match uses (before the first fight)
-function Run.configure(mapId: string?, diffId: string?)
+-- which map and difficulty this match uses (before the first fight); friendlyFire = false: teammates cannot hurt
+-- each other in this run (a PLAY-window lobby's choice, read by Combat.friendlyFire)
+function Run.configure(mapId: string?, diffId: string?, friendlyFire: boolean?)
+	RS:SetAttribute("FriendlyFire", friendlyFire ~= false)
 	MapLoader.load(mapId or Maps.default)
 	diff = Maps.diffById[diffId or ""] or Maps.diffById[Maps.defaultDiff]
 	Ghost.diff = { hp = diff.hp, dmg = diff.dmg, speed = diff.speed }
@@ -448,8 +450,8 @@ function Run.configure(mapId: string?, diffId: string?)
 end
 
 -- start a match with these players (Studio local match, or the players of a reserved server)
-function Run.beginMatch(list: { Player }, mapId: string?, diffId: string?)
-	Run.configure(mapId, diffId)
+function Run.beginMatch(list: { Player }, mapId: string?, diffId: string?, friendlyFire: boolean?)
+	Run.configure(mapId, diffId, friendlyFire)
 	kills, level, eventLeft, lastKind, lastMonster = 0, 1, 0, "", ""
 	lastEvolved = ""
 	prevMonster = ""

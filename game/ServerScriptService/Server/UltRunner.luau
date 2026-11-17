@@ -51,7 +51,7 @@ function Runner.barrel(pos: Vector3, by: Player?)
 	Fire.ignite(pos, B.FireRadius, by, 3, true)
 	for _, p in game:GetService("Players"):GetPlayers() do
 		local hrp = p:GetAttribute("InMatch") and p.Character and p.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
-		if hrp and (hrp.Position - pos).Magnitude < B.PlayerRadius then
+		if hrp and (hrp.Position - pos).Magnitude < B.PlayerRadius and (p == by or by == nil or Combat.friendlyFire()) then
 			local out = hrp.Position - pos
 			Combat.hitPlayer(p, nil, B.PlayerDamage, (out.Magnitude > 0.1 and out.Unit or Vector3.yAxis) * 55 + Vector3.new(0, 28, 0), "barrel", true, 1)
 		end

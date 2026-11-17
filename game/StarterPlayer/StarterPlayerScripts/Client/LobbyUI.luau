@@ -28,8 +28,11 @@ local startBtn: TextButton
 local status: TextLabel
 local pickMap, pickDiff, pickSize = Maps.default, Maps.defaultDiff, 2
 local pickPrivate = false
+local pickFF = true -- friendly fire in the run you create
 local privBtn: TextButton
 local minePriv: TextButton
+local ffBtn: TextButton
+local mineFF: TextButton
 local inviteList: ScrollingFrame
 local invitePop: Frame
 local invitePopText: TextLabel
@@ -149,6 +152,10 @@ local function refreshPicks()
 		setText(privBtn, pickPrivate and "PRIVATE" or "PUBLIC")
 		paint(privBtn, pickPrivate and PURPLE or DARK)
 	end
+	if ffBtn then
+		setText(ffBtn, pickFF and "FRIENDLY FIRE: ON" or "FRIENDLY FIRE: OFF")
+		paint(ffBtn, pickFF and DARK or GREEN)
+	end
 end
 
 local function refreshList()
@@ -169,7 +176,7 @@ local function refreshList()
 		local d = Maps.diffById[pt.diff]
 		Grunge.frame(row, { BackgroundTransparency = 0, BackgroundColor3 = m and m.color or RED, Position = UDim2.new(0, 4, 0.12, 0), Size = UDim2.new(0, 5, 0.76, 0), Rotation = 2, ZIndex = 12 })
 		Grunge.text(row, { Text = string.upper(pt.host) .. "'S LOBBY" .. (pt.private and "  [PRIVATE]" or ""), Position = UDim2.new(0, 14, 0.05, 0), Size = UDim2.new(0.62, 0, 0.5, 0), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 12 })
-		Grunge.text(row, { Text = string.upper((m and m.name or pt.map) .. " - " .. (d and d.name or pt.diff)) .. "   " .. #pt.names .. "/" .. pt.size,
+		Grunge.text(row, { Text = string.upper((m and m.name or pt.map) .. " - " .. (d and d.name or pt.diff)) .. "   " .. #pt.names .. "/" .. pt.size .. (pt.ff == false and "   FF OFF" or ""),
 			Font = Grunge.TYPE, Position = UDim2.new(0, 14, 0.56, 0), Size = UDim2.new(0.62, 0, 0.36, 0), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = d and d.color or Grunge.PAPER, ZIndex = 12 })
 		local full = #pt.names >= pt.size
 		local b = button(row, pt.id == myId and "YOURS" or (full and "FULL" or (invited and "JOIN!" or "JOIN")), { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -6, 0.5, 0), Size = UDim2.new(0.26, 0, 0.72, 0),
@@ -190,6 +197,10 @@ local function refreshList()
 		minePriv.Visible = host
 		setText(minePriv, myParty.private and "PRIVATE" or "PUBLIC")
 		paint(minePriv, myParty.private and PURPLE or DARK)
+		-- everyone in the lobby sees the friendly fire choice; only the host's press changes it
+		setText(mineFF, myParty.ff == false and "FRIENDLY FIRE: OFF" or "FRIENDLY FIRE: ON")
+		paint(mineFF, myParty.ff == false and GREEN or DARK)
+		mineFF:SetAttribute("Host", host)
 		-- invite list: everyone in the server who is not in this lobby and not fighting
 		for _, c in inviteList:GetChildren() do if c:IsA("Frame") then c:Destroy() end end
 		inviteList.Visible = host
@@ -333,8 +344,10 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 	end
 	privBtn = button(createPage, "PUBLIC", { Position = UDim2.fromScale(0.6, 0.745), Size = UDim2.fromScale(0.4, 0.075), BackgroundColor3 = DARK, ZIndex = 12 })
 	privBtn.Activated:Connect(function() Sfx.play("Click"); pickPrivate = not pickPrivate; refreshPicks() end)
+	ffBtn = button(createPage, "FRIENDLY FIRE: ON", { Position = UDim2.fromScale(0, 0.922), Size = UDim2.fromScale(0.55, 0.07), BackgroundColor3 = DARK, ZIndex = 12, Font = Grunge.TYPE })
+	ffBtn.Activated:Connect(function() Sfx.play("Click"); pickFF = not pickFF; refreshPicks() end)
 	local create = button(createPage, "CREATE", { Position = UDim2.fromScale(0.58, 0.84), Size = UDim2.fromScale(0.42, 0.13), BackgroundColor3 = GREEN, ZIndex = 12, Rotation = -1.5 })
-	create.Activated:Connect(function() Sfx.play("Click"); Remotes.Party:FireServer("create", pickMap, pickDiff, pickSize, pickPrivate) end)
+	create.Activated:Connect(function() Sfx.play("Click"); Remotes.Party:FireServer("create", pickMap, pickDiff, pickSize, pickPrivate, pickFF) end)
 
 	-- left half when you are in a lobby: your lobby
 	mine = Grunge.frame(panel, { Position = UDim2.fromScale(0.04, 0.14), Size = UDim2.fromScale(0.46, 0.82), ZIndex = 10, Visible = false })
@@ -344,6 +357,12 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 	minePriv.Activated:Connect(function()
 		Sfx.play("Click")
 		Remotes.Party:FireServer("privacy", minePriv:GetAttribute("Label") == "PUBLIC")
+	end)
+	mineFF = button(mine, "FRIENDLY FIRE: ON", { Position = UDim2.fromScale(0, 0.31), Size = UDim2.fromScale(0.6, 0.075), BackgroundColor3 = DARK, ZIndex = 12, Font = Grunge.TYPE })
+	mineFF.Activated:Connect(function()
+		if not mineFF:GetAttribute("Host") then return end
+		Sfx.play("Click")
+		Remotes.Party:FireServer("ff", mineFF:GetAttribute("Label") == "FRIENDLY FIRE: OFF")
 	end)
 	heading(mine, "INVITE PLAYERS", 0, 0.42, 1, 11)
 	inviteList = Instance.new("ScrollingFrame")

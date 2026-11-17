@@ -1,17 +1,17 @@
 # Graph Report - Beat-the-shit-out-of-the-ghost-game  (2026-11-17)
 
 ## Corpus Check
-- 74 files · ~149,330 words
+- 74 files · ~149,710 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 3 file(s) not represented in the graph (top: (none) 3)
 
 ## Summary
-- 910 nodes · 2621 edges · 46 communities (35 shown, 11 thin omitted)
-- Extraction: 76% EXTRACTED · 24% INFERRED · 0% AMBIGUOUS · INFERRED: 620 edges (avg confidence: 0.85)
+- 911 nodes · 2624 edges · 46 communities (34 shown, 12 thin omitted)
+- Extraction: 76% EXTRACTED · 24% INFERRED · 0% AMBIGUOUS · INFERRED: 623 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `ae496181`
+- Built from commit: `5eef9a23`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -41,7 +41,6 @@
 - Sfx.play
 - game/ServerScriptService/Server/Fury.luau
 - Run.startFight
-- Run.startFight
 - game/ServerScriptService/Server/Sandbox.luau
 - AdminPanel.luau
 - CrewAnim.luau
@@ -49,7 +48,7 @@
 - Spectate.luau
 - Furniture.smash
 - MapLoader.luau
-- game/ServerScriptService/Main.server.luau
+- Combat.luau
 - script_parent_sfx
 - Friends.luau
 - game/StarterPlayer/StarterPlayerScripts/Client/SandboxUI.luau
@@ -67,21 +66,21 @@
 10. `Kit.chunks()` - 25 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `MonsterFx.handle()` --calls--> `Sfx.voice()`  [INFERRED]
-  game/StarterPlayer/StarterPlayerScripts/Client/MonsterFx.luau → game/StarterPlayer/StarterPlayerScripts/Client/Sfx.luau
-- `Abilities.clear()` --calls--> `Loot.clear()`  [INFERRED]
-  game/ServerScriptService/Server/Abilities.luau → game/ServerScriptService/Server/GoblinLoot.luau
-- `Ghost.step()` --calls--> `Fury.windUp()`  [INFERRED]
-  game/ServerScriptService/Server/Ghost.luau → game/ServerScriptService/Server/Fury.luau
+- `Combat.refreshHealth()` --calls--> `alive()`  [INFERRED]
+  game/ServerScriptService/Server/Combat.luau → game/ServerScriptService/Server/Inventory.luau
+- `applyFx()` --calls--> `Ghost.vuln()`  [INFERRED]
+  game/ServerScriptService/Server/Inventory.luau → game/ServerScriptService/Server/Ghost.luau
 - `Ghost.hit()` --calls--> `Ragdoll.kick()`  [INFERRED]
   game/ServerScriptService/Server/Ghost.luau → game/ServerScriptService/Server/Ragdoll.luau
 - `Ghost.hit()` --calls--> `Ragdoll.start()`  [INFERRED]
   game/ServerScriptService/Server/Ghost.luau → game/ServerScriptService/Server/Ragdoll.luau
+- `MonsterFx.handle()` --calls--> `Sfx.voice()`  [INFERRED]
+  game/StarterPlayer/StarterPlayerScripts/Client/MonsterFx.luau → game/StarterPlayer/StarterPlayerScripts/Client/Sfx.luau
 
 ## Import Cycles
 - None detected.
 
-## Communities (46 total, 11 thin omitted)
+## Communities (46 total, 12 thin omitted)
 
 ### Community 0 - "Furniture.smash"
 Cohesion: 0.29
@@ -136,8 +135,8 @@ Cohesion: 0.12
 Nodes (71): Kit.near(), HUD.banner(), HUD.flash(), Sfx.at(), Acts.burn(), Acts.fling(), Acts.freeze(), Acts.giant() (+63 more)
 
 ### Community 19 - "onPlayer"
-Cohesion: 0.29
-Nodes (6): onPlayer(), Events.despawn(), Run.addToMatch(), Run.beginMatch(), Run.configure(), Vip.start()
+Cohesion: 0.17
+Nodes (14): onPlayer(), Monetization.start(), aliveCount(), aliveIn(), checkWipe(), endDeath(), respawnSpectators(), Run.extendRevive() (+6 more)
 
 ### Community 20 - "GoblinLoot.luau"
 Cohesion: 0.20
@@ -179,17 +178,13 @@ Nodes (12): Hotbar.confirmHit(), Hotbar.current(), Hotbar.init(), Hotbar.primary
 Cohesion: 0.32
 Nodes (6): Fury.comboCount(), Fury.launch(), Fury.smashes(), Fury.smashPunch(), Fury.tick(), Fury.windUp()
 
-### Community 31 - "Run.startFight"
-Cohesion: 0.38
-Nodes (10): Inventory.clearWorld(), clearTemp(), doorPrompt(), onGhostDeath(), Run.endMatch(), Run.startFight(), setState(), setWaypoint() (+2 more)
-
 ### Community 34 - "Run.startFight"
-Cohesion: 0.15
-Nodes (21): Lobby.returnPlayer(), Monetization.start(), Quests.add(), aliveCount(), aliveIn(), checkWipe(), endDeath(), hrpOf() (+13 more)
+Cohesion: 0.17
+Nodes (20): Inventory.clearWorld(), Lobby.returnPlayer(), Quests.add(), cashMult(), clearTemp(), doorPrompt(), hrpOf(), insideHouse() (+12 more)
 
 ### Community 35 - "game/ServerScriptService/Server/Sandbox.luau"
-Cohesion: 0.33
-Nodes (9): MapLoader.spawnInside(), Run.setSandbox(), center(), enter(), leave(), Sandbox.start(), spawnDummy(), sweep() (+1 more)
+Cohesion: 0.27
+Nodes (12): Events.despawn(), MapLoader.spawnInside(), Run.addToMatch(), Run.beginMatch(), Run.setSandbox(), center(), enter(), leave() (+4 more)
 
 ### Community 36 - "AdminPanel.luau"
 Cohesion: 0.06
@@ -208,23 +203,23 @@ Cohesion: 0.20
 Nodes (17): phoneSpot(), checkThrown(), checkThrownPlayers(), Combat.start(), Furniture.flingAt(), Furniture.folder(), Furniture.grab(), Furniture.isValid() (+9 more)
 
 ### Community 42 - "MapLoader.luau"
-Cohesion: 0.27
-Nodes (9): Furniture.recapture(), folder(), MapLoader.exists(), MapLoader.ghostSpawns(), MapLoader.hookRescue(), MapLoader.init(), MapLoader.load(), MapLoader.randomGhostSpawn() (+1 more)
+Cohesion: 0.24
+Nodes (10): Furniture.recapture(), folder(), MapLoader.exists(), MapLoader.ghostSpawns(), MapLoader.hookRescue(), MapLoader.init(), MapLoader.load(), MapLoader.randomGhostSpawn() (+2 more)
 
 ### Community 46 - "script_parent_sfx"
 Cohesion: 0.12
 Nodes (10): CallerUI.call(), CallerUI.init(), Platform.menu(), build(), Prompts.init(), productId(), ReviveUI.handle(), ReviveUI.init() (+2 more)
 
 ### Community 47 - "Friends.luau"
-Cohesion: 0.40
-Nodes (4): areFriends(), Friends.mult(), refresh(), cashMult()
+Cohesion: 0.50
+Nodes (3): areFriends(), Friends.mult(), refresh()
 
 ### Community 49 - "game/StarterPlayer/StarterPlayerScripts/Client/SandboxUI.luau"
 Cohesion: 0.53
 Nodes (8): button(), free(), inSandbox(), leave(), refresh(), UI.init(), UI.setShopOpen(), ultimates()
 
 ## Knowledge Gaps
-- **11 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **12 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_

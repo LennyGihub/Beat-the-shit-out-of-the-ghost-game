@@ -64,7 +64,8 @@ local function onPlayer(p: Player)
 		-- the party picked a map + difficulty on the lobby pad
 		if not configured and not Run.running() then
 			configured = true
-			Run.configure(type(td) == "table" and type(td.map) == "string" and td.map or nil, type(td) == "table" and type(td.diff) == "string" and td.diff or nil)
+			Run.configure(type(td) == "table" and type(td.map) == "string" and td.map or nil, type(td) == "table" and type(td.diff) == "string" and td.diff or nil,
+				not (type(td) == "table" and td.ff == false)) -- the lobby switched friendly fire off
 		end
 	else
 		-- a lobby player is never in a run; a failure here must not stop the character from loading below

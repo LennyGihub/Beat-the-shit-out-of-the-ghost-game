@@ -471,7 +471,7 @@ local function step(dt: number)
 		if hit then boomAt = hit.Position end
 		if g and (g.hrp.Position - new).Magnitude < 4 then boomAt = new end
 		-- PvP: a thrown item that reaches another player hits them
-		local victim = os.clock() - pr.t0 > 0.08 and Combat.playerNear(new, 3.2, pr.by) or nil
+		local victim = os.clock() - pr.t0 > 0.08 and Combat.friendlyFire() and Combat.playerNear(new, 3.2, pr.by) or nil
 		if victim then boomAt = new end
 		if os.clock() - pr.t0 > 4 then boomAt = new end
 		if boomAt then

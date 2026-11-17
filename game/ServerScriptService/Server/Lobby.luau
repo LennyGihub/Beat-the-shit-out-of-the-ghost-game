@@ -77,7 +77,7 @@ local function launch(room, members: { Player })
 			for _, p in members do Remotes.Fx:FireClient(p, "Toast", "A match is already running in this Studio test") end
 			return
 		end
-		Run.beginMatch(members, room.map, room.diff)
+		Run.beginMatch(members, room.map, room.diff, room.ff ~= false)
 		return
 	end
 	setSign(room, room.size .. " PLAYER" .. (room.size > 1 and "S" or ""), "TELEPORTING...", Color3.fromRGB(150, 220, 110))
@@ -89,7 +89,7 @@ local function launch(room, members: { Player })
 	end
 	local opts = Instance.new("TeleportOptions")
 	opts.ReservedServerAccessCode = code
-	opts:SetTeleportData({ size = #members, map = room.map, diff = room.diff })
+	opts:SetTeleportData({ size = #members, map = room.map, diff = room.diff, ff = room.ff ~= false })
 	for _, p in members do Data.save(p) end
 	local tok, err = pcall(function() TeleportService:TeleportAsync(game.PlaceId, members, opts) end)
 	if not tok then
@@ -141,7 +141,7 @@ local function tick()
 	end
 end
 
--- PLAY-button lobbies (parties): a host creates one (map, difficulty, 1-4 players), others join from the list,
+-- PLAY-button lobbies (parties): a host creates one (map, difficulty, 1-4 players, friendly fire on / off), others join from the list,
 -- the host presses START. Published to every client as the ReplicatedStorage attribute "Parties" (JSON).
 local HttpService = game:GetService("HttpService")
 local parties = {} :: { [string]: any }
@@ -153,7 +153,7 @@ local function publish()
 		local inv = {}
 		for uid in pt.invited do table.insert(inv, uid) end
 		table.insert(list, { id = id, host = pt.host.DisplayName, hostId = pt.host.UserId, map = pt.map, diff = pt.diff, size = pt.size, names = names,
-			private = pt.private, invited = inv })
+			private = pt.private, invited = inv, ff = pt.ff })
 	end
 	table.sort(list, function(a, b) return a.id < b.id end)
 	RS:SetAttribute("Parties", HttpService:JSONEncode(list))
@@ -175,7 +175,7 @@ local function leaveParty(p: Player)
 	end
 	publish()
 end
-local function onParty(p: Player, action: any, a: any, b: any, c: any, d: any)
+local function onParty(p: Player, action: any, a: any, b: any, c: any, d: any, e: any)
 	if type(action) ~= "string" or p:GetAttribute("InMatch") then return end
 	if action == "create" then
 		if type(a) ~= "string" or type(b) ~= "string" or type(c) ~= "number" then return end
@@ -185,7 +185,8 @@ local function onParty(p: Player, action: any, a: any, b: any, c: any, d: any)
 		if not Data.ownsMap(p, m.id) then Remotes.Fx:FireClient(p, "Toast", "Buy " .. m.name .. " at the dealer first"); return end
 		leaveParty(p)
 		local id = tostring(p.UserId)
-		parties[id] = { id = id, host = p, members = { p }, map = m.id, diff = dd.id, size = math.clamp(math.floor(c), 1, 4), private = private, invited = {} }
+		parties[id] = { id = id, host = p, members = { p }, map = m.id, diff = dd.id, size = math.clamp(math.floor(c), 1, 4), private = private, invited = {},
+			ff = e ~= false } -- friendly fire: on unless the host switched it off
 		p:SetAttribute("PartyId", id)
 		publish()
 	elseif action == "join" then
@@ -211,6 +212,12 @@ local function onParty(p: Player, action: any, a: any, b: any, c: any, d: any)
 		if not pt or pt.host ~= p then return end
 		pt.private = a == true
 		publish()
+	elseif action == "ff" then
+		-- the host switches friendly fire for the run (a = on)
+		local pt = partyOf(p)
+		if not pt or pt.host ~= p then return end
+		pt.ff = a == true
+		publish()
 	elseif action == "leave" then
 		leaveParty(p)
 	elseif action == "start" then
@@ -221,7 +228,7 @@ local function onParty(p: Player, action: any, a: any, b: any, c: any, d: any)
 		for _, m in pt.members do m:SetAttribute("PartyId", nil) end
 		parties[pt.id] = nil
 		publish()
-		launch({ map = pt.map, diff = pt.diff, size = #members, name = "Party" }, members)
+		launch({ map = pt.map, diff = pt.diff, size = #members, name = "Party", ff = pt.ff }, members)
 	end
 end
 
