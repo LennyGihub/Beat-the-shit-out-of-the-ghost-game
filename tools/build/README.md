@@ -40,6 +40,10 @@ The PS2 textures are MaterialVariants in MaterialService.AssistantMaterials (mad
 -> `maps/doors_clear.luau` (standalone, LAST): removes furniture the random passes left standing in a door opening
    (explosive barrels are moved aside). `furnish` and `detail` now skip doorways, stairs and the map's `KeepClear` parts
    (maplib `keepClear(x1, z1, x2, z2, floorY)`: corridors, gallery walks, the foot of a stair) themselves.
+-> `maps/phones.luau` (standalone, after furnish / detail / stairs; safe to re-run): three small telephone tables per map,
+   built into the house against a plain wall (`<map>.PhoneSpots`, models `PhoneTable` with a part `Top`). The Caller's
+   phone rings on one of them (Server/Caller `phoneSpot`); they are not furniture, so the phone never floats. Spots avoid
+   doorways, stairs (9 studs round them), KeepClear zones and the players' start, and are spread over the floors.
 -> `maps/facade_fix.luau` (standalone, one-off, already run): pushed the detail pass's ivy / rust patches flush onto the
    outside walls and removed the ones that hung across doorways and windows; `detail` now places them that way itself.
 -> `demon`, `animatronic`, `titan` (hand-built part monsters: ServerStorage.Monsters.Demon / .Animatronic = The Party Bear / .Titan = The Flayed Giant;
