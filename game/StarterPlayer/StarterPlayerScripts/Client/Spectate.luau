@@ -1,12 +1,14 @@
 --!strict
 -- Spectating (team runs): when you die while teammates still fight, the server sets your Spectating attribute; the
 -- camera follows a living teammate (third person) until the wave's monster is knocked out and you are respawned.
--- A bar at the bottom says who you watch; NEXT switches teammate, LEAVE RUN takes your payout and goes to the lobby.
+-- A bar at the bottom says who you watch; REVIVE brings you back right now (the REVIVE product, free for an admin:
+-- Client/ReviveUI), NEXT switches teammate, LEAVE RUN takes your payout and goes to the lobby.
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Grunge = require(script.Parent.Grunge)
 local Sfx = require(script.Parent.Sfx)
+local ReviveUI = require(script.Parent.ReviveUI)
 local Remotes = RS:WaitForChild("Remotes")
 
 local Spectate = {}
@@ -55,8 +57,11 @@ function Spectate.init()
 	gui.Parent = lp:WaitForChild("PlayerGui")
 	local bar = Grunge.panel(gui, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -24), Size = UDim2.fromScale(0.5, 0.11), Rotation = -0.5 }, 71)
 	local ar = Instance.new("UIAspectRatioConstraint"); ar.AspectRatio = 7; ar.Parent = bar
-	label = Grunge.text(bar, { Text = "", Font = Grunge.FONT, Position = UDim2.fromScale(0.03, 0.1), Size = UDim2.fromScale(0.6, 0.5), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Grunge.PAPER, ZIndex = 10 })
-	Grunge.text(bar, { Text = "YOU'RE BACK WHEN THIS MONSTER IS KNOCKED OUT", Font = Grunge.TYPE, Position = UDim2.fromScale(0.03, 0.6), Size = UDim2.fromScale(0.6, 0.3), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(190, 180, 160), ZIndex = 10 })
+	label = Grunge.text(bar, { Text = "", Font = Grunge.FONT, Position = UDim2.fromScale(0.03, 0.1), Size = UDim2.fromScale(0.44, 0.5), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Grunge.PAPER, ZIndex = 10 })
+	Grunge.text(bar, { Text = "YOU'RE BACK WHEN THIS MONSTER IS KNOCKED OUT", Font = Grunge.TYPE, Position = UDim2.fromScale(0.03, 0.6), Size = UDim2.fromScale(0.44, 0.3), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(190, 180, 160), ZIndex = 10 })
+	-- back on your feet now, for as long as you spectate (the death screen's offer does not run out here)
+	local reviveBtn = button(bar, "REVIVE", { Position = UDim2.fromScale(0.49, 0.2), Size = UDim2.fromScale(0.15, 0.6), ZIndex = 11, BackgroundColor3 = Color3.fromRGB(30, 120, 60) })
+	reviveBtn.Activated:Connect(function() Sfx.play("Click"); ReviveUI.buy() end)
 	local nextBtn = button(bar, "NEXT", { Position = UDim2.fromScale(0.66, 0.2), Size = UDim2.fromScale(0.14, 0.6), ZIndex = 11 })
 	nextBtn.Activated:Connect(function() Sfx.play("Click"); pick += 1; choose() end)
 	local leave = button(bar, "LEAVE RUN", { Position = UDim2.fromScale(0.82, 0.2), Size = UDim2.fromScale(0.16, 0.6), ZIndex = 11, BackgroundColor3 = Color3.fromRGB(120, 24, 20) })
@@ -67,6 +72,7 @@ function Spectate.init()
 		local deathScreen = type(lp:GetAttribute("ReviveUntil")) == "number"
 		gui.Enabled = on and not deathScreen
 		if not on then watching = nil; return end
+		reviveBtn.Visible = ReviveUI.canRevive()
 		if not (watching and alive(watching)) then choose() end
 		local cam = workspace.CurrentCamera
 		local hum = watching and alive(watching)

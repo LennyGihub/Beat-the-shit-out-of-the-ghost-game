@@ -4,10 +4,15 @@
 -- MONEY (cash). Each one is an OrderedDataStore; every server writes its players' scores (every 2 min and when they
 -- leave, only when they changed), lobby servers read the tops every 2 min and draw them on the boards.
 -- Studio has no DataStores: the boards then show the players in the server, so they can be checked.
+-- Admins are never on the boards: the staff (Server/Staff) and the Admin Panel pass owners can give themselves cash
+-- and kills. Their scores are not written, an entry they already had is removed, and staff ids are skipped when a
+-- board is read.
+-- The stores are "_v2" since 2026-11-17: the boards were wiped with the saves (Server/Data).
 local Players = game:GetService("Players")
 local DSS = game:GetService("DataStoreService")
 local RunService = game:GetService("RunService")
 local Data = require(script.Parent.Data)
+local Staff = require(script.Parent.Staff)
 
 local Leaderboards = {}
 type Board = { id: string, title: string, unit: string, color: Color3, value: (d: any) -> number }
@@ -22,11 +27,17 @@ local STUDIO = RunService:IsStudio()
 local stores = {} :: { [string]: OrderedDataStore }
 if not STUDIO then
 	for _, b in BOARDS do
-		local ok, s = pcall(function() return DSS:GetOrderedDataStore("LB_" .. b.id .. "_v1") end)
+		local ok, s = pcall(function() return DSS:GetOrderedDataStore("LB_" .. b.id .. "_v2") end)
 		if ok then stores[b.id] = s end
 	end
 end
 local written = {} :: { [Player]: { [string]: number } }
+
+-- staff, or an Admin Panel pass owner (IsAdmin is set by Server/Admin; it is true for everyone in Studio, where
+-- nothing is written anyway)
+local function isAdmin(p: Player): boolean
+	return p:GetAttribute("IsAdmin") == true or Staff.isDevId(p.UserId)
+end
 
 -- write a player's scores (only the ones that changed since the last write)
 local function write(p: Player)
@@ -34,6 +45,17 @@ local function write(p: Player)
 	if not d or not Data.loaded(p) then return end
 	local last = written[p] or {}
 	written[p] = last
+	if isAdmin(p) then
+		-- an admin's score never goes on a board; one written before they were an admin is taken off (once)
+		for _, b in BOARDS do
+			local s = stores[b.id]
+			if s and last[b.id] ~= -1 then
+				local ok = pcall(function() s:RemoveAsync("u_" .. p.UserId) end)
+				if ok then last[b.id] = -1 end
+			end
+		end
+		return
+	end
 	for _, b in BOARDS do
 		local v = math.floor(b.value(d))
 		local s = stores[b.id]
@@ -107,18 +129,19 @@ local function top(b: Board): { { name: string, v: number } }
 	local out = {}
 	local s = stores[b.id]
 	if s then
-		local ok, page = pcall(function() return s:GetSortedAsync(false, 10) end)
+		-- a few more than 10: staff entries are skipped
+		local ok, page = pcall(function() return s:GetSortedAsync(false, 30) end)
 		if ok and page then
 			for _, e in page:GetCurrentPage() do
 				local id = tonumber(string.match(e.key, "^u_(%d+)$"))
-				if id then table.insert(out, { name = nameOf(id), v = e.value }) end
+				if id and not Staff.isDevId(id) and #out < 10 then table.insert(out, { name = nameOf(id), v = e.value }) end
 			end
 		end
 	else
-		-- Studio: the players in this server
+		-- Studio: the players in this server (everyone is an admin there: only the staff is left out)
 		for _, p in Players:GetPlayers() do
 			local d = Data.get(p)
-			if d then table.insert(out, { name = p.DisplayName, v = math.floor(b.value(d)) }) end
+			if d and not Staff.isDevId(p.UserId) then table.insert(out, { name = p.DisplayName, v = math.floor(b.value(d)) }) end
 		end
 		table.sort(out, function(x, y) return x.v > y.v end)
 	end

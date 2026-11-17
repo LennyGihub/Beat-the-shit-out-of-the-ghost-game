@@ -47,6 +47,7 @@ local Spectate = require(Client.Spectate)
 local KeyHints = require(Client.KeyHints)
 local CrewAnim = require(Client.CrewAnim)
 local Vip = require(Client.Vip)
+local NameTags = require(Client.NameTags)
 local CallerUI = require(Client.CallerUI)
 local CallerMarks = require(Client.CallerMarks)
 local SandboxUI = require(Client.SandboxUI)
@@ -84,7 +85,8 @@ ReviveUI.init()
 Spectate.init()
 KeyHints.init() -- the small controls reminder (H hides it)
 CrewAnim.init() -- the Burning Captain's little skeletons run
-Vip.init() -- VIP pass: chat tag
+Vip.init() -- chat tags: DEV (staff) and VIP
+NameTags.init() -- the lobby's name tags (name plate + DEV / VIP titles)
 CallerUI.init() -- the Caller's phone call
 CallerMarks.init() -- his ringing phone (outline + arrow) and the outline of the room he sits in
 -- lobby screen: PLAY (create / join lobbies) and SHOP buttons, friend booster

@@ -10,7 +10,9 @@ local HttpService = game:GetService("HttpService")
 local Remotes = require(script.Parent.Remotes)
 
 local Data = {}
-local okStore, store = pcall(function() return DSS:GetDataStore("GhostBrawl_v1") end)
+-- v2 (2026-11-17): every save was wiped before release (the testers' saves held gifted cash) by starting a new store.
+-- The old saves are still in "GhostBrawl_v1"; nothing reads them.
+local okStore, store = pcall(function() return DSS:GetDataStore("GhostBrawl_v2") end)
 local profiles = {} -- [Player] = { loaded = bool, data = table }
 
 local function fresh()

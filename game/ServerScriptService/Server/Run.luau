@@ -390,9 +390,10 @@ function Run.onDied(p: Player): number
 		return 99
 	end
 	if team then
-		-- teammates are still fighting: watch them, back next wave (or revive now)
+		-- teammates are still fighting: watch them, back next wave (or revive now). The first one down gets the same
+		-- death screen as the last one (an admin revives for free, so they get it without a REVIVE product too).
 		p:SetAttribute("Spectating", true)
-		if reviveOn() then
+		if reviveOn() or p:GetAttribute("IsAdmin") then
 			p:SetAttribute("ReviveUntil", workspace:GetServerTimeNow() + REVIVE_WINDOW)
 			Remotes.Fx:FireClient(p, "ReviveOffer", REVIVE_WINDOW, true)
 			task.spawn(function()

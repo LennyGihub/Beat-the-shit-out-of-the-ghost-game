@@ -18,6 +18,26 @@ local granted = {} :: { [string]: boolean } -- PurchaseId -> done (this server)
 
 local function id(attr: string): number return tonumber(RS:GetAttribute(attr)) or 0 end
 
+-- This game's Game Pass and Developer Product ids (creator dashboard). They are written to the ReplicatedStorage
+-- attributes when this module loads (before any module starts); an attribute already set to another id wins.
+-- 0 = not made yet (the shop shows SOON).
+local IDS: { [string]: number } = {
+	Money2PassId = 0,
+	DoubleUltPassId = 2092401025,
+	VipPassId = 2093960947,
+	SecondChancePassId = 2094074958,
+	GlockPassId = 2092275006,
+	AdminPassId = 2092449017,
+	ReviveProductId = 3732932320,
+	CashPack1Id = 3732931910, -- 1000
+	CashPack2Id = 3732931994, -- 2500
+	CashPack3Id = 3732932046, -- 6000
+	CashPack4Id = 3732932132, -- 15000
+}
+for attr, default in IDS do
+	if id(attr) <= 0 then RS:SetAttribute(attr, default) end
+end
+
 -- Game Passes (Shared/Passes): the owner gets the pass's player attribute. The Admin Panel pass is Server/Admin's.
 local function checkPass(p: Player)
 	for _, pass in Passes.list do

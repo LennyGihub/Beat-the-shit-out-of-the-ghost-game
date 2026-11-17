@@ -1,7 +1,10 @@
 --!strict
--- VIP Game Pass (player attribute VIP, set by Monetization): a gold "[VIP] name" over the owner's head in place of
--- Roblox's own name tag. The other perks live elsewhere: +20% run cash in Run (Config.Vip.CashBonus), the chat tag
--- in Client/Vip.
+-- The name over a player's head (server side).
+-- In the lobby (not InMatch): Roblox's own name tag is off; every client draws the game's own name tag there
+-- (Client/NameTags: the name on a painted plate, with the DEV and VIP titles).
+-- In a run: Roblox's name tag, or for a VIP Game Pass owner (player attribute VIP, set by Monetization) a gold
+-- "[VIP] name" in its place. The VIP's other perks live elsewhere: +20% run cash in Run (Config.Vip.CashBonus), the
+-- chat tag in Client/Vip.
 local Players = game:GetService("Players")
 
 local Vip = {}
@@ -15,11 +18,11 @@ local function dress(p: Player)
 	local hum = ch:FindFirstChildOfClass("Humanoid")
 	if not head or not hum or p.Character ~= ch then return end
 	local old = head:FindFirstChild("VipName")
-	if not p:GetAttribute("VIP") then
-		if old then
-			old:Destroy()
-			hum.NameDisplayDistance = DEFAULT_NAME_DISTANCE
-		end
+	local inRun = p:GetAttribute("InMatch") == true
+	if not inRun or not p:GetAttribute("VIP") then
+		if old then old:Destroy() end
+		-- lobby: Roblox's white name off (the client's name tag takes its place); run: Roblox's name
+		hum.NameDisplayDistance = inRun and DEFAULT_NAME_DISTANCE or 0
 		return
 	end
 	if old then return end
@@ -49,6 +52,7 @@ function Vip.start()
 	local function onPlayer(p: Player)
 		p.CharacterAdded:Connect(function() task.spawn(dress, p) end)
 		p:GetAttributeChangedSignal("VIP"):Connect(function() task.spawn(dress, p) end)
+		p:GetAttributeChangedSignal("InMatch"):Connect(function() task.spawn(dress, p) end)
 		task.spawn(dress, p)
 	end
 	Players.PlayerAdded:Connect(onPlayer)

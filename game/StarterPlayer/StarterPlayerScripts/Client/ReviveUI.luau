@@ -3,6 +3,7 @@
 -- the countdown and a REVIVE button that prompts the REVIVE Developer Product (ReplicatedStorage attribute
 -- ReviveProductId). Team run (teammates still fighting): the second button is WATCH (spectate, back next wave);
 -- last one standing: GO TO LOBBY. Without a product (and not admin) there is no REVIVE button, just the countdown.
+-- An admin revives for free. ReviveUI.buy() is also the REVIVE button of the spectator bar (Client/Spectate).
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local MarketplaceService = game:GetService("MarketplaceService")
@@ -23,6 +24,25 @@ local team = false
 local lobbyBtn: TextButton
 
 local function productId(): number return tonumber(RS:GetAttribute("ReviveProductId")) or 0 end
+
+-- this player has a way to come back now: the REVIVE product is on sale, or they are an admin (free)
+function ReviveUI.canRevive(): boolean
+	return productId() > 0 or lp:GetAttribute("IsAdmin") == true
+end
+-- revive now: free for an admin, the Robux prompt for everyone else
+function ReviveUI.buy()
+	local id = productId()
+	if lp:GetAttribute("IsAdmin") then
+		task.spawn(function() RS.Remotes:WaitForChild("Admin"):InvokeServer("revive") end)
+	elseif id > 0 then
+		Remotes.Revive:FireServer("prompt") -- keeps the window open while paying
+		MarketplaceService:PromptProductPurchase(lp, id)
+	end
+end
+function ReviveUI.label(): string
+	if lp:GetAttribute("IsAdmin") then return "REVIVE (ADMIN)" end
+	return productId() > 0 and ("REVIVE  R$ " .. tostring(price or "?")) or "REVIVE - SOON"
+end
 
 function ReviveUI.init()
 	gui = Instance.new("ScreenGui")
@@ -58,13 +78,7 @@ function ReviveUI.init()
 	local pad = Instance.new("UIPadding"); pad.PaddingTop = UDim.new(0.12, 0); pad.PaddingBottom = UDim.new(0.12, 0); pad.Parent = btn
 	btn.Activated:Connect(function()
 		Sfx.play("Click")
-		local id = productId()
-		if id > 0 then
-			Remotes.Revive:FireServer("prompt") -- keeps the window open while paying
-			MarketplaceService:PromptProductPurchase(lp, id)
-		elseif lp:GetAttribute("IsAdmin") then
-			RS.Remotes:WaitForChild("Admin"):InvokeServer("revive")
-		end
+		ReviveUI.buy()
 	end)
 	task.spawn(function()
 		local id = productId()
@@ -91,9 +105,8 @@ function ReviveUI.handle(kind: string, ...)
 	if kind == "ReviveOffer" then
 		local _, isTeam = ...
 		team = isTeam == true
-		local id = productId()
-		btn.Text = id > 0 and ("REVIVE  R$ " .. tostring(price or "?")) or (lp:GetAttribute("IsAdmin") and "REVIVE (ADMIN)" or "REVIVE - SOON")
-		btn.Visible = id > 0 or lp:GetAttribute("IsAdmin") == true
+		btn.Text = ReviveUI.label()
+		btn.Visible = ReviveUI.canRevive()
 		lobbyBtn.Text = team and "WATCH" or "GO TO LOBBY"
 		lobbyBtn.Position = btn.Visible and UDim2.fromScale(0.62, 0.6) or UDim2.fromScale(0.3, 0.58)
 		lobbyBtn.Size = btn.Visible and UDim2.fromScale(0.32, 0.22) or UDim2.fromScale(0.4, 0.26)

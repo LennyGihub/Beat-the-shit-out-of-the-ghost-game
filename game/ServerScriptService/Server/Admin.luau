@@ -16,6 +16,7 @@ local Inventory = require(script.Parent.Inventory)
 local Ghost = require(script.Parent.Ghost)
 local Run = require(script.Parent.Run)
 local Remotes = require(script.Parent.Remotes) -- creates the Remotes folder
+local Staff = require(script.Parent.Staff)
 
 local Admin = {}
 
@@ -24,22 +25,10 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local passOwners = {} :: { [Player]: boolean }
 local function passId(): number return tonumber(RS:GetAttribute("AdminPassId")) or 0 end
 
--- full admins: Studio, the owner, ADMIN_IDS below and the ReplicatedStorage attribute AdminUserIds (comma list).
--- Pass owners are "bought" admins (see WORLD below).
-local ADMIN_IDS = { [8414349674] = true, [484096331] = true, [3999142176] = true, [11998610710] = true, [8352705213] = true }
+-- full admins: anyone in Studio and the staff (Server/Staff: the owner, its id list and the ReplicatedStorage
+-- attribute AdminUserIds). Pass owners are "bought" admins (see WORLD below).
 local function isFullAdmin(p: Player): boolean
-	if RunService:IsStudio() then return true end
-	if ADMIN_IDS[p.UserId] then return true end
-	if game.CreatorType == Enum.CreatorType.User and p.UserId == game.CreatorId then return true end
-	if game.CreatorType == Enum.CreatorType.Group then
-		local ok, rank = pcall(function() return p:GetRankInGroup(game.CreatorId) end)
-		if ok and rank >= 255 then return true end
-	end
-	local list = RS:GetAttribute("AdminUserIds")
-	if type(list) == "string" then
-		for id in string.gmatch(list, "%d+") do if tonumber(id) == p.UserId then return true end end
-	end
-	return false
+	return RunService:IsStudio() or Staff.isDev(p)
 end
 local function isAdmin(p: Player): boolean
 	return isFullAdmin(p) or passOwners[p] == true
@@ -350,6 +339,7 @@ function Admin.start()
 	end
 	local function onPlayer(p: Player)
 		p:SetAttribute("IsAdmin", isFullAdmin(p))
+		p:SetAttribute("Dev", Staff.isDev(p)) -- the DEV title (lobby name tag, chat tag)
 		task.spawn(function()
 			local id = passId()
 			if id > 0 then
