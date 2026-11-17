@@ -1,6 +1,6 @@
 # One-time setup of the Microsoft dev tunnel for the Roblox MCP bridge. Started by setup-devtunnel.bat
-# (double-click that one). Nothing to type: it installs the devtunnel program, signs in with GitHub (a browser
-# window opens), makes a persistent tunnel to port 8765, saves its id where start-bridge.bat looks for it,
+# (double-click that one). Nothing to type: it installs the devtunnel program, signs in with GitHub (it shows a
+# code to enter at github.com/login/device, on any device), makes a persistent tunnel to port 8765, saves its id where start-bridge.bat looks for it,
 # restarts the bridge and checks that the tunnel answers.
 #
 # It can be run again: an existing tunnel is kept. The bridge key is never read or shown.
@@ -66,11 +66,13 @@ Say "devtunnel: $dt"
 # 2) signed in? (GitHub account; the sign-in is kept on this PC)
 $who = Run-DevTunnel $dt @("user", "show")
 if ($LASTEXITCODE -ne 0 -or $who -match "(?i)not logged in") {
-    Say "Signing in with GitHub: a browser window opens. Approve it there, then come back to this window."
-    & $dt user login -g
+    # device code: devtunnel prints a short code below; it is entered at https://github.com/login/device
+    # on any device (a phone works), signed in to the GitHub account. Nothing to click on this PC.
+    Say "Signing in with GitHub. A CODE appears below: enter it at https://github.com/login/device (a phone works)."
+    & $dt user login -g -d
     $who = Run-DevTunnel $dt @("user", "show")
     if ($LASTEXITCODE -ne 0 -or $who -match "(?i)not logged in") {
-        Finish "FAILED" @("step: sign in", "the GitHub sign-in was not completed (run this again and approve it in the browser)")
+        Finish "FAILED" @("step: sign in", "the GitHub sign-in was not completed (run this again and enter the new code at https://github.com/login/device)")
     }
 }
 Say ("Signed in: " + $who.Trim())
