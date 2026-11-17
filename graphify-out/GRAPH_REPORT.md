@@ -1,7 +1,7 @@
 # Graph Report - Beat-the-shit-out-of-the-ghost-game  (2026-11-17)
 
 ## Corpus Check
-- 74 files · ~149,710 words
+- 74 files · ~149,757 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 3 file(s) not represented in the graph (top: (none) 3)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `5eef9a23`
+- Built from commit: `3c3b678c`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -66,16 +66,16 @@
 10. `Kit.chunks()` - 25 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Combat.refreshHealth()` --calls--> `alive()`  [INFERRED]
-  game/ServerScriptService/Server/Combat.luau → game/ServerScriptService/Server/Inventory.luau
-- `applyFx()` --calls--> `Ghost.vuln()`  [INFERRED]
-  game/ServerScriptService/Server/Inventory.luau → game/ServerScriptService/Server/Ghost.luau
+- `CallerUI.init()` --calls--> `Grunge.text()`  [INFERRED]
+  game/StarterPlayer/StarterPlayerScripts/Client/CallerUI.luau → game/StarterPlayer/StarterPlayerScripts/Client/Grunge.luau
 - `Ghost.hit()` --calls--> `Ragdoll.kick()`  [INFERRED]
   game/ServerScriptService/Server/Ghost.luau → game/ServerScriptService/Server/Ragdoll.luau
 - `Ghost.hit()` --calls--> `Ragdoll.start()`  [INFERRED]
   game/ServerScriptService/Server/Ghost.luau → game/ServerScriptService/Server/Ragdoll.luau
 - `MonsterFx.handle()` --calls--> `Sfx.voice()`  [INFERRED]
   game/StarterPlayer/StarterPlayerScripts/Client/MonsterFx.luau → game/StarterPlayer/StarterPlayerScripts/Client/Sfx.luau
+- `Abilities.clear()` --calls--> `Loot.clear()`  [INFERRED]
+  game/ServerScriptService/Server/Abilities.luau → game/ServerScriptService/Server/GoblinLoot.luau
 
 ## Import Cycles
 - None detected.

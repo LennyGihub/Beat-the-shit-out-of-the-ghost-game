@@ -92,8 +92,8 @@ local function sketch(parent: Instance, seed: number, z: number)
 	end
 end
 
--- Creates a grunge bar. Returns an object with :set(fraction) and the root frame.
-function Grunge.bar(parent: Instance, o: { size: UDim2, pos: UDim2, anchor: Vector2?, color: Color3, label: string?, rot: number?, seed: number?, slices: number?, labelSide: string? })
+-- Creates a grunge bar. Returns an object with :set(fraction) and the root frame. outline = false: no pen lines around it.
+function Grunge.bar(parent: Instance, o: { size: UDim2, pos: UDim2, anchor: Vector2?, color: Color3, label: string?, rot: number?, seed: number?, slices: number?, labelSide: string?, outline: boolean? })
 	local seed = o.seed or 1
 	local n = o.slices or 30
 	local root = frame(parent, { Size = o.size, Position = o.pos, AnchorPoint = o.anchor or Vector2.zero, Rotation = o.rot or 0 })
@@ -115,7 +115,7 @@ function Grunge.bar(parent: Instance, o: { size: UDim2, pos: UDim2, anchor: Vect
 			Size = UDim2.new(0, rng:NextInteger(10, 26), 0, 2), Rotation = rng:NextNumber(-35, 35), ZIndex = 5,
 		})
 	end
-	sketch(root, seed + 5, 6)
+	if o.outline ~= false then sketch(root, seed + 5, 6) end
 	local label
 	if o.label then
 		label = Grunge.text(root, {
@@ -174,8 +174,9 @@ function Grunge.paint(f: Instance, color: Color3)
 		if s:IsA("Frame") then s.BackgroundColor3 = color:Lerp(Color3.new(0, 0, 0), (i * 7 % 10) / 55) end
 	end
 end
--- a big painted slab (a panel background): overlapping horizontal brush rows, sketchy outline, a blood splat behind
-function Grunge.slab(parent: Instance, props: { [string]: any }, color: Color3, seed: number?, rows: number?): Frame
+-- a big painted slab (a panel background): overlapping horizontal brush rows, sketchy outline (outline = false: none),
+-- a blood splat behind
+function Grunge.slab(parent: Instance, props: { [string]: any }, color: Color3, seed: number?, rows: number?, outline: boolean?): Frame
 	local p = frame(parent, props)
 	local z = props.ZIndex or 1
 	local rng = Random.new(seed or 5)
@@ -191,7 +192,7 @@ function Grunge.slab(parent: Instance, props: { [string]: any }, color: Color3, 
 	local sc = Instance.new("ImageLabel")
 	sc.BackgroundTransparency = 1; sc.Image = Grunge.SCRATCH; sc.ImageTransparency = 0.85; sc.Size = UDim2.fromScale(1, 1)
 	sc.ScaleType = Enum.ScaleType.Crop; sc.ZIndex = z; sc.Parent = p
-	sketch(p, (seed or 5) + 1, z + 1)
+	if outline ~= false then sketch(p, (seed or 5) + 1, z + 1) end
 	return p
 end
 

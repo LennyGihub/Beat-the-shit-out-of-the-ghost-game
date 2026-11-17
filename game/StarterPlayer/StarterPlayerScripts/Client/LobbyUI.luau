@@ -114,7 +114,7 @@ end
 local function bigButton(text: string, sub: string, color: Color3, y: number, rot: number, onClick: () -> (), h: number?): TextButton
 	seedN += 7
 	local holder = Grunge.frame(side, { Position = UDim2.fromScale(0, y), Size = UDim2.fromScale(1, h or 0.2) })
-	local bar = Grunge.bar(holder, { size = UDim2.fromScale(1, 0.78), pos = UDim2.fromScale(0, 0.18), color = color, rot = rot, seed = seedN, slices = 26 })
+	local bar = Grunge.bar(holder, { size = UDim2.fromScale(1, 0.78), pos = UDim2.fromScale(0, 0.18), color = color, rot = rot, seed = seedN, slices = 26, outline = false })
 	local word = Grunge.text(holder, { Text = text, Position = UDim2.fromScale(0.05, 0.12), Size = UDim2.fromScale(0.62, 0.82), TextXAlignment = Enum.TextXAlignment.Left,
 		Rotation = rot - 2, ZIndex = 8 })
 	Grunge.text(holder, { Text = sub, Font = Grunge.TYPE, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.fromScale(0.95, 0.6), Size = UDim2.fromScale(0.42, 0.26),
@@ -303,11 +303,11 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 	boostTag = Grunge.text(side, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0.02, 0.81), Size = UDim2.fromScale(1.1, 0.08), TextXAlignment = Enum.TextXAlignment.Left, Rotation = -1 })
 
 	-- PLAY panel: a painted ink slab over a blood splat, the title over a red brush (like the ghost name over its bar)
-	panel = Grunge.slab(gui, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.55, 0.52), Size = UDim2.fromScale(0.62, 0.8), Visible = false, ZIndex = 8 }, Color3.fromRGB(21, 17, 15), 33, 6)
+	panel = Grunge.slab(gui, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.55, 0.52), Size = UDim2.fromScale(0.62, 0.8), Visible = false, ZIndex = 8 }, Color3.fromRGB(21, 17, 15), 33, 6, false) -- no pen lines around the lobby's panels and bars
 	local par = Instance.new("UIAspectRatioConstraint"); par.AspectRatio = 1.45; par.Parent = panel
 	Grunge.text(panel, { Text = "FIND A FIGHT", Font = Grunge.HORROR, Position = UDim2.fromScale(0.04, 0.025), Size = UDim2.fromScale(0.5, 0.095), TextXAlignment = Enum.TextXAlignment.Left,
 		Rotation = -1, ZIndex = 11 })
-	local titleBar = Grunge.bar(panel, { size = UDim2.fromScale(0.42, 0.028), pos = UDim2.fromScale(0.04, 0.115), color = RED, rot = 0.4, seed = 51, slices = 30 })
+	local titleBar = Grunge.bar(panel, { size = UDim2.fromScale(0.42, 0.028), pos = UDim2.fromScale(0.04, 0.115), color = RED, rot = 0.4, seed = 51, slices = 30, outline = false })
 	titleBar.root.ZIndex = 10
 	local close = button(panel, "CLOSE", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(0.96, 0.035), Size = UDim2.fromScale(0.15, 0.07), BackgroundColor3 = DARK, ZIndex = 12, Modal = true, Rotation = 1.5 })
 	close.Activated:Connect(function() Sfx.play("Click"); setOpen(false) end)
@@ -385,7 +385,7 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 	status = Grunge.text(panel, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0.53, 0.88), Size = UDim2.fromScale(0.43, 0.05), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = ACCENT, ZIndex = 11 })
 
 	-- invite popup (top centre): "X invited you" with JOIN / NO
-	invitePop = Grunge.slab(gui, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.12), Size = UDim2.fromScale(0.34, 0.15), Rotation = -1, Visible = false, ZIndex = 8 }, Color3.fromRGB(21, 17, 15), 51, 3)
+	invitePop = Grunge.slab(gui, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.12), Size = UDim2.fromScale(0.34, 0.15), Rotation = -1, Visible = false, ZIndex = 8 }, Color3.fromRGB(21, 17, 15), 51, 3, false)
 	local ipr = Instance.new("UIAspectRatioConstraint"); ipr.AspectRatio = 4.2; ipr.Parent = invitePop
 	invitePopText = Grunge.text(invitePop, { Text = "", Position = UDim2.fromScale(0.05, 0.1), Size = UDim2.fromScale(0.9, 0.38), ZIndex = 10 })
 	local ij = button(invitePop, "JOIN", { Position = UDim2.fromScale(0.12, 0.55), Size = UDim2.fromScale(0.36, 0.34), BackgroundColor3 = GREEN, ZIndex = 12 })

@@ -313,8 +313,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/Grunge.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.Grunge",
    "class": "ModuleScript",
-   "bytes": 9014,
-   "sha1": "1e2cb833cd62434e5f13e6523f83d0b965e911a0"
+   "bytes": 9180,
+   "sha1": "22de2afde4fe63fe5aa012c110a7fa21e2a32946"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/HUD.luau",
@@ -348,8 +348,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/LobbyUI.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.LobbyUI",
    "class": "ModuleScript",
-   "bytes": 25668,
-   "sha1": "f950a3d91590a2cdb92e4740e5e11d6634318d10"
+   "bytes": 25767,
+   "sha1": "ae533b1f24956b41c39cf8e100faa61d71949a87"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/LockOn.luau",
