@@ -23,7 +23,9 @@ Roblox Studio ⇄ mcp.bat (stdio, ONE copy) ⇄ mcp-gateway.js :8765 (127.0.0.1,
 ## Microsoft Dev Tunnels instead of ngrok
 
 ngrok's free plan stops after 1 GB a month. `start-bridge.bat` uses a Microsoft dev tunnel instead when the file
-`%USERPROFILE%\roblox-mcp-bridge-tunnel.txt` holds a tunnel id. One-time setup:
+`%USERPROFILE%\roblox-mcp-bridge-tunnel.txt` holds a tunnel id. One-time setup: double-click
+`setup-devtunnel.bat` (it does the steps below by itself, restarts the bridge, tests the tunnel and writes the
+address in `%USERPROFILE%\roblox-devtunnel-result.txt`). By hand:
 
 ```
 winget install Microsoft.devtunnel
