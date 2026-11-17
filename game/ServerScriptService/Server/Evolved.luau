@@ -272,15 +272,17 @@ DRESS.Conqueror = function(m)
 		if p then add(p, "EvoKnee", Vector3.new(p.Size.X * 1.15, 0.7, 0.5), CFrame.new(0, p.Size.Y / 2 - 0.1, -p.Size.Z / 2 - 0.15), GOLD_D, METAL) end
 	end
 	if head then
-		local w, h, d = head.Size.X, head.Size.Y, head.Size.Z
-		add(head, "EvoHelm", Vector3.new(w * 1.14, h * 0.5, d * 1.14), CFrame.new(0, h * 0.34, 0.05), GOLD, METAL)
-		add(head, "EvoHelmBrow", Vector3.new(w * 1.2, 0.3, 0.4), CFrame.new(0, h * 0.13, -d / 2 - 0.1), GOLD_D, METAL)
-		add(head, "EvoHelmBack", Vector3.new(w * 1.1, h * 0.75, 0.4), CFrame.new(0, -h * 0.05, d / 2 + 0.1), GOLD, METAL)
+		-- the helmet sits ON the skull: its rim is above the brow ridge, the eyes and the face stay open.
+		-- (the Head part is the inner block of the rounded head: its real height and depth are 1 / 0.8 of it)
+		local w, h, d = head.Size.X, head.Size.Y / 0.8, head.Size.Z / 0.8
+		add(head, "EvoHelm", Vector3.new(w * 1.16, h * 0.36, d * 1.14), CFrame.new(0, h * 0.5, 0.05), GOLD, METAL)
+		add(head, "EvoHelmBrow", Vector3.new(w * 1.2, 0.26, 0.4), CFrame.new(0, h * 0.37, -d / 2 - 0.17), GOLD_D, METAL)
+		add(head, "EvoHelmBack", Vector3.new(w * 1.1, h * 0.7, 0.4), CFrame.new(0, h * 0.05, d / 2 + 0.1), GOLD, METAL)
 		for _, sx in { -1, 1 } do
-			add(head, "EvoCheekGuard", Vector3.new(0.35, h * 0.72, d * 0.62), CFrame.new(sx * (w / 2 + 0.1), -h * 0.12, 0.1), GOLD, METAL)
-			add(head, "EvoFin", Vector3.new(0.25, h * 0.75, d * 0.5), CFrame.new(sx * w * 0.42, h * 0.72, 0.15) * CFrame.Angles(-0.25, 0, sx * -0.28), GOLD_D, METAL)
+			add(head, "EvoCheekGuard", Vector3.new(0.35, h * 0.6, d * 0.5), CFrame.new(sx * (w / 2 + 0.12), -h * 0.08, d * 0.14), GOLD, METAL)
+			add(head, "EvoFin", Vector3.new(0.25, h * 0.5, d * 0.45), CFrame.new(sx * w * 0.42, h * 0.8, 0.15) * CFrame.Angles(-0.25, 0, sx * -0.28), GOLD_D, METAL)
 		end
-		add(head, "EvoCrest", Vector3.new(0.4, h * 0.42, d * 1.05), CFrame.new(0, h * 0.68, 0.1), GOLD_D, METAL)
+		add(head, "EvoCrest", Vector3.new(0.4, h * 0.3, d * 1.0), CFrame.new(0, h * 0.74, 0.1), GOLD_D, METAL)
 	end
 	-- his war blade, in the left fist: a long grip with a heavy cleaver blade at each end (the gauntlet hand stays free)
 	local fist = body(m, "LeftHand")
