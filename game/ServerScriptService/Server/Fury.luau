@@ -129,9 +129,23 @@ function Fury.wake(g)
 	if pressure(g, os.clock()) >= F.WakeRoar then g.roarQueued = true end
 end
 
--- below EnrageAt of its HP (Ghost.damage)
+-- below EnrageAt of its HP (Ghost.damage). Enraged, it can't be knocked out (ragdolled) for F.RageGuard seconds,
+-- and for F.RageStepGuard seconds more each time its health crosses another 10% mark.
 function Fury.checkEnrage(g)
-	if g.enraged or g.hp <= 0 or g.hp > g.maxHp * F.EnrageAt then return end
+	if g.hp <= 0 then return end
+	local step = math.ceil(g.hp / g.maxHp * 10) -- 5 = 41..50%, 4 = 31..40%...
+	if g.enraged then
+		if step < (g.rageStep or step) then
+			g.rageStep = step
+			g.noRagUntil = math.max(g.noRagUntil or 0, os.clock() + F.RageStepGuard)
+			g.model:SetAttribute("NoRagdoll", true)
+		end
+		return
+	end
+	if g.hp > g.maxHp * F.EnrageAt then return end
+	g.rageStep = step
+	g.noRagUntil = os.clock() + F.RageGuard
+	g.model:SetAttribute("NoRagdoll", true)
 	g.enraged = true
 	g.furySpeed = F.EnrageSpeed
 	g.cdMult = g.cdBase * F.EnrageCooldown
@@ -288,10 +302,18 @@ function Fury.smashPunch(g, G, p: Player, thrp: BasePart)
 	Fury.launch(g, G, p, vel, swipeDamage(g) * F.SmashDamage, F.SmashTime, "smash")
 end
 -- does its swipe launch you through the walls? (enraged, an evolved monster, or a born smasher: the Conqueror)
+-- enraged and in one of its no-knockout windows (checkEnrage)
+function Fury.unragdollable(g): boolean
+	local on = g.noRagUntil ~= nil and os.clock() < g.noRagUntil
+	if not on and g.model:GetAttribute("NoRagdoll") then g.model:SetAttribute("NoRagdoll", false) end
+	return on
+end
+
 function Fury.smashes(g): boolean return g.enraged == true or g.evolved == true or (g.def :: any).smasher == true end
 -- every frame: walls further along a launched player's path break too
 function Fury.tick(g)
 	local now = os.clock()
+	if g.noRagUntil then Fury.unragdollable(g) end -- (clears the NoRagdoll attribute once the window is over)
 	for p, untilT in flying do
 		local hrp = hrpOf(p)
 		if now > untilT or not hrp then

@@ -446,11 +446,11 @@ local PRESETS = {
 	inside = { ClockTime = 19.1, Brightness = 1.4, Exposure = 0, Ambient = Color3.fromRGB(30, 27, 25), Outdoor = Color3.fromRGB(105, 110, 138),
 		AtmDensity = 0.12, AtmColor = Color3.fromRGB(58, 60, 78), AtmDecay = Color3.fromRGB(36, 36, 50), AtmHaze = 0.6, AtmGlare = 0,
 		Tint = Color3.fromRGB(255, 240, 226), Sat = -0.38, Contrast = 0.22 },
-	-- the lobby: a forest clearing on a moonlit night (dark enough to feel like night, you still see the trees and
-	-- cabins; the lanterns add the warmth)
-	lobby = { ClockTime = 21.5, Brightness = 1.5, Exposure = -0.1, Ambient = Color3.fromRGB(42, 47, 60), Outdoor = Color3.fromRGB(86, 97, 124),
-		AtmDensity = 0.3, AtmColor = Color3.fromRGB(84, 98, 120), AtmDecay = Color3.fromRGB(36, 44, 58), AtmHaze = 1.4, AtmGlare = 0,
-		Tint = Color3.fromRGB(218, 228, 242), Sat = -0.18, Contrast = 0.14 },
+	-- the lobby: a forest clearing on a dark night (the lanterns and the cabins' windows give the light; a thick dark
+	-- fog swallows the trees outside the fence and the backdrop behind them, so nothing shows beyond the park)
+	lobby = { ClockTime = 22.5, Brightness = 0.9, Exposure = -0.3, Ambient = Color3.fromRGB(26, 29, 40), Outdoor = Color3.fromRGB(50, 56, 76),
+		AtmDensity = 0.42, AtmColor = Color3.fromRGB(36, 42, 56), AtmDecay = Color3.fromRGB(14, 16, 24), AtmHaze = 2, AtmGlare = 0,
+		Tint = Color3.fromRGB(210, 220, 238), Sat = -0.22, Contrast = 0.16 },
 }
 PRESETS.yard = table.clone(PRESETS.inside)
 PRESETS.yard.Exposure = 0.35

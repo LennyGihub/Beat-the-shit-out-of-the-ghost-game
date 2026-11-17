@@ -24,6 +24,9 @@ local clones = {} :: { { model: Model, untilT: number, from: number, speed: numb
 local limp = {} :: { { model: Model, untilT: number } }
 -- players the Pirate's shield bash sent flying: hitting a wall hurts (once)
 local flyers = {} :: { [Player]: { untilT: number, dmg: number } }
+-- furniture the Demon threw, flying at its target (Abilities.hurl)
+type Hurl = { obj: Model, target: Player, pos: Vector3, vel: Vector3, speed: number, dmg: number, untilT: number, rot: CFrame, spin: Vector3, rp: RaycastParams, blocked: boolean }
+local hurled = {} :: { Hurl }
 
 local function hrpOf(p: Player): BasePart?
 	local ch = p.Character
@@ -353,6 +356,61 @@ local function stalkBlink(g, G, thrp: BasePart): boolean
 end
 
 -- runs while g.state == "Ability"
+-- THE DEMON'S THROWS FLY TRUE: a piece he throws is steered at its target, not left to the physics, so a door frame
+-- or another piece of furniture on the way doesn't stop or break it (it stays in his grip: no collisions). If the
+-- target can be seen from the piece (no wall, floor or stairs of the house in between) it follows them and hits
+-- them; once they are behind a wall it flies on at where it last saw them and breaks against that wall.
+function Abilities.hurl(g, obj: Model, target: Player, speed: number, dmg: number)
+	if not obj.Parent or not obj.PrimaryPart then return end
+	local pos = obj:GetPivot().Position
+	local hrp = hrpOf(target)
+	local aim = hrp and hrp.Position or pos + g.hrp.CFrame.LookVector * 30
+	local dir = aim - pos
+	dir = dir.Magnitude > 0.1 and dir.Unit or g.hrp.CFrame.LookVector
+	table.insert(hurled, { obj = obj, target = target, pos = pos, vel = dir * speed, speed = speed, dmg = dmg, untilT = os.clock() + 3,
+		rot = obj:GetPivot().Rotation, spin = Vector3.new(rng:NextNumber(-7, 7), rng:NextNumber(-7, 7), rng:NextNumber(-7, 7)), rp = g.rp, blocked = false })
+end
+
+-- the grip's glow goes before a hurled piece breaks (its bits must not keep the red aura)
+local function smashHurled(obj: Model, vel: Vector3, strength: number)
+	local hl = obj:FindFirstChild("DemonGrip") if hl then hl:Destroy() end
+	local au = obj.PrimaryPart and obj.PrimaryPart:FindFirstChild("DemonAura") if au then au:Destroy() end
+	Furniture.smash(obj, vel, strength)
+end
+
+local function stepHurled(G, dt: number, paused: boolean)
+	for i = #hurled, 1, -1 do
+		local h = hurled[i]
+		local obj = h.obj
+		if not obj.Parent or obj:GetAttribute("Broken") then table.remove(hurled, i); continue end
+		if paused then continue end -- time stop: it hangs in the air
+		local hrp = hrpOf(h.target)
+		local live = hrp ~= nil and h.target:GetAttribute("InMatch") == true and not warded(h.target)
+		local _, size = obj:GetBoundingBox()
+		-- steer at them while they can be seen (the aim is the middle of the body)
+		if live and not h.blocked then
+			local to = (hrp :: BasePart).Position - h.pos
+			if workspace:Raycast(h.pos, to, h.rp) then h.blocked = true else h.vel = to.Unit * h.speed end
+		end
+		local stepV = h.vel * dt
+		local hitTarget = live and ((hrp :: BasePart).Position - h.pos).Magnitude <= 2.6 + size.Magnitude * 0.25
+		local wall = not hitTarget and workspace:Raycast(h.pos, stepV + stepV.Unit * math.min(2, size.Magnitude * 0.3), h.rp)
+		if hitTarget then
+			table.remove(hurled, i)
+			G.hitPlayer(h.target, nil, h.dmg, h.vel.Unit * 60 + Vector3.new(0, 20, 0), "furniture")
+			smashHurled(obj, h.vel, 120)
+		elseif wall or os.clock() > h.untilT then
+			table.remove(hurled, i)
+			if wall then fx("WallSlam", wall.Position, h.speed) end
+			smashHurled(obj, h.vel * 0.4, 100)
+		else
+			h.pos += stepV
+			h.rot *= CFrame.Angles(h.spin.X * dt, h.spin.Y * dt, h.spin.Z * dt)
+			obj:PivotTo(CFrame.new(h.pos) * h.rot)
+		end
+	end
+end
+
 function Abilities.step(g, G, dt: number, now: number, target: Player?, thrp: BasePart?, hoverY: number)
 	local ab = g.ab
 	if not ab then G.setState(g, "Chase"); return end
@@ -577,12 +635,10 @@ function Abilities.step(g, G, dt: number, now: number, target: Player?, thrp: Ba
 				for _, o in objs do
 					if not o.thrown then
 						o.thrown = true
-						ungrip(o.obj)
-						local hrp = hrpOf(target)
-						if hrp then
-							Furniture.flingAt(o.obj, hrp.Position + Vector3.new(0, 1, 0), nil, a.power or 150)
-							local info = Furniture.thrown[o.obj]
-							if info then info.monster = (a.dmg or 20) * dmgScale(g) end
+						if target then
+							Abilities.hurl(g, o.obj, target, a.speed or 95, (a.dmg or 20) * dmgScale(g))
+						else
+							ungrip(o.obj)
 						end
 						break
 					end
@@ -789,6 +845,7 @@ function Abilities.tick(G, dt: number, now: number)
 	-- gas clouds and hellfire marks wait where they are until time moves again
 	local cur = G.current
 	local stopped = cur ~= nil and cur.ts ~= nil and now < cur.ts.untilT
+	stepHurled(G, dt, stopped or (STUDIO and game:GetService("ReplicatedStorage"):GetAttribute("DebugFreezeGhost") == true))
 	-- shield-bashed players flying across the room: the first wall they hit hurts
 	for p, f in flyers do
 		local hrp = hrpOf(p)
@@ -957,6 +1014,8 @@ function Abilities.clear()
 	Loot.clear()
 	Caller.clear()
 	flyers = {}
+	for _, h in hurled do if h.obj.Parent then smashHurled(h.obj, Vector3.zero, 20) end end
+	hurled = {}
 	for _, c in clones do if c.model.Parent then c.model:Destroy() end end
 	clones = {}
 	for _, l in limp do if l.model.Parent then l.model:Destroy() end end

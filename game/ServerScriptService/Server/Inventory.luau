@@ -318,7 +318,8 @@ local function explode(p: Player, it, pos: Vector3, direct: Player?)
 		local dir = g.hrp.Position - pos
 		dir = Vector3.new(dir.X, 0, dir.Z)
 		if dir.Magnitude < 0.1 then dir = Vector3.new(0, 0, 1) end
-		local dmg = Combat.registerHit(p, dir.Unit, g.hrp.Position, it.dmg, it.knock, 2, 1, nil, true)
+		-- a thrown item (brick, bowling ball, pipe bomb...) knocks it back but never knocks it out (no ragdoll)
+		local dmg = Combat.registerHit(p, dir.Unit, g.hrp.Position, it.dmg, it.knock, 2, 1, nil, true, true)
 		applyFx(p, it, dmg, dir.Unit)
 	end
 	if it.smash or it.boom then

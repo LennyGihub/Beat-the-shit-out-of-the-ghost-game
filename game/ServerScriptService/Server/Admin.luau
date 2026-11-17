@@ -26,7 +26,7 @@ local function passId(): number return tonumber(RS:GetAttribute("AdminPassId")) 
 
 -- full admins: Studio, the owner, ADMIN_IDS below and the ReplicatedStorage attribute AdminUserIds (comma list).
 -- Pass owners are "bought" admins (see WORLD below).
-local ADMIN_IDS = { [8414349674] = true, [484096331] = true, [3999142176] = true, [11998610710] = true }
+local ADMIN_IDS = { [8414349674] = true, [484096331] = true, [3999142176] = true, [11998610710] = true, [8352705213] = true }
 local function isFullAdmin(p: Player): boolean
 	if RunService:IsStudio() then return true end
 	if ADMIN_IDS[p.UserId] then return true end
@@ -337,6 +337,15 @@ function Admin.start()
 		RS:GetAttributeChangedSignal("DebugKnock"):Connect(function()
 			local v = RS:GetAttribute("DebugKnock")
 			if typeof(v) == "Vector3" and Ghost.alive() then Ghost.hit(nil, v.Unit, v.Magnitude, 1) end
+		end)
+		-- DebugGhostHP = fraction 0..1: sets the monster's health (then a tiny hit, so enrage checks run)
+		RS:GetAttributeChangedSignal("DebugGhostHP"):Connect(function()
+			local f = RS:GetAttribute("DebugGhostHP")
+			local g = Ghost.current
+			if type(f) == "number" and g and Ghost.alive() then
+				g.hp = math.clamp(f, 0.01, 1) * g.maxHp + 0.01
+				Ghost.damage(0.01, nil)
+			end
 		end)
 	end
 	local function onPlayer(p: Player)

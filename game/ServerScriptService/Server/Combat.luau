@@ -315,7 +315,8 @@ end
 -- a landed hit: combo, ultimate buffs, knockback, brutality, effects. Returns the damage dealt.
 -- charge (0..1, already validated) = a charged attack: more damage and knockback
 -- obj = a thrown item hit (Ghost.hit applies the monster's objTaken)
-function Combat.registerHit(player: Player, dir: Vector3, hitPos: Vector3, baseDmg: number, baseKnock: number, knockPerCombo: number?, comboStep: number?, charge: number?, obj: boolean?): number
+-- noRagdoll = the hit knocks it back but never knocks it out (thrown items)
+function Combat.registerHit(player: Player, dir: Vector3, hitPos: Vector3, baseDmg: number, baseKnock: number, knockPerCombo: number?, comboStep: number?, charge: number?, obj: boolean?, noRagdoll: boolean?): number
 	local s = st(player)
 	local now = os.clock()
 	local step = comboStep or 1
@@ -341,7 +342,7 @@ function Combat.registerHit(player: Player, dir: Vector3, hitPos: Vector3, baseD
 		dmg *= 1 + c * CH.DamageBonus
 		knock *= 1 + c * CH.KnockBonus
 	end
-	Ghost.hit(player, dir, knock, dmg, obj, c >= 0.6)
+	Ghost.hit(player, dir, knock, dmg, obj, c >= 0.6, noRagdoll)
 	local ls = (buff(s, "lifesteal") :: number?) or 0
 	if ls > 0 then heal(player, dmg * ls) end
 	local burn = buff(s, "burnOnHit")

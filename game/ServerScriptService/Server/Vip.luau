@@ -1,7 +1,7 @@
 --!strict
 -- VIP Game Pass (player attribute VIP, set by Monetization): a gold "[VIP] name" over the owner's head in place of
 -- Roblox's own name tag. The other perks live elsewhere: +20% run cash in Run (Config.Vip.CashBonus), the chat tag
--- and the VIP cabin's door in Client/Vip.
+-- in Client/Vip.
 local Players = game:GetService("Players")
 
 local Vip = {}

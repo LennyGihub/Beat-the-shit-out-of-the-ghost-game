@@ -30,7 +30,7 @@ local List: { Monster } = {
 	m({ id = "Demon", name = "The Red Demon", title = "THE RED DEMON", rarity = 1, template = "Demon", color = C(200, 40, 30),
 		hp = 1.15, speed = 0.95, dmg = 1.3, reward = 1.5, hover = 0, walker = true, scale = 1, solid = true, -- solid: no walking through walls
 		objTaken = 1.25, -- furniture and thrown items hurt him more
-		ability = { kind = "levitateThrow", cd = 6.5, range = 70, lift = 1.3, aim = 0.45, power = 150, dmg = 22 },
+		ability = { kind = "levitateThrow", cd = 6.5, range = 70, lift = 1.3, aim = 0.45, speed = 95, dmg = 22 }, -- speed: the thrown piece (studs/s)
 		desc = "Lifts the furniture with his mind and hurls it at you." }),
 	m({ id = "Pirate", name = "The Pirate", title = "THE PIRATE", rarity = 1, template = "Pirate", color = C(226, 214, 186),
 		hp = 1.1, speed = 1.05, dmg = 1.2, reward = 1.5, hover = 0, walker = true, scale = 1, solid = true,
@@ -107,7 +107,7 @@ local EVO: { [string]: { [string]: any } } = {
 		power = { kind = "doubles", cd = 13, n = 3, t = 14, dmg = 10, ring = 17, spread = 26, pause = 1 },
 		desc = "Purple and wrong. She splits into doubles: only one of them is real." },
 	Demon = { title = "THE DEMON LORD", color = C(150, 20, 16), scale = 1.3, reach = 1.3,
-		ability = { kind = "levitateThrow", cd = 6, range = 75, lift = 1.4, aim = 0.5, power = 160, dmg = 18, count = 3 },
+		ability = { kind = "levitateThrow", cd = 6, range = 75, lift = 1.4, aim = 0.5, speed = 100, dmg = 18, count = 3 },
 		desc = "Bigger, with a sceptre. He lifts several pieces of furniture at once and throws them all." },
 	Goblin = { title = "THE GOBLIN KING", color = C(34, 92, 44), scale = 1.15, solid = false, wallBreaker = true,
 		power = { kind = "armed", weapons = { "BaseballBat", "FryingPan", "Crowbar", "LeadPipe", "Shovel", "SpikedBat", "Machete", "FireAxe" } },

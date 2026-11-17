@@ -8,8 +8,9 @@ export type Map = { id: string, name: string, price: number, desc: string, color
 export type Difficulty = { id: string, name: string, hp: number, dmg: number, speed: number, reward: number, color: Color3, desc: string }
 
 local function C(r, g, b) return Color3.fromRGB(r, g, b) end
-local function light(tint: Color3, ambient: Color3, sat: number, contrast: number, bright: number?): { [string]: any }
-	return { Tint = tint, Ambient = ambient, Sat = sat, Contrast = contrast, Brightness = bright or 1.4 }
+-- exposure: optional, the camera exposure inside that map (darker below 0)
+local function light(tint: Color3, ambient: Color3, sat: number, contrast: number, bright: number?, exposure: number?): { [string]: any }
+	return { Tint = tint, Ambient = ambient, Sat = sat, Contrast = contrast, Brightness = bright or 1.4, Exposure = exposure }
 end
 
 local List: { Map } = {
@@ -28,7 +29,7 @@ local List: { Map } = {
 	{ id = "Farm", name = "Hollow Creek Farm", price = 2200, desc = "A farmhouse and its barn, hay everywhere.", color = C(190, 140, 70),
 		light = light(C(255, 226, 180), C(34, 28, 20), -0.3, 0.22) },
 	{ id = "Asylum", name = "Ravenhill Asylum", price = 2400, desc = "A caged hall under a gallery, a corridor of padded cells, the baths, the shock room. She was a patient here.", color = C(176, 150, 96),
-		light = light(C(255, 236, 196), C(32, 27, 20), -0.5, 0.3, 1.3) },
+		light = light(C(236, 222, 196), C(17, 15, 12), -0.5, 0.34, 0.8, -0.45) }, -- (kept dark)
 	{ id = "Hotel", name = "Hotel Morrow", price = 2600, desc = "A red-carpet lobby, a ballroom and long hallways.", color = C(200, 60, 50),
 		light = light(C(255, 214, 190), C(36, 24, 20), -0.25, 0.25) },
 	{ id = "Prison", name = "Cellblock 9", price = 2800, desc = "Two tiers of cells around a concrete yard.", color = C(140, 140, 150),

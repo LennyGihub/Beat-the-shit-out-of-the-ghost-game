@@ -28,6 +28,7 @@ local MapLoader = require(Server.MapLoader)
 local Admin = require(Server.Admin)
 local Friends = require(Server.Friends)
 local Monetization = require(Server.Monetization)
+local Leaderboards = require(Server.Leaderboards)
 local Quests = require(Server.Quests)
 local Vip = require(Server.Vip)
 local Sandbox = require(Server.Sandbox)
@@ -51,6 +52,7 @@ Friends.start()
 Monetization.start()
 Vip.start()
 Quests.start()
+Leaderboards.start(Run.mode == "Lobby") -- the lobby's global leaderboards (kills, highest wave, money)
 
 local expected = 1
 local firstJoin = nil :: number?

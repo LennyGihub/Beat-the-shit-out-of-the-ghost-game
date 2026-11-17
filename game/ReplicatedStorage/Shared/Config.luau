@@ -94,6 +94,9 @@ local Config = {
 		-- enraged: every swipe is a SMASH PUNCH that launches you through the inside walls
 		SmashSpeed = 115, SmashUp = 30, SmashTime = 1.6, SmashDamage = 1.25, SmashReach = 45,
 		EnrageAt = 0.5, EnrageSpeed = 1.2, EnrageCooldown = 0.7,
+		-- enraged, it can't be knocked out (ragdolled) for RageGuard s, and again for RageStepGuard s each time it
+		-- loses another 10% of its health (40%, 30%, 20%, 10%)
+		RageGuard = 15, RageStepGuard = 5,
 		Grace = 1.3,
 		RegenPause = 6, -- no health regen for this long after a monster hits you (StarterCharacterScripts.Health)
 		BurstCap = 0.4, BurstWindow = 3,

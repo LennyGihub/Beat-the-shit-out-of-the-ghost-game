@@ -108,12 +108,12 @@ Ghost.setState = setState
 
 -- SPECIALS CAN'T BE INTERRUPTED: while a monster does its ability (or its evolved power, or the Woman's vanish and
 -- scream) hits still hurt but don't knock it back, ragdoll it, launch it or push it, and a stun or a time stop only
--- PAUSES the move (it carries on afterwards). Two exceptions can still be cut short: the Party Bear's lights-out hunt
--- (blackout) and the Golden Conqueror's purple beam (laser).
+-- PAUSES the move (it carries on afterwards). One exception can still be cut short: the Party Bear's lights-out hunt
+-- (blackout).
 local function unstoppable(g): boolean
 	local s = g.state
 	if s == "Ability" then return g.ab ~= nil and g.ab.kind ~= "blackout" end
-	if s == "Evo" then return g.evo ~= nil and g.evo.kind ~= "laser" end
+	if s == "Evo" then return g.evo ~= nil end
 	return s == "Vanish" or s == "Scare"
 end
 Ghost.unstoppable = unstoppable
@@ -418,7 +418,8 @@ end
 -- Called by combat for punches, throws and the ultimate shockwave.
 -- obj = the hit is a thrown object (furniture, a thrown item): the monster's objTaken applies
 -- power = a charged hit (breaks the Fury armour: roar, counter-swipe)
-function Ghost.hit(by: Player?, dir: Vector3, knock: number, damage: number, obj: boolean?, power: boolean?)
+-- noRagdoll = knocked back at most, never knocked out (thrown items)
+function Ghost.hit(by: Player?, dir: Vector3, knock: number, damage: number, obj: boolean?, power: boolean?, noRagdoll: boolean?)
 	local g = Ghost.current
 	if not g or g.state == "Dead" or g.state == "Spawn" then return end
 	local locked = unstoppable(g) -- in the middle of a special: it takes the damage and keeps going
@@ -445,6 +446,12 @@ function Ghost.hit(by: Player?, dir: Vector3, knock: number, damage: number, obj
 		setState(g, "Recover", 0.6)
 	end
 	if knock <= 0 then return end
+	if noRagdoll then knock = math.min(knock, Ragdoll.MIN_KNOCK - 1) end
+	-- enraged, in a no-knockout window (Fury.checkEnrage): a knockout blow only knocks it back
+	if knock >= Ragdoll.MIN_KNOCK and g.state ~= "Ragdoll" and Fury.unragdollable(g) then
+		knock = Ragdoll.MIN_KNOCK - 1
+		Remotes.Fx:FireAllClients("FuryArmor", g.hrp.Position)
+	end
 	if locked and unstoppable(g) then
 		if g.state ~= "Dead" then Remotes.Fx:FireAllClients("FuryArmor", g.hrp.Position) end
 		return

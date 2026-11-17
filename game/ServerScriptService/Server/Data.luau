@@ -144,6 +144,8 @@ function Data.grantCashReceipt(player: Player, purchaseId: string, cash: number)
 end
 
 function Data.get(player: Player) local p = profiles[player]; return p and p.data end
+-- the save loaded (false: playing without saving, e.g. in Studio)
+function Data.loaded(player: Player): boolean local p = profiles[player]; return p ~= nil and p.loaded end
 
 function Data.addCash(player: Player, n: number)
 	local d = Data.get(player); if not d then return end

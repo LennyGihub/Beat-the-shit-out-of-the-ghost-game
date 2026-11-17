@@ -149,17 +149,21 @@ local function stock(shop: Instance, list: { any })
 	tarp(folder, groundSpots)
 end
 
+-- the vendor (ServerStorage.ShopVendor, tools/build/vendor_human.luau): a hurt survivor sitting on the ground by the
+-- shop, turned toward the house (where the players come from)
 local function vendor(cf: CFrame, line: string, ev)
-	local tpl = SS:FindFirstChild("PilotLying") :: Model?
+	local tpl = SS:FindFirstChild("ShopVendor") :: Model?
 	if not tpl then return end
 	local v = tpl:Clone()
-	v:PivotTo(cf)
+	local at = cf.Position
+	local face = Vector3.new(-at.X, 0, -at.Z)
+	v:PivotTo(face.Magnitude > 1 and CFrame.lookAt(at, at + face) or cf)
 	local bb = v:FindFirstChildWhichIsA("BillboardGui", true)
 	local lbl = bb and bb:FindFirstChildOfClass("TextLabel")
 	if lbl then lbl.Text = line end
 	v.Parent = workspace
 	table.insert(ev.models, v)
-	local torso = v:FindFirstChild("Torso") :: BasePart?
+	local torso = (v:FindFirstChild("UpperTorso") or v:FindFirstChild("Torso")) :: BasePart?
 	if torso then
 		local pp = Events.prompt(torso, "Leave the run", "Cash out to the lobby", 1.5, Enum.KeyCode.R)
 		pp.Triggered:Connect(function(p) if Events.onLeave then Events.onLeave(p) end end)

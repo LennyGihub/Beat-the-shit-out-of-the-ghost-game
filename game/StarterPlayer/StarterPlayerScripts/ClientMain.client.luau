@@ -82,7 +82,7 @@ ReviveUI.init()
 Spectate.init()
 KeyHints.init() -- the small controls reminder (H hides it)
 CrewAnim.init() -- the Burning Captain's little skeletons run
-Vip.init() -- VIP pass: chat tag, the VIP cabin's door
+Vip.init() -- VIP pass: chat tag
 CallerUI.init() -- the Caller's phone call
 CallerMarks.init() -- his ringing phone (outline + arrow) and the outline of the room he sits in
 -- lobby screen: PLAY (create / join lobbies) and SHOP buttons, friend booster
