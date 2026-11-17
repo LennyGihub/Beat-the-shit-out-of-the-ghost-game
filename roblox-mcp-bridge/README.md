@@ -20,6 +20,23 @@ Roblox Studio ⇄ mcp.bat (stdio, ONE copy) ⇄ mcp-gateway.js :8765 (127.0.0.1,
    asks for the bridge key through a secure form: paste the content of
    `%USERPROFILE%\roblox-mcp-bridge-key.txt` there, never in the chat.
 
+## Microsoft Dev Tunnels instead of ngrok
+
+ngrok's free plan stops after 1 GB a month. `start-bridge.bat` uses a Microsoft dev tunnel instead when the file
+`%USERPROFILE%\roblox-mcp-bridge-tunnel.txt` holds a tunnel id. One-time setup:
+
+```
+winget install Microsoft.devtunnel
+devtunnel user login -g                      (sign in with GitHub)
+devtunnel create -a                          (a persistent tunnel, anonymous access: the bridge key is the lock)
+devtunnel port create <tunnel id> -p 8765 --protocol http
+```
+
+Put the tunnel id (one line, nothing else) in `%USERPROFILE%\roblox-mcp-bridge-tunnel.txt`. The address is
+`https://<tunnel id>-8765.<region>.devtunnels.ms` (shown by `devtunnel host <tunnel id>`): give it to Claude,
+which stores the bridge key for it through the secure form. A tunnel that is not used for 30 days is deleted.
+Delete the file to go back to ngrok.
+
 ## Without the tunnel: GitHub sync
 
 ngrok's free plan has a monthly bandwidth limit; once it is used up (error `ERR_NGROK_725`) no cloud session can

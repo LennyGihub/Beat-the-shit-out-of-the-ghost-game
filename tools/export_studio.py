@@ -45,7 +45,8 @@ class Bridge:
         self._post({"jsonrpc": "2.0", "method": "notifications/initialized"})
 
     def _post(self, body):
-        h = {"Content-Type": "application/json", "Accept": "application/json, text/event-stream"}
+        h = {"Content-Type": "application/json", "Accept": "application/json, text/event-stream",
+             "X-Tunnel-Skip-AntiPhishing-Page": "true"}  # Microsoft Dev Tunnels: no browser warning page
         if self.sid:
             h["Mcp-Session-Id"] = self.sid
             h["MCP-Protocol-Version"] = "2025-06-18"

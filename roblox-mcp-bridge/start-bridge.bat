@@ -3,11 +3,15 @@ setlocal
 rem ===================================================================
 rem  Roblox Studio MCP bridge
 rem  Lets a CLOUD Claude session use the Studio MCP running on this PC.
-rem  Studio MCP (stdio)  ->  supergateway (HTTP, needs a key)  ->  ngrok (https)
+rem  Studio MCP (stdio)  ->  mcp-gateway.js (HTTP, needs a key)  ->  tunnel (https)
 rem  Close the two windows it opens to switch the bridge off.
 rem ===================================================================
 
-rem 1) Your free static ngrok domain (ngrok dashboard -> Domains)
+rem 1) The public tunnel. Microsoft Dev Tunnels is used when the file below holds a tunnel id
+rem    (made once with: devtunnel create -a, see README); without that file, ngrok and its static domain.
+set "TUNNELFILE=%USERPROFILE%\roblox-mcp-bridge-tunnel.txt"
+set "DEVTUNNEL_ID="
+if exist "%TUNNELFILE%" set /p DEVTUNNEL_ID=<"%TUNNELFILE%"
 set "NGROK_DOMAIN=skinny-wages-stopped.ngrok-free.dev"
 set "PORT=8765"
 set "KEYFILE=%USERPROFILE%\roblox-mcp-bridge-key.txt"
@@ -47,10 +51,16 @@ rem     by themselves (Edit mode). It needs no tunnel: it keeps working when ngr
 start "GitHub sync" cmd /k "set PORT=%PORT%&& set KEYFILE=%KEYFILE%&& node "%~dp0pull-from-github.js" --watch"
 
 rem 5) Public https address for the cloud session
+if defined DEVTUNNEL_ID goto devtunnel
 start "ngrok tunnel" cmd /k ngrok http %PORT% --domain=%NGROK_DOMAIN%
-
 echo.
 echo Bridge starting. Cloud sessions connect to: https://%NGROK_DOMAIN%/mcp
+goto started
+:devtunnel
+start "Dev tunnel" cmd /k devtunnel host %DEVTUNNEL_ID%
+echo.
+echo Bridge starting on dev tunnel %DEVTUNNEL_ID%. Its https address is in the "Dev tunnel" window.
+:started
 echo Keep Roblox Studio open with "MCP Ready". Close the new windows to stop.
 echo The "GitHub sync" window pulls pending scripts from GitHub into Studio, tunnel or not.
 pause
