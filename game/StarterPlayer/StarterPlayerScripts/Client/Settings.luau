@@ -23,8 +23,10 @@ Settings.ACTIONS = {
 	{ id = "Drop", name = "DROP ITEM" },
 	{ id = "Use", name = "INTERACT / BUY" },
 	{ id = "Settings", name = "SETTINGS" },
+	{ id = "SwapUlt", name = "SWAP ULTIMATE" }, -- Double Ultimate pass
+	{ id = "Hints", name = "CONTROLS PANEL" }, -- show / hide the small controls reminder (KeyHints)
 }
-Settings.DEFAULT_BINDS = { Punch = "MouseButton1", Block = "MouseButton2", Lift = "E", Ultimate = "Q", Sprint = "LeftShift", Drop = "X", Use = "F", Settings = "P" }
+Settings.DEFAULT_BINDS = { Punch = "MouseButton1", Block = "MouseButton2", Lift = "E", Ultimate = "Q", Sprint = "LeftShift", Drop = "X", Use = "F", Settings = "P", SwapUlt = "R", Hints = "H" }
 local MUSIC = { FightMusic = true }
 
 -- hideKeys = the small controls reminder (KeyHints) was hidden with H

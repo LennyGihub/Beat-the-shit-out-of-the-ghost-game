@@ -1,7 +1,8 @@
 --!strict
--- Robux: the 2X MONEY Game Pass (ReplicatedStorage attribute Money2PassId), the REVIVE Developer Product
--- (attribute ReviveProductId) and the cash packs (Config.CashPacks, attributes CashPack1Id..). 0 = not set up yet
--- (the shop shows SOON). The only ProcessReceipt of the game lives here.
+-- Robux: the Game Passes (Shared/Passes: 2X MONEY, DOUBLE ULTIMATE, VIP, SECOND CHANCE, GLOCK 18; each has its id in
+-- a ReplicatedStorage attribute), the REVIVE Developer Product (attribute ReviveProductId) and the cash packs
+-- (Config.CashPacks, attributes CashPack1Id..). 0 = not set up yet (the shop shows SOON). The only ProcessReceipt of
+-- the game lives here.
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local MarketplaceService = game:GetService("MarketplaceService")
@@ -10,41 +11,55 @@ local Run = require(script.Parent.Run)
 local Inventory = require(script.Parent.Inventory)
 local Data = require(script.Parent.Data)
 local Config = require(RS.Shared.Config)
+local Passes = require(RS.Shared.Passes)
 
 local Monetization = {}
 local granted = {} :: { [string]: boolean } -- PurchaseId -> done (this server)
 
 local function id(attr: string): number return tonumber(RS:GetAttribute(attr)) or 0 end
 
--- Game Passes: id attribute -> player attribute it unlocks
-local PASSES = { Money2PassId = "Money2", GlockPassId = "GlockPass" }
+-- Game Passes (Shared/Passes): the owner gets the pass's player attribute. The Admin Panel pass is Server/Admin's.
 local function checkPass(p: Player)
-	for attr, flag in PASSES do
-		local pass = id(attr)
-		if pass > 0 then
-			local ok, owns = pcall(function() return MarketplaceService:UserOwnsGamePassAsync(p.UserId, pass) end)
-			if ok and owns then p:SetAttribute(flag, true) end
+	for _, pass in Passes.list do
+		local passId = id(pass.id)
+		if passId > 0 and not pass.admin then
+			local ok, owns = pcall(function() return MarketplaceService:UserOwnsGamePassAsync(p.UserId, passId) end)
+			if ok and owns and p.Parent then p:SetAttribute(pass.own, true) end
 		end
 	end
 end
 
 function Monetization.start()
-	for _, a in { "Money2PassId", "ReviveProductId", "GlockPassId" } do
-		if RS:GetAttribute(a) == nil then RS:SetAttribute(a, 0) end
+	for _, pass in Passes.list do
+		if RS:GetAttribute(pass.id) == nil then RS:SetAttribute(pass.id, 0) end
 	end
+	if RS:GetAttribute("ReviveProductId") == nil then RS:SetAttribute("ReviveProductId", 0) end
 	for _, pack in Config.CashPacks do
 		if RS:GetAttribute(pack.attr) == nil then RS:SetAttribute(pack.attr, 0) end
 	end
 	Players.PlayerAdded:Connect(function(p) task.spawn(checkPass, p) end)
 	for _, p in Players:GetPlayers() do task.spawn(checkPass, p) end
-	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(p, pass, bought)
-		if bought and pass == id("Money2PassId") then
-			p:SetAttribute("Money2", true)
-			Remotes.Fx:FireClient(p, "Toast", "2X MONEY UNLOCKED - every run pays double")
-		elseif bought and pass == id("GlockPassId") then
-			p:SetAttribute("GlockPass", true)
-			if p:GetAttribute("InMatch") then Inventory.give(p, "Glock18") end
-			Remotes.Fx:FireClient(p, "Toast", "GLOCK 18 UNLOCKED - it is in your hotbar every run")
+	-- bought in game: it works at once, no rejoin. The "bought" flag of this event comes from the player's own
+	-- client, so it is only a hint: the pass is given once Roblox itself says the player owns it (its ownership
+	-- cache is refreshed when this event fires; a few tries in case it lags).
+	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(p, passId, bought)
+		if not bought then return end
+		for _, pass in Passes.list do
+			if not pass.admin and id(pass.id) > 0 and passId == id(pass.id) and not p:GetAttribute(pass.own) then
+				for try = 1, 4 do
+					local ok, owns = pcall(function() return MarketplaceService:UserOwnsGamePassAsync(p.UserId, passId) end)
+					if not p.Parent then return end
+					if ok and owns then
+						p:SetAttribute(pass.own, true)
+						if pass.own == "GlockPass" and p:GetAttribute("InMatch") then Inventory.give(p, "Glock18") end
+						Remotes.Fx:FireClient(p, "Toast", pass.toast, true)
+						return
+					end
+					task.wait(2 * try)
+				end
+				warn("[Monetization] " .. p.Name .. " reported buying " .. pass.name .. " but Roblox does not list it (yet)")
+				return
+			end
 		end
 	end)
 	MarketplaceService.ProcessReceipt = function(info)

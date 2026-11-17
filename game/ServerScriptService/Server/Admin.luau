@@ -71,7 +71,7 @@ local function find(list: { any }, word: string?): any
 end
 
 local HELP = "cash <n> | runcash <n> | give <item> | clearitems | ult <id> | allults | allmaps | heal | brut | god | start [map] [diff] | "
-	.. "revive | money2 | glock | next | killghost | bring | ragdoll [power] | monster <id|off> | evolved on|off|<tier> | event plane|van|train | leave | endrun"
+	.. "revive | money2 | glock | vip | doubleult | secondchance | next | killghost | bring | ragdoll [power] | monster <id|off> | evolved on|off|<tier> | event plane|van|train | leave | endrun"
 
 local CMD: { [string]: (p: Player, a: string?, b: string?) -> (boolean, string) } = {}
 
@@ -147,6 +147,15 @@ CMD.money2 = function(p)
 	local on = not p:GetAttribute("Money2")
 	p:SetAttribute("Money2", on)
 	return true, "2X money " .. (on and "ON" or "OFF") .. " (this session)"
+end
+
+-- the other passes, for this session (testing them without buying)
+for cmd, attr in { vip = "VIP", doubleult = "DoubleUlt", secondchance = "SecondChance" } do
+	CMD[cmd] = function(p)
+		local on = not p:GetAttribute(attr)
+		p:SetAttribute(attr, on)
+		return true, attr .. " pass " .. (on and "ON" or "OFF") .. " (this session)"
+	end
 end
 
 CMD.brut = function(p)

@@ -37,7 +37,8 @@ local seenMonsters = {} :: { [string]: boolean }
 local seenEvolved = {} :: { [string]: boolean }
 local busy = false
 local breakUntil = 0
-local stats = {} :: { [Player]: { earned: number, damage: number, kills: number, paid: boolean, revives: number? } }
+-- secondChance = the free revive of the SECOND CHANCE pass was used in this run
+local stats = {} :: { [Player]: { earned: number, damage: number, kills: number, paid: boolean, revives: number?, secondChance: boolean? } }
 local temp = {} :: { Instance }
 local rng = Random.new()
 local DOOR = Vector3.new(0, 7, 62)
@@ -70,11 +71,16 @@ local function insideHouse(pos: Vector3): boolean
 end
 local function clearTemp() for _, i in temp do i:Destroy() end temp = {} end
 
+-- run cash multipliers: friend booster, the 2X MONEY pass, the VIP pass (+20%)
+local function cashMult(p: Player): number
+	return Friends.mult(p) * (p:GetAttribute("Money2") and 2 or 1) * (p:GetAttribute("VIP") and Config.Vip.CashBonus or 1)
+end
+
 function Run.addToMatch(p: Player)
 	p:SetAttribute("InMatch", true)
 	p:SetAttribute("RunCash", 0)
 	p:SetAttribute("RunKills", 0)
-	stats[p] = { earned = 0, damage = 0, kills = 0, paid = false, revives = 0 }
+	stats[p] = { earned = 0, damage = 0, kills = 0, paid = false, revives = 0, secondChance = false }
 	Inventory.clear(p)
 	if p:GetAttribute("GlockPass") then Inventory.give(p, "Glock18") end -- Robux pass: in every run
 	local sp = workspace:FindFirstChild("MatchSpawn")
@@ -97,7 +103,7 @@ function Run.payout(p: Player, reason: string): number
 	if st.kills > 0 then Quests.add(p, "runs") end -- a finished run (at least one monster knocked out)
 	local g = Ghost.current
 	if g and g.damageBy[p] then st.damage += g.damageBy[p]; g.damageBy[p] = 0 end
-	local cash = math.floor((st.earned + st.damage / Config.Payout.DamageDiv * diff.reward) * Friends.mult(p) * (p:GetAttribute("Money2") and 2 or 1)) -- friend booster, 2X money
+	local cash = math.floor((st.earned + st.damage / Config.Payout.DamageDiv * diff.reward) * cashMult(p))
 	Data.addCash(p, cash)
 	task.spawn(Data.save, p)
 	Remotes.Fx:FireClient(p, "RunOver", reason, cash, st.kills)
@@ -192,7 +198,7 @@ local function onGhostDeath(g)
 			g.damageBy[p] = 0
 			p:SetAttribute("RunKills", st.kills)
 		end
-		local r = math.floor(reward * Friends.mult(p) * (p:GetAttribute("Money2") and 2 or 1)) -- friend booster, 2X money
+		local r = math.floor(reward * cashMult(p))
 		p:SetAttribute("RunCash", (p:GetAttribute("RunCash") or 0) + r)
 		Data.winGhost(p, g.level)
 		Quests.add(p, "kills")
@@ -345,6 +351,14 @@ function Run.onDied(p: Player): number
 	local at = hrp and hrp.CFrame or CFrame.new(MapLoader.spawnInside())
 	local team = aliveCount(p) > 0
 	pending[p] = { untilT = os.clock() + REVIVE_WINDOW, at = at, team = team }
+	-- SECOND CHANCE pass: the first death of every run is free (before a bought revive is touched)
+	local st = stats[p]
+	if p:GetAttribute("SecondChance") and st and not st.secondChance then
+		st.secondChance = true
+		Remotes.Fx:FireClient(p, "Toast", "SECOND CHANCE - BACK ON YOUR FEET (ONCE PER RUN)", true)
+		task.delay(1.5, function() Run.revive(p) end)
+		return 99
+	end
 	-- a revive bought earlier is used right away
 	local spare = p:GetAttribute("SpareRevives") or 0
 	if spare > 0 then
@@ -476,9 +490,53 @@ function Run.start()
 	end)
 	local lastTick = 0
 	local lastWarn = {} :: { [Player]: number }
+	local nextRoofCheck = 0
+	local inRoof = {} :: { [Player]: number } -- since when a player has been above the top ceiling
+	Players.PlayerRemoving:Connect(function(p) inRoof[p] = nil; lastWarn[p] = nil end)
 	RunService.Heartbeat:Connect(function(dt)
 		Ghost.step(dt)
 		local now = os.clock()
+		-- STUCK IN THE ROOF: a grab or a throw put a player through the top ceiling (above the outside walls, same
+		-- limit as the monsters' Ghost.outside). After half a second up there they are put back in the room below.
+		if now >= nextRoofCheck and state ~= "Idle" then
+			nextRoofCheck = now + 0.25
+			local B = Ghost.houseBounds()
+			for _, p in Run.matchPlayers() do
+				local hrp = hrpOf(p)
+				local hum = p.Character and p.Character:FindFirstChildOfClass("Humanoid")
+				local pos = hrp and hrp.Position
+				if pos and hum and hum.Health > 0 and pos.Y > B.max.Y and pos.Y < B.max.Y + 60 and pos.X > B.min.X - 4 and pos.X < B.max.X + 4 and pos.Z > B.min.Z - 4 and pos.Z < B.max.Z + 4 then
+					inRoof[p] = inRoof[p] or now
+					if now - inRoof[p] >= 0.5 then
+						inRoof[p] = nil
+						local rp = RaycastParams.new()
+						rp.FilterType = Enum.RaycastFilterType.Include
+						local live = workspace:FindFirstChild("Mansion")
+						rp.FilterDescendantsInstances = { live and live:FindFirstChild("Structure") or workspace.Terrain }
+						-- the floor of the room right under them (or a few steps to the side: they can be over a wall)
+						local op = OverlapParams.new()
+						op.FilterType = Enum.RaycastFilterType.Include
+						op.FilterDescendantsInstances = rp.FilterDescendantsInstances
+						local at: Vector3? = nil
+						for _, off in { Vector3.zero, Vector3.new(4, 0, 0), Vector3.new(-4, 0, 0), Vector3.new(0, 0, 4), Vector3.new(0, 0, -4),
+							Vector3.new(6, 0, 6), Vector3.new(-6, 0, 6), Vector3.new(6, 0, -6), Vector3.new(-6, 0, -6) } do
+							local floor = workspace:Raycast(Vector3.new(pos.X + off.X, B.max.Y - 4, pos.Z + off.Z), Vector3.new(0, -60, 0), rp)
+							if floor and floor.Normal.Y > 0.7 then
+								local spot = floor.Position + Vector3.new(0, 3.2, 0)
+								if #workspace:GetPartBoundsInBox(CFrame.new(spot + Vector3.new(0, 0.4, 0)), Vector3.new(2.4, 5, 2.4), op) == 0 then
+									at = spot
+									break
+								end
+							end
+						end
+						hrp.AssemblyLinearVelocity = Vector3.zero
+						;(p.Character :: Model):PivotTo(CFrame.new(at or (MapLoader.spawnInside() + Vector3.new(0, 3, 0))))
+					end
+				else
+					inRoof[p] = nil
+				end
+			end
+		end
 		if state == "Intro" or (state == "Fight" and Ghost.alive()) then
 			-- no running out to the shop while a monster is in the house: back inside
 			for _, p in Run.matchPlayers() do

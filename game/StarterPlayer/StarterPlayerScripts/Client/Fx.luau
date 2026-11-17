@@ -406,6 +406,9 @@ function Fx.handle(kind: string, ...)
 		Sfx.play("Cash")
 	elseif kind == "Toast" then
 		HUD.toast(args[1], args[2])
+	elseif kind == "UltSwapped" then -- Double Ultimate pass: the other ultimate is the one that fires now
+		HUD.toast("ULTIMATE: " .. tostring(args[1]), true)
+		Sfx.play("Click", { PlaybackSpeed = 0.8 })
 	elseif kind == "BackInLobby" then
 		HUD.banner("BACK IN THE PARK", "", 2.5)
 	elseif kind == "Lift" then

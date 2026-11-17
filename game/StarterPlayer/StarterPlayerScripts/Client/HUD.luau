@@ -255,7 +255,11 @@ function HUD.update(dt: number)
 	barsRoot.Visible = inMatch
 	crosshair.Visible = inMatch
 	local u = Ultimates.byId[lp:GetAttribute("EquippedUlt") or "Rage"]
-	ultName.Text = u and ("ULT: " .. string.upper(u.name)) or ""
+	local line = u and ("ULT: " .. string.upper(u.name)) or ""
+	-- Double Ultimate pass: the spare one and the key that switches to it
+	local u2 = lp:GetAttribute("DoubleUlt") and Ultimates.byId[lp:GetAttribute("EquippedUlt2") or ""]
+	if u2 and line ~= "" then line ..= "   |   " .. Platform.label("SwapUlt") .. " " .. string.upper(u2.name) end
+	ultName.Text = line
 	updateWaypoint()
 	local showCash = not inMatch or (roundState ~= "Fight" and roundState ~= "Intro")
 	cashLabel.Visible = showCash

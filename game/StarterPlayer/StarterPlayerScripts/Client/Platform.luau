@@ -46,10 +46,10 @@ end
 -- controller buttons for each action (fixed)
 Platform.PAD = {
 	Punch = "R2", Lift = "L2", Ultimate = "Y", Sprint = "L3", Drop = "D-PAD DOWN", Use = "X", Settings = "D-PAD LEFT",
-	Swap = "L1 / R1", Play = "D-PAD UP",
+	Swap = "L1 / R1", Play = "D-PAD UP", Block = "B", SwapUlt = "R3", Hints = "D-PAD RIGHT",
 }
 -- touch buttons (TouchControls) for each action
-Platform.TOUCH = { Punch = "HIT", Lift = "LIFT", Ultimate = "ULT", Sprint = "RUN", Drop = "DROP", Use = "TAP", Settings = "SETTINGS", Swap = "TAP A SLOT" }
+Platform.TOUCH = { Punch = "HIT", Lift = "LIFT", Ultimate = "ULT", Sprint = "RUN", Drop = "DROP", Use = "TAP", Settings = "SETTINGS", Swap = "TAP A SLOT", SwapUlt = "SWAP" }
 
 -- keyboard key names are filled in by Settings (rebindable)
 Platform.keyName = function(_action: string): string return "?" end

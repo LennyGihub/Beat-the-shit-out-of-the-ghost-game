@@ -13,7 +13,7 @@ local gui: ScreenGui
 local buttons = {} :: { [string]: { root: TextButton, base: Vector2, size: number, stroke: UIStroke, label: TextLabel } }
 local running = false
 
-type Handlers = { punch: (down: boolean) -> (), block: (down: boolean) -> (), lift: () -> (), ult: () -> (), sprint: (on: boolean) -> (), drop: () -> () }
+type Handlers = { punch: (down: boolean) -> (), block: (down: boolean) -> (), lift: () -> (), ult: () -> (), sprint: (on: boolean) -> (), drop: () -> (), swap: (() -> ())? }
 
 local function make(id: string, text: string, size: number, base: Vector2, color: Color3, onDown: () -> (), onUp: (() -> ())?)
 	local b = Instance.new("TextButton")
@@ -58,6 +58,7 @@ function TC.init(h: Handlers)
 	make("Block", "BLOCK", 88, Vector2.new(-150, -170), DARK, function() h.block(true) end, function() h.block(false) end)
 	make("Lift", "LIFT", 88, Vector2.new(-190, -300), DARK, h.lift)
 	make("Ult", "ULT", 88, Vector2.new(-320, -300), DARK, h.ult)
+	make("Swap", "SWAP", 62, Vector2.new(-320, -398), DARK, function() if h.swap then h.swap() end end) -- Double Ultimate pass
 	make("Run", "RUN", 78, Vector2.new(-440, -120), DARK, function()
 		running = not running
 		h.sprint(running)
@@ -82,6 +83,7 @@ function TC.init(h: Handlers)
 		buttons.Run.root.BackgroundColor3 = running and Color3.fromRGB(196, 176, 64) or Color3.fromRGB(40, 34, 30)
 		buttons.Lift.label.Text = lp:GetAttribute("Carrying") and "THROW" or "LIFT"
 		buttons.Drop.root.Visible = (lp:GetAttribute("Sel") or 0) > 0
+		buttons.Swap.root.Visible = lp:GetAttribute("DoubleUlt") == true and (lp:GetAttribute("EquippedUlt2") or "") ~= ""
 	end)
 end
 

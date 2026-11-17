@@ -322,12 +322,33 @@ function Lobby.start()
 		task.spawn(Data.save, p)
 		Remotes.Fx:FireClient(p, "UltResult", true, "Bought " .. m.name .. " - pick it on a room pad")
 	end)
-	Remotes.EquipUlt.OnServerEvent:Connect(function(p, id)
-		if type(id) == "string" and Data.equipUlt(p, id) then
-			local u = Ultimates.byId[id]
-			Remotes.Fx:FireClient(p, "UltResult", true, "Equipped " .. (u and u.name or id))
+	-- slot 2 = the second ultimate of the Double Ultimate pass
+	Remotes.EquipUlt.OnServerEvent:Connect(function(p, id, slot)
+		if type(id) ~= "string" then return end
+		local second = slot == 2
+		if second and not p:GetAttribute("DoubleUlt") then
+			Remotes.Fx:FireClient(p, "UltResult", false, "The second slot needs the Double Ultimate pass")
+			return
+		end
+		local u = Ultimates.byId[id]
+		if Data.equipUlt(p, id, second and 2 or 1) then
+			Remotes.Fx:FireClient(p, "UltResult", true, "Equipped " .. (u and u.name or id) .. (second and " in slot 2" or ""))
+		elseif second then
+			Remotes.Fx:FireClient(p, "UltResult", false, "Pick another ultimate for slot 2")
 		end
 	end)
+	-- Double Ultimate: switch which of the two fires (in the park or in a fight, not while one is running)
+	local lastSwap = {} :: { [Player]: number }
+	Remotes.SwapUlt.OnServerEvent:Connect(function(p)
+		if not p:GetAttribute("DoubleUlt") or p:GetAttribute("UltActive") then return end
+		if os.clock() - (lastSwap[p] or 0) < 0.4 then return end
+		lastSwap[p] = os.clock()
+		if Data.swapUlts(p) then
+			local u = Ultimates.byId[Data.equipped(p)]
+			Remotes.Fx:FireClient(p, "UltSwapped", u and u.name or "")
+		end
+	end)
+	Players.PlayerRemoving:Connect(function(p) lastSwap[p] = nil end)
 	Remotes.ReturnLobby.OnServerEvent:Connect(function(p)
 		if p:GetAttribute("InMatch") then Run.leave(p, "left") end
 	end)

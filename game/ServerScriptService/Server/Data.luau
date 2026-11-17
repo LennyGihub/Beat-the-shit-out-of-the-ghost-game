@@ -1,4 +1,5 @@
--- Player save data: Cash, owned items, next ghost level, kills, settings (volumes + keybinds), and the Robux
+-- Player save data: Cash, owned items, next ghost level, kills, the equipped ultimate (and the second one of the
+-- Double Ultimate pass, Equipped2), settings (volumes + keybinds), and the Robux
 -- purchases already granted (Receipts: the last 100 PurchaseIds, so a cash pack is never given twice).
 -- Never overwrites a save that failed to load; saves on leave, every 90 s and on shutdown.
 local DSS = game:GetService("DataStoreService")
@@ -14,7 +15,7 @@ local function fresh() return { Cash = 0, Owned = {}, GhostLevel = 1, Kills = 0,
 local MAX_RECEIPTS = 100
 
 -- settings sent by the client: volumes 0..1 and keyboard keybinds (action -> KeyCode / mouse button name)
-local BIND_ACTIONS = { Punch = true, Block = true, Lift = true, Ultimate = true, Sprint = true, Drop = true, Use = true, Settings = true }
+local BIND_ACTIONS = { Punch = true, Block = true, Lift = true, Ultimate = true, Sprint = true, Drop = true, Use = true, Settings = true, SwapUlt = true, Hints = true }
 local MOUSE = { MouseButton1 = true, MouseButton2 = true, MouseButton3 = true }
 local function cleanSettings(s: any): { [string]: any }?
 	if type(s) ~= "table" then return nil end
@@ -52,6 +53,7 @@ local function publish(player)
 	for id in p.data.Ults do table.insert(ults, id) end
 	player:SetAttribute("OwnedUlts", table.concat(ults, ","))
 	player:SetAttribute("EquippedUlt", p.data.Equipped)
+	player:SetAttribute("EquippedUlt2", p.data.Equipped2 or "")
 	local ls = player:FindFirstChild("leaderstats")
 	if ls then
 		(ls :: any).Cash.Value = p.data.Cash;
@@ -80,6 +82,9 @@ function Data.load(player: Player)
 						for id, v in res.Ults do if type(id) == "string" and v == true then prof.data.Ults[id] = true end end
 					end
 					if type(res.Equipped) == "string" and prof.data.Ults[res.Equipped] then prof.data.Equipped = res.Equipped end
+					if type(res.Equipped2) == "string" and prof.data.Ults[res.Equipped2] and res.Equipped2 ~= prof.data.Equipped then
+						prof.data.Equipped2 = res.Equipped2
+					end
 					prof.data.Settings = cleanSettings(res.Settings)
 					if type(res.Owned) == "table" then
 						for id, v in res.Owned do if type(id) == "string" and v == true then prof.data.Owned[id] = true end end
@@ -104,7 +109,7 @@ end
 function Data.save(player: Player): boolean
 	local prof = profiles[player]
 	if not prof or not prof.loaded or not okStore then return false end
-	local snap = { Cash = prof.data.Cash, GhostLevel = prof.data.GhostLevel, Kills = prof.data.Kills, Owned = table.clone(prof.data.Owned), Ults = table.clone(prof.data.Ults), Equipped = prof.data.Equipped, Settings = prof.data.Settings, Receipts = table.clone(prof.data.Receipts),
+	local snap = { Cash = prof.data.Cash, GhostLevel = prof.data.GhostLevel, Kills = prof.data.Kills, Owned = table.clone(prof.data.Owned), Ults = table.clone(prof.data.Ults), Equipped = prof.data.Equipped, Equipped2 = prof.data.Equipped2, Settings = prof.data.Settings, Receipts = table.clone(prof.data.Receipts),
 		Quests = prof.data.Quests and HttpService:JSONDecode(HttpService:JSONEncode(prof.data.Quests)) or nil }
 	for i = 1, 3 do
 		local ok, err = pcall(function()
@@ -174,10 +179,33 @@ function Data.ownUlt(player: Player, id: string)
 	d.Ults[id] = true; publish(player)
 end
 
-function Data.equipUlt(player: Player, id: string): boolean
+-- slot 1 = the ultimate that fires; slot 2 = the spare one of the Double Ultimate pass (the caller checks the pass).
+-- An ultimate is never in both slots: equipping the other slot's ultimate swaps the two.
+function Data.equipUlt(player: Player, id: string, slot: number?): boolean
 	local d = Data.get(player)
 	if not d or not d.Ults[id] then return false end
-	d.Equipped = id; publish(player)
+	if slot == 2 then
+		if d.Equipped == id then
+			if not d.Equipped2 then return false end -- slot 1 can't be left empty
+			d.Equipped, d.Equipped2 = d.Equipped2, d.Equipped
+		else
+			d.Equipped2 = id
+		end
+	elseif d.Equipped2 == id then
+		d.Equipped, d.Equipped2 = d.Equipped2, d.Equipped
+	else
+		d.Equipped = id
+	end
+	publish(player)
+	return true
+end
+
+-- Double Ultimate: the spare ultimate becomes the one that fires (and the other way round)
+function Data.swapUlts(player: Player): boolean
+	local d = Data.get(player)
+	if not d or not d.Equipped2 or not d.Ults[d.Equipped2] then return false end
+	d.Equipped, d.Equipped2 = d.Equipped2, d.Equipped
+	publish(player)
 	return true
 end
 

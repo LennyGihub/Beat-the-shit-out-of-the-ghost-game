@@ -100,6 +100,8 @@ local Config = {
 	},
 	-- more players = a stronger monster: each extra player adds this much (2 players = x1.55 health, 4 = x2.65)
 	Scaling = { HpPerPlayer = 0.55, DmgPerPlayer = 0.1, SpeedPerPlayer = 0.05, CooldownPerPlayer = 0.06 },
+	-- VIP Game Pass (Shared/Passes): run cash multiplier
+	Vip = { CashBonus = 1.2 },
 	-- Robux cash packs (Developer Products): attr = the ReplicatedStorage attribute holding the product id
 	-- (0 = not set up yet: the shop shows SOON). A good run pays ~1800-2600 cash, maps cost 1200-3200.
 	CashPacks = {

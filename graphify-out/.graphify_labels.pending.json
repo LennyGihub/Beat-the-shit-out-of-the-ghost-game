@@ -23,12 +23,19 @@
   "21": "Evolved.luau",
   "22": "Abilities.luau",
   "23": "Ghost.luau",
-  "24": "checkThrown",
+  "24": "Fire.luau",
   "25": "Ragdoll.luau",
-  "26": "Furniture.luau",
+  "26": "Fx.luau",
   "27": "RoomPickUI.luau",
   "28": "ShopArt.luau",
   "29": "SawAudio.luau",
   "30": "Fury.luau",
-  "33": "Shared/Quests.luau"
+  "31": "Ghost.spawn",
+  "32": "Settings.luau",
+  "33": "Shared/Quests.luau",
+  "34": "HUD.luau",
+  "35": "refresh",
+  "36": "Client/Vip.luau",
+  "37": "CrewAnim.luau",
+  "38": "Passes.luau"
 }

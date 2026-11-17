@@ -1,5 +1,5 @@
 -- Controls: click = punch (or throw while carrying), E = lift / throw furniture, Q = ultimate, Shift = sprint, X = drop,
--- P = settings (keyboard keys are rebindable in Settings). Controller: R2 / L2 / Y / L3, L1-R1 items, D-pad down drop,
+-- R = swap ultimate (Double Ultimate pass), P = settings (keyboard keys are rebindable in Settings). Controller: R2 / L2 / Y / L3, L1-R1 items, D-pad down drop,
 -- D-pad left settings, D-pad up PLAY in the lobby. Phones: TouchControls buttons.
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
@@ -164,6 +164,13 @@ local function ult()
 end
 
 
+-- Double Ultimate pass: the spare ultimate becomes the one that fires
+local function swapUlt()
+	if shopOpen or not lp:GetAttribute("DoubleUlt") or (lp:GetAttribute("EquippedUlt2") or "") == "" then return end
+	if lp:GetAttribute("UltActive") then return end
+	Remotes:WaitForChild("SwapUlt"):FireServer()
+end
+
 -- the hint under the crosshair, in the player's controls
 local function liftHint(name: string?): string?
 	local m = Platform.mode()
@@ -177,7 +184,7 @@ local function liftHint(name: string?): string?
 	return Platform.label("Lift") .. "  LIFT " .. name
 end
 
-local ACTIONS = { "Punch", "Block", "Grab", "Ultimate", "Sprint", "Drop", "Settings", "SwapPrev", "SwapNext", "Play" }
+local ACTIONS = { "Punch", "Block", "Grab", "Ultimate", "SwapUlt", "Sprint", "Drop", "Settings", "SwapPrev", "SwapNext", "Play" }
 
 -- (re)bind every action: keyboard keys from Settings, fixed controller buttons
 local function bindAll()
@@ -203,6 +210,10 @@ local function bindAll()
 		if st == Enum.UserInputState.Begin then ult() end
 		return Enum.ContextActionResult.Pass
 	end, false, Settings.input("Ultimate"), Enum.KeyCode.ButtonY)
+	CAS:BindAction("SwapUlt", function(_, st)
+		if st == Enum.UserInputState.Begin and not UIS:GetFocusedTextBox() then swapUlt() end
+		return Enum.ContextActionResult.Pass
+	end, false, Settings.input("SwapUlt"), Enum.KeyCode.ButtonR3)
 	CAS:BindAction("Sprint", function(_, st)
 		setSprint(st == Enum.UserInputState.Begin)
 		return Enum.ContextActionResult.Pass
@@ -253,7 +264,7 @@ function Input.init()
 	TouchControls.init({
 		punch = function(down: boolean) if down then hitDown() else hitUp() end end,
 		block = function(down: boolean) if down then setBlock(true) elseif blockHeld then setBlock(false) end end,
-		lift = grab, ult = ult, sprint = setSprint,
+		lift = grab, ult = ult, swap = swapUlt, sprint = setSprint,
 		drop = function() if lp:GetAttribute("InMatch") then Hotbar.drop() end end,
 	})
 	if RunService:IsStudio() then

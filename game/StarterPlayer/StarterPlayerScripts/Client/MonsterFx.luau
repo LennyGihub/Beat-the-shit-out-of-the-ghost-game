@@ -434,10 +434,37 @@ function MonsterFx.handle(kind: string, ...)
 			HUD.toast("GRABBED!")
 			Sfx.play("GhostScream", { Volume = 0.8, PlaybackSpeed = 0.7 })
 			local untilT = os.clock() + (t or 0.9) + 0.25 -- the server's throw (Fling) ends it sooner
+			-- The fist can be up through a ceiling or a wall (the Flayed Giant is taller than the upstairs rooms):
+			-- the held player stays inside the room the monster stands in, or the throw would start in the roof.
+			local monster = hand:FindFirstAncestorOfClass("Model")
+			local root = monster and monster:FindFirstChild("HumanoidRootPart") :: BasePart?
+			local rp = RaycastParams.new()
+			rp.FilterType = Enum.RaycastFilterType.Include
+			local function inRoom(cf: CFrame): CFrame
+				local mansion = workspace:FindFirstChild("Mansion")
+				local st = mansion and mansion:FindFirstChild("Structure")
+				if not root or not st then return cf end
+				rp.FilterDescendantsInstances = { st }
+				local from = root.Position
+				local pos = cf.Position
+				-- under the ceiling above the monster's own body...
+				local up = workspace:Raycast(from, Vector3.new(0, 60, 0), rp)
+				if up and pos.Y > up.Position.Y - 3.4 then pos = Vector3.new(pos.X, math.max(from.Y, up.Position.Y - 3.4), pos.Z) end
+				-- ...and on its side of the walls
+				local to = Vector3.new(pos.X - from.X, 0, pos.Z - from.Z)
+				if to.Magnitude > 0.5 then
+					local wall = workspace:Raycast(Vector3.new(from.X, pos.Y, from.Z), to.Unit * (to.Magnitude + 2), rp)
+					if wall then
+						local d = math.max(0, wall.Distance - 2)
+						pos = Vector3.new(from.X + to.Unit.X * d, pos.Y, from.Z + to.Unit.Z * d)
+					end
+				end
+				return cf.Rotation + pos
+			end
 			holdConn = RunService.RenderStepped:Connect(function()
 				if os.clock() > untilT or not hand.Parent or not hrp.Parent then release(); return end
 				hrp.AssemblyLinearVelocity = Vector3.zero
-				hrp.CFrame = hand.CFrame * CFrame.new(0, -1.2, -1.6) * CFrame.Angles(0, math.pi, 0)
+				hrp.CFrame = inRoom(hand.CFrame * CFrame.new(0, -1.2, -1.6) * CFrame.Angles(0, math.pi, 0))
 				Fx.shake(0.05)
 			end)
 		end

@@ -1,8 +1,8 @@
 --!strict
 -- A small reminder of the fight controls on the left of the screen during a run: ATTACK, CHARGE ATTACK, BLOCK and
--- ULTIMATE, with the player's own keys (rebinds and controller buttons follow). H hides it (D-pad right on a
--- controller) and shows it again; hidden, only a faint "[H] CONTROLS" tag is left. The choice is saved with the
--- settings. Phones don't get it: their buttons are already labelled on the screen.
+-- ULTIMATE, with the player's own keys (rebinds and controller buttons follow). H hides it (the CONTROLS PANEL
+-- keybind; D-pad right on a controller) and shows it again; hidden, only a faint "[H] CONTROLS" tag is left. The
+-- choice is saved with the settings. Phones don't get it: their buttons are already labelled on the screen.
 -- Studio test hook: player attribute DebugKeyHints = true / false shows / hides it.
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
@@ -13,7 +13,6 @@ local Settings = require(script.Parent.Settings)
 
 local KeyHints = {}
 local lp = Players.LocalPlayer
-local HIDE_KEY = Enum.KeyCode.H
 local HIDE_PAD = Enum.KeyCode.DPadRight
 local KEY_COLOR = Color3.fromRGB(255, 196, 96)
 local DIM = Color3.fromRGB(170, 160, 145)
@@ -38,7 +37,7 @@ local function refresh()
 		local k = pad and r.pad or Settings.keyName(r.action)
 		keys[i].Text = (r.hold and "HOLD " or "") .. k
 	end
-	local hideKey = pad and "D-PAD RIGHT" or HIDE_KEY.Name
+	local hideKey = pad and "D-PAD RIGHT" or Settings.keyName("Hints")
 	hideLabel.Text = "[" .. hideKey .. "] HIDE"
 	tag.Text = "[" .. hideKey .. "] CONTROLS"
 	local show = lp:GetAttribute("InMatch") == true and not lp:GetAttribute("Spectating") and mode ~= "touch"
@@ -93,7 +92,8 @@ function KeyHints.init()
 	lp:GetAttributeChangedSignal("Spectating"):Connect(refresh)
 	UIS.InputBegan:Connect(function(input, typing)
 		if typing or UIS:GetFocusedTextBox() then return end
-		if input.KeyCode == HIDE_KEY or input.KeyCode == HIDE_PAD then toggle() end
+		local key = Settings.input("Hints")
+		if input.KeyCode == HIDE_PAD or (input.KeyCode ~= Enum.KeyCode.Unknown and input.KeyCode == key) or input.UserInputType == key then toggle() end
 	end)
 	if RunService:IsStudio() then
 		lp:GetAttributeChangedSignal("DebugKeyHints"):Connect(function()

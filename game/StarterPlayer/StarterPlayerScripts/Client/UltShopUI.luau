@@ -1,6 +1,8 @@
--- Lobby shop at the Hooded Dealer, picture first: three tabs (ULTIMATES, MAPS, ROBUX), each a grid of cards
+-- Lobby shop at the Hooded Dealer, picture first: three tabs (ULTIMATES, MAPS, ROBUX: cash packs and the Game
+-- Passes of Shared/Passes), each a grid of cards
 -- (a PS2-style picture from Shared/ShopArt, a short name, a price tag). Click a card to select it: the strip at the
 -- bottom shows its one-line description and the BUY / EQUIP button. Same look as the lobby panel and the fight HUD.
+-- Owners of the Double Ultimate pass get a second button on an owned ultimate: EQUIP SLOT 2 (the spare ultimate).
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -9,6 +11,7 @@ local Ultimates = require(RS.Shared.Ultimates)
 local Maps = require(RS.Shared.Maps)
 local Config = require(RS.Shared.Config)
 local Art = require(RS.Shared.ShopArt)
+local Passes = require(RS.Shared.Passes)
 local Grunge = require(script.Parent.Grunge)
 local Platform = require(script.Parent.Platform)
 local Sfx = require(script.Parent.Sfx)
@@ -23,6 +26,7 @@ local statusText: TextLabel
 local selName: TextLabel
 local selDesc: TextLabel
 local actBtn: TextButton
+local actBtn2: TextButton -- EQUIP SLOT 2 (Double Ultimate pass)
 local registered = false
 local onToggle: ((boolean) -> ())? = nil
 local tab = "ults" -- ults | maps | robux
@@ -33,13 +37,16 @@ local DARK = Color3.fromRGB(38, 31, 27)
 local GREEN = Color3.fromRGB(62, 118, 40)
 local BLUE = Color3.fromRGB(44, 72, 120)
 local GREY = Color3.fromRGB(64, 58, 52)
+local GOLD = Color3.fromRGB(150, 104, 18)
 local ROBUX = Color3.fromRGB(30, 120, 60)
 local ACCENT = Color3.fromRGB(255, 150, 80)
 local CARD = Color3.fromRGB(24, 19, 17)
 local RARITY = { Color3.fromRGB(200, 196, 186), Color3.fromRGB(110, 200, 90), Color3.fromRGB(80, 150, 240), Color3.fromRGB(170, 90, 230), Color3.fromRGB(255, 170, 40) }
 
 -- one thing on sale. state() = tag text, tag colour, owned?; act() = what the big button does
+-- verb2 / act2 = an optional second button (nil text = hidden)
 type Entry = { key: string, name: string, desc: string, color: Color3, state: () -> (string, Color3, boolean), act: () -> (), verb: () -> string,
+	verb2: (() -> (string?, Color3?))?, act2: (() -> ())?,
 	card: TextButton?, tag: Frame?, tagText: TextLabel?, sel: UIStroke?, img: ImageLabel? }
 local entries = {} :: { [string]: { Entry } }
 local selected: Entry? = nil
@@ -59,6 +66,10 @@ local function ownedMaps(): { [string]: boolean }
 		if m then o[m] = true end
 	end
 	return o
+end
+-- the spare ultimate of the Double Ultimate pass ("" = none, or no pass)
+local function second(): string
+	return lp:GetAttribute("DoubleUlt") and (lp:GetAttribute("EquippedUlt2") or "") or ""
 end
 local function attrId(name: string): number return tonumber(RS:GetAttribute(name)) or 0 end
 local function cash(): number return lp:GetAttribute("Cash") or 0 end
@@ -85,7 +96,7 @@ local function setButton(b: TextButton, text: string, color: Color3)
 end
 
 local function refresh()
-	if not gui or not actBtn then return end -- not built yet
+	if not gui or not actBtn or not actBtn2 then return end -- not built yet
 	cashText.Text = "$" .. tostring(cash())
 	for id, g in grids do g.Visible = id == tab end
 	for id, b in tabBtns do
@@ -111,11 +122,22 @@ local function refresh()
 		local _, color = s.state()
 		setButton(actBtn, s.verb(), color)
 		actBtn.Visible = true
+		-- the second button, when this card has one: the two share the place of the big one
+		local text2, color2 = nil, nil
+		if s.verb2 then text2, color2 = s.verb2() end
+		actBtn2.Visible = text2 ~= nil
+		if text2 then
+			setButton(actBtn2, text2, color2 or GOLD)
+			actBtn.Position = UDim2.fromScale(0.96, 0.835); actBtn.Size = UDim2.fromScale(0.27, 0.07)
+		else
+			actBtn.Position = UDim2.fromScale(0.96, 0.85); actBtn.Size = UDim2.fromScale(0.27, 0.1)
+		end
 	else
 		selName.Text = "PICK SOMETHING"
 		selName.TextColor3 = Grunge.PAPER
 		selDesc.Text = ""
 		actBtn.Visible = false
+		actBtn2.Visible = false
 	end
 end
 
@@ -211,6 +233,7 @@ function Shop.init(toggle: (boolean) -> ())
 			key = "ult_" .. u.id, name = u.name, desc = u.desc, color = RARITY[u.rarity] or u.color,
 			state = function()
 				if (lp:GetAttribute("EquippedUlt") or "Rage") == u.id then return "EQUIPPED", GREEN, true end
+				if second() == u.id then return "SLOT 2", GOLD, true end
 				if owned()[u.id] then return "OWNED", BLUE, true end
 				return "$" .. u.price, cash() >= u.price and RED or GREY, false
 			end,
@@ -220,6 +243,15 @@ function Shop.init(toggle: (boolean) -> ())
 			end,
 			act = function()
 				if owned()[u.id] then Remotes.EquipUlt:FireServer(u.id) else Remotes.BuyUlt:FireServer(u.id) end
+			end,
+			-- Double Ultimate pass: the spare slot
+			verb2 = function(): (string?, Color3?)
+				if not lp:GetAttribute("DoubleUlt") or not owned()[u.id] then return nil, nil end
+				if second() == u.id then return "IN SLOT 2", GREY end
+				return "EQUIP SLOT 2", GOLD
+			end,
+			act2 = function()
+				if second() ~= u.id then Remotes.EquipUlt:FireServer(u.id, 2) end
 			end,
 		}
 		table.insert(entries.ults, e)
@@ -254,11 +286,7 @@ function Shop.init(toggle: (boolean) -> ())
 		table.insert(entries.robux, e)
 		card(gr, e, i)
 	end
-	local passes = {
-		{ key = "pass_money2", name = "2X Money", desc = "Forever: every run pays double.", color = Color3.fromRGB(240, 200, 60), own = "Money2", id = "Money2PassId", soon = "2X money is not on sale yet" },
-		{ key = "pass_glock", name = "Glock 18", desc = "Forever: a full-auto Glock 18 in your hotbar every run.", color = Color3.fromRGB(200, 200, 205), own = "GlockPass", id = "GlockPassId", soon = "The Glock 18 is not on sale yet" },
-		{ key = "pass_admin", name = "Admin Panel", desc = "Every cheat, forever: cash, items, ultimates, maps, god mode. Opens with F2.", color = Color3.fromRGB(120, 230, 120), own = "IsAdmin", id = "AdminPassId", soon = "The admin panel is not on sale yet" },
-	}
+	local passes = Passes.list
 	for i, p in passes do
 		local e: Entry = {
 			key = p.key, name = p.name, desc = p.desc, color = p.color,
@@ -267,7 +295,7 @@ function Shop.init(toggle: (boolean) -> ())
 				if lp:GetAttribute(p.own) then return "OWNED" end
 				return attrId(p.id) == 0 and "SOON" or ("BUY  R$ " .. tostring(prices[p.id] or "?"))
 			end,
-			act = function() if not lp:GetAttribute(p.own) then prompt("pass", attrId(p.id), p.soon) end end,
+			act = function() if not lp:GetAttribute(p.own) then prompt("pass", attrId(p.id), p.name .. " is not on sale yet") end end,
 		}
 		table.insert(entries.robux, e)
 		card(gr, e, 10 + i)
@@ -301,8 +329,17 @@ function Shop.init(toggle: (boolean) -> ())
 		Sfx.play("Click")
 		if selected then selected.act() end
 	end)
+	actBtn2 = button(panel, "EQUIP SLOT 2", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(0.96, 0.912), Size = UDim2.fromScale(0.27, 0.07), ZIndex = 12, Rotation = 1, Visible = false }, GOLD)
+	actBtn2.Activated:Connect(function()
+		Sfx.play("Click")
+		if selected and selected.act2 then selected.act2() end
+	end)
 
-	for _, a in { "Cash", "OwnedUlts", "EquippedUlt", "Owned", "IsAdmin", "Money2", "GlockPass" } do lp:GetAttributeChangedSignal(a):Connect(refresh) end
+	for _, a in { "Cash", "OwnedUlts", "EquippedUlt", "EquippedUlt2", "Owned" } do lp:GetAttributeChangedSignal(a):Connect(refresh) end
+	for _, pass in Passes.list do
+		lp:GetAttributeChangedSignal(pass.own):Connect(refresh)
+		RS:GetAttributeChangedSignal(pass.id):Connect(refresh)
+	end
 	-- Studio test hooks: player attribute ShopTab = "robux" | "maps" | "all" opens the shop on that tab;
 	-- ShopPick = a card's key (e.g. "ult_Rage") selects it
 	if game:GetService("RunService"):IsStudio() then
