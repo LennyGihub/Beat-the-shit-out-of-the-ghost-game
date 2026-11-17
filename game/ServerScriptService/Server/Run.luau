@@ -166,6 +166,16 @@ function Run.startFight()
 	if type(forced) == "string" and Monsters.byId[forced] then def = Monsters.byId[forced] end
 	local forcedEvo = RS:GetAttribute("AdminEvolved") or (RunService:IsStudio() and RS:GetAttribute("DebugEvolved")) -- admin 'evolved on'
 	if forcedEvo then evoTier = type(forcedEvo) == "number" and forcedEvo or math.max(1, level // 3) end
+	-- admin 'boss <id> [tier]': that monster's boss variant, this ghost only
+	local once = RS:GetAttribute("AdminBossOnce")
+	if type(once) == "string" then
+		RS:SetAttribute("AdminBossOnce", nil)
+		local id, t = string.match(once, "^(%w+):(%d)$")
+		if id and Monsters.byId[id] and Monsters.evo[id] then
+			def = Monsters.byId[id]
+			evoTier = math.clamp(tonumber(t) or 1, 1, 3)
+		end
+	end
 	prevMonster = lastMonster
 	lastMonster = def.id
 	if evoTier then lastEvolved = def.id end
@@ -232,6 +242,7 @@ local function onGhostDeath(g)
 		breakUntil = os.clock() + 60 -- if nobody goes out, the event still comes
 	else
 		task.wait(3)
+		Events.restock(event) -- same wreck, new items on the shelves
 		startBreak()
 	end
 end

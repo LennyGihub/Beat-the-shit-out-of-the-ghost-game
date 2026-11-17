@@ -6,6 +6,7 @@ local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
+local Settings = require(script.Parent.Settings)
 local Sfx = require(script.Parent.Sfx)
 
 local Kit = {}
@@ -146,7 +147,7 @@ function Kit.burst(pos: Vector3, props: { [string]: any }, n: number, life: numb
 	pe.SpreadAngle = Vector2.new(180, 180); pe.Rate = 0
 	for k, v in props do (pe :: any)[k] = v end
 	pe.Parent = a
-	pe:Emit(n)
+	pe:Emit(Settings.fxCount(n)) -- particle setting (Settings)
 	Debris:AddItem(a, life or 4)
 end
 function Kit.dust(pos: Vector3, size: number, n: number, color: Color3?)

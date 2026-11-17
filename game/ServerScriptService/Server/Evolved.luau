@@ -659,7 +659,10 @@ function Evolved.step(g, G, dt: number, now: number, target: Player?, thrp: Base
 		if thrp then
 			local want = flat(thrp.Position - pos)
 			local ang = math.atan2(e.dir:Cross(want).Y, e.dir:Dot(want))
-			local lim = math.rad(P.turn) * dt
+			-- the sweep is capped in studs a second where the target stands (P.sweep), so far away it turns even more
+			-- slowly: walking (17) or sprinting (26) across it always outruns it
+			local farD = math.max(8, Vector3.new(thrp.Position.X - pos.X, 0, thrp.Position.Z - pos.Z).Magnitude)
+			local lim = math.min(math.rad(P.turn), (P.sweep or 11) / farD) * dt
 			e.dir = CFrame.Angles(0, math.clamp(ang, -lim, lim), 0):VectorToWorldSpace(e.dir)
 			-- its height follows the target at once (stairs, a knocked-down player): only the sweep is slow
 			e.aimY = thrp.Position.Y

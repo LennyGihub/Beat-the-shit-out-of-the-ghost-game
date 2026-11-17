@@ -33,6 +33,7 @@ local function update()
 		local J = mi.joints
 		local root = J.Root or J.RootJoint
 		if root and not root.Enabled then continue end -- knocked out: limp
+		if m:GetAttribute("Frozen") then continue end -- time is stopped: they hold their pose
 		local size = m:GetScale()
 		local ph = t * 17 + mi.phase
 		local s, c = math.sin(ph), math.cos(ph)

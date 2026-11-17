@@ -46,7 +46,7 @@ local function isAdmin(p: Player): boolean
 end
 
 -- commands that change the game for everyone: a bought admin can only use them while playing alone
-local WORLD = { start = true, next = true, killghost = true, monster = true, event = true, endrun = true, bring = true, ragdoll = true }
+local WORLD = { start = true, next = true, killghost = true, monster = true, boss = true, event = true, endrun = true, bring = true, ragdoll = true }
 
 -- 500, 25k, 2m, 1b
 local function num(s: string?): number?
@@ -71,7 +71,7 @@ local function find(list: { any }, word: string?): any
 end
 
 local HELP = "cash <n> | runcash <n> | give <item> | clearitems | ult <id> | allults | allmaps | heal | brut | god | start [map] [diff] | "
-	.. "revive | money2 | glock | vip | doubleult | secondchance | next | killghost | bring | ragdoll [power] | monster <id|off> | evolved on|off|<tier> | event plane|van|train | leave | endrun"
+	.. "revive | money2 | glock | vip | doubleult | secondchance | next | killghost | bring | ragdoll [power] | monster <id|off> | boss <id> [tier 1-3] | evolved on|off|<tier> | event plane|van|train | leave | endrun"
 
 local CMD: { [string]: (p: Player, a: string?, b: string?) -> (boolean, string) } = {}
 
@@ -242,6 +242,29 @@ CMD.monster = function(_p, a)
 	return true, "Next ghost will be " .. m.name .. " (start a run)"
 end
 
+-- boss <id> [tier 1-3]: the BOSS VARIANT (evolved form) of that monster comes now, once; the ghosts after it are
+-- picked as usual. The id can also be the boss's own name ("golden conqueror", "captain").
+CMD.boss = function(_p, a, b)
+	local m = find(Monsters.list, a)
+	if not m then
+		local bosses = {}
+		for id, e in Monsters.evo do table.insert(bosses, { id = id, name = e.title }) end
+		local hit = find(bosses, a)
+		m = hit and Monsters.byId[hit.id]
+	end
+	if not m then return false, "Usage: boss <monster> [tier 1-3]  (no monster called '" .. tostring(a) .. "')" end
+	if not Monsters.evo[m.id] then return false, m.name .. " has no boss variant" end
+	local tier = math.clamp(math.floor(tonumber(b) or 1), 1, 3)
+	RS:SetAttribute("AdminBossOnce", m.id .. ":" .. tier)
+	local title = Monsters.evolved(m.id, tier).name
+	if Run.running() then
+		Ghost.despawn()
+		task.spawn(Run.startFight)
+		return true, title .. " (tier " .. tier .. ") is coming now"
+	end
+	return true, "The first ghost will be " .. title .. " (tier " .. tier .. ") - start a run"
+end
+
 CMD.event = function(_p, a)
 	local k = string.lower(a or "")
 	if k ~= "plane" and k ~= "van" and k ~= "train" then return false, "Usage: event plane|van|train" end
@@ -262,7 +285,7 @@ CMD.endrun = function(p)
 	return true, "Run ended"
 end
 
-local ALIAS = { money = "cash", item = "give", heal = "heal", ghost = "monster", kill = "killghost", stop = "endrun", ["end"] = "endrun", ults = "allults", maps = "allmaps" }
+local ALIAS = { variant = "boss", evo = "boss", money = "cash", item = "give", heal = "heal", ghost = "monster", kill = "killghost", stop = "endrun", ["end"] = "endrun", ults = "allults", maps = "allmaps" }
 
 function Admin.run(p: Player, line: string): (boolean, string)
 	local words = {}

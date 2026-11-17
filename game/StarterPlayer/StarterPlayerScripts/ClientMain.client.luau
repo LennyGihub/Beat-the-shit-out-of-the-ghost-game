@@ -20,6 +20,10 @@ local Remotes = RS:WaitForChild("Remotes")
 local Platform = require(Client.Platform)
 local LockOn = require(Client.LockOn)
 local Settings = require(Client.Settings)
+local Loading = require(game:GetService("ReplicatedFirst"):WaitForChild("Loading"))
+game:GetService("TeleportService").TeleportInitFailed:Connect(function(p)
+	if p == Players.LocalPlayer then task.spawn(Loading.hide) end
+end)
 local SettingsUI = require(Client.SettingsUI)
 local HUD = require(Client.HUD)
 local VM = require(Client.Viewmodel)
@@ -104,7 +108,11 @@ end
 
 Remotes.Fx.OnClientEvent:Connect(function(kind: string, ...)
 	if FIGHT[kind] and not lp:GetAttribute("InMatch") then return end
-	if kind == "OpenUltShop" then
+	if kind == "Teleporting" then
+		Loading.teleport(...) -- the loading screen (ReplicatedFirst/Loading)
+	elseif kind == "TeleportFailed" then
+		task.spawn(Loading.hide)
+	elseif kind == "OpenUltShop" then
 		UltShop.open()
 	elseif kind == "UltResult" then
 		UltShop.result(...)

@@ -72,18 +72,25 @@ end
 
 local function launch(room, members: { Player })
 	room.countdownStart = nil
+	-- the loading screen (ReplicatedFirst/Loading) comes up for everyone who goes
+	local function loading(text: string) for _, p in members do Remotes.Fx:FireClient(p, "Teleporting", text) end end
+	local function failed() for _, p in members do Remotes.Fx:FireClient(p, "TeleportFailed") end end
 	if RunService:IsStudio() then
 		if Run.running() then
 			for _, p in members do Remotes.Fx:FireClient(p, "Toast", "A match is already running in this Studio test") end
 			return
 		end
+		loading("LOADING THE HOUSE...")
+		task.wait(0.4) -- (the card is up before the map is built)
 		Run.beginMatch(members, room.map, room.diff, room.ff ~= false)
 		return
 	end
+	loading("TELEPORTING TO THE HOUSE...")
 	setSign(room, room.size .. " PLAYER" .. (room.size > 1 and "S" or ""), "TELEPORTING...", Color3.fromRGB(150, 220, 110))
 	local ok, code = pcall(function() return TeleportService:ReserveServer(game.PlaceId) end)
 	if not ok then
 		warn("[Lobby] ReserveServer failed: " .. tostring(code))
+		failed()
 		for _, p in members do Remotes.Fx:FireClient(p, "Toast", "Teleport failed, try again") end
 		return
 	end
@@ -94,6 +101,7 @@ local function launch(room, members: { Player })
 	local tok, err = pcall(function() TeleportService:TeleportAsync(game.PlaceId, members, opts) end)
 	if not tok then
 		warn("[Lobby] Teleport failed: " .. tostring(err))
+		failed()
 		for _, p in members do Remotes.Fx:FireClient(p, "Toast", "Teleport failed, try again") end
 	end
 end
@@ -235,8 +243,12 @@ end
 function Lobby.returnPlayer(p: Player)
 	if Run.mode == "Match" then
 		Data.save(p)
+		Remotes.Fx:FireClient(p, "Teleporting", "BACK TO THE LOBBY...")
 		local ok, err = pcall(function() TeleportService:TeleportAsync(game.PlaceId, { p }) end)
-		if not ok then warn("[Lobby] return failed: " .. tostring(err)) end
+		if not ok then
+			warn("[Lobby] return failed: " .. tostring(err))
+			Remotes.Fx:FireClient(p, "TeleportFailed")
+		end
 		return
 	end
 	Run.removeFromMatch(p)

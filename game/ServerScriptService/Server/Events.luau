@@ -38,8 +38,8 @@ function Events.prompt(parent: Instance, action: string, object: string, hold: n
 	return pp
 end
 
--- 6 items, rarer ones less likely, no duplicates
-function Events.rollStock(n: number): { any }
+-- 6 items, rarer ones less likely, no duplicates (avoid = ids of the last stock: left out while there is enough else)
+function Events.rollStock(n: number, avoid: { [string]: boolean }?): { any }
 	local total = 0
 	for _, r in Items.rarity do total += r.weight end
 	local picked, out, tries = {}, {}, 0
@@ -51,7 +51,9 @@ function Events.rollStock(n: number): { any }
 			if x <= 0 then rar = i; break end
 		end
 		local pool = {}
-		for _, it in Items.list do if it.rarity == rar and not picked[it.id] and not it.exclusive then table.insert(pool, it) end end
+		for _, it in Items.list do
+			if it.rarity == rar and not picked[it.id] and not it.exclusive and not (avoid and avoid[it.id] and tries < 150) then table.insert(pool, it) end
+		end
 		if #pool > 0 then
 			local it = pool[rng:NextInteger(1, #pool)]
 			picked[it.id] = true
@@ -104,8 +106,14 @@ local function tarp(shop: Instance, cfs: { CFrame })
 	t.Parent = shop
 end
 
--- put the stock on the shop's Slot1..6 attachments
+-- put the stock on the shop's Slot1..6 attachments (everything it adds goes in the shop's "Stock" folder, so a
+-- restock can clear it)
 local function stock(shop: Instance, list: { any })
+	local old = shop:FindFirstChild("Stock")
+	if old then old:Destroy() end
+	local folder = Instance.new("Folder")
+	folder.Name = "Stock"
+	folder.Parent = shop
 	local groundSpots = {}
 	for i, it in list do
 		local slot = shop:FindFirstChild("Slot" .. i, true) :: Attachment?
@@ -123,7 +131,7 @@ local function stock(shop: Instance, list: { any })
 			-- sit it on the shelf / ground (meshes have their pivot at the grip, not the bottom)
 			local bcf, bsz = m:GetBoundingBox()
 			m:PivotTo(m:GetPivot() + Vector3.new(0, base.Position.Y + 0.12 - (bcf.Position.Y - bsz.Y / 2), 0))
-			m.Parent = shop
+			m.Parent = folder
 			-- rarity glow under the item
 			local r = Items.rarity[it.rarity]
 			local glowPart = Instance.new("Part")
@@ -138,7 +146,7 @@ local function stock(shop: Instance, list: { any })
 			pp.Triggered:Connect(function(p) if Events.onBuy then Events.onBuy(p, it.id, at) end end)
 		end
 	end
-	tarp(shop, groundSpots)
+	tarp(folder, groundSpots)
 end
 
 local function vendor(cf: CFrame, line: string, ev)
@@ -234,6 +242,7 @@ local function plane(ev, trigger: Vector3)
 	stand:PivotTo(standSpot(land, trigger))
 	stand.Parent = workspace
 	table.insert(ev.models, stand)
+	ev.shop = stand
 	stock(stand, ev.stock)
 	vendor(stand:GetPivot() * CFrame.new(-7.5, 0, 1.5) * CFrame.Angles(0, math.rad(-25), 0), "\"ugh... my leg... the stuff's on the table. cash first.\"", ev)
 	ev.shopPos = (stand:GetPivot() * CFrame.new(0, 4, 0)).Position
@@ -273,6 +282,7 @@ local function van(ev)
 	v.Parent = workspace
 	table.insert(ev.models, v)
 	task.wait(1)
+	ev.shop = v
 	stock(v, ev.stock)
 	vendor(VAN_CF * CFrame.new(6.5, 0, 9) * CFrame.Angles(0, math.rad(60), 0), "\"lost the brakes... bought a lot of junk though. wanna see?\"", ev)
 	ev.shopPos = (VAN_CF * CFrame.new(0, 4, 9)).Position
@@ -304,6 +314,7 @@ local function train(ev)
 	burn(w1:FindFirstChild("Body", true) :: BasePart?, 5)
 	fx("TrainImpact", T.loco.Position)
 	task.wait(1)
+	ev.shop = w2
 	stock(w2, ev.stock)
 	vendor(T.w2 * CFrame.new(-9, 0, 9) * CFrame.Angles(0, math.rad(70), 0), "\"conductor... ugh... the wagon's open. everything must go.\"", ev)
 	ev.shopPos = (T.w2 * CFrame.new(-7, 4, 0)).Position
@@ -315,6 +326,19 @@ function Events.spawn(kind: string, trigger: Vector3)
 	local ev = { kind = kind, models = {}, stock = Events.rollStock(6), shopPos = trigger, label = "SHOP" }
 	if kind == "van" then van(ev) elseif kind == "train" then train(ev) else plane(ev, trigger) end
 	return ev
+end
+
+-- NEW STOCK EVERY ROUND: the same wreck stays for Config.EventLife ghosts, but its shelves get new items after each
+-- kill (none of the last ones while there is enough else). Returns true if the shop was restocked.
+function Events.restock(ev): boolean
+	if not ev or not ev.shop or not ev.shop.Parent then return false end
+	local last = {}
+	for _, it in ev.stock do last[it.id] = true end
+	ev.stock = Events.rollStock(6, last)
+	local at = ev.shop:GetPivot().Position
+	stock(ev.shop, ev.stock)
+	fx("ShopRestock", ev.label, at)
+	return true
 end
 
 function Events.despawn(ev)

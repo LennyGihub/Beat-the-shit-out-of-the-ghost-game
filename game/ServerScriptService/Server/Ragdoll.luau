@@ -69,6 +69,16 @@ end
 -- from the floor to just above her body, ~6 studs wide. The part is cut into the pieces around the hole;
 -- only the hole's volume flies off as chunks. Everything is put back by restoreWalls.
 local HOLE_W = 6
+-- the flying chunks live in workspace.WallChunks: each client thins them out to its particle setting (Client/Settings)
+local function chunkFolder(): Folder
+	local f = workspace:FindFirstChild("WallChunks")
+	if not f then
+		f = Instance.new("Folder")
+		f.Name = "WallChunks"
+		f.Parent = workspace
+	end
+	return f :: Folder
+end
 local function chunks(cf: CFrame, size: Vector3, src: BasePart, push: Vector3)
 	local made = {} :: { BasePart }
 	local nx = math.clamp(math.round(size.X / 2), 1, 4)
@@ -85,7 +95,8 @@ local function chunks(cf: CFrame, size: Vector3, src: BasePart, push: Vector3)
 				c.Color = src.Color; c.Material = src.Material
 				c.TopSurface = Enum.SurfaceType.Smooth; c.BottomSurface = Enum.SurfaceType.Smooth
 				c.CollisionGroup = "Debris"; c.CanQuery = false; c.CanTouch = false
-				c.Parent = workspace
+				c.Parent = chunkFolder()
+				pcall(function() c:SetNetworkOwner(nil) end) -- the server moves them: no chunk physics on weak computers
 				c.AssemblyLinearVelocity = push * rng:NextNumber(20, 50) + Vector3.new(rng:NextNumber(-1, 1), rng:NextNumber(0, 1), rng:NextNumber(-1, 1)) * 18
 				c.AssemblyAngularVelocity = Vector3.new(rng:NextNumber(-8, 8), rng:NextNumber(-8, 8), rng:NextNumber(-8, 8))
 				Debris:AddItem(c, rng:NextNumber(6, 9))

@@ -126,9 +126,10 @@ local EVO: { [string]: { [string]: any } } = {
 		power = { kind = "shotgun", cd = 10, wind = 1.2, gap = 1.0, shots = 2, dmg = 46, range = 95, power = 70, min = 5 },
 		desc = "The same mask, red now, and a shotgun. Two shots, and each one blows your cover away." },
 	-- gold armour and a helmet; everything the Conqueror does, plus the gauntlet's beam: it turns after you slowly
-	-- (turn = degrees per second), cuts through furniture and inside walls, and burns for `dps` while you stand in it
+	-- (turn = degrees per second, sweep = studs per second, so you can always outrun it), cuts through furniture and inside walls, and burns for `dps` while you stand in it
 	Conqueror = { title = "THE GOLDEN CONQUEROR", color = C(232, 186, 70), scale = 1.1,
-		power = { kind = "laser", cd = 13, wind = 1.5, t = 6, range = 140, turn = 24, dps = 42, width = 3 },
+		-- turn = degrees a second at most, sweep = studs a second at most where you stand (slower than walking)
+		power = { kind = "laser", cd = 13, wind = 1.5, t = 6, range = 140, turn = 16, sweep = 10, dps = 42, width = 3 },
 		desc = "In his golden war armour. The gauntlet fires a slow purple beam that cuts through the house: never stand in it." },
 	Titan = { title = "THE BONE GIANT", color = C(226, 214, 190), scale = 1.08,
 		power = { kind = "eat", cd = 10, below = 0.85, range = 17, t = 1.5, heal = 0.07, wallHeal = 0.04 },

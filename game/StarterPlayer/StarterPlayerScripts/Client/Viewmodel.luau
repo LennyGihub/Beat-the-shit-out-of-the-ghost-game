@@ -29,8 +29,10 @@ local leftGripPart: BasePart? = nil -- where the left hand holds the item
 local tipPart: BasePart? = nil
 local lastUse = -1
 local style = "bat"
-local anim: { t0: number, dur: number, variant: number, hidden: boolean? }? = nil
+local anim: { t0: number, dur: number, variant: number, hidden: boolean?, step: number? }? = nil
 local variant = 1
+local demonStep = 0 -- the Demon Blade's 3-swing combo (1 = falling slash, 2 = rising slash, 3 = heavy chop)
+local lastDemonUse = 0
 local freezeUntil = 0
 local frozenAt = 0
 local spraying = false
@@ -47,6 +49,8 @@ local HOLD: { [string]: any } = {
 	bat = { fist = Vector3.new(0.9, -1.05, -1.8), aim = Vector2.new(-0.05, 0.7), roll = -0.4 },
 	golf = { fist = Vector3.new(0.85, -1.05, -1.8), aim = Vector2.new(0.0, 0.5), roll = 0 },
 	slash = { fist = Vector3.new(0.85, -1.0, -1.75), aim = Vector2.new(-0.05, 0.75), roll = 1.3 },
+	-- the Demon Blade: raised across the screen toward the upper left, its flat side to you (edge down, teeth up)
+	demon = { fist = Vector3.new(0.9, -1.1, -1.7), aim = Vector2.new(-0.5, 0.62), roll = 0.25 },
 	heavy = { fist = Vector3.new(0.75, -1.15, -1.35), aim = Vector2.new(-0.4, 0.72), roll = 1.5 },
 	thrust = { fist = Vector3.new(0.65, -1.0, -1.8), aim = Vector2.new(0.05, 0.4), roll = 0 },
 	saw = C(0.9, -1.2, -1.6, 0.7, 0.45, 1.3), -- on its side, top handle to the left, bar up toward the crosshair
@@ -92,13 +96,13 @@ local LEFT_GRIP_ROT = A(0.4, -0.6, -0.3)
 local STYLE = {
 	FireAxe = "heavy", Sledgehammer = "heavy", StormHammer = "heavy", Shovel = "heavy", FrostPickaxe = "heavy",
 	BaseballBat = "bat", SpikedBat = "bat", BurningBat = "bat", LeadPipe = "bat", Crowbar = "bat", FryingPan = "bat", GolfClub = "golf",
-	Katana = "slash", DemonBlade = "slash", Machete = "slash", HolyCross = "thrust", Chainsaw = "saw",
+	Katana = "slash", DemonBlade = "demon", Machete = "slash", HolyCross = "thrust", Chainsaw = "saw",
 	NailGun = "pistol", Taser = "pistol", Glock18 = "glock", FlareGun = "pistol", SilverRevolver = "pistol",
 	SaltShotgun = "shotgun", PotatoCannon = "longgun", StakeCrossbow = "longgun", HarpoonGun = "longgun",
 	EnergyDrink = "drink", Painkillers = "drink", Adrenaline = "inject", RageSerum = "inject",
 	Medkit = "apply", KevlarVest = "apply", Talisman = "raise", PocketWatch = "raise", BearTrap = "place",
 }
-local DUR = { heavy = 0.78, bat = 0.42, golf = 0.5, slash = 0.3, thrust = 0.34, saw = 0.12, pistol = 0.22, glock = 0.1, shotgun = 0.62,
+local DUR = { heavy = 0.78, bat = 0.42, golf = 0.5, slash = 0.3, demon = 0.36, thrust = 0.34, saw = 0.12, pistol = 0.22, glock = 0.1, shotgun = 0.62,
 	longgun = 0.45, throw = 0.48, drink = 0.9, inject = 0.8, apply = 0.8, raise = 0.9, place = 0.6, spray = 0.1 }
 
 -- keyframes {t, offset}: translation and rotation in CAMERA space, turning around the right fist
@@ -128,6 +132,19 @@ local KEYS = {
 	place = { { 0, C(0, 0, 0) }, { 0.45, C(-0.1, -0.85, -0.5, -0.6, 0, 0) }, { 1, C(0, 0, 0) } },
 	spray = { { 0, C(0, 0, 0) }, { 1, C(0, 0, 0) } },
 }
+-- THE DEMON BLADE: a 3-swing combo, from its raised hold (HOLD.demon). 1 = it goes up to the right and falls in a
+-- wide diagonal to the lower left; 2 = a rising backhand from the lower left up through the middle to the right;
+-- 3 = a heavy chop: raised high with the blade across, brought straight down (longer). Edge first, flat side to the camera; each one
+-- strikes around 0.45 of its time (VM.impactTime). (Keys solved from screen targets for the tip and the edge.)
+local DEMON = {
+	{ { 0, C(0, 0, 0) }, { 0.24, C(-0.55, 1.35, 0.15, 0.20, 0.39, -1.84) }, { 0.45, C(-1.25, 0.65, -0.30, -0.41, 0.10, 0.38) },
+		{ 0.64, C(-1.50, 0.35, -0.20, -0.28, -0.07, 0.87) }, { 1, C(0, 0, 0) } },
+	{ { 0, C(0, 0, 0) }, { 0.24, C(-1.35, 0.25, 0.00, 2.74, 0.85, 0.77) }, { 0.45, C(-0.80, 0.55, -0.30, 2.12, -0.51, 1.91) },
+		{ 0.64, C(-0.30, 0.75, -0.15, -3.01, -0.92, -2.90) }, { 1, C(0, 0, 0) } },
+	{ { 0, C(0, 0, 0) }, { 0.3, C(-0.55, 1.45, 0.25, -0.33, 0.11, -0.19) }, { 0.47, C(-0.80, 0.60, -0.30, -0.54, 0.12, 0.52) },
+		{ 0.72, C(-0.85, 0.30, -0.20, -0.57, -0.01, 0.69) }, { 1, C(0, 0, 0) } },
+}
+local DEMON_DUR = { 0.36, 0.36, 0.5 }
 local LOCAL_KEYS = { saw = true }
 -- where the arms come from while holding an item (camera space, below and behind the screen corners)
 local SHOULDER = { R = Vector3.new(1.0, -1.7, 0.35), L = Vector3.new(-1.0, -1.7, 0.35) }
@@ -394,6 +411,14 @@ local function addTrail(m: Model)
 	tr.Lifetime = 0.14; tr.MinLength = 0.05; tr.FaceCamera = true; tr.LightEmission = 0.4
 	tr.Transparency = NumberSequence.new(0.35, 1)
 	tr.Color = ColorSequence.new(heldItem and heldItem.glow or Color3.fromRGB(235, 230, 220))
+	if heldItem and heldItem.id == "DemonBlade" then
+		-- a long burning arc: white-hot at the blade, red, then smoke-dark as it fades
+		a0.WorldPosition = (pivot * CFrame.new(0, 0, -size.Z * 0.3)).Position
+		tr.Lifetime = 0.24; tr.LightEmission = 1; tr.LightInfluence = 0
+		tr.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 230, 200)), ColorSequenceKeypoint.new(0.3, Color3.fromRGB(255, 40, 30)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(60, 0, 0)) })
+		tr.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.05), NumberSequenceKeypoint.new(0.6, 0.5), NumberSequenceKeypoint.new(1, 1) })
+	end
 	tr.Enabled = false
 	tr.Parent = root
 	trail = tr
@@ -452,9 +477,20 @@ function VM.use()
 	freezeUntil, frozenAt = 0, 0
 	lastUse = os.clock()
 	anim = { t0 = os.clock(), dur = DUR[style] or 0.4, variant = variant }
+	if style == "demon" then
+		-- the combo goes on while you keep swinging; a pause starts it over
+		local now = os.clock()
+		demonStep = (now - lastDemonUse > 0.9) and 1 or (demonStep % 3 + 1)
+		lastDemonUse = now
+		anim.step = demonStep
+		anim.dur = DEMON_DUR[demonStep]
+	end
 end
+-- the Demon Blade's combo step of the swing playing now (3 = the heavy chop), 0 = none
+function VM.demonStep(): number return (anim and anim.step) or 0 end
 -- seconds from VM.use() to the moment the swing connects on screen (melee hit sounds play then)
 function VM.impactTime(): number
+	if anim and anim.step then return anim.dur * 0.45 end
 	return (DUR[style] or 0.4) * 0.42
 end
 -- kept for old callers
@@ -502,11 +538,16 @@ local function itemOffset(now: number): CFrame
 	end
 	local forced = STUDIO and lp:GetAttribute("DebugAnimA") -- Studio test hook: freeze the animation at fraction a
 	if type(forced) == "number" then
-		local cf = sample(KEYS[style] or KEYS.bat, math.clamp(forced, 0, 1))
+		local fs = lp:GetAttribute("DebugAnimStep") -- (Demon Blade combo step for the frozen frame)
+		local cf = sample((style == "demon" and DEMON[type(fs) == "number" and fs or 1]) or KEYS[style] or KEYS.bat, math.clamp(forced, 0, 1))
 		return cf
 	end
 	if style == "saw" and not anim then
 		return CFrame.new((math.random() - 0.5) * 0.015, (math.random() - 0.5) * 0.015, -0.3) -- idling engine
+	end
+	if style == "demon" and not anim then
+		-- the blade is alive in your hand: a slow, heavy breathing sway
+		return CFrame.new(0, math.sin(now * 1.6) * 0.025, 0) * A(math.sin(now * 1.6 + 0.6) * 0.03, 0, math.sin(now * 0.9) * 0.04)
 	end
 	if not anim then return CFrame.new() end
 	-- hit-stop: time stands still for a few frames
@@ -523,10 +564,10 @@ local function itemOffset(now: number): CFrame
 		if trail then trail.Enabled = false end
 		return style == "saw" and CFrame.new(0, 0, -0.3) or CFrame.new()
 	end
-	local keys = KEYS[style] or KEYS.bat
+	local keys = (anim.step and DEMON[anim.step]) or KEYS[style] or KEYS.bat
 	local cf = sample(keys, a)
 	if anim.variant < 0 and (style == "bat" or style == "slash") then cf = mirror(cf) end
-	if trail then trail.Enabled = a > 0.22 and a < 0.8 end
+	if trail then trail.Enabled = a > 0.22 and a < (anim.step and 0.7 or 0.8) end
 	if style == "saw" then cf *= CFrame.new((math.random() - 0.5) * 0.06, (math.random() - 0.5) * 0.06, 0) end
 	-- thrown items leave the hand at release and come back
 	anim.hidden = style == "throw" and a > 0.52 and a < 0.92

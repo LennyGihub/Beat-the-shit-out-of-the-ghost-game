@@ -106,6 +106,30 @@ local function setState(g, s: string, dur: number?)
 end
 Ghost.setState = setState
 
+-- SPECIALS CAN'T BE INTERRUPTED: while a monster does its ability (or its evolved power, or the Woman's vanish and
+-- scream) hits still hurt but don't knock it back, ragdoll it, launch it or push it, and a stun or a time stop only
+-- PAUSES the move (it carries on afterwards). Two exceptions can still be cut short: the Party Bear's lights-out hunt
+-- (blackout) and the Golden Conqueror's purple beam (laser).
+local function unstoppable(g): boolean
+	local s = g.state
+	if s == "Ability" then return g.ab ~= nil and g.ab.kind ~= "blackout" end
+	if s == "Evo" then return g.evo ~= nil and g.evo.kind ~= "laser" end
+	return s == "Vanish" or s == "Scare"
+end
+Ghost.unstoppable = unstoppable
+-- the time fields a special keeps (Abilities / Evolved / Caller / GoblinLoot): moved on by the length of a pause
+local TIME_KEYS = { "untilT", "landT", "nextBlink", "nextThrow", "standUntil", "nextBreath", "springAt", "nextTick", "nextPush", "nextShot" }
+local function shiftTimers(g, by: number)
+	g.stateUntil += by
+	for _, t in { g.ab, g.evo } do
+		if type(t) == "table" then
+			for _, k in TIME_KEYS do
+				if type(t[k]) == "number" then t[k] += by end
+			end
+		end
+	end
+end
+
 -- the sandbox's training dummy (Server/Sandbox): she stands where she is, watches the nearest player and never
 -- attacks, roars or gets enraged; hits, knockbacks, freezes and burns work as always
 Ghost.passive = false
@@ -284,6 +308,12 @@ function Ghost.freeze(t: number)
 	local g = Ghost.current
 	if not g or g.state == "Dead" then return end
 	g.frozenUntil = math.max(g.frozenUntil, os.clock() + t)
+	if unstoppable(g) then
+		-- a special is paused, not cancelled: it goes on where it was once the stun wears off
+		g.pauseFrom = g.pauseFrom or os.clock()
+		g.model:SetAttribute("Frozen", true)
+		return
+	end
 	if g.state == "WindUp" or g.state == "Swipe" or g.state == "Vanish" or g.state == "Scare" or g.state == "Ability" or g.state == "Roar" or g.state == "Lunge" or g.state == "Evo" then
 		g.model:SetAttribute("Vanish", false)
 		g.fury = nil
@@ -317,6 +347,7 @@ end
 function Ghost.launch(h: number, d: number, by: Player?)
 	local g = Ghost.current
 	if not g or g.state == "Dead" or g.state == "Spawn" or g.state == "Ragdoll" then return end
+	if unstoppable(g) then return end
 	g.model:SetAttribute("Vanish", false)
 	g.launch = { phase = "up", topY = g.hrp.Position.Y + h, d = d, by = by }
 	setState(g, "Launched")
@@ -337,6 +368,7 @@ function Ghost.shove(v: Vector3)
 	local g = Ghost.current
 	if not g or g.state == "Dead" or g.state == "Spawn" or g.state == "Launched" or g.state == "Ragdoll" then return end
 	if g.ts and os.clock() < g.ts.untilT then return end
+	if unstoppable(g) then return end
 	g.vel = v
 	if g.state ~= "Knocked" then setState(g, "Knocked", 0.12) end
 end
@@ -389,7 +421,8 @@ end
 function Ghost.hit(by: Player?, dir: Vector3, knock: number, damage: number, obj: boolean?, power: boolean?)
 	local g = Ghost.current
 	if not g or g.state == "Dead" or g.state == "Spawn" then return end
-	if g.model:GetAttribute("Vanish") then g.model:SetAttribute("Vanish", false) end
+	local locked = unstoppable(g) -- in the middle of a special: it takes the damage and keeps going
+	if g.model:GetAttribute("Vanish") and not locked then g.model:SetAttribute("Vanish", false) end
 	if obj then damage *= (g.def :: any).objTaken or 1 end
 	-- the Caller, found in his corner before he could strike: this hit counts several times and staggers him
 	local found = Abilities.ambushHit(g, by)
@@ -411,8 +444,11 @@ function Ghost.hit(by: Player?, dir: Vector3, knock: number, damage: number, obj
 	if g.state == "Ability" and g.ab and g.ab.kind == "blackout" and g.def.ability.lightsOut then
 		setState(g, "Recover", 0.6)
 	end
-	if found > 1 and g.state == "Ability" then setState(g, "Recover", 1.3) end -- caught: out of his corner, dazed
 	if knock <= 0 then return end
+	if locked and unstoppable(g) then
+		if g.state ~= "Dead" then Remotes.Fx:FireAllClients("FuryArmor", g.hrp.Position) end
+		return
+	end
 	if g.state == "Dead" then return end
 	Fury.onHit(g, knock, knock >= Ragdoll.MIN_KNOCK and g.state ~= "Ragdoll")
 	-- roaring, or swiping back after a beating: plain hits and combos still hurt but don't stagger it.
@@ -441,16 +477,17 @@ function Ghost.hit(by: Player?, dir: Vector3, knock: number, damage: number, obj
 		return
 	end
 	g.vel = flat * knock + Vector3.new(0, math.min(knock * 0.15, 18), 0)
-	setState(g, "Knocked", 0.18)
+	setState(g, "Knocked", 0.12)
 	-- a small hit only delays its next swipe a little; once beaten up enough (Fury pressure) not at all
-	if Fury.pressure(g) < Config.Fury.ArmorPressure then g.nextAttack = math.max(g.nextAttack, os.clock() + 0.35) end
+	if Fury.pressure(g) < Config.Fury.ArmorPressure then g.nextAttack = math.max(g.nextAttack, os.clock() + 0.12) end
 end
 
 local function stepKnocked(g, dt: number, now: number)
 	local pos = g.hrp.Position
 	local floorY = floorBelow(pos, g.rp)
 	local hoverY = floorY + g.hover
-	g.vel *= math.exp(-1.7 * dt)
+	-- a simple hit: it flies back for a split second, then brakes hard and is straight back on its feet
+	g.vel *= math.exp(-(os.clock() - g.stateStart < 0.15 and 1.7 or 6) * dt)
 	g.vel += Vector3.new(0, (hoverY - pos.Y) * 6 * dt - g.vel.Y * 2.5 * dt, 0)
 	local step = g.vel * dt
 	local speed = g.vel.Magnitude
@@ -480,7 +517,7 @@ local function stepKnocked(g, dt: number, now: number)
 		end
 	end
 	g.lv.VectorVelocity = g.vel
-	if g.vel.Magnitude < 6 and now > g.stateUntil then setState(g, "Recover", 0.5) end
+	if g.vel.Magnitude < 8 and now > g.stateUntil then setState(g, "Recover", 0.12) end
 end
 
 local function warded(p: Player?): boolean
@@ -643,6 +680,11 @@ function Ghost.step(dt: number)
 		return
 	elseif g.model:GetAttribute("Frozen") then
 		g.model:SetAttribute("Frozen", false)
+	end
+	if g.pauseFrom then
+		-- a paused special picks up where it stopped
+		shiftTimers(g, now - g.pauseFrom)
+		g.pauseFrom = nil
 	end
 
 	local floorY = floorBelow((thrp and not g.def.solid) and thrp.Position or pos, g.rp)

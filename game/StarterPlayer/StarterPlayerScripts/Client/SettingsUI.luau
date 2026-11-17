@@ -42,6 +42,12 @@ local function refreshSliders()
 	end
 end
 
+-- PARTICLES: low / medium / high (Settings.setFx)
+local fxBtns = {} :: { [string]: TextButton }
+local function refreshFx()
+	for level, b in fxBtns do b.BackgroundColor3 = Settings.get("fx") == level and RED or DARK end
+end
+
 local function refreshBinds()
 	for id, b in bindRows do
 		b.Text = listening == id and "PRESS A KEY..." or Settings.keyName(id)
@@ -68,7 +74,7 @@ function UI.setOpen(open: boolean)
 	listening = nil
 	gui.Enabled = open
 	if open then
-		refreshSliders(); refreshBinds(); refreshPad()
+		refreshSliders(); refreshBinds(); refreshPad(); refreshFx()
 		local s = panel:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
 		s.Parent = panel; s.Scale = 0.75
 		TweenService:Create(s, TweenInfo.new(0.22, Enum.EasingStyle.Back), { Scale = 1 }):Play()
@@ -129,8 +135,15 @@ function UI.init(toggled: (boolean) -> ())
 	local body = Grunge.frame(panel, { Position = UDim2.fromScale(0.06, 0.15), Size = UDim2.fromScale(0.88, 0.8), ZIndex = 10 })
 	slider(body, "sfx", "SOUND", 0.0)
 	slider(body, "music", "MUSIC", 0.1)
+	-- particles: fewer wall chunks, sparks and smoke for low-end computers (MEDIUM by default)
+	Grunge.text(body, { Text = "PARTICLES", Font = Grunge.TYPE, Position = UDim2.fromScale(0, 0.2), Size = UDim2.fromScale(0.2, 0.07), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(220, 90, 60), ZIndex = 11 })
+	for i, level in Settings.FX_LEVELS do
+		local b = button(body, string.upper(level), { Position = UDim2.fromScale(0.22 + (i - 1) * 0.225, 0.195), Size = UDim2.fromScale(0.21, 0.075), ZIndex = 12 })
+		b.Activated:Connect(function() Sfx.play("Click"); Settings.setFx(level) end)
+		fxBtns[level] = b
+	end
 
-	keysPage = Grunge.frame(body, { Position = UDim2.fromScale(0, 0.21), Size = UDim2.fromScale(1, 0.62), ZIndex = 10 })
+	keysPage = Grunge.frame(body, { Position = UDim2.fromScale(0, 0.3), Size = UDim2.fromScale(1, 0.54), ZIndex = 10 })
 	Grunge.text(keysPage, { Text = "KEYBINDS  (click one, then press the new key)", Font = Grunge.TYPE, Size = UDim2.fromScale(1, 0.08), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(220, 90, 60), ZIndex = 11 })
 	for i, a in Settings.ACTIONS do
 		local col = (i - 1) % 2
@@ -172,7 +185,7 @@ function UI.init(toggled: (boolean) -> ())
 		end
 	end)
 	Settings.changed:Connect(function(k)
-		if k == "binds" then refreshBinds() else refreshSliders() end
+		if k == "binds" then refreshBinds() elseif k == "fx" then refreshFx() else refreshSliders() end
 	end)
 	Platform.changed:Connect(function() if gui.Enabled then refreshPad() end end)
 	Platform.menu(panel, function() UI.setOpen(false) end)

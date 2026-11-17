@@ -22,6 +22,7 @@ local KINDS = {
 	RoarWind = true, Roar = true, LungeWind = true, Lunge = true, Enraged = true, CounterWind = true, FuryArmor = true, FurySmash = true, -- Fury
 	SnapWind = true, Snap = true, TitanEat = true, TitanHeal = true, -- evolved monsters
 }
+local Settings = require(script.Parent.Settings)
 local Items = require(game:GetService("ReplicatedStorage").Shared.Items)
 local GOBLIN = Color3.fromRGB(130, 230, 70)
 local GOLD = Color3.fromRGB(255, 205, 60)
@@ -51,7 +52,7 @@ local function emitter(pos: Vector3, props: { [string]: any }, emit: number?, li
 	pe.SpreadAngle = Vector2.new(180, 180)
 	for k, v in props do (pe :: any)[k] = v end
 	pe.Parent = a
-	if emit then pe.Rate = 0; pe:Emit(emit) end
+	if emit then pe.Rate = 0; pe:Emit(Settings.fxCount(emit)) end -- particle setting (Settings)
 	Debris:AddItem(a, life or 3)
 	return pe
 end

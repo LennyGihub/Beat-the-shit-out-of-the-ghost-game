@@ -184,6 +184,69 @@ function B.katana(m, c, glow)
 	if glow then moving(m, edge, "flicker") end
 	mark(m, "Tip", at(0, 0.1, -3.8))
 end
+-- THE DEMON BLADE: a broad, cruel black blade with a red-hot core. Bone grip with a little skull for a pommel, a
+-- crossguard of two curled horns with a burning eye in the middle, a jagged spine of teeth along the back, a glowing
+-- edge and vein, and embers drifting off it.
+function B.demonblade(m, c, glow)
+	local hot = glow or Color3.fromRGB(255, 30, 40)
+	local OBS = Color3.fromRGB(26, 14, 16) -- obsidian
+	local BONE = Color3.fromRGB(214, 200, 172)
+	local BLOOD = Color3.fromRGB(110, 12, 16)
+	-- grip: black leather wound with red cord, bone ferrules
+	p(m, V(0.22, 0.26, 1.15), at(0, 0, 0.1), BLACK, M.Fabric)
+	for i = 0, 3 do p(m, V(0.24, 0.09, 0.09), at(0, 0.09, 0.5 - i * 0.27, 0, 0, 0.78), BLOOD) end
+	p(m, V(0.26, 0.3, 0.12), at(0, 0, -0.45), BONE)
+	p(m, V(0.26, 0.3, 0.12), at(0, 0, 0.66), BONE)
+	-- pommel: a small skull, eye sockets glowing
+	p(m, V(0.3, 0.32, 0.3), at(0, 0.02, 0.86), BONE)
+	p(m, V(0.24, 0.12, 0.22), at(0, -0.15, 0.84), worn(BONE, 0.2)) -- jaw
+	for _, x in { -0.07, 0.07 } do
+		local e = p(m, V(0.08, 0.08, 0.06), at(x, 0.06, 1.0), hot, M.Neon)
+		moving(m, e, "flicker")
+	end
+	p(m, V(0.08, 0.08, 0.28), at(0, 0, 1.12, 0, 0, 0), OBS, M.Metal) -- spike out of the skull
+	-- crossguard: a dark block with two horns curling forward, a burning eye in the middle
+	p(m, V(0.34, 0.95, 0.2), at(0, 0.02, -0.58), OBS, M.Metal)
+	p(m, V(0.36, 0.5, 0.14), at(0, 0.02, -0.7), BLOOD, M.Metal)
+	for _, side in { 1, -1 } do
+		p(m, V(0.18, 0.34, 0.16), at(0, side * 0.6, -0.62, side * 0.5, 0, 0), BONE)
+		p(m, V(0.14, 0.28, 0.14), at(0, side * 0.82, -0.8, side * 1.0, 0, 0), BONE)
+		p(m, V(0.1, 0.22, 0.1), at(0, side * 0.9, -1.02, side * 1.5, 0, 0), worn(BONE, 0.25))
+	end
+	local eye = p(m, V(0.4, 0.2, 0.2), at(0, 0.02, -0.62), hot, M.Neon, Enum.PartType.Ball)
+	moving(m, eye, "flicker")
+	-- blade: broad at the guard, a notch, then tapering to a hooked point; teeth along the spine (+Y)
+	local b = worn(c, 0.0):Lerp(OBS, 0.72)
+	p(m, V(0.07, 0.5, 1.1), at(0, 0.06, -1.25), b, M.Metal)
+	p(m, V(0.07, 0.44, 1.1), at(0, 0.08, -2.3), b, M.Metal)
+	p(m, V(0.07, 0.36, 0.8), at(0, 0.1, -3.2), b, M.Metal)
+	p(m, V(0.07, 0.24, 0.45), at(0, 0.13, -3.78, -0.18, 0, 0), b, M.Metal)
+	p(m, V(0.07, 0.12, 0.3), at(0, 0.2, -4.08, -0.5, 0, 0), b, M.Metal)
+	for i = 0, 5 do -- the spine's teeth
+		p(m, V(0.07, 0.18, 0.18), at(0, 0.34 - i * 0.012, -1.0 - i * 0.5, 0.78, 0, 0), b, M.Metal)
+	end
+	-- red-hot edge and the vein down the middle (both faces)
+	local edge = p(m, V(0.08, 0.07, 3.05), at(0, -0.17, -2.45, 0.025, 0, 0), hot, M.Neon)
+	moving(m, edge, "flicker")
+	for _, x in { -0.04, 0.04 } do
+		local vein = p(m, V(0.02, 0.06, 2.6), at(x, 0.1, -2.15), hot, M.Neon)
+		vein.Transparency = 0.15
+		moving(m, vein, "flicker")
+	end
+	-- embers drifting off the blade
+	local core = p(m, V(0.05, 0.3, 3), at(0, 0.08, -2.4), hot)
+	core.Name = "EmberCore"; core.Transparency = 1
+	local e = Instance.new("ParticleEmitter")
+	e.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	e.Color = ColorSequence.new(Color3.fromRGB(255, 120, 60), hot)
+	e.LightEmission = 1; e.LightInfluence = 0
+	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.12), NumberSequenceKeypoint.new(1, 0) })
+	e.Transparency = NumberSequence.new(0.1, 1)
+	e.Lifetime = NumberRange.new(0.5, 1.1); e.Rate = 9; e.Speed = NumberRange.new(0.4, 1.2)
+	e.SpreadAngle = Vector2.new(180, 180); e.Acceleration = Vector3.new(0, 2.5, 0); e.Drag = 1
+	e.Parent = core
+	mark(m, "Tip", at(0, 0.2, -4.15))
+end
 function B.axe(m, c)
 	local wood = worn(WOOD, 0.05)
 	p(m, V(0.2, 0.26, 3.1), at(0, 0, -1.15), wood)
@@ -877,7 +940,7 @@ end
 
 -- long items lie along the shelf in the event shops
 function ItemModels.isLong(shape: string): boolean
-	local long = { bat = 1, spikedbat = 1, pan = 1, crowbar = 1, pipe = 1, shovel = 1, golf = 1, machete = 1, katana = 1, axe = 1, sledge = 1, warhammer = 1,
+	local long = { bat = 1, spikedbat = 1, pan = 1, crowbar = 1, pipe = 1, shovel = 1, golf = 1, machete = 1, katana = 1, demonblade = 1, axe = 1, sledge = 1, warhammer = 1,
 		pickaxe = 1, chainsaw = 1, shotgun = 1, cannon = 1, harpoon = 1, crossbow = 1, blower = 1, vacuum = 1, flamethrower = 1, cross = 1 }
 	return long[shape] ~= nil
 end

@@ -222,11 +222,27 @@ local function build()
 		button(ag, "KILL GHOST", O, function() cmd("killghost") end, { LayoutOrder = 3 })
 		button(ag, "END RUN", R, function() cmd("endrun") end, { LayoutOrder = 4 })
 		button(ag, "RAGDOLL GHOST", O, function() cmd("ragdoll") end, { LayoutOrder = 8 })
-		heading(page, "FORCE MONSTER (spawns now during a run)", 0.68)
-		local monG = grid(page, 6, 3.2, { Size = UDim2.fromScale(1, 0.26), Position = UDim2.fromScale(0, 0.74), ScrollBarThickness = 0 })
+		heading(page, "FORCE MONSTER (spawns now during a run)", 0.67)
+		local monG = grid(page, 9, 2.2, { Size = UDim2.fromScale(1, 0.12), Position = UDim2.fromScale(0, 0.72), ScrollBarThickness = 0 })
 		button(monG, "RANDOM", PAPER, function() cmd("monster off") end, { LayoutOrder = 0 })
 		for i, m in Monsters.list do
 			button(monG, string.upper(m.name), m.color, function() cmd("monster " .. m.id) end, { LayoutOrder = i })
+		end
+		-- boss variants (evolved forms): the first button picks the tier, the others spawn that boss now (once)
+		heading(page, "SPAWN BOSS VARIANT (now, once)", 0.84)
+		local bossG = grid(page, 9, 2.2, { Size = UDim2.fromScale(1, 0.12), Position = UDim2.fromScale(0, 0.89), ScrollBarThickness = 0 })
+		local bossTier = 1
+		local tierBtn: TextButton
+		tierBtn = button(bossG, "TIER 1", Color3.fromRGB(255, 60, 60), function()
+			bossTier = bossTier % 3 + 1
+			((tierBtn :: any).Label :: TextLabel).Text = "TIER " .. bossTier
+		end, { LayoutOrder = 0 })
+		for i, m in Monsters.list do
+			local e = Monsters.evo[m.id]
+			if e then
+				local title = string.gsub(string.upper(e.title), "^THE ", "")
+				button(bossG, title, e.color or m.color, function() cmd("boss " .. m.id .. " " .. bossTier) end, { LayoutOrder = i })
+			end
 		end
 		button(ag, "PLANE CRASH", O, function() cmd("event plane") end, { LayoutOrder = 5 })
 		button(ag, "VAN CRASH", O, function() cmd("event van") end, { LayoutOrder = 6 })

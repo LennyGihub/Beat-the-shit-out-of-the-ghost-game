@@ -6,6 +6,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Lighting = game:GetService("Lighting")
 local Debris = game:GetService("Debris")
+local Settings = require(script.Parent.Settings)
 local Config = require(RS.Shared.Config)
 local Sfx = require(script.Parent.Sfx)
 local SawAudio = require(script.Parent.SawAudio)
@@ -68,7 +69,7 @@ local function burst(pos: Vector3, color: Color3, count: number, speed: number, 
 	pe.Acceleration = Vector3.new(0, -6, 0)
 	pe.Rate = 0
 	pe.Parent = a
-	pe:Emit(count)
+	pe:Emit(Settings.fxCount(count)) -- particle setting (Settings)
 	Debris:AddItem(a, 2)
 end
 
@@ -377,7 +378,16 @@ function Fx.handle(kind: string, ...)
 			Fx.shake(heavy and 0.45 or 0.22)
 			Fx.kick(heavy and 6 or 3)
 			local tip = VM.itemTip()
-			if tip then burst(tip, Color3.fromRGB(255, 220, 160), heavy and 18 or 10, 14, 0.25, "rbxasset://textures/particles/sparkles_main.dds") end
+			if id == "DemonBlade" then
+				-- the Demon Blade bites: a burst of red-hot embers and a flash, the heavy chop (combo step 3) hits harder
+				local cleave = VM.demonStep() == 3
+				if cleave then Fx.shake(0.5); Fx.kick(7) end
+				if tip then
+					burst(tip, Color3.fromRGB(255, 40, 30), cleave and 30 or 18, cleave and 24 or 16, 0.3, "rbxasset://textures/particles/sparkles_main.dds")
+					burst(tip, Color3.fromRGB(40, 6, 6), cleave and 10 or 5, 8, 0.9)
+					flashBall(tip, Color3.fromRGB(255, 50, 40), cleave and 4 or 2.4, 0.18)
+				end
+			elseif tip then burst(tip, Color3.fromRGB(255, 220, 160), heavy and 18 or 10, 14, 0.25, "rbxasset://textures/particles/sparkles_main.dds") end
 		end
 	elseif kind == "ItemBroke" then
 		HUD.toast("YOUR " .. string.upper(args[1]) .. " IS SPENT")
@@ -424,6 +434,11 @@ function Fx.handle(kind: string, ...)
 		local k = args[1]
 		local title = k == "van" and "A VAN SMASHED INTO THE HOUSE" or (k == "train" and "THE TRAIN JUMPED THE RAILS" or "SOMEONE SURVIVED THE CRASH")
 		HUD.banner(title, "SHOP OPEN - RUN CASH ONLY", 4)
+	elseif kind == "ShopRestock" then
+		-- same wreck, new items on its shelves
+		local where, at = args[1], args[2]
+		HUD.toast("NEW STOCK AT THE " .. tostring(where or "SHOP") .. "!")
+		if typeof(at) == "Vector3" then burst(at + Vector3.new(0, 3, 0), Color3.fromRGB(255, 220, 140), 24, 12, 0.6, "rbxasset://textures/particles/sparkles_main.dds") end
 	end
 end
 

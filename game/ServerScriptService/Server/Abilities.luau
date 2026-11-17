@@ -785,6 +785,10 @@ end
 -- (Studio photo hook: RS attribute DebugFreezeGhost also holds the doubles and the crew where they are)
 function Abilities.tick(G, dt: number, now: number)
 	Loot.tick(G, dt, now)
+	-- TIME STOP (Ghost.timeStop) holds everything the monster sent out too: the Captain's crew, the Widow's doubles,
+	-- gas clouds and hellfire marks wait where they are until time moves again
+	local cur = G.current
+	local stopped = cur ~= nil and cur.ts ~= nil and now < cur.ts.untilT
 	-- shield-bashed players flying across the room: the first wall they hit hurts
 	for p, f in flyers do
 		local hrp = hrpOf(p)
@@ -819,7 +823,9 @@ function Abilities.tick(G, dt: number, now: number)
 	end
 	for i = #clouds, 1, -1 do
 		local c = clouds[i]
-		if now > c.untilT then
+		if stopped then
+			c.untilT += dt; c.nextTick += dt
+		elseif now > c.untilT then
 			table.remove(clouds, i)
 		elseif now >= c.nextTick then
 			c.nextTick = now + 0.5
@@ -834,7 +840,9 @@ function Abilities.tick(G, dt: number, now: number)
 	end
 	for i = #marks, 1, -1 do
 		local mk = marks[i]
-		if now >= mk.at then
+		if stopped then
+			mk.at += dt
+		elseif now >= mk.at then
 			table.remove(marks, i)
 			fx("HellPillar", mk.pts, mk.r)
 			for _, pt in mk.pts do
@@ -865,10 +873,14 @@ function Abilities.tick(G, dt: number, now: number)
 	local boss = G.current
 	for i = #clones, 1, -1 do
 		local c = clones[i]
+		if c.model.Parent and (c.model:GetAttribute("Frozen") == true) ~= stopped then
+			c.model:SetAttribute("Frozen", stopped) -- (Client/CrewAnim holds their pose)
+		end
 		if not c.model.Parent then
 			table.remove(clones, i)
-		elseif hold then
+		elseif hold or stopped then
 			c.untilT += dt
+			c.from += dt
 		elseif now < c.from then
 			-- standing there for a moment before they come
 		elseif now > c.untilT then
