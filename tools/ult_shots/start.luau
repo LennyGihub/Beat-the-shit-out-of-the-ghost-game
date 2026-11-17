@@ -1,0 +1,16 @@
+-- start a solo match with god mode and every ultimate unlocked (run once after tools/studio.py play)
+local RS = game:GetService("ReplicatedStorage")
+local Remotes = RS:WaitForChild("Remotes")
+local out = {}
+local ok, msg = Remotes.Admin:InvokeServer("start")
+table.insert(out, tostring(msg))
+task.wait(6)
+local _, m2 = Remotes.Admin:InvokeServer("god")
+table.insert(out, tostring(m2))
+local _, m3 = Remotes.Admin:InvokeServer("allults")
+table.insert(out, tostring(m3))
+local lp = game.Players.LocalPlayer
+local hrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
+local g = workspace:FindFirstChild("Ghost")
+table.insert(out, "me " .. tostring(hrp and hrp.Position) .. " ghost " .. tostring(g and g:GetPivot().Position) .. " state " .. tostring(g and g:GetAttribute("State")) .. " inMatch " .. tostring(lp:GetAttribute("InMatch")))
+return table.concat(out, "\n")
