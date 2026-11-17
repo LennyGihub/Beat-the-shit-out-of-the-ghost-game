@@ -106,6 +106,10 @@ local function setState(g, s: string, dur: number?)
 end
 Ghost.setState = setState
 
+-- the sandbox's training dummy (Server/Sandbox): she stands where she is, watches the nearest player and never
+-- attacks, roars or gets enraged; hits, knockbacks, freezes and burns work as always
+Ghost.passive = false
+
 function Ghost.alive(): boolean
 	return Ghost.current ~= nil and Ghost.current.state ~= "Dead"
 end
@@ -272,7 +276,7 @@ function Ghost.damage(amount: number, by: Player?)
 	if game:GetService("RunService"):IsStudio() and RS:GetAttribute("DebugGhostGod") then amount = math.min(amount, g.hp - 1) end
 	g.hp = math.max(0, g.hp - amount)
 	g.model:SetAttribute("HP", g.hp)
-	if g.hp <= 0 then die(g) else Fury.checkEnrage(g) end
+	if g.hp <= 0 then die(g) elseif not Ghost.passive then Fury.checkEnrage(g) end
 end
 
 -- ultimate effects -------------------------------------------------------
@@ -607,6 +611,8 @@ function Ghost.step(dt: number)
 		if outside(body.Position) then bringBack(g); return end
 	end
 	local target, thrp = pickTarget(g)
+	local watch = thrp -- (passive) the player she turns to
+	if Ghost.passive then target, thrp = nil, nil end -- nobody to chase or hit
 	g.target = target
 	local pos = g.hrp.Position
 	if s == "Ragdoll" then
@@ -628,7 +634,7 @@ function Ghost.step(dt: number)
 	end
 	if s == "Launched" then return stepLaunched(g, dt) end
 	-- Fury: a long beating doesn't stunlock it: it roars or swipes back straight out of a stagger
-	if (s == "Knocked" or s == "Recover") and now >= g.frozenUntil then
+	if (s == "Knocked" or s == "Recover") and now >= g.frozenUntil and not Ghost.passive then
 		if Fury.roarCheck(g, Ghost, now, target) or Fury.counterCheck(g, Ghost, now, target, thrp) then return end
 	end
 	if s == "Knocked" then return stepKnocked(g, dt, now) end
@@ -669,6 +675,7 @@ function Ghost.step(dt: number)
 		if now > g.stateUntil then setState(g, "Chase") end
 	elseif s == "Chase" then
 		if not thrp then
+			if watch then face(watch.Position) end
 			g.lv.VectorVelocity = Vector3.new(0, (hoverY - pos.Y) * 4, 0)
 			return
 		end

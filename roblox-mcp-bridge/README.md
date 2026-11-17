@@ -20,12 +20,27 @@ Roblox Studio ⇄ mcp.bat (stdio, ONE copy) ⇄ mcp-gateway.js :8765 (127.0.0.1,
    asks for the bridge key through a secure form: paste the content of
    `%USERPROFILE%\roblox-mcp-bridge-key.txt` there, never in the chat.
 
+## Without the tunnel: GitHub sync
+
+ngrok's free plan has a monthly bandwidth limit; once it is used up (error `ERR_NGROK_725`) no cloud session can
+reach Studio until the next month. Scripts still get into the game:
+
+```
+cloud Claude -> git push (main, folder pending/src) -> GitHub -> pull-from-github.js on the PC -> mcp-gateway.js -> Studio
+```
+
+`start-bridge.bat` opens a **GitHub sync** window (`pull-from-github.js --watch`). Every 15 seconds it looks at the
+`main` branch of the game's public repo and writes each new or changed script of `pending/src/` into the open
+Studio (Edit mode only: it waits while a playtest runs). Nothing to log in to, no tunnel. It is one way: Claude
+cannot see Studio through it (no playtest, no screenshots), so save the place and tell Claude what you see.
+`node pull-from-github.js --all` pushes every pending script again.
+
 ## Each time you want to test
 
 1. Open Roblox Studio on your place, check **MCP Ready** (bottom-right).
-2. Double-click `start-bridge.bat` (two windows open: gateway + ngrok).
+2. Double-click `start-bridge.bat` (four windows open: gateway, image relay, GitHub sync, ngrok).
 3. Start a **new** cloud session on this game's environment (`Ghost ahh game`).
-4. When done, close both windows: the bridge is off and nothing can reach Studio.
+4. When done, close the windows: the bridge is off and nothing can reach Studio.
 
 ## Safety
 

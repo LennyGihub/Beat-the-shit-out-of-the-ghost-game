@@ -394,6 +394,7 @@ function Fx.handle(kind: string, ...)
 		Sfx.play("Click", { PlaybackSpeed = 0.8 })
 	elseif kind == "BackInLobby" then
 		HUD.banner("BACK IN THE PARK", "", 2.5)
+		setMusic(false) -- the fight music stays in the house
 	elseif kind == "Lift" then
 		Sfx.at("PunchLight", args[1], { PlaybackSpeed = 0.5, Volume = 0.6 })
 	elseif kind == "Throw" then

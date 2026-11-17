@@ -224,6 +224,12 @@ function Combat.endUltimate(player: Player)
 	sync(player, s, true)
 end
 
+-- let go of the furniture in the hands (leaving the sandbox)
+function Combat.release(player: Player)
+	local s = st(player)
+	if s.carrying then dropCarried(player, s) end
+end
+
 function Combat.fillBrutality(player: Player)
 	local s = st(player)
 	if not ult(s) then s.brut = BR.Max; sync(player, s, true) end
@@ -399,7 +405,9 @@ local function onUltimate(player: Player)
 	if not hum or not hrp then return end
 	local s = st(player)
 	if ult(s) or s.brut < BR.Max then return end
-	local def = Ultimates.byId[Data.equipped(player)] or Ultimates.byId[Ultimates.default]
+	-- the sandbox fires the ultimate on trial (owned or not: Server/Sandbox sets TrialUlt), a run the equipped one
+	local trial = player:GetAttribute("Sandbox") and player:GetAttribute("TrialUlt")
+	local def = Ultimates.byId[type(trial) == "string" and trial or Data.equipped(player)] or Ultimates.byId[Ultimates.default]
 	s.ultDur = def.dur * Combat.stat(player, "ultDuration")
 	s.ultUntil = os.clock() + s.ultDur
 	s.buff = def.buff
@@ -673,6 +681,8 @@ function Combat.start()
 				s.onePunch = false
 				setWalk(p, s)
 				sync(p, s, true)
+			elseif p:GetAttribute("Sandbox") and s.brut < BR.Max then
+				s.brut = math.min(BR.Max, s.brut + BR.Max * dt / 1.5) -- the sandbox: the next ultimate is ready in 1.5 s
 			end
 			if s.combo > 0 and not buff(s, "comboLock") and now - s.lastHit > P.ComboWindow * Combat.stat(p, "combo") then s.combo = 0 end
 			if s.carrying and (not s.carrying.Parent or s.carrying:GetAttribute("Broken")) then

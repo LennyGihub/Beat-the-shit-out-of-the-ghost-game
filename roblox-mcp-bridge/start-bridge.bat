@@ -42,10 +42,15 @@ start "Roblox MCP gateway" cmd /k "set PORT=%PORT%&& set KEYFILE=%KEYFILE%&& set
 rem 4b) Image relay: lets Studio upload images from the public game-art repo via localhost
 start "Image relay" cmd /k node "%~dp0image-relay.js"
 
+rem 4c) GitHub sync: scripts that cloud sessions commit to pending/src on the main branch go into Studio
+rem     by themselves (Edit mode). It needs no tunnel: it keeps working when ngrok is off or over its limit.
+start "GitHub sync" cmd /k "set PORT=%PORT%&& set KEYFILE=%KEYFILE%&& node "%~dp0pull-from-github.js" --watch"
+
 rem 5) Public https address for the cloud session
 start "ngrok tunnel" cmd /k ngrok http %PORT% --domain=%NGROK_DOMAIN%
 
 echo.
 echo Bridge starting. Cloud sessions connect to: https://%NGROK_DOMAIN%/mcp
-echo Keep Roblox Studio open with "MCP Ready". Close the two new windows to stop.
+echo Keep Roblox Studio open with "MCP Ready". Close the new windows to stop.
+echo The "GitHub sync" window pulls pending scripts from GitHub into Studio, tunnel or not.
 pause
