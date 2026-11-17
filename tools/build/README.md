@@ -54,3 +54,12 @@ Monsters (ServerStorage.Monsters.<id>) and item meshes (ReplicatedStorage.ItemMe
 Motor6Ds with the R15 joint names the GhostAnim code drives. Items: `generate_mesh` upright, pivot moved to the grip,
 rotated so the item points toward -Z.
 
+-> `lobby_detail` (standalone, after `lobby_remake` / `lobby_night`; safe to re-run): the lobby's detail pass. Shop booth to the north
+   end of the path, quest board to the west end, the new bestiary altar at the south end (Lobby.BestiaryAltar), a cobbled plaza with
+   a fountain and a signpost, gates on the four paths, graveyard, camp, pumpkin patch, pond, playground. EVERY PROP IS HAND-BUILT
+   from blocks (its `BUILD.*` functions): no AI meshes, the user banned `generate_mesh` for this game.
+-> `shop_stall` (standalone): ServerStorage.ShopStall, the run shop's long market stall (six bays, Slot1..6); Server/Events stands it
+   by every event's wreck and hangs a price board over each item.
+-> `rat` (standalone): ServerStorage.Monsters.Rat = The Sewer Rat, a hand-built blocky rig like the Demon's.
+-> `maps/sewer.luau` (prepend `lib2 furn_lib maplib`): The Old Sewer (ServerStorage.Maps.Sewer); then `detail` (TARGET = "Sewer"),
+   `phones` and `doors_clear`. (No `furnish` list for it: its furniture is placed by hand in the map file.)
