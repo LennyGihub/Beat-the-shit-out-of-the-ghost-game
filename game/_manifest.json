@@ -467,8 +467,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/UltFx.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.UltFx",
    "class": "ModuleScript",
-   "bytes": 28691,
-   "sha1": "6430b3c478657d3c57c4196eec640c18943272b3"
+   "bytes": 28703,
+   "sha1": "7672a101f06b128c7df53b414e84736fbfcbfa82"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/UltKit.luau",

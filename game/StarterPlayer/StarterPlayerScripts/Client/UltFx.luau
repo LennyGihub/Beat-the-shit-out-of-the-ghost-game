@@ -319,7 +319,7 @@ end
 -- a pillar of white gold; the floor's dust rises with you
 function sigs.god(_by, def, pos, floor)
 	local gold = rgb(255, 236, 170)
-	Kit.column(floor, 2, 9, 90, gold, 1.4, 0.3, 0.35)
+	Kit.column(floor, 1.5, 5.5, 90, gold, 1.2, 0.55, 0.3)
 	for i = 0, 4 do
 		Kit.after(i * 0.1, function()
 			Kit.ring(floor + UP * (0.5 + i * 2.2), { r0 = 1, r1 = 6 + i, n = 16, h = 0.4, w = 0.4, color = i % 2 == 0 and WHITE or gold, dur = 0.7, lift = false })
@@ -501,7 +501,7 @@ function UltFx.cast(pos: Vector3, by: Player, ultId: string?)
 		look = look.Magnitude > 0.1 and look.Unit or Vector3.zAxis
 		Kit.ring(floor, { r0 = 0.8, r1 = 5 + rarity * 1.5, n = 14, h = 0.9, h1 = 0.2, w = 0.5, color = color:Lerp(WHITE, 0.5), dur = 0.35 })
 		if rarity >= 4 then
-			Kit.column(floor, 0.6, 2 + rarity, 50, color:Lerp(WHITE, 0.4), 0.6, 0.4)
+			Kit.column(floor, 0.6, 1.4 + rarity * 0.5, 50, color:Lerp(WHITE, 0.4), 0.5, 0.6)
 			Kit.ring(floor, { r0 = 1, r1 = 12 + rarity * 2, n = 20, h = 0.4, w = 0.6, color = color, dur = 0.55 })
 		end
 		own = mine and (workspace.CurrentCamera.CFrame.Position - p).Magnitude < 4
