@@ -31,6 +31,7 @@ local Monetization = require(Server.Monetization)
 local Leaderboards = require(Server.Leaderboards)
 local Quests = require(Server.Quests)
 local Vip = require(Server.Vip)
+local Mobile = require(Server.Mobile)
 local Sandbox = require(Server.Sandbox)
 local Bestiary = require(Server.Bestiary)
 
@@ -52,6 +53,7 @@ Admin.start()
 Friends.start()
 Monetization.start()
 Vip.start()
+Mobile.start() -- mobile players: longer reach, far lifting, a weaker monster
 Quests.start()
 Leaderboards.start(Run.mode == "Lobby") -- the lobby's global leaderboards (kills, highest wave, money)
 Bestiary.start(Run.mode == "Lobby") -- the lobby's bestiary: display copies of every monster

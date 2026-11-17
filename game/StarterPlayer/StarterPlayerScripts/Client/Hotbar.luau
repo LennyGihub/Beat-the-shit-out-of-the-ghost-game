@@ -10,6 +10,7 @@ local VM = require(script.Parent.Viewmodel)
 local Sfx = require(script.Parent.Sfx)
 local SawAudio = require(script.Parent.SawAudio)
 local Platform = require(script.Parent.Platform)
+local Config = require(RS.Shared.Config)
 local Remotes = RS:WaitForChild("Remotes")
 
 local Hotbar = {}
@@ -167,7 +168,8 @@ local function setSpray(on: boolean, it)
 			sprayEmitter = pe
 		end
 		local pe = sprayEmitter :: ParticleEmitter
-		local reach = it.range or 18 -- the spray visibly reaches as far as it hits
+		-- the spray visibly reaches as far as it hits (further on touch controls: Config.Mobile.Reach)
+		local reach = (it.range or 18) * (Platform.mode() == "touch" and Config.Mobile.Reach or 1)
 		pe.Speed = NumberRange.new(reach * 1.7, reach * 2.5)
 		local fire = it.id == "Flamethrower"
 		-- real flames for the flamethrower, smoke-like puffs for the others

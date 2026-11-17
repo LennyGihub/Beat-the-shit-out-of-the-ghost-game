@@ -206,6 +206,10 @@ function UI.init(toggled: (boolean) -> ())
 	end
 	label()
 	Platform.changed:Connect(label)
+	-- small screens: the button steps aside while a window is open (it would sit on the window's corner)
+	local function show() openBtn.Visible = not (Platform.compact() and Platform.windowOpen()) end
+	Platform.windowChanged:Connect(show)
+	Platform.changed:Connect(show)
 	Settings.changed:Connect(function(k) if k == "binds" then label() end end)
 end
 

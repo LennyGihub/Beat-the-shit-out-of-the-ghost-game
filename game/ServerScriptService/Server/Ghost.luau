@@ -16,6 +16,7 @@ local MapLoader = require(script.Parent.MapLoader)
 local Fury = require(script.Parent.Fury)
 local Evolved = require(script.Parent.Evolved)
 local Entrances = require(RS.Shared.Entrances)
+local Mobile = require(script.Parent.Mobile)
 local C = Config.Ghost
 
 local Ghost = {}
@@ -208,7 +209,9 @@ function Ghost.spawn(level: number, pos: Vector3, monsterId: string?, evoTier: n
 	-- more players = a stronger, faster monster (Config.Scaling)
 	local SC = Config.Scaling
 	local extra = teamSize() - 1
-	local maxHp = math.floor((C.BaseHP + (level - 1) * C.HPPerLevel) * def.hp * Ghost.diff.hp * (1 + extra * SC.HpPerPlayer))
+	-- mobile players in the run = a much weaker monster (Server/Mobile)
+	local ease = Mobile.ease()
+	local maxHp = math.floor((C.BaseHP + (level - 1) * C.HPPerLevel) * def.hp * Ghost.diff.hp * (1 + extra * SC.HpPerPlayer) * ease.hp)
 	local intro = entrance and Entrances.of(def.id) or Entrances.plain
 	local late = intro - Entrances.plain -- its first attack, ability and power wait for the entrance to end
 	m:SetAttribute("EntranceTime", entrance and intro or 0)
@@ -223,6 +226,7 @@ function Ghost.spawn(level: number, pos: Vector3, monsterId: string?, evoTier: n
 	m:SetAttribute("Ability", "")
 	m:SetAttribute("Evolved", (def :: any).evolved == true)
 	m:SetAttribute("TeamSize", extra + 1)
+	m:SetAttribute("MobileEase", ease.hp) -- 1 = no mobile player in the run
 	-- the whole monster reaches each client in one go (with streaming on, its parts could otherwise arrive
 	-- after the model and its animation would have nothing to drive)
 	m.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
@@ -235,8 +239,8 @@ function Ghost.spawn(level: number, pos: Vector3, monsterId: string?, evoTier: n
 		damageBy = {} :: { [Player]: number }, target = nil :: Player?, rp = structParams(),
 		frozenUntil = 0, slowMult = 1, slowUntil = 0, vulnMult = 1, vulnUntil = 0, burns = {}, ts = nil :: any, launch = nil :: any, fire = nil :: { Instance }?,
 		def = def, hover = hover, bob = def.walker and 0 or 0.35, ab = nil :: any, nextAbility = os.clock() + 5 + late,
-		speedMult = def.speed * Ghost.diff.speed * (1 + extra * SC.SpeedPerPlayer),
-		dmgMult = def.dmg * Ghost.diff.dmg * (1 + extra * SC.DmgPerPlayer),
+		speedMult = def.speed * Ghost.diff.speed * (1 + extra * SC.SpeedPerPlayer) * ease.speed,
+		dmgMult = def.dmg * Ghost.diff.dmg * (1 + extra * SC.DmgPerPlayer) * ease.dmg,
 		evolved = (def :: any).evolved == true, evo = nil :: any, nextPower = os.clock() + 6 + late,
 		cdBase = ((def :: any).atk or 1) * math.max(0.6, 1 - extra * SC.CooldownPerPlayer),
 	}

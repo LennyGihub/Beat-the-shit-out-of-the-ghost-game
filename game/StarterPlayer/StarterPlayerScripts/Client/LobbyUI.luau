@@ -243,7 +243,8 @@ end
 
 local function refreshVisible()
 	local inMatch = lp:GetAttribute("InMatch") == true
-	side.Visible = not inMatch
+	-- small screens: the buttons step aside while a window is open (they would sit on top of it)
+	side.Visible = not inMatch and not (Platform.compact() and Platform.windowOpen())
 	if inMatch and panel.Visible then setOpen(false) end
 	local b = lp:GetAttribute("FriendBoost") or 0
 	local n = lp:GetAttribute("FriendCount") or 0
@@ -406,6 +407,8 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 	RS:GetAttributeChangedSignal("Parties"):Connect(refreshList)
 	for _, a in { "PartyId", "Owned" } do lp:GetAttributeChangedSignal(a):Connect(function() refreshPicks(); refreshList() end) end
 	for _, a in { "InMatch", "FriendBoost", "FriendCount" } do lp:GetAttributeChangedSignal(a):Connect(refreshVisible) end
+	Platform.windowChanged:Connect(refreshVisible)
+	Platform.changed:Connect(refreshVisible)
 	refreshVisible()
 	-- Studio test hook: player attribute LobbyOpen = true opens the PLAY panel
 	if game:GetService("RunService"):IsStudio() then

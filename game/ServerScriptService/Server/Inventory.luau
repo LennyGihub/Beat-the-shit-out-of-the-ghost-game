@@ -11,6 +11,7 @@ local Combat = require(script.Parent.Combat)
 local Ragdoll = require(script.Parent.Ragdoll)
 local Fire = require(script.Parent.Fire)
 local Furniture = require(script.Parent.Furniture)
+local Mobile = require(script.Parent.Mobile)
 
 local Inventory = {}
 local SLOTS = 5
@@ -180,7 +181,7 @@ local function useMelee(p: Player, n: number, it, dir: Vector3, charge: number)
 	if not Combat.useStamina(p, it.stamina * (1 + charge * Config.Charge.StaminaBonus)) then return end
 	consume(p, n)
 	local _, _, head = alive(p)
-	if head and Ghost.hitClone(head.Position, dir, it.range, charge) then
+	if head and Ghost.hitClone(head.Position, dir, it.range * Mobile.reach(p), charge) then
 		Remotes.Fx:FireAllClients("ItemSwing", p, it.id, true)
 		return
 	end
@@ -255,12 +256,13 @@ local function useGun(p: Player, n: number, it, dir: Vector3)
 	local o = (head :: BasePart).Position
 	local g = ghostAlive()
 	local total, hits = 0, 0
+	local range = it.range * Mobile.reach(p) -- (a mobile player's shots carry further)
 	local endPoints = {}
 	local firstHit: { part: BasePart, at: Vector3, d: Vector3 }? = nil
 	for _ = 1, it.pellets do
 		local d = (dir + Vector3.new(rng:NextNumber(-1, 1), rng:NextNumber(-1, 1), rng:NextNumber(-1, 1)) * it.spread).Unit
-		local endPt = o + d * it.range
-		local wall = workspace:Raycast(o, d * it.range, structure())
+		local endPt = o + d * range
+		local wall = workspace:Raycast(o, d * range, structure())
 		if wall then endPt = wall.Position end
 		if g then
 			for _, name in { "UpperTorso", "Head", "HumanoidRootPart", "LowerTorso" } do
@@ -353,6 +355,7 @@ local function useSpray(p: Player, n: number, it, dir: Vector3)
 	local _, _, head = alive(p)
 	if not head then return end
 	consume(p, n)
+	local range = it.range * Mobile.reach(p) -- (a mobile player's spray carries further and needs less aim)
 	-- flamethrower: the wood it is aimed at catches fire
 	if it.fx and it.fx.burn and os.clock() - (lastFlame[p] or 0) > 0.35 then
 		lastFlame[p] = os.clock()
@@ -362,7 +365,7 @@ local function useSpray(p: Player, n: number, it, dir: Vector3)
 		local gm = workspace:FindFirstChild("Ghost")
 		if gm then table.insert(ex, gm) end
 		rp.FilterDescendantsInstances = ex
-		local r = workspace:Raycast((head :: BasePart).Position, dir.Unit * it.range, rp)
+		local r = workspace:Raycast((head :: BasePart).Position, dir.Unit * range, rp)
 		-- what the flamethrower hits catches a WILDFIRE that spreads through the whole house (Fire.wildfire)
 		if r and r.Instance:IsA("BasePart") then Fire.wildfire(r.Instance, r.Position, r.Normal, p) end
 	end
@@ -370,7 +373,7 @@ local function useSpray(p: Player, n: number, it, dir: Vector3)
 	if not g then return end
 	local o = (head :: BasePart).Position
 	local to = g.hrp.Position - o
-	if to.Magnitude > it.range or dir:Dot(to.Unit) < it.cone then return end
+	if to.Magnitude > range or dir:Dot(to.Unit) < Mobile.cone(p, it.cone) then return end
 	if workspace:Raycast(o, to, structure()) then return end
 	Ghost.damage(it.dps * 0.1, p)
 	local fx = it.fx or {}

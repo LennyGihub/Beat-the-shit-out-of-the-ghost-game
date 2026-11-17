@@ -13,6 +13,7 @@ local Ghost = require(script.Parent.Ghost)
 local Quests = require(script.Parent.Quests)
 local Ragdoll = require(script.Parent.Ragdoll)
 local Fury = require(script.Parent.Fury)
+local Mobile = require(script.Parent.Mobile)
 local P, ST, BR, CA = Config.Punch, Config.Stamina, Config.Brutality, Config.Carry
 
 local Combat = {}
@@ -276,20 +277,22 @@ function Combat.giant(player: Player, scale: number, dur: number)
 	end)
 end
 
--- where a strike from this player's head along dir hits the ghost (nil = miss)
+-- where a strike from this player's head along dir hits the ghost (nil = miss). A mobile player reaches further and
+-- needs less aim (Server/Mobile).
 function Combat.tryHit(player: Player, dir: Vector3, range: number): Vector3?
 	local _, hrp = alive(player)
 	local g = Ghost.current
 	if not hrp or not g or not Ghost.alive() or g.state == "Spawn" or g.model:GetAttribute("Vanish") then return nil end
 	local head = (player.Character :: Model):FindFirstChild("Head") :: BasePart?
 	local from = head and head.Position or hrp.Position
-	range *= math.max(1, (player.Character :: Model):GetScale())
+	range *= math.max(1, (player.Character :: Model):GetScale()) * Mobile.reach(player)
+	local cone = Mobile.cone(player, P.ConeDot)
 	local best, hitPos = math.huge, nil
 	for _, name in { "HumanoidRootPart", "UpperTorso", "Head", "LowerTorso" } do
 		local part = g.model:FindFirstChild(name) :: BasePart?
 		if part then
 			local to = part.Position - from
-			if to.Magnitude < best and dir:Dot(to.Unit) >= P.ConeDot then best = to.Magnitude; hitPos = part.Position end
+			if to.Magnitude < best and dir:Dot(to.Unit) >= cone then best = to.Magnitude; hitPos = part.Position end
 		end
 	end
 	if best <= range then return hitPos end
@@ -395,7 +398,7 @@ local function onPunch(player: Player, look: any, rawCharge: any)
 	if not Combat.useStamina(player, P.StaminaCost * (1 + charge * CH.StaminaBonus)) then return end
 	s.lastPunch = now
 	local head = (player.Character :: Model):FindFirstChild("Head") :: BasePart?
-	local clonePos = Ghost.hitClone((head or hrp).Position, dir, P.Range, charge)
+	local clonePos = Ghost.hitClone((head or hrp).Position, dir, P.Range * Mobile.reach(player), charge)
 	if clonePos then
 		Remotes.Fx:FireAllClients("Hit", clonePos, 1, 0, false, player)
 		sync(player, s, true)
@@ -433,7 +436,7 @@ local function onGrab(player: Player, m: any)
 	if s.carrying then return end
 	if not Furniture.isValid(m) or m:GetAttribute("CarriedBy") then return end
 	local cf, size = m:GetBoundingBox()
-	if (cf.Position - hrp.Position).Magnitude > CA.Range + size.Magnitude / 2 then return end
+	if (cf.Position - hrp.Position).Magnitude > Mobile.liftRange(player) + size.Magnitude / 2 then return end -- (far for a mobile player)
 	if Furniture.grab(player, m) then
 		s.carrying = m
 		player:SetAttribute("Carrying", true)

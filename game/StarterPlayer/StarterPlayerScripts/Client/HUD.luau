@@ -242,6 +242,7 @@ function HUD.update(dt: number)
 	if not inMatch then
 		local q = lp:GetAttribute("QueueRoom")
 		obj = q and "WAITING FOR PLAYERS..." or (lp:GetAttribute("PartyId") and "IN A LOBBY - THE HOST PRESSES START" or "PRESS PLAY OR STEP ON A ROOM PAD")
+		if Platform.windowOpen() then obj = "" end -- a window is open: no line of text behind (or sticking out above) it
 	end
 	objective.Text = obj
 	objective.Visible = obj ~= ""

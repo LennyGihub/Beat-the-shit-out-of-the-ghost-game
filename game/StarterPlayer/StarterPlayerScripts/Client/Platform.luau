@@ -2,7 +2,11 @@
 -- Which controls the player is using right now (keyboard / gamepad / touch), button names for hints, and
 -- controller navigation of the menus: a registered menu that is open gets its first button selected
 -- (the stick / d-pad moves between buttons, A presses) and B closes it.
--- Studio test hook: player attribute DebugPlatform = "keyboard" | "gamepad" | "touch" forces a mode.
+-- Small screens (Platform.compact: touch controls, or a short window): an open menu window is moved down so it
+-- clears Roblox's top bar buttons, and Platform.windowChanged tells the lobby's own buttons to step aside
+-- (Platform.windowOpen) so nothing sits on top of the window.
+-- Studio test hooks: player attribute DebugPlatform = "keyboard" | "gamepad" | "touch" forces a mode; DebugInset =
+-- pixels: pretends Roblox's top bar is that tall.
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local GuiService = game:GetService("GuiService")
@@ -12,6 +16,8 @@ local Platform = {}
 local lp = Players.LocalPlayer
 local changed = Instance.new("BindableEvent")
 Platform.changed = changed.Event
+local windowChanged = Instance.new("BindableEvent")
+Platform.windowChanged = windowChanged.Event -- (open: boolean) a menu window opened / the last one closed
 
 local GAMEPAD = {
 	[Enum.UserInputType.Gamepad1] = true, [Enum.UserInputType.Gamepad2] = true,
@@ -43,6 +49,12 @@ local function setMode(m: string)
 	changed:Fire(Platform.mode())
 end
 
+-- a small screen: a phone / tablet (touch controls) or a short window
+function Platform.compact(): boolean
+	local cam = workspace.CurrentCamera
+	return Platform.mode() == "touch" or (cam ~= nil and cam.ViewportSize.Y < 520)
+end
+
 -- controller buttons for each action (fixed)
 Platform.PAD = {
 	Punch = "R2", Lift = "L2", Ultimate = "Y", Sprint = "L3", Drop = "D-PAD DOWN", Use = "X", Settings = "D-PAD LEFT",
@@ -63,7 +75,7 @@ function Platform.label(action: string): string
 end
 
 -- MENUS ------------------------------------------------------------------------------------------------
-type Menu = { root: GuiObject, close: (() -> ())?, order: number }
+type Menu = { root: GuiObject, close: (() -> ())?, order: number, pos: UDim2, size: UDim2 }
 local menus = {} :: { Menu }
 local counter = 0
 
@@ -79,7 +91,7 @@ end
 -- register a menu window (root) and how to close it (B on a controller)
 function Platform.menu(root: GuiObject, close: (() -> ())?)
 	counter += 1
-	table.insert(menus, { root = root, close = close, order = counter })
+	table.insert(menus, { root = root, close = close, order = counter, pos = root.Position, size = root.Size })
 end
 
 local function openMenu(): Menu?
@@ -109,6 +121,39 @@ local function firstButton(root: GuiObject): GuiObject?
 		end
 	end
 	return best
+end
+
+-- small screens: a window whose top would sit under Roblox's top bar (its buttons cover a title) is moved below
+-- it, and made less tall if it no longer fits. Everywhere else it keeps the place it was built at.
+local function fit(m: Menu)
+	local pos, size = m.pos, m.size
+	local cam = workspace.CurrentCamera
+	if Platform.compact() and cam and pos.Y.Offset == 0 and size.Y.Offset == 0 then
+		local inset = GuiService:GetGuiInset().Y
+		local dbg = RunService:IsStudio() and lp:GetAttribute("DebugInset")
+		if type(dbg) == "number" then inset = dbg end
+		local ay = m.root.AnchorPoint.Y
+		local top = (inset + 10) / math.max(1, cam.ViewportSize.Y)
+		if pos.Y.Scale - size.Y.Scale * ay < top then
+			local h = math.min(size.Y.Scale, 0.965 - top)
+			size = UDim2.new(size.X, UDim.new(h, 0))
+			pos = UDim2.new(pos.X, UDim.new(top + h * ay, 0))
+		end
+	end
+	if m.root.Position ~= pos then m.root.Position = pos end
+	if m.root.Size ~= size then m.root.Size = size end
+end
+
+local windowIsOpen = false
+function Platform.windowOpen(): boolean return windowIsOpen end
+-- every frame: place the open window, tell the listeners when one opens / the last one closes
+local function windowStep()
+	local m = openMenu()
+	if m then fit(m) end
+	if (m ~= nil) ~= windowIsOpen then
+		windowIsOpen = m ~= nil
+		windowChanged:Fire(windowIsOpen)
+	end
 end
 
 local wasOpen: Menu? = nil
@@ -148,6 +193,7 @@ function Platform.init()
 			navStep()
 		end
 	end)
+	RunService.RenderStepped:Connect(windowStep)
 end
 
 return Platform

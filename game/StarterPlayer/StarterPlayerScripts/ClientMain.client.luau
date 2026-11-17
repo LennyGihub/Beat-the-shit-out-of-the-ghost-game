@@ -55,6 +55,14 @@ local BestiaryUI = require(Client.BestiaryUI)
 local Entrance = require(Client.Entrance)
 
 Platform.init()
+-- the server is told which controls this player uses: touch players reach further, lift from far and face a weaker
+-- monster (Server/Mobile)
+do
+	local remote = Remotes:WaitForChild("Platform") :: RemoteEvent
+	local function report() remote:FireServer(Platform.mode()) end
+	Platform.changed:Connect(report)
+	report()
+end
 LockOn.init() -- phones: the LOCK button keeps the view on the monster
 Settings.init()
 HUD.init()

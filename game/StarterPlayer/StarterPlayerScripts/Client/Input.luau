@@ -32,14 +32,17 @@ function Input.setShopOpen(on: boolean) shopOpen = on end
 
 local function look(): Vector3 return cam.CFrame.LookVector end
 
--- furniture you are looking at (or right in front of you)
+-- furniture you are looking at (or right in front of you). On touch controls: from far away (Config.Mobile.LiftRange,
+-- checked again by the server), and roughly looking at it is enough.
 local function aimedFurniture(): Model?
 	local f = workspace:FindFirstChild("Mansion") and workspace.Mansion:FindFirstChild("Furniture")
 	if not f then return nil end
+	local mobile = Platform.mode() == "touch"
+	local reach = mobile and Config.Mobile.LiftRange or Config.Carry.Range
 	local rp = RaycastParams.new()
 	rp.FilterType = Enum.RaycastFilterType.Include
 	rp.FilterDescendantsInstances = { f }
-	local r = workspace:Raycast(cam.CFrame.Position, look() * (Config.Carry.Range + 2), rp)
+	local r = workspace:Raycast(cam.CFrame.Position, look() * (reach + 2), rp)
 	local function modelOf(p: Instance): Model?
 		local m: Instance? = p
 		while m and m.Parent ~= f do m = m.Parent end
@@ -52,15 +55,31 @@ local function aimedFurniture(): Model?
 	local hrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	if not hrp then return nil end
 	local best, bestD = nil, 7
+	-- touch: else the piece nearest to the middle of the screen, up to the far reach, with nothing of the house in
+	-- the way
+	local far, farDot = nil, 0.86
+	local structure = workspace.Mansion:FindFirstChild("Structure")
+	local sp: RaycastParams? = nil
+	if mobile and structure then
+		sp = RaycastParams.new()
+		sp.FilterType = Enum.RaycastFilterType.Include
+		sp.FilterDescendantsInstances = { structure }
+	end
+	local eye = cam.CFrame.Position
 	for _, m in f:GetChildren() do
 		if m:IsA("Model") and CS:HasTag(m, "Furniture") and not m:GetAttribute("CarriedBy") then
 			local c = m:GetBoundingBox().Position
 			local to = c - hrp.Position
 			local d = Vector3.new(to.X, 0, to.Z).Magnitude
 			if d < bestD and look():Dot(to.Unit) > 0.3 then best, bestD = m, d end
+			if mobile and to.Magnitude <= reach then
+				local fromEye = c - eye
+				local dot = fromEye.Magnitude > 0.5 and look():Dot(fromEye.Unit) or 0
+				if dot > farDot and not (sp and workspace:Raycast(eye, fromEye, sp)) then far, farDot = m, dot end
+			end
 		end
 	end
-	return best
+	return best or far
 end
 
 local triggerHeld = false -- the hit button / key / trigger is held down (keep hitting, keep spraying)

@@ -102,6 +102,12 @@ local Config = {
 		BurstCap = 0.4, BurstWindow = 3,
 	},
 	-- more players = a stronger monster: each extra player adds this much (2 players = x1.55 health, 4 = x2.65)
+	-- MOBILE PLAYERS (touch controls; Server/Mobile). Reach = x the range of their punches, melee weapons, sprays and
+	-- shotguns; ConeDot = how well a hit must be aimed (Punch.ConeDot is 0.4; 0 = anywhere in front); LiftRange =
+	-- studs from which they lift furniture (Carry.Range is 11). Monster* = what the monster's health / damage /
+	-- speed are multiplied by when the whole team is on mobile; one mobile player in a mixed team already gives
+	-- MixedShare of that effect.
+	Mobile = { Reach = 2, ConeDot = 0, LiftRange = 45, MonsterHp = 0.45, MonsterDmg = 0.5, MonsterSpeed = 0.8, MixedShare = 0.5 },
 	Scaling = { HpPerPlayer = 0.55, DmgPerPlayer = 0.1, SpeedPerPlayer = 0.05, CooldownPerPlayer = 0.06 },
 	-- VIP Game Pass (Shared/Passes): run cash multiplier
 	Vip = { CashBonus = 1.2 },
