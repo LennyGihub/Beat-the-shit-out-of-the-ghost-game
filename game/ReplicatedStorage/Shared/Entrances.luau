@@ -12,6 +12,7 @@ local TIME: { [string]: number } = {
 	Goblin = 4.8, -- smoke puffs all over the room, a somersault out of the last one
 	Caller = 5.4, -- the phone rings in the dark; each flash of light shows him closer
 	Conqueror = 5.6, -- a portal tears open and he walks out of it, fist raised
+	Rat = 4.8, -- the floor bulges and cracks, he bursts out of it and shrieks
 }
 return {
 	time = TIME,

@@ -112,7 +112,7 @@ for _, k in { "WallSmash", "GhostVanish", "ItemSwing", "Hit", "GoblinUse", "Wall
 	"TrapSnap", "Tracer", "TitanHeal", "TitanEat", "TimeStop", "PlayerHit", "LaserEnd", "GoblinDrop", "GhostWindUp", "GhostScream", "Ultimate",
 	"UltFling", "TimeResume", "Throw", "Tased", "SnapWind", "Smash", "ShotgunPump", "ShotgunFire", "ShotgunAim", "ShieldBlock", "RoarWind", "Roar",
 	"OnePunch", "LungeWind", "Lunge", "Lift", "LaserWind", "LaserBeam", "HouseOnFire", "GoblinSteal", "GhostSpawn", "GhostRagdoll", "GhostDeath",
-	"FurySmash", "FuryArmor", "Enraged", "CounterWind", "ChargedHit", "AmbushStrike", "AbilityWind", "Entrance" } do
+	"FurySmash", "FuryArmor", "Enraged", "CounterWind", "ChargedHit", "AmbushStrike", "AbilityWind", "Entrance", "DemonSummon", "RatDashWarn", "RatDash", "RatDizzy", "RatDig", "RatTrail", "RatWarn", "RatErupt" } do
 	FIGHT[k] = true
 end
 

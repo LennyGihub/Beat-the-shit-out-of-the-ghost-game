@@ -220,8 +220,8 @@ local function setSpray(on: boolean, it)
 			flameRoar = Sfx.loop("PlaneEngine", { PlaybackSpeed = 0.5, Volume = 0.4 })
 		end
 		-- wind items sound like a vacuum
-		if (it.id == "LeafBlower" or it.id == "ShopVac") and not vacSound then
-			vacSound = Sfx.loop("Vacuum", { PlaybackSpeed = it.id == "LeafBlower" and 1.15 or 0.95 })
+		if it.id == "LeafBlower" and not vacSound then
+			vacSound = Sfx.loop("Vacuum", { PlaybackSpeed = 1.15 })
 		end
 	else
 		if sprayEmitter then sprayEmitter.Enabled = false end

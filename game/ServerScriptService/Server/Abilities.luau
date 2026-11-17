@@ -89,6 +89,7 @@ function Abilities.interrupt(g)
 		Remotes.Fx:FireClient(g.ab.victim, "Released") -- knocked out of his grip: the victim drops
 	end
 	if g.ab.kind == "blackout" then fx("BlackoutEnd"); g.model:SetAttribute("Shadow", false) end
+	if g.ab.kind == "ratRush" then g.model:SetAttribute("Vanish", false) end -- (never left under the floor)
 	if g.ab.kind == "warp" then g.model:SetAttribute("Vanish", false) end
 	if g.ab.kind == "ambush" then Caller.interrupt(g) end
 	if g.ab.kind == "steal" then Remotes.Fx:FireAllClients("GoblinUse", g.model, "", "stop", 0) end
@@ -172,17 +173,35 @@ function Abilities.try(g, G, now: number, target: Player?, thrp: BasePart?, dist
 	elseif k == "levitateThrow" then
 		if dist > (a.range or 70) then return false end
 		-- a.count pieces at once (the evolved Demon Lord lifts several)
-		local list = Furniture.nearest(g.hrp.Position, 40, a.count or 1)
-		if #list == 0 then g.nextAbility = now + 2; return false end
-		local objs = {}
-		for i, obj in list do
-			grip(obj)
-			table.insert(objs, { obj = obj, from = obj:GetPivot(), spin = rng:NextNumber(-2, 2), slot = i, thrown = false })
-		end
+		local want = a.count or 1
+		local list = Furniture.nearest(g.hrp.Position, 40, want)
 		local function snd(name: string, parent: Instance, vol: number?)
 			local s = Instance.new("Sound"); s.SoundId = "rbxassetid://" .. Sounds[name].ids[1]; s.Volume = vol or Sounds[name].volume
 			s.RollOffMinDistance = 10; s.RollOffMaxDistance = 140; s.Parent = parent; s:Play()
 			game:GetService("Debris"):AddItem(s, 6)
+		end
+		if #list < want then
+			-- THE SUMMONING: the room has nothing (or not enough) left to throw. He raises both arms, a burning
+			-- circle opens on the floor for every piece he is short of (Client/MonsterFx "DemonSummon"), and hell's
+			-- own furniture comes up through it (Furniture.conjure); then he lifts and throws as always.
+			local spots = {}
+			local n = want - #list
+			for i = 1, n do
+				local at = (g.hrp.CFrame * CFrame.new((i - (n + 1) / 2) * 7.5, 0, -7.5)).Position
+				local r = workspace:Raycast(Vector3.new(at.X, g.hrp.Position.Y + 2, at.Z), Vector3.new(0, -40, 0), g.rp)
+				table.insert(spots, r and r.Position or Vector3.new(at.X, g.hrp.Position.Y - g.hover, at.Z))
+			end
+			local SUMMON = 1.7
+			fx("DemonSummon", spots, SUMMON)
+			snd("DemonLaugh", g.model:FindFirstChild("Head") or g.hrp)
+			snd("Telekinesis", g.hrp)
+			start(g, G, "summon", SUMMON, { have = list, spots = spots, t0 = now, snd = snd })
+			return true
+		end
+		local objs = {}
+		for i, obj in list do
+			grip(obj)
+			table.insert(objs, { obj = obj, from = obj:GetPivot(), spin = rng:NextNumber(-2, 2), slot = i, thrown = false })
 		end
 		snd("Telekinesis", list[1].PrimaryPart :: BasePart)
 		snd("DemonLaugh", g.model:FindFirstChild("Head") or g.hrp)
@@ -239,6 +258,20 @@ function Abilities.try(g, G, now: number, target: Player?, thrp: BasePart?, dist
 		if dist < a.min or dist > a.max then return false end
 		start(g, G, "wind", a.wind, { dir = flat(thrp.Position - g.hrp.Position), hit = {} })
 		fx("AbilityWind", g.hrp.Position, k)
+	elseif k == "ratRush" then
+		-- THE SEWER RAT. Far from you (or now and then): the BURROW. Otherwise: the CHARGE.
+		if warded(target) then return false end
+		local feet = g.hrp.Position - Vector3.new(0, g.hover - 0.2, 0)
+		if dist > (a.far or 26) or (dist > 9 and rng:NextNumber() < 0.4) then
+			start(g, G, "dig", a.dig, { nextTrail = 0 })
+			fx("RatDig", feet, a.dig)
+		else
+			if dist < 6 then return false end -- nose to nose: he just bites
+			local dir = flat(thrp.Position - g.hrp.Position)
+			start(g, G, "wind", a.wind, { dir = dir, left = a.dashes or 1, hit = {} })
+			fx("RatDashWarn", feet, dir, a.dashSpeed * a.dashTime, a.wind)
+			fx("AbilityWind", g.hrp.Position, k)
+		end
 	elseif k == "warp" then
 		-- the Conqueror is slow: from far enough he opens a portal, steps in, and comes out a few strides from you
 		if dist < a.min or warded(target) then return false end
@@ -598,6 +631,29 @@ function Abilities.step(g, G, dt: number, now: number, target: Player?, thrp: Ba
 		g.lv.VectorVelocity = hover(g, hoverY, Vector3.zero)
 		if thrp then face(thrp.Position) end
 		local ab = g.ab
+		if ab.phase == "summon" then
+			-- the circles burn; when they are done the conjured pieces stand in them and the usual lift begins
+			if now < ab.untilT then return end
+			local list = ab.have
+			for _, spot in ab.spots do
+				local m = Furniture.conjure(CFrame.new(spot) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0))
+				if m then table.insert(list, m) end
+			end
+			local made = {}
+			for i, obj in list do
+				if Furniture.isValid(obj) then
+					grip(obj)
+					table.insert(made, { obj = obj, from = obj:GetPivot(), spin = rng:NextNumber(-2, 2), slot = i, thrown = false })
+				end
+			end
+			if #made == 0 then finish(g, G, 0.3); return end
+			ab.obj = made[1].obj
+			ab.objs = made
+			ab.t0 = now
+			ab.snd("Telekinesis", made[1].obj.PrimaryPart :: BasePart)
+			setPhase(g, "lift", a.lift or 1.3)
+			return
+		end
 		local objs = ab.objs
 		local n = #objs
 		-- pieces that broke or vanished are out
@@ -685,6 +741,119 @@ function Abilities.step(g, G, dt: number, now: number, target: Player?, thrp: Ba
 			if now >= ab.untilT then setPhase(g, "recover", 0.5) end
 		elseif ab.phase == "recover" then
 			g.lv.VectorVelocity = hover(g, hoverY, Vector3.zero)
+			if now >= ab.untilT then finish(g, G, 0.3) end
+		end
+	elseif k == "ratRush" then
+		local ab = g.ab
+		local function dizzy(t: number)
+			setPhase(g, "dizzy", t)
+			fx("RatDizzy", g.model, t)
+		end
+		if ab.phase == "wind" then
+			-- pawing the floor: he keeps turning with his target until just before he goes
+			g.lv.VectorVelocity = hover(g, hoverY, Vector3.zero)
+			if thrp and now < ab.untilT - 0.25 then ab.dir = flat(thrp.Position - pos) end
+			face(pos + ab.dir * 10)
+			if now >= ab.untilT then
+				ab.hit = {}
+				setPhase(g, "dash", a.dashTime)
+				fx("RatDash", g.model, a.dashTime)
+			end
+		elseif ab.phase == "dash" then
+			-- THE CHARGE: a straight line. Inside walls are smashed open, furniture is blown apart, players fly.
+			local ahead = workspace:Raycast(pos + Vector3.new(0, 1, 0), ab.dir * 7, g.rp)
+			if ahead and ahead.Normal.Y < 0.6 then
+				if Ragdoll.breakWalls(ahead.Position + Vector3.new(0, 2, 0), ab.dir * 130, 11, 9) > 0 then
+					fx("WallSmash", ahead.Position, 150)
+				else
+					-- an outside wall does not give: he cracks his head on it
+					fx("WallSlam", ahead.Position, 130)
+					dizzy(a.dizzy)
+					return
+				end
+			end
+			if G.outside(pos + ab.dir * 6) then dizzy(a.dizzy); return end
+			g.lv.VectorVelocity = hover(g, hoverY, ab.dir * a.dashSpeed)
+			face(pos + ab.dir * 10)
+			for _, m in Furniture.near(pos + ab.dir * 2, 6.5) do Furniture.smash(m, ab.dir * a.dashSpeed + Vector3.new(0, 30, 0), 120) end
+			for _, p in matchPlayers() do
+				local hrp = hrpOf(p)
+				if hrp and not ab.hit[p] and (hrp.Position - pos).Magnitude < 7.5 and not warded(p) then
+					ab.hit[p] = true
+					local side = flat(hrp.Position - pos)
+					local dir = (ab.dir * 0.8 + side * 0.4).Unit
+					G.hitPlayer(p, nil, a.dashDmg * dmgScale(g), dir * a.dashPower + Vector3.new(0, 26, 0), "rat", true, 1.6)
+					flyers[p] = { untilT = now + 1.4, dmg = 12 * dmgScale(g) }
+					fx("AbilityHit", hrp.Position, k)
+				end
+			end
+			if now >= ab.untilT then
+				ab.left -= 1
+				if ab.left > 0 and thrp then
+					-- (the Plague King) he skids round and goes again
+					ab.dir = flat(thrp.Position - pos)
+					setPhase(g, "wind", a.wind * 0.65)
+					fx("RatDashWarn", pos - Vector3.new(0, g.hover - 0.2, 0), ab.dir, a.dashSpeed * a.dashTime, a.wind * 0.65)
+				else
+					dizzy(a.dizzy * 0.55) -- out of breath: the moment to hit him
+				end
+			end
+		elseif ab.phase == "dizzy" then
+			g.lv.VectorVelocity = hover(g, hoverY, Vector3.zero)
+			if now >= ab.untilT then finish(g, G, 0.2) end
+		elseif ab.phase == "dig" then
+			-- THE BURROW: he digs himself into the floor...
+			g.lv.VectorVelocity = hover(g, hoverY, Vector3.zero)
+			if now >= ab.untilT then
+				g.model:SetAttribute("Vanish", true) -- (gone under the floor: nothing can reach him)
+				setPhase(g, "under", a.underTime)
+			end
+		elseif ab.phase == "under" then
+			-- ...runs under it toward his target (a furrow of dirt shows where)...
+			if not thrp then
+				g.model:SetAttribute("Vanish", false)
+				finish(g, G, 0.3)
+				return
+			end
+			local below = workspace:Raycast(thrp.Position, Vector3.new(0, -30, 0), g.rp)
+			local floorY = below and below.Position.Y or (thrp.Position.Y - 3)
+			local to = Vector3.new(thrp.Position.X - pos.X, 0, thrp.Position.Z - pos.Z)
+			local v = to.Magnitude > 1 and to.Unit * a.underSpeed or Vector3.zero
+			g.lv.VectorVelocity = Vector3.new(v.X, (floorY + g.hover - pos.Y) * 5, v.Z)
+			if now >= (ab.nextTrail or 0) then
+				ab.nextTrail = now + 0.1
+				fx("RatTrail", Vector3.new(pos.X, floorY, pos.Z))
+			end
+			if to.Magnitude < 2.5 or now >= ab.untilT then
+				-- ...and stops under their feet: the floor cracks for a moment before he comes up (step away!)
+				ab.at = Vector3.new(thrp.Position.X, floorY, thrp.Position.Z)
+				g.model:PivotTo(CFrame.new(ab.at + Vector3.new(0, g.hover, 0)) * g.hrp.CFrame.Rotation)
+				g.lv.VectorVelocity = Vector3.zero
+				setPhase(g, "warn", a.warn)
+				fx("RatWarn", ab.at, a.popRadius, a.warn)
+			end
+		elseif ab.phase == "warn" then
+			g.lv.VectorVelocity = Vector3.zero
+			if now >= ab.untilT then
+				g.model:SetAttribute("Vanish", false)
+				fx("RatErupt", ab.at, a.popRadius)
+				for _, p in matchPlayers() do
+					local hrp = hrpOf(p)
+					if hrp and not warded(p) then
+						local d = hrp.Position - ab.at
+						if Vector3.new(d.X, 0, d.Z).Magnitude < a.popRadius and math.abs(d.Y) < 9 then
+							local side = flat(d)
+							G.hitPlayer(p, nil, a.popDmg * dmgScale(g), side * 28 + Vector3.new(0, a.popUp, 0), "rat", true, 1.5)
+							fx("AbilityHit", hrp.Position, k)
+						end
+					end
+				end
+				for _, m in Furniture.near(ab.at + Vector3.new(0, 2, 0), a.popRadius) do Furniture.smash(m, Vector3.new(0, 70, 0), 90) end
+				setPhase(g, "pop", 0.75)
+			end
+		elseif ab.phase == "pop" then
+			g.lv.VectorVelocity = hover(g, hoverY, Vector3.zero)
+			if thrp then face(thrp.Position) end
 			if now >= ab.untilT then finish(g, G, 0.3) end
 		end
 	elseif k == "furnitureStorm" or k == "hellfire" or k == "clones" or k == "gas" then

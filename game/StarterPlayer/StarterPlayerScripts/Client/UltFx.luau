@@ -276,7 +276,7 @@ function sigs.void(by, def, pos, floor)
 	Kit.ring(floor + UP * 0.1, { r0 = 14, r1 = 0.5, n = 16, h = 0.2, w = 0.8, color = def.color, dur = 0.5, ease = E.inq, hold = 0.9, spin = -3 })
 	local c = focusOf(by, pos)
 	if c == pos then Kit.poly(c, 6, 0.4, rgb(8, 4, 14), 0.45, { tr = 0.3, mat = SP, ease = E.inq, hold = 0.9 }) end
-	Sfx.at("Vacuum", pos, { PlaybackSpeed = 0.5, Volume = 0.7 })
+	Sfx.at("Whoosh", pos, { PlaybackSpeed = 0.5, Volume = 0.8 })
 end
 
 -- a soft pillar of light on the caster, a halo climbing off the head

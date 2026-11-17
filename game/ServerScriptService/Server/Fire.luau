@@ -32,6 +32,31 @@ local FLAME_COLORS = ColorSequence.new({
 	ColorSequenceKeypoint.new(1, Color3.fromRGB(40, 30, 25)) })
 
 -- realistic flames on a part (they come out of its whole volume) or an attachment; s = size
+-- BLEEDING on a body: heavy dark-red drops that fall (no glow, no flames), with a spurt now and then
+function Fire.blood(parent: Instance, s: number): { Instance }
+	local out = {}
+	local function emitter(props: { [string]: any })
+		local e = Instance.new("ParticleEmitter")
+		e.Texture = "rbxasset://textures/particles/smoke_main.dds"
+		e.LightEmission = 0; e.LightInfluence = 0.4
+		e.Color = ColorSequence.new(Color3.fromRGB(170, 6, 10), Color3.fromRGB(80, 0, 4))
+		e.Rotation = NumberRange.new(0, 360)
+		for k, v in props do (e :: any)[k] = v end
+		e.Parent = parent
+		table.insert(out, e)
+	end
+	-- drops running off it and falling to the floor
+	emitter({ Size = seq(0, 0.28 * s, 0.6, 0.22 * s, 1, 0.1 * s), Transparency = seq(0, 0, 0.8, 0.05, 1, 1), Lifetime = NumberRange.new(0.7, 1.1), Rate = 34,
+		Speed = NumberRange.new(1 * s, 4 * s), Acceleration = Vector3.new(0, -42, 0), SpreadAngle = Vector2.new(180, 180), Drag = 0.5 })
+	-- spurts
+	emitter({ Size = seq(0, 0.2 * s, 1, 0.34 * s), Transparency = seq(0, 0, 0.7, 0.1, 1, 1), Lifetime = NumberRange.new(0.35, 0.6), Rate = 16,
+		Speed = NumberRange.new(9 * s, 15 * s), Acceleration = Vector3.new(0, -50, 0), SpreadAngle = Vector2.new(55, 55), EmissionDirection = Enum.NormalId.Front })
+	-- a thin red mist round the wound
+	emitter({ Size = seq(0, 0.8 * s, 1, 1.8 * s), Transparency = seq(0, 0.75, 1, 1), Lifetime = NumberRange.new(0.4, 0.7), Rate = 8,
+		Speed = NumberRange.new(0.5, 2), SpreadAngle = Vector2.new(180, 180), Color = ColorSequence.new(Color3.fromRGB(120, 0, 6)) })
+	return out
+end
+
 function Fire.flames(parent: Instance, s: number): { Instance }
 	local out = {}
 	local function emitter(props: { [string]: any })

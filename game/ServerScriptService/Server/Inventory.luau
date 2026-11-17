@@ -144,7 +144,7 @@ end
 local function applyFx(p: Player, it, dmg: number, dir: Vector3)
 	local fx = it.fx
 	if not fx or not ghostAlive() then return end
-	if fx.bleed then Ghost.burn(fx.bleed.dps, fx.bleed.t, BLOOD, p) end
+	if fx.bleed then Ghost.burn(fx.bleed.dps, fx.bleed.t, BLOOD, p, true) end
 	if fx.burn then Ghost.burn(fx.burn.dps, fx.burn.t, fx.burn.color or FIRE, p) end
 	if fx.slow then Ghost.slow(fx.slow.mult, fx.slow.t) end
 	if fx.stun then

@@ -122,6 +122,29 @@ DRESS.Demon = function(m)
 	end
 end
 
+-- the Plague King: sick green fur, yellow eyes, boils, a rusty crown
+DRESS.Rat = function(m)
+	recolor(m, { { rgb(98, 84, 72), rgb(74, 104, 52) }, { rgb(62, 54, 48), rgb(44, 66, 36) }, { rgb(124, 108, 92), rgb(104, 136, 64) },
+		{ rgb(150, 132, 112), rgb(150, 160, 96) }, { rgb(255, 44, 30), rgb(220, 255, 60), Enum.Material.Neon } })
+	local head = body(m, "Head")
+	if head then
+		local RUST = rgb(150, 96, 40)
+		add(head, "Crown", Vector3.new(1.7, 0.4, 1.7), CFrame.new(0, 1.2, 0.1), RUST, Enum.Material.Metal)
+		for i = 0, 3 do
+			local a = i * math.pi / 2 + math.pi / 4
+			add(head, "CrownSpike", Vector3.new(0.35, 0.8, 0.35), CFrame.new(math.cos(a) * 0.75, 1.75, 0.1 + math.sin(a) * 0.75), RUST, Enum.Material.Metal)
+		end
+	end
+	local torso = body(m, "UpperTorso")
+	if torso then
+		for _, o in { Vector3.new(-1.2, 0.6, -1.5), Vector3.new(0.9, -0.5, -1.55), Vector3.new(1.5, 0.9, 0.4), Vector3.new(-1.7, -0.2, 0.5) } do
+			add(torso, "Boil", Vector3.new(0.7, 0.7, 0.7), CFrame.new(o), rgb(190, 220, 80), Enum.Material.Neon, Enum.PartType.Ball)
+		end
+		glow(torso, rgb(150, 230, 70), 16, 1.1)
+	end
+	tint(m, rgb(170, 240, 80))
+end
+
 -- the Goblin King: fat, forest green, a little crown
 DRESS.Goblin = function(m)
 	recolor(m, {

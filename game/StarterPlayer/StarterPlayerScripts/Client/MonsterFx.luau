@@ -21,6 +21,8 @@ local KINDS = {
 	ShieldBlock = true, Slammed = true, AnimJumpscare = true,
 	RoarWind = true, Roar = true, LungeWind = true, Lunge = true, Enraged = true, CounterWind = true, FuryArmor = true, FurySmash = true, -- Fury
 	SnapWind = true, Snap = true, TitanEat = true, TitanHeal = true, -- evolved monsters
+	DemonSummon = true, -- the Red Demon conjures furniture
+	RatDashWarn = true, RatDash = true, RatDizzy = true, RatDig = true, RatTrail = true, RatWarn = true, RatErupt = true, -- the Sewer Rat
 }
 local Settings = require(script.Parent.Settings)
 local Items = require(game:GetService("ReplicatedStorage").Shared.Items)
@@ -602,6 +604,160 @@ function MonsterFx.handle(kind: string, ...)
 			Debris:AddItem(d, delay + 0.1)
 			Sfx.at("Whoosh", pt, { PlaybackSpeed = 0.5, Volume = 1 })
 		end
+	elseif kind == "RatDashWarn" then
+		-- the line he is about to charge down (feet, direction, length, seconds of warning)
+		local feet, dir, len, t = a[1], a[2], a[3], a[4]
+		local mid = feet + dir * (len / 2 + 2) + Vector3.new(0, 0.12, 0)
+		local lane = part({ Size = Vector3.new(7.5, 0.1, len), CFrame = CFrame.lookAt(mid, mid + dir), Color = Color3.fromRGB(255, 40, 30), Transparency = 1 })
+		TweenService:Create(lane, TweenInfo.new(t * 0.4), { Transparency = 0.55 }):Play()
+		task.delay(t, function() TweenService:Create(lane, TweenInfo.new(0.35), { Transparency = 1 }):Play() end)
+		Debris:AddItem(lane, t + 0.5)
+		emitter(feet + Vector3.new(0, 0.4, 0), { Color = ColorSequence.new(Color3.fromRGB(120, 104, 88)), Size = NumberSequence.new(1.5, 4), Transparency = NumberSequence.new(0.4, 1),
+			Lifetime = NumberRange.new(0.5, 0.9), Speed = NumberRange.new(6, 14), SpreadAngle = Vector2.new(40, 40), Rate = 26 }, nil, t)
+		if near(feet, 70) > 0 then HUD.toast("IT'S GOING TO CHARGE - GET OUT OF THE RED LINE!", false) end
+	elseif kind == "RatDash" then
+		local model, t = a[1], a[2]
+		local root = typeof(model) == "Instance" and model:FindFirstChild("HumanoidRootPart") :: BasePart?
+		Sfx.play("Whoosh", { PlaybackSpeed = 0.6, Volume = 1.2 })
+		if root then
+			Sfx.at("RatSqueal", root.Position, { Volume = 1.4 })
+			local dust = Instance.new("ParticleEmitter")
+			dust.Texture = "rbxasset://textures/particles/smoke_main.dds"
+			dust.Color = ColorSequence.new(Color3.fromRGB(130, 116, 100)); dust.Size = NumberSequence.new(2.5, 6); dust.Transparency = NumberSequence.new(0.45, 1)
+			dust.Lifetime = NumberRange.new(0.5, 1); dust.Speed = NumberRange.new(2, 8); dust.SpreadAngle = Vector2.new(180, 180); dust.Rate = 60
+			dust.Parent = root
+			task.delay(t, function() dust.Enabled = false; Debris:AddItem(dust, 1.2) end)
+		end
+		Fx.shake(0.35)
+	elseif kind == "RatDizzy" then
+		-- he has hit something too hard: stars round his head, and he can be hit freely
+		local model, t = a[1], a[2]
+		local head = typeof(model) == "Instance" and model:FindFirstChild("Head") :: BasePart?
+		if head then
+			local stars = Instance.new("ParticleEmitter")
+			stars.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+			stars.Color = ColorSequence.new(Color3.fromRGB(255, 230, 90)); stars.LightEmission = 1; stars.Size = NumberSequence.new(0.7, 0.2)
+			stars.Lifetime = NumberRange.new(0.5, 0.8); stars.Speed = NumberRange.new(3, 5); stars.SpreadAngle = Vector2.new(180, 180); stars.Rate = 22
+			stars.Shape = Enum.ParticleEmitterShape.Sphere; stars.Parent = head
+			task.delay(t, function() stars.Enabled = false; Debris:AddItem(stars, 1) end)
+			if near(head.Position, 60) > 0 then HUD.toast("IT'S DIZZY - HIT IT NOW!", true) end
+		end
+	elseif kind == "RatDig" then
+		-- digging himself into the floor: dirt flying, a mound
+		local feet, t = a[1], a[2]
+		for i = 0, 2 do task.delay(i * 0.22, function() Sfx.at("Dig", feet, { Volume = 1.4, PlaybackSpeed = 1.2 }) end) end
+		emitter(feet + Vector3.new(0, 0.5, 0), { Color = ColorSequence.new(Color3.fromRGB(86, 66, 48)), Size = NumberSequence.new(1.2, 3.5), Transparency = NumberSequence.new(0.2, 1),
+			Lifetime = NumberRange.new(0.5, 1), Speed = NumberRange.new(10, 24), SpreadAngle = Vector2.new(50, 50), EmissionDirection = Enum.NormalId.Top,
+			Acceleration = Vector3.new(0, -40, 0), Rate = 70 }, nil, t)
+		local mound = disc(feet + Vector3.new(0, 0.2, 0), 1, Color3.fromRGB(60, 46, 34), 0)
+		mound.Material = Enum.Material.Slate
+		TweenService:Create(mound, TweenInfo.new(t), { Size = Vector3.new(0.5, 9, 9) }):Play()
+		task.delay(t + 3, function() TweenService:Create(mound, TweenInfo.new(1), { Transparency = 1 }):Play() end)
+		Debris:AddItem(mound, t + 4.2)
+		if near(feet, 70) > 0 then HUD.toast("IT'S DIGGING - KEEP MOVING!", false) end
+	elseif kind == "RatTrail" then
+		-- where he is, under the floor: a furrow of broken ground
+		local pos = a[1]
+		local lump = part({ Size = Vector3.new(rng:NextNumber(2, 3.2), 0.5, rng:NextNumber(2, 3.2)), Material = Enum.Material.Slate, Color = Color3.fromRGB(64, 50, 38),
+			CFrame = CFrame.new(pos + Vector3.new(0, 0.1, 0)) * CFrame.Angles(rng:NextNumber(-0.2, 0.2), rng:NextNumber(0, 3), rng:NextNumber(-0.2, 0.2)) })
+		TweenService:Create(lump, TweenInfo.new(1.6, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Transparency = 1, Size = lump.Size * Vector3.new(1, 0.2, 1) }):Play()
+		Debris:AddItem(lump, 1.7)
+		emitter(pos + Vector3.new(0, 0.4, 0), { Color = ColorSequence.new(Color3.fromRGB(96, 78, 60)), Size = NumberSequence.new(1, 2.6), Transparency = NumberSequence.new(0.4, 1),
+			Lifetime = NumberRange.new(0.3, 0.6), Speed = NumberRange.new(3, 8), EmissionDirection = Enum.NormalId.Top, SpreadAngle = Vector2.new(60, 60) }, 5, 1)
+	elseif kind == "RatWarn" then
+		-- the floor cracks under your feet: he comes up there in a moment
+		local pos, r, t = a[1], a[2], a[3]
+		local ring = disc(pos + Vector3.new(0, 0.15, 0), r, Color3.fromRGB(255, 50, 30), 1)
+		TweenService:Create(ring, TweenInfo.new(t), { Transparency = 0.45 }):Play()
+		Debris:AddItem(ring, t + 0.05)
+		for i = 1, 7 do
+			local an = i / 7 * math.pi * 2 + rng:NextNumber(-0.2, 0.2)
+			local dir = Vector3.new(math.cos(an), 0, math.sin(an))
+			local len = rng:NextNumber(r * 0.6, r)
+			local crack = part({ Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(8, 6, 6), Size = Vector3.new(0.35, 0.1, len),
+				CFrame = CFrame.lookAt(pos + dir * len / 2 + Vector3.new(0, 0.2, 0), pos + dir * 40 + Vector3.new(0, 0.2, 0)) })
+			Debris:AddItem(crack, t + 2.5)
+		end
+		Sfx.at("Crash", pos, { PlaybackSpeed = 0.5, Volume = 0.8 })
+		Fx.shake(0.4 * near(pos, 40))
+	elseif kind == "RatErupt" then
+		local pos, r = a[1], a[2]
+		Sfx.at("Explosion", pos, { Volume = 0.8, PlaybackSpeed = 1.1 })
+		Sfx.at("RatSpawn", pos, { Volume = 1.4, PlaybackSpeed = 1.5 })
+		local ring = disc(pos + Vector3.new(0, 0.2, 0), 2, Color3.fromRGB(140, 120, 100), 0.3)
+		TweenService:Create(ring, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.new(0.15, r * 4, r * 4), Transparency = 1 }):Play()
+		Debris:AddItem(ring, 0.55)
+		emitter(pos + Vector3.new(0, 1, 0), { Color = ColorSequence.new(Color3.fromRGB(90, 70, 52)), Size = NumberSequence.new(2, 6), Transparency = NumberSequence.new(0.25, 1),
+			Lifetime = NumberRange.new(0.6, 1.3), Speed = NumberRange.new(16, 40), SpreadAngle = Vector2.new(60, 60), EmissionDirection = Enum.NormalId.Top,
+			Acceleration = Vector3.new(0, -40, 0) }, 70, 2)
+		for _ = 1, Settings.fxCount(12) do
+			local sz = rng:NextNumber(0.6, 1.6)
+			local chunk = Instance.new("Part")
+			chunk.Size = Vector3.new(sz, sz * 0.6, sz); chunk.Material = Enum.Material.Slate; chunk.Color = Color3.fromRGB(70, 56, 44)
+			chunk.CanQuery = false; chunk.CanTouch = false; chunk.CollisionGroup = "Debris"
+			chunk.CFrame = CFrame.new(pos + Vector3.new(rng:NextNumber(-2, 2), 1, rng:NextNumber(-2, 2)))
+			chunk.Parent = workspace.Terrain
+			local an = rng:NextNumber(0, math.pi * 2)
+			chunk.AssemblyLinearVelocity = Vector3.new(math.cos(an) * 22, rng:NextNumber(30, 55), math.sin(an) * 22)
+			Debris:AddItem(chunk, 3)
+		end
+		Fx.shake(0.9 * near(pos, 50))
+	elseif kind == "DemonSummon" then
+		-- THE SUMMONING (Server/Abilities levitateThrow, phase "summon"): a burning circle with a five-pointed star
+		-- is drawn on the floor at every spot, fire climbs out of it, and after `dur` seconds a pillar of fire leaves
+		-- a piece of hell's furniture standing there.
+		local spots, dur = a[1], a[2] or 1.7
+		local RED, ORANGE = Color3.fromRGB(255, 40, 16), Color3.fromRGB(255, 130, 40)
+		Sfx.play("FireLoop", { Volume = 0.9, PlaybackSpeed = 1.2 })
+		for _, pt in spots do
+			local R = 3.6
+			local strokes = {} :: { BasePart }
+			local pts = {}
+			for i = 0, 4 do
+				local an = i / 5 * math.pi * 2 + math.pi / 2
+				table.insert(pts, pt + Vector3.new(math.cos(an) * R, 0.12, math.sin(an) * R))
+			end
+			for i = 1, 5 do
+				local p1, p2 = pts[i], pts[(i + 1) % 5 + 1]
+				table.insert(strokes, part({ Size = Vector3.new(0.28, 0.1, (p2 - p1).Magnitude), CFrame = CFrame.lookAt(p1:Lerp(p2, 0.5), p2), Color = RED, Transparency = 1 }))
+			end
+			for i = 1, 16 do
+				local a0, a1 = (i - 1) / 16 * math.pi * 2, i / 16 * math.pi * 2
+				local p1, p2 = pt + Vector3.new(math.cos(a0) * R, 0.12, math.sin(a0) * R), pt + Vector3.new(math.cos(a1) * R, 0.12, math.sin(a1) * R)
+				table.insert(strokes, part({ Size = Vector3.new(0.32, 0.1, (p2 - p1).Magnitude + 0.1), CFrame = CFrame.lookAt(p1:Lerp(p2, 0.5), p2), Color = RED, Transparency = 1 }))
+			end
+			-- drawn stroke by stroke, gone a moment after the furniture has come
+			for i, st in strokes do
+				task.delay(i * 0.035, function() TweenService:Create(st, TweenInfo.new(0.12), { Transparency = 0.05 }):Play() end)
+				task.delay(dur + 0.5, function() TweenService:Create(st, TweenInfo.new(0.6), { Transparency = 1 }):Play() end)
+				Debris:AddItem(st, dur + 1.3)
+			end
+			local glowPart = part({ Size = Vector3.one * 0.2, Transparency = 1, Position = pt + Vector3.new(0, 2, 0) })
+			local l = Instance.new("PointLight"); l.Color = RED; l.Range = 26; l.Brightness = 0; l.Shadows = false; l.Parent = glowPart
+			TweenService:Create(l, TweenInfo.new(dur), { Brightness = 3 }):Play()
+			Debris:AddItem(glowPart, dur + 1.2)
+			-- fire climbing out of the circle, harder and harder
+			local fire = emitter(pt + Vector3.new(0, 0.3, 0), { Texture = "rbxasset://textures/particles/fire_main.dds", Color = ColorSequence.new(ORANGE, RED), LightEmission = 1,
+				Size = NumberSequence.new(2.4, 0.3), Lifetime = NumberRange.new(0.4, 0.8), Speed = NumberRange.new(5, 12), SpreadAngle = Vector2.new(16, 16),
+				EmissionDirection = Enum.NormalId.Top, Rate = 30 }, nil, dur + 1.5)
+			emitter(pt + Vector3.new(0, 0.3, 0), { Color = ColorSequence.new(Color3.fromRGB(30, 10, 10)), Size = NumberSequence.new(2, 5), Transparency = NumberSequence.new(0.5, 1),
+				Lifetime = NumberRange.new(0.8, 1.4), Speed = NumberRange.new(4, 9), SpreadAngle = Vector2.new(24, 24), EmissionDirection = Enum.NormalId.Top, Rate = 12 }, nil, dur + 0.2)
+			task.delay(dur, function()
+				fire.Enabled = false
+				-- it arrives: a pillar of fire, a ring, embers
+				local col = part({ Shape = Enum.PartType.Cylinder, Color = ORANGE, Transparency = 0.15, Size = Vector3.new(16, 5, 5), CFrame = CFrame.new(pt + Vector3.new(0, 8, 0)) * CFrame.Angles(0, 0, math.pi / 2) })
+				TweenService:Create(col, TweenInfo.new(0.55, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Transparency = 1, Size = Vector3.new(20, 0.4, 0.4) }):Play()
+				Debris:AddItem(col, 0.6)
+				local ring = disc(pt + Vector3.new(0, 0.2, 0), 1.5, RED, 0.3)
+				TweenService:Create(ring, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.new(0.15, 22, 22), Transparency = 1 }):Play()
+				Debris:AddItem(ring, 0.55)
+				emitter(pt + Vector3.new(0, 1.5, 0), { Color = ColorSequence.new(ORANGE), LightEmission = 1, Size = NumberSequence.new(0.6, 0), Speed = NumberRange.new(14, 30),
+					Lifetime = NumberRange.new(0.5, 1.1), Acceleration = Vector3.new(0, -20, 0), Texture = "rbxasset://textures/particles/sparkles_main.dds" }, 50, 1.5)
+				Sfx.at("Explosion", pt, { Volume = 0.6, PlaybackSpeed = 1.4 })
+				Fx.shake(0.5 * near(pt, 50))
+			end)
+		end
+		if near(spots[1] or Vector3.zero, 60) > 0 then HUD.toast("HE IS SUMMONING FURNITURE FROM HELL!", false) end
 	elseif kind == "HellPillar" then
 		local pts, r = a[1], a[2]
 		for _, pt in pts do

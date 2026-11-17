@@ -514,7 +514,9 @@ function Acts.timeStop(t: number)
 	grade({ Saturation = -1, Contrast = 0.3, TintColor = rgb(220, 215, 255) }, t, 0.08)
 	if HUD then HUD.flash(WHITE, 0.6); HUD.banner("TIME STOPS", "", t * 0.6) end
 	Kit.poly(origin, 4, 130, WHITE, 0.55, { tr = 0.75, n = 2, ease = E.out })
-	Sfx.play("Ultimate", { PlaybackSpeed = 0.4, Volume = 1.2 })
+	-- (a clock stopping: two dry ticks; the old slowed-down groan is gone)
+	Sfx.play("Click", { PlaybackSpeed = 0.55, Volume = 1 })
+	task.delay(0.22, function() Sfx.play("Click", { PlaybackSpeed = 0.4, Volume = 0.8 }) end)
 	-- the clock: a faceted rim, twelve ticks and two hands, facing the camera
 	local size = g and ghostSize(g) or Vector3.new(5, 10, 0)
 	local R = 6.5
@@ -663,8 +665,8 @@ local function hole(g: Model, hrp: BasePart, t: number, k: number, color: Color3
 	local inflow: { { p: Part, ang: number, r: number, y: number, t0: number } } = {}
 	local att = Instance.new("Attachment"); att.Parent = workspace.Terrain
 	local light = Instance.new("PointLight"); light.Color = color; light.Range = 45; light.Brightness = 0; light.Shadows = false; light.Parent = att
-	local snd = Sfx.loop("Vacuum", { PlaybackSpeed = 0.45, Volume = 0 })
-	Sfx.at("Ultimate", hrp.Position, { PlaybackSpeed = 0.5, Volume = 1 })
+	-- a deep rumble while the hole is open (no vacuum-cleaner whine, no slowed-down groan)
+	local snd = Sfx.loop("PlaneEngine", { PlaybackSpeed = 0.28, Volume = 0 })
 	local c = hrp.Position + UP * 3.5 * k
 	local ending: number? = nil
 	local acc = 0
@@ -710,7 +712,7 @@ local function hole(g: Model, hrp: BasePart, t: number, k: number, color: Color3
 		end
 		att.WorldPosition = c
 		light.Brightness = 4 * s
-		if snd then snd.Volume = math.clamp(1 - Kit.dist(c) / 130, 0, 1) * 0.9 * s end
+		if snd then snd.Volume = math.clamp(1 - Kit.dist(c) / 130, 0, 1) * 0.35 * s end
 		if (ending and s <= 0) or al >= 1 then
 			for _, p in core do p:Destroy() end
 			for _, p in halo do p:Destroy() end
@@ -878,7 +880,7 @@ end
 function Acts.slow(t: number, color: Color3)
 	local g, hrp = ghost()
 	grade({ Saturation = -0.5, Contrast = 0.12, TintColor = rgb(205, 218, 255) }, t, 0.25)
-	Sfx.play("Ultimate", { PlaybackSpeed = 0.3, Volume = 0.9 })
+	Sfx.play("Whoosh", { PlaybackSpeed = 0.45, Volume = 0.7 })
 	if not g or not hrp then return end
 	local size = ghostSize(g)
 	local acc, acc2 = 0, 0.5

@@ -14,6 +14,7 @@ local function make(name: string, parent: Instance, props: { [string]: any }?): 
 	s.Volume = def.volume
 	s.SoundGroup = Settings.group(name)
 	if props then for k, v in props do (s :: any)[k] = v end end
+	if def.speed then s.PlaybackSpeed *= def.speed end -- (a sound's own pitch: the giant rat's slowed-down squeals)
 	s.Parent = parent
 	return s
 end
@@ -28,6 +29,7 @@ local VOICES = {
 	Animatronic = { Spawn = "AnimSpawn", WindUp = "AnimGrowl", Claw = "AnimGrowl", Hurt = "AnimHurt", Death = "AnimDeath" },
 	Goblin = { Spawn = "GoblinSpawn", WindUp = "GoblinGrowl", Claw = "GoblinCackle", Hurt = "GoblinHurt", Death = "GoblinDeath" },
 	Caller = { Spawn = "DemonLaugh", WindUp = "PirateSwing", Claw = "PirateSwing", Hurt = "PirateHurt", Death = "GhostDeath" },
+	Rat = { Spawn = "RatSpawn", WindUp = "RatSqueal", Claw = "RatSqueal", Hurt = "RatHurt", Death = "RatDeath" },
 	Conqueror = { Spawn = "DemonRoar", WindUp = "DemonGrowl", Claw = "DemonHit", Hurt = "DemonHurt", Death = "DemonDeath" },
 }
 local lastMonster = "Woman"

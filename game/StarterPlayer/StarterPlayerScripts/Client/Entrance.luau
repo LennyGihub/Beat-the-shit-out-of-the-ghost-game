@@ -48,6 +48,7 @@ local COLORS: { [string]: { { Color3 } } } = {
 	Goblin = { { C(130, 230, 70), C(50, 110, 30) }, { C(246, 206, 66), C(50, 120, 44) } },
 	Caller = { { C(236, 238, 244), C(120, 124, 136) }, { C(255, 48, 44), C(110, 10, 12) } },
 	Conqueror = { { C(170, 96, 255), C(70, 20, 130) }, { C(255, 204, 76), C(160, 80, 255) } },
+	Rat = { { C(150, 128, 104), C(70, 54, 40) }, { C(150, 220, 80), C(50, 76, 34) } },
 }
 
 type Ctx = {
@@ -624,7 +625,6 @@ SCRIPTS.Conqueror = function(x)
 	local core = x.evolved and x.c2 or x.c1
 	at(x, T.portal, function()
 		Sfx.play("Telekinesis", { Volume = 1, PlaybackSpeed = 0.7 })
-		Sfx.play("Ultimate", { Volume = 0.6, PlaybackSpeed = 0.5 })
 		local face = CFrame.lookAt(center, center + x.look) * CFrame.Angles(0, math.pi / 2, 0)
 		local rim = part(x, { Shape = Enum.PartType.Cylinder, Color = rimCol, Transparency = 0.1 })
 		local hole = part(x, { Shape = Enum.PartType.Cylinder, Color = core, Transparency = 0.05 })
@@ -691,6 +691,78 @@ SCRIPTS.Conqueror = function(x)
 		local k = ss(seg(s, 0, x.D))
 		local walk = seg(s, T.step0, T.step1)
 		return spot(x, lerp(16, 11.5, k), lerp(-3.5, -1.5, k), lerp(2, x.H * 0.42, k)), body(x, lerp(6, 0, walk), x.H * lerp(0.5, 0.66, ss(seg(s, T.fist, T.clench))))
+	end
+end
+
+-- THE SEWER RAT: the floor bulges and cracks, and he bursts out of it; he sniffs the air, rears up and shrieks
+SCRIPTS.Rat = function(x)
+	local T = EP.T.Rat
+	local f = x.floor
+	local DIRT, MUD = C(86, 66, 48), C(52, 40, 30)
+	local dirt = { Color = ColorSequence.new(DIRT, MUD), Size = NumberSequence.new(1.5, 5), Transparency = NumberSequence.new(0.25, 1), Lifetime = NumberRange.new(0.6, 1.3), Drag = 2 }
+	at(x, 0, function()
+		Sfx.play("Crash", { Volume = 0.5, PlaybackSpeed = 0.5 })
+		-- the bulge
+		local mound = disc(x, f + UP * 0.15, 0.5, MUD, 0)
+		mound.Material = Enum.Material.Slate
+		each(x, function(s)
+			local r = 5.5 * ss(seg(s, 0, T.burst)) * (1 - seg(s, x.D - 0.9, x.D - 0.3))
+			mound.Size = Vector3.new(0.3 + 0.9 * seg(s, 0.3, T.burst), r * 2 + 0.01, r * 2 + 0.01)
+			if s < T.burst then shake(0.012) end
+		end)
+		-- cracks creeping out from it
+		for i = 1, 9 do
+			local a = i / 9 * math.pi * 2 + rng:NextNumber(-0.2, 0.2)
+			local len = rng:NextNumber(5, 10)
+			local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+			local c = part(x, { Material = Enum.Material.SmoothPlastic, Color = C(8, 6, 6), Transparency = 1, Size = Vector3.new(rng:NextNumber(0.25, 0.5), 0.08, len),
+				CFrame = CFrame.lookAt(f + dir * (len / 2 + 2) + UP * 0.07, f + dir * 40 + UP * 0.07) })
+			each(x, function(s) c.Transparency = 1 - seg(s, 0.3 + i * 0.12, 0.5 + i * 0.12) * (1 - seg(s, x.D - 0.8, x.D - 0.3)) end)
+		end
+	end)
+	for _, t in { 0.5, 1.0, 1.35 } do
+		at(x, t, function()
+			Sfx.play("Dig", { Volume = 1.2, PlaybackSpeed = 0.9 })
+			shake(0.2)
+			burst(x, f + UP * 0.5, with(dirt, { Speed = NumberRange.new(8, 18), SpreadAngle = Vector2.new(50, 50), EmissionDirection = Enum.NormalId.Top, Acceleration = Vector3.new(0, -40, 0) }), 16)
+		end)
+	end
+	at(x, T.burst, function()
+		Sfx.play("Explosion", { Volume = 0.8, PlaybackSpeed = 1.05 })
+		Sfx.play("RatSqueal", { Volume = 1.2 })
+		shake(1.0); kick(12)
+		flash(x, Color3.new(1, 1, 1), 0.3, 0.3)
+		ring(x, f, x.c1, 2, 26, 0.7)
+		chunks(x, f + UP, 18, DIRT, Enum.Material.Slate, 34)
+		burst(x, f + UP * 1.5, with(dirt, { Speed = NumberRange.new(16, 40), SpreadAngle = Vector2.new(70, 70), EmissionDirection = Enum.NormalId.Top, Acceleration = Vector3.new(0, -30, 0) }), 100)
+	end)
+	at(x, T.land, function()
+		Sfx.play("PunchHeavy", { Volume = 1, PlaybackSpeed = 0.6 })
+		shake(0.6)
+		ring(x, f, x.c2, 1.5, 14, 0.45)
+	end)
+	at(x, T.rear + 0.15, function()
+		Sfx.play(Sfx.voice("Spawn", "Rat"), { Volume = 1.4 })
+		shake(0.8); kick(10)
+		flash(x, x.c1, 0.2, 0.35)
+		ring(x, f, x.c1, 2, 28, 0.7)
+		if x.evolved then
+			burst(x, f + UP * x.H * 0.5, { Color = ColorSequence.new(x.c1), LightEmission = 0.6, Size = NumberSequence.new(3, 8), Transparency = NumberSequence.new(0.5, 1),
+				Lifetime = NumberRange.new(0.8, 1.6), Speed = NumberRange.new(8, 20) }, 40) -- a cloud of plague
+		end
+		x.card()
+	end)
+	at(x, 0, function()
+		local l = light(x, spot(x, 5, 1, x.H * 0.9), C(255, 232, 200), 32, 0)
+		each(x, function(s) l.Brightness = 0.7 * seg(s, T.burst - 0.4, T.burst) * (1 - seg(s, x.D - 0.6, x.D - 0.1)) end)
+	end)
+	x.camera = function(s)
+		local up = seg(s, T.burst, T.peak)
+		local down = seg(s, T.peak, T.land)
+		local rear = ss(seg(s, T.rear, T.rear + 0.3))
+		local y = s < T.burst and 0.8 or (5 * up * (1 - down * down) + x.H * lerp(0.3, 0.62, rear))
+		local k = ss(seg(s, 0, x.D))
+		return spot(x, lerp(13, 10.5, k), lerp(4, 2, k), lerp(1.6, x.H * 0.5, ss(seg(s, T.burst, T.rear)))), f + UP * y
 	end
 end
 

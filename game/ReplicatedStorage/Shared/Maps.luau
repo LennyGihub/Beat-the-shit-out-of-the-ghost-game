@@ -1,5 +1,5 @@
 --!strict
--- The 12 maps (the Mansion is free, the rest are bought at the Hooded Dealer) and the 4 difficulties.
+-- The 13 maps (the Mansion is free, the rest are bought at the Hooded Dealer) and the 4 difficulties.
 -- Prices: one good run (8-10 kills on Normal, ~1800-2600 cash) unlocks the next map.
 -- Every map is a ServerStorage.Maps.<id> model built on the same footprint as the Mansion
 -- (house x -80..80, z -60..60, front door at z = 60 facing the yard), so the run, events and yard all fit.
@@ -38,6 +38,9 @@ local List: { Map } = {
 		light = light(C(255, 225, 215), C(32, 26, 26), -0.3, 0.25) },
 	{ id = "Funeral", name = "Greaves Funeral Home", price = 3200, desc = "Coffins, a viewing room and the morgue downstairs.", color = C(110, 90, 140),
 		light = light(C(230, 220, 255), C(24, 22, 30), -0.45, 0.3, 1.2) },
+	-- (tools/build/maps/sewer.luau) the waterworks: a canal hall of green water, pump rooms, overflow chambers
+	{ id = "Sewer", name = "The Old Sewer", price = 3400, desc = "The city waterworks: a brick canal hall of green water, pump rooms and overflow chambers. Something big lives down here.", color = C(110, 160, 90),
+		light = light(C(214, 240, 200), C(20, 28, 20), -0.4, 0.3, 1.1, -0.2) },
 }
 
 local Difficulties: { Difficulty } = {

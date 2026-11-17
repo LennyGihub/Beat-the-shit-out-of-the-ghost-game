@@ -59,7 +59,7 @@ local ABILITY = {
 	scare = "VANISH AND SCREAM", levitateThrow = "THROWS THE FURNITURE", shieldBash = "SHIELD BASH", blackout = "LIGHTS OUT",
 	titanGrab = "GRAB AND THROW", steal = "STEALS YOUR ITEM", ambush = "THE PHONE CALL", warp = "PORTAL STEP",
 	doubles = "SPLITS INTO DOUBLES", armed = "COMES ARMED", army = "SKELETON CREW", snap = "FINGER SNAP", shotgun = "12 GAUGE",
-	laser = "GAUNTLET BEAM", eat = "EATS THE HOUSE",
+	laser = "GAUNTLET BEAM", eat = "EATS THE HOUSE", ratRush = "CHARGE AND BURROW",
 }
 local Entries: { Entry } = {}
 local entryByKey: { [string]: Entry } = {}

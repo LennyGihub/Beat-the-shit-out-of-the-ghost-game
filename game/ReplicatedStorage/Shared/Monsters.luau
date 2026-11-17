@@ -69,6 +69,17 @@ local List: { Monster } = {
 		atk = 0.7, flank = true,
 		ability = { kind = "ambush", cd = 30, first = 10, hide = 30, wake = 45, enter = 34, react = 0.45, rise = 0.7, rush = 4, dmg = 46, bonus = 2.5, lunge = 70 },
 		desc = "A masked killer with a knife. He sits in a corner and phones you to lure you in: walk in without seeing him and he stabs you in the back. Spot him and he just comes at you." }),
+	-- THE SEWER RAT (hand-built: tools/build/rat.luau): a rat the size of a car. ratRush = two moves (Server/Abilities):
+	-- the CHARGE (wind seconds of warning along a red line, then dashSpeed studs/s in a straight line for dashTime
+	-- seconds: furniture, inside walls and players in the way are all sent flying, and he is dizzy for a moment after)
+	-- and the BURROW (he digs into the floor in `dig` seconds, travels under it at underSpeed toward you, the floor
+	-- cracks for `warn` seconds and he bursts out: popDmg and a launch for anyone within popRadius).
+	m({ id = "Rat", name = "The Sewer Rat", title = "THE SEWER RAT", rarity = 2, template = "Rat", color = C(124, 108, 92),
+		hp = 1.35, speed = 1.12, dmg = 1.15, reward = 1.7, hover = 0, walker = true, scale = 1, solid = true,
+		reach = 1.2,
+		ability = { kind = "ratRush", cd = 6.5, wind = 0.9, dashSpeed = 112, dashTime = 0.95, dashDmg = 30, dashPower = 150, dizzy = 1.3,
+			dig = 0.75, underSpeed = 42, underTime = 3.4, warn = 0.55, popDmg = 28, popUp = 80, popRadius = 7, far = 26 },
+		desc = "A rat the size of a car. It charges in a straight line through furniture and walls, or digs under the floor and bursts out under your feet: never stand still." }),
 	-- THE SECRET ONE: a huge purple warlord with a golden gauntlet. Slow on his feet, so he steps through a portal
 	-- and comes out behind you (warp: from `min` studs away, `wind` seconds of warning); his fist sends you through
 	-- the walls, and he punches his own way through them rather than use a door.
@@ -135,6 +146,11 @@ local EVO: { [string]: { [string]: any } } = {
 		-- turn = degrees a second at most, sweep = studs a second at most where you stand (slower than walking)
 		power = { kind = "laser", cd = 13, wind = 1.5, t = 6, range = 140, turn = 16, sweep = 10, dps = 42, width = 3 },
 		desc = "In his golden war armour. The gauntlet fires a slow purple beam that cuts through the house: never stand in it." },
+	-- bloated and green, a rusty crown on its head: it charges twice in a row and comes up from the floor faster
+	Rat = { title = "THE PLAGUE KING", color = C(120, 176, 66), scale = 1.2, reach = 1.3,
+		ability = { kind = "ratRush", cd = 5.5, wind = 0.75, dashSpeed = 126, dashTime = 0.95, dashDmg = 34, dashPower = 165, dizzy = 1.1, dashes = 2,
+			dig = 0.6, underSpeed = 52, underTime = 3.4, warn = 0.45, popDmg = 34, popUp = 88, popRadius = 9, far = 24 },
+		desc = "Bloated, green, crowned. It charges twice in a row and comes up through the floor before you have stopped running." },
 	Titan = { title = "THE BONE GIANT", color = C(226, 214, 190), scale = 1.08,
 		power = { kind = "eat", cd = 10, below = 0.85, range = 17, t = 1.5, heal = 0.07, wallHeal = 0.04 },
 		desc = "More bone than flesh. He eats the furniture and the walls to heal: hit him while he chews." },

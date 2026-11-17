@@ -33,6 +33,14 @@ return {
 	Music_Caller_E = { ids = { 117622854482826 }, volume = 0.5 }, -- Maniac (underscore)
 	Music_Conqueror = { ids = { 9039352752 }, volume = 0.5 }, -- Soul Conqueror
 	Music_Conqueror_E = { ids = { 1844309360 }, volume = 0.55 }, -- Requiem: Dies Irae
+	Music_Rat = { ids = { 1837158470 }, volume = 0.5 }, -- Sewer Chase
+	Music_Rat_E = { ids = { 1837318901 }, volume = 0.5 }, -- Black Plague
+	-- the Sewer Rat's voice (real rat squeals, slowed down: speed) and its digging
+	RatSpawn = { ids = { 9118053340 }, volume = 1, speed = 0.55 },
+	RatSqueal = { ids = { 9118055004, 9118053340 }, volume = 1, speed = 0.7 },
+	RatHurt = { ids = { 9118058248, 9118057950, 9118057636 }, volume = 0.9, speed = 0.7 },
+	RatDeath = { ids = { 9118053340 }, volume = 1, speed = 0.4 },
+	Dig = { ids = { 9114084427 }, volume = 1 },
 	-- the Golden Bear snaps his fingers (Client/MonsterFx "Snap", and his entrance)
 	FingerSnap = { ids = { 9114427575 }, volume = 1 },
 	Ultimate = { ids = { 1848248007 }, volume = 1 },

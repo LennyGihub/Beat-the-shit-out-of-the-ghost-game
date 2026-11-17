@@ -230,7 +230,7 @@ function HUD.update(dt: number)
 		-- monster name, tinted by rarity (rare blue, legendary gold, secret purple)
 		local rar = g:GetAttribute("Rarity") or 0
 		local mad = g:GetAttribute("Enraged") == true
-		ghostTitle.Text = (g:GetAttribute("Evolved") and "EVOLVED: " or "") .. (g:GetAttribute("MonsterName") or "THE WOMAN IN THE HOUSE") .. (mad and " - ENRAGED" or "")
+		ghostTitle.Text = (g:GetAttribute("Evolved") and "EVOLVED: " or "") .. (g:GetAttribute("MonsterName") or "THE WOMAN IN THE HOUSE") .. (mad and " - ENRAGED" or "") .. (g:GetAttribute("Bleeding") and " - BLEEDING" or "")
 		ghostTitle.TextColor3 = mad and Color3.fromRGB(255, 70, 40) or rar == 4 and Color3.fromRGB(200, 130, 255) or rar == 3 and Color3.fromRGB(255, 190, 70) or (rar == 2 and Color3.fromRGB(120, 175, 255) or Color3.fromRGB(200, 225, 228))
 	elseif g and g:GetAttribute("State") == "Dead" then
 		ghostBar:set(0, dt)

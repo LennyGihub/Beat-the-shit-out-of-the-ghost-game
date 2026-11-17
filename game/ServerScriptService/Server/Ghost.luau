@@ -353,10 +353,11 @@ function Ghost.slow(mult: number, t: number)
 	g.slowUntil = os.clock() + t
 end
 
-function Ghost.burn(dps: number, t: number, color: Color3?, by: Player?)
+-- bleed = true: the same damage over time, but it BLEEDS (blood runs off it, Fire.blood) instead of catching fire
+function Ghost.burn(dps: number, t: number, color: Color3?, by: Player?, bleed: boolean?)
 	local g = Ghost.current
 	if not g or g.state == "Dead" then return end
-	table.insert(g.burns, { dps = dps, untilT = os.clock() + t, color = color or Color3.fromRGB(255, 110, 30), by = by })
+	table.insert(g.burns, { dps = dps, untilT = os.clock() + t, color = color or Color3.fromRGB(255, 110, 30), by = by, bleed = bleed == true })
 end
 
 function Ghost.launch(h: number, d: number, by: Player?)
@@ -653,17 +654,33 @@ function Ghost.step(dt: number)
 		return
 	end
 	-- burning (damage over time) + its fire
+	local burning, bleeding = false, false
 	for i = #g.burns, 1, -1 do
 		local b = g.burns[i]
-		if now > b.untilT then table.remove(g.burns, i) else Ghost.damage(b.dps * dt, b.by) end
+		if now > b.untilT then
+			table.remove(g.burns, i)
+		else
+			Ghost.damage(b.dps * dt, b.by)
+			if b.bleed then bleeding = true else burning = true end
+		end
 	end
 	if not Ghost.alive() then return end
-	if #g.burns > 0 and not g.fire then
+	if burning and not g.fire then
 		local torso = g.model:FindFirstChild("UpperTorso")
 		if torso then g.fire = Fire.flames(torso, 1.3) end -- realistic flames on her body
-	elseif #g.burns == 0 and g.fire then
+	elseif not burning and g.fire then
 		for _, e in g.fire do e:Destroy() end
 		g.fire = nil
+	end
+	-- BLEEDING (knives, the machete, the katana...): blood runs and spurts off it, and its name says so (Client/HUD)
+	if bleeding and not g.blood then
+		local torso = g.model:FindFirstChild("UpperTorso")
+		if torso then g.blood = Fire.blood(torso, 1.2) end
+		g.model:SetAttribute("Bleeding", true)
+	elseif not bleeding and g.blood then
+		for _, e in g.blood do e:Destroy() end
+		g.blood = nil
+		g.model:SetAttribute("Bleeding", false)
 	end
 	-- time stop ends: everything stored lands at once
 	if g.ts and now >= g.ts.untilT then

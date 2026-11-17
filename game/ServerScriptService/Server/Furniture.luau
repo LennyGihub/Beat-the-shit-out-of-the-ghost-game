@@ -190,6 +190,70 @@ function Furniture.flingAt(m: Model, target: Vector3, by: Player?, power: number
 end
 
 -- furniture models sorted by distance to a point
+-- CONJURED FURNITURE (the Red Demon, when the room has nothing left to throw): a piece of hell's own furniture,
+-- hand-built from blocks, standing at cf. It is real furniture from then on: it can be lifted, thrown and smashed.
+local function C(r: number, g: number, b: number): Color3 return Color3.fromRGB(r, g, b) end
+local CONJURED: { (add: (name: string, size: Vector3, cf: CFrame, color: Color3, mat: Enum.Material) -> BasePart) -> () } = {
+	-- a black coffin with an upside-down cross burning on its lid
+	function(add)
+		add("Base", Vector3.new(2.4, 1.3, 5.2), CFrame.new(0, 0.65, 0), C(24, 18, 16), Enum.Material.WoodPlanks)
+		add("Lid", Vector3.new(2.6, 0.3, 5.4), CFrame.new(0, 1.45, 0), C(36, 26, 22), Enum.Material.WoodPlanks)
+		add("CrossPost", Vector3.new(0.3, 0.12, 2.6), CFrame.new(0, 1.66, 0.2), C(255, 60, 20), Enum.Material.Neon)
+		add("CrossArm", Vector3.new(1.3, 0.12, 0.3), CFrame.new(0, 1.66, 1.0), C(255, 60, 20), Enum.Material.Neon)
+		for _, z in { -2.2, 2.2 } do add("Band", Vector3.new(2.7, 1.4, 0.25), CFrame.new(0, 0.7, z), C(60, 54, 50), Enum.Material.Metal) end
+	end,
+	-- a throne of bone with a red seat
+	function(add)
+		local bone = C(206, 196, 170)
+		add("Base", Vector3.new(2.6, 0.5, 2.6), CFrame.new(0, 1.9, 0), bone, Enum.Material.SmoothPlastic)
+		add("Cushion", Vector3.new(2.2, 0.3, 2.2), CFrame.new(0, 2.3, 0), C(120, 16, 14), Enum.Material.Fabric)
+		add("Back", Vector3.new(2.6, 4, 0.5), CFrame.new(0, 4.1, 1.05), bone, Enum.Material.SmoothPlastic)
+		for _, x in { -1.05, 1.05 } do
+			for _, z in { -1.05, 1.05 } do add("Leg", Vector3.new(0.5, 1.7, 0.5), CFrame.new(x, 0.85, z), bone, Enum.Material.SmoothPlastic) end
+			add("Arm", Vector3.new(0.5, 0.5, 2.4), CFrame.new(x * 1.2, 3.0, 0), bone, Enum.Material.SmoothPlastic)
+			add("Horn", Vector3.new(0.4, 1.6, 0.4), CFrame.new(x, 6.7, 1.05) * CFrame.Angles(0, 0, math.rad(-x * 18)), bone, Enum.Material.SmoothPlastic)
+		end
+		add("Skull", Vector3.new(1, 0.9, 0.9), CFrame.new(0, 6.3, 0.9), bone, Enum.Material.SmoothPlastic)
+		add("SkullEyes", Vector3.new(0.7, 0.2, 0.1), CFrame.new(0, 6.4, 0.42), C(255, 60, 20), Enum.Material.Neon)
+	end,
+	-- a block of brimstone, cracked and glowing
+	function(add)
+		add("Base", Vector3.new(3.2, 2.6, 3.2), CFrame.new(0, 1.3, 0), C(26, 22, 24), Enum.Material.Basalt)
+		add("Top", Vector3.new(2.4, 0.8, 2.4), CFrame.new(0.2, 3.0, -0.1) * CFrame.Angles(0, 0.4, 0), C(34, 28, 30), Enum.Material.Basalt)
+		add("Crack", Vector3.new(3.3, 0.2, 0.25), CFrame.new(0, 1.5, 1.1) * CFrame.Angles(0, 0, 0.3), C(255, 110, 30), Enum.Material.Neon)
+		add("Crack", Vector3.new(0.25, 0.2, 3.3), CFrame.new(-1.0, 0.9, 0) * CFrame.Angles(0.25, 0, 0), C(255, 110, 30), Enum.Material.Neon)
+		add("Crack", Vector3.new(0.2, 2.2, 3.3), CFrame.new(0.9, 1.4, 0) * CFrame.Angles(0.5, 0, 0), C(255, 70, 20), Enum.Material.Neon)
+	end,
+}
+function Furniture.conjure(cf: CFrame): Model?
+	local folder = Furniture.folder()
+	if not folder then return nil end
+	local m = Instance.new("Model")
+	m.Name = "Conjured"
+	local prim: BasePart? = nil
+	local function add(name: string, size: Vector3, rel: CFrame, color: Color3, mat: Enum.Material): BasePart
+		local p = Instance.new("Part")
+		p.Name = name; p.Size = size; p.CFrame = cf * rel; p.Color = color; p.Material = mat
+		p.TopSurface = Enum.SurfaceType.Smooth; p.BottomSurface = Enum.SurfaceType.Smooth
+		p.Anchored = prim == nil; p.CanCollide = true
+		p.Parent = m
+		if prim then
+			local w = Instance.new("WeldConstraint"); w.Part0 = prim; w.Part1 = p; w.Parent = p
+		else
+			prim = p
+		end
+		return p
+	end
+	CONJURED[rng:NextInteger(1, #CONJURED)](add)
+	m.PrimaryPart = prim
+	m:SetAttribute("Weight", 2)
+	m:SetAttribute("Kind", "Table")
+	m:SetAttribute("Conjured", true)
+	CS:AddTag(m, "Furniture")
+	m.Parent = folder
+	return m
+end
+
 function Furniture.nearest(pos: Vector3, maxDist: number, count: number): { Model }
 	local f = Furniture.folder()
 	if not f then return {} end

@@ -442,7 +442,6 @@ function Fx.handle(kind: string, ...)
 			-- an EVOLVED monster (every 3rd ghost)
 			HUD.banner("GHOST " .. tostring(args[1]), (rar == 4 and "SECRET " or "") .. "SOMETHING WORSE IS COMING...", 2.8)
 			Sfx.play("GhostWhisper", { Volume = 1.2, PlaybackSpeed = 0.6 })
-			Sfx.play("Ultimate", { Volume = 0.6, PlaybackSpeed = 0.5 })
 			Fx.shake(0.5)
 		else
 			HUD.banner("GHOST " .. tostring(args[1]), tag .. "SOMETHING IS COMING...", 2.8)

@@ -20,6 +20,7 @@ EP.T = {
 	Goblin = { puff1 = 0.4, puff2 = 0.95, flip = 1.5, land = 2.0, rub0 = 2.3, rub1 = 3.3, point = 3.45, calm = 4.3 },
 	Caller = { flash1 = 0.9, flash2 = 1.9, flash3 = 2.8, raise = 3.1, pump = 3.95 },
 	Conqueror = { portal = 0.1, step0 = 1.4, step1 = 3.0, close = 3.1, fist = 3.4, clench = 3.9, calm = 4.9 },
+	Rat = { burst = 1.7, peak = 1.98, land = 2.4, rear = 3.4, calm = 4.2 },
 }
 EP.FLASH = 0.16 -- how long each of the Caller's flashes shows him
 -- the running entrance's clock, written by Client/Entrance every frame: which monster, the seconds so far, and
@@ -221,6 +222,25 @@ POSES.Conqueror = function(p, s, t, H)
 	p.RightWrist = A(0.5 * clench * fist, 0, 0)
 	p.LeftShoulder = A(-0.2 * fist + sin(ph) * 0.25 * am, 0, -0.3 * fist); p.LeftElbow = A(0.2 + 0.8 * fist, 0, 0)
 	return s < T.step0 and 1 or 0
+end
+
+-- THE SEWER RAT: bursts up out of the floor, lands on all fours, sniffs left and right, then rears up and shrieks
+POSES.Rat = function(p, s, t, H)
+	local T = EP.T.Rat
+	local up = seg(s, T.burst, T.peak)
+	local down = seg(s, T.peak, T.land)
+	local rear = ss(seg(s, T.rear, T.rear + 0.3)) * (1 - seg(s, T.calm, T.calm + 0.4))
+	local four = (s >= T.peak and 1 or up) * (1 - rear) * (1 - seg(s, T.calm, T.calm + 0.4)) -- how much he is on all fours
+	local y = -(H + 2) * (1 - up) + 5 * up * (1 - down * down)
+	p.Root = CFrame.new(0, y - 2.0 * four * (s >= T.land and 1 or down), 0) * A(-1.15 * four + 0.3 * rear, 0, 0)
+	p.Waist = A(-0.15 * four + 0.15 * rear, 0, 0)
+	local sniff = seg(s, T.land + 0.1, T.land + 0.3) * (1 - seg(s, T.rear - 0.2, T.rear))
+	p.Neck = A(1.0 * four + 0.35 * rear + sin(t * 30) * 0.05 * rear, sin((s - T.land) * 5.5) * 0.7 * sniff, 0)
+	p.RightShoulder = A(1.35 * four + 1.2 * rear + 2.2 * up * (1 - down), 0, 0.1 + 1.1 * rear); p.LeftShoulder = A(1.35 * four + 1.2 * rear + 2.2 * up * (1 - down), 0, -0.1 - 1.1 * rear)
+	p.RightElbow = A(0.3 + 0.7 * rear, 0, 0); p.LeftElbow = A(0.3 + 0.7 * rear, 0, 0)
+	p.RightHip = A(1.2 * four, 0, 0.1); p.LeftHip = A(1.2 * four, 0, -0.1)
+	p.RightKnee = A(-1.3 * four, 0, 0); p.LeftKnee = A(-1.3 * four, 0, 0)
+	return s < T.burst and 1 or 0
 end
 
 -- the pose and the see-through amount (0 = solid, 1 = gone) of monster `id`, s seconds into its entrance

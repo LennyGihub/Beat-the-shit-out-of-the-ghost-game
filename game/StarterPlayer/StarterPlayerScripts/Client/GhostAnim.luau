@@ -192,7 +192,14 @@ local function abilityPose(ab: string, phase: string, t: number, since: number):
 		return p
 	end
 	if ab == "levitateThrow" then
-		if phase == "lift" or phase == "aim" then -- right hand raised, fingers spread, controlling the object
+		if phase == "summon" then -- both arms thrown up at the ceiling, head back, shaking: calling furniture up from below
+			local sh = s(t * 34) * 0.05
+			p.Root = A(0.16, 0, 0); p.Waist = A(0.18, 0, 0); p.Neck = A(0.5, 0, s(t * 27) * 0.06)
+			p.RightShoulder = A(2.75 + sh, 0, 0.55); p.LeftShoulder = A(2.75 - sh, 0, -0.55)
+			p.RightElbow = A(0.35, 0, 0); p.LeftElbow = A(0.35, 0, 0)
+			p.RightWrist = A(-0.7, 0, 0); p.LeftWrist = A(-0.7, 0, 0)
+			p.RightHip = A(0.1, 0, 0.12); p.LeftHip = A(0.1, 0, -0.12)
+		elseif phase == "lift" or phase == "aim" then -- right hand raised, fingers spread, controlling the object
 			local shake = phase == "aim" and s(t * 40) * 0.05 or 0
 			p.Waist = A(-0.15, -0.25, 0); p.Neck = A(-0.35, -0.2, 0)
 			p.RightShoulder = A(2.6 * a + shake, 0, -0.35); p.RightElbow = A(0.25, 0, 0); p.RightWrist = A(-0.7, 0, 0)
@@ -203,6 +210,48 @@ local function abilityPose(ab: string, phase: string, t: number, since: number):
 			p.RightShoulder = A(0.5, 0, -0.3); p.RightElbow = A(0.1, 0, 0); p.RightWrist = A(0.3, 0, 0)
 			p.LeftShoulder = A(-0.4, 0, 0.5)
 			p.RightHip = A(-0.4, 0, 0); p.LeftHip = A(0.45, 0, 0); p.LeftKnee = A(-0.4, 0, 0)
+		end
+	elseif ab == "ratRush" then
+		-- the Sewer Rat. On all fours for the charge (pawing the floor first), scooping his way into the floor,
+		-- bursting back out of it with his claws wide, swaying when he is dizzy.
+		local ph = os.clock() - phaseT
+		local function allFours(low: number, gallop: number)
+			local w = s(t * 26) * gallop
+			p.Root = CFrame.new(0, -low, 0) * A(-1.2, 0, 0)
+			p.Waist = A(-0.15, 0, 0); p.Neck = A(1.05, 0, 0)
+			p.RightShoulder = A(1.35 + w * 0.7, 0, 0.1); p.LeftShoulder = A(1.35 - w * 0.7, 0, -0.1)
+			p.RightElbow = A(0.3, 0, 0); p.LeftElbow = A(0.3, 0, 0)
+			p.RightHip = A(1.2 - w * 0.6, 0, 0.1); p.LeftHip = A(1.2 + w * 0.6, 0, -0.1)
+			p.RightKnee = A(-1.3, 0, 0); p.LeftKnee = A(-1.3, 0, 0)
+		end
+		if phase == "wind" then
+			allFours(1.9, 0)
+			p.Root = CFrame.new(0, -1.9, 0.6 + s(t * 9) * 0.25) * A(-1.05, 0, 0) -- rocking back on his haunches
+			p.RightShoulder = A(1.35 + s(t * 16) * 0.7, 0, 0.1) -- one paw rakes the floor
+			p.Neck = A(0.9, s(t * 21) * 0.08, 0)
+		elseif phase == "dash" then
+			allFours(2.1, 1)
+		elseif phase == "dizzy" then
+			p.Root = A(0.12, 0, s(t * 4.5) * 0.28)
+			p.Waist = A(-0.2, s(t * 3.1) * 0.2, 0)
+			p.Neck = A(0.25, s(t * 6) * 0.5, s(t * 4.2) * 0.4)
+			p.RightShoulder = A(0.2, 0, 0.25 + s(t * 4.5) * 0.2); p.LeftShoulder = A(0.2, 0, -0.25 + s(t * 4.5) * 0.2)
+		elseif phase == "dig" then
+			allFours(1.9, 0)
+			local sink = math.clamp(ph / 0.7, 0, 1)
+			p.Root = CFrame.new(0, -1.9 - 9 * sink * sink, 0) * A(-1.35, 0, 0)
+			p.RightShoulder = A(1.5 + s(t * 30) * 0.9, 0, 0.1); p.LeftShoulder = A(1.5 - s(t * 30) * 0.9, 0, -0.1)
+		elseif phase == "under" or phase == "warn" then
+			p.Root = CFrame.new(0, -12, 0)
+		else -- pop: up out of the floor, higher than he stands, claws wide, then down on his feet
+			local up = math.clamp(ph / 0.22, 0, 1)
+			local down = math.clamp((ph - 0.22) / 0.35, 0, 1)
+			p.Root = CFrame.new(0, -10 * (1 - up) + 4.5 * up * (1 - down * down), 0) * A(0.25 * (1 - down), 0, 0)
+			p.Neck = A(0.5 * (1 - down), 0, 0)
+			p.RightShoulder = A(2.3, 0, 0.7); p.LeftShoulder = A(2.3, 0, -0.7)
+			p.RightElbow = A(0.5, 0, 0); p.LeftElbow = A(0.5, 0, 0)
+			p.RightHip = A(0.5 * (1 - down), 0, 0.15); p.LeftHip = A(0.3 * (1 - down), 0, -0.15)
+			p.RightKnee = A(-0.7 * (1 - down), 0, 0); p.LeftKnee = A(-0.5 * (1 - down), 0, 0)
 		end
 	elseif ab == "titanGrab" then
 		-- the Flayed Giant: reach, carry the victim out in front, swing them across (twice), lift and throw
@@ -475,6 +524,13 @@ local function target(state: string, t: number, sinceState: number): { [string]:
 			p.Neck = A(-0.15, s(t * 1.1) * 0.15, s(t * 2.7) * 0.1)
 			p.LeftShoulder = A(0.15, 0.25, -0.25); p.LeftElbow = A(1.35, 0, 0)
 			p.RightElbow = A(0.5, 0, 0)
+		elseif g:GetAttribute("MonsterId") == "Rat" then
+			-- a fat rat on its hind legs: hunched over its belly, paws held up in front, nose twitching, sniffing
+			p.Waist = (p.Waist or CFrame.new()) * A(-0.32, 0, 0)
+			p.Neck = A(0.3 + s(t * 11) * 0.04, s(t * 1.9) * 0.3, 0)
+			p.RightShoulder = A(0.85 + s(t * 9) * 0.1, 0, -0.2); p.LeftShoulder = A(0.85 - s(t * 9) * 0.1, 0, 0.2)
+			p.RightElbow = A(1.1, 0, 0); p.LeftElbow = A(1.1, 0, 0)
+			p.RightWrist = A(0.4, 0, 0); p.LeftWrist = A(0.4, 0, 0)
 		elseif g:GetAttribute("MonsterId") == "Goblin" then
 			p.Waist = (p.Waist or CFrame.new()) * A(0.3, 0, 0) -- hunched, sneaky
 			p.Neck = A(-0.35, s(t * 1.7) * 0.25, s(t * 2.3) * 0.08) -- looking around for something to steal
