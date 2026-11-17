@@ -14,14 +14,13 @@
 - This game's pictures use `--style ps2` (low-poly PS2 horror look; the default style is a bright cartoon). `--kind art` keeps the dark background (good for shop cards); `--upload-only` pushes + uploads a PNG that is already saved.
 - The lobby shop's pictures are a batch: `tools/art/shop_images.txt` (name | size | prompt) with `python3 tools/art/gen_shop_images.py gen [names] [--seed N]` (generate, no upload; review with a contact sheet), `upload` (ids into `tools/art/shop_ids.json`; don't start/stop a playtest while it runs) and `module <path>/ReplicatedStorage/Shared/ShopArt.luau` (writes the id table the shop reads). Don't write "PlayStation", "console" or "no game controller" in a prompt: the model then draws controllers and logos.
 
-## 3D models (free, low-token)
+## 3D models: hand-built blocky PS2 parts only
 
-Studio's own tools do 3D for free and answer with a few lines, so prefer them over building big models from Luau code:
-1. **Free Creator Store model** for common props: `search_asset` (`scope` "creator_store", `priceFilter` "free", `assetType` "Model", `verifiedCreatorsOnly` true, `maxResults` 3-5) then `insert_asset`. Free models can hide malicious scripts: right after inserting, list every Script/LocalScript/ModuleScript inside it and delete them unless the model needs them and you've read them.
-2. **AI mesh** (`generate_mesh`, ~1-2 min, textured, split into parts, e.g. a chest's body + lid) for unique props in the game's style; give `size` in studs and `maxTriangles` (2000-5000 for props). Several at once: `async` true, then `wait_job_finished`. The result is tagged in CollectionService with the returned `tag`.
-3. **Procedural model** (`generate_procedural_model`) for blocky objects built from parts with tunable attributes (buildings, vehicles, characters).
-4. Hand-built parts via `execute_luau` only for simple or large layout pieces (floors, walls, paths), not detailed props.
-- Check the result once with `screen_capture` (needs the Studio window visible on the PC; a black image means it's minimized). Put props in named Folders/Models, anchor them, set `CanCollide/CanQuery/CanTouch` false on decoration.
+- **Never use `generate_mesh` (Studio's AI mesh generator), `generate_scene`, `generate_texture` or any other AI 3D generator for this game.** The user rejected them for good (2026-11-17, the lobby props): they come out smooth and cartoonish with a painted texture, not in the game's blocky PS2 look. Don't offer it again.
+- Every prop is **hand-built from plain Parts** (boxes, cylinders, wedges) in an Edit-mode build script under `tools/build/` (see `tools/build/lobby_detail.luau`: fountain, gates, wagon, well, graves, scarecrows, pumpkins): chunky shapes, few parts, flat dark colours, the `PS2_*` MaterialVariants (`PS2_Stone`, `PS2_DarkBeam`, `PS2_Siding`, `PS2_FloorPlanks`, `PS2_Mud`...), Neon only for small lights. Same look as the log cabins and the hand-built trees.
+- A free Creator Store model only if it is already blocky / low-poly in that style, and only after showing the user; after inserting, list every Script/LocalScript/ModuleScript inside it and delete them unless the model needs them and you've read them.
+- Check the result with a screenshot (needs the Studio window visible on the PC; a black image means it's minimized). Put props in named Folders/Models, anchor them, set `CanCollide/CanQuery/CanTouch` false on decoration.
+- In the lobby, keep particle effects tiny: a big or dense smoke emitter on a path greys out the whole screen of a player standing in it.
 
 ## Saving the game's code (user's standing instruction)
 
