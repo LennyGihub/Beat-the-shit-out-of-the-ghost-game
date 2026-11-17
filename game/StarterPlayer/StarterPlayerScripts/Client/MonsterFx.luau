@@ -367,7 +367,10 @@ function MonsterFx.handle(kind: string, ...)
 		local model, pos, mode = a[1], a[2], a[3]
 		local hand = typeof(model) == "Instance" and (model:FindFirstChild("RightHand") or model:FindFirstChild("HumanoidRootPart")) :: BasePart?
 		if hand then
-			Sfx.at("Breaker", hand.Position, { PlaybackSpeed = 1.9, Volume = 2.2 })
+			-- THE SNAP: a clear finger snap everyone in the house hears (loud and dry, with a soft echo behind it)
+			Sfx.play("FingerSnap", { Volume = 3 })
+			task.delay(0.16, function() Sfx.play("FingerSnap", { Volume = 0.9, PlaybackSpeed = 0.8 }) end)
+			Sfx.at("Breaker", hand.Position, { PlaybackSpeed = 1.9, Volume = 0.5 })
 			emitter(hand.Position, { Color = ColorSequence.new(GOLD), LightEmission = 1, Size = NumberSequence.new(0.8, 0), Speed = NumberRange.new(18, 30),
 				Lifetime = NumberRange.new(0.15, 0.3), Texture = "rbxasset://textures/particles/sparkles_main.dds" }, 24, 0.8)
 		end

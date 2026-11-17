@@ -54,7 +54,7 @@ local sfxGroup, musicGroup = group("SFX"), group("Music")
 
 -- the group a named sound (Shared/Sounds) plays in
 function Settings.group(soundName: string): SoundGroup
-	return MUSIC[soundName] and musicGroup or sfxGroup
+	return (MUSIC[soundName] or string.sub(soundName, 1, 6) == "Music_") and musicGroup or sfxGroup
 end
 
 local function apply()

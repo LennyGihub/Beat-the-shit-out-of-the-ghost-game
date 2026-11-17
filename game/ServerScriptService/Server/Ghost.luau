@@ -15,6 +15,7 @@ local Monsters = require(RS.Shared.Monsters)
 local MapLoader = require(script.Parent.MapLoader)
 local Fury = require(script.Parent.Fury)
 local Evolved = require(script.Parent.Evolved)
+local Entrances = require(RS.Shared.Entrances)
 local C = Config.Ghost
 
 local Ghost = {}
@@ -158,7 +159,9 @@ local function teamSize(): number
 end
 
 -- evoTier = nil for a normal monster, 1.. for an EVOLVED one (1 = the first of the run, kept beatable)
-function Ghost.spawn(level: number, pos: Vector3, monsterId: string?, evoTier: number?)
+-- entrance = true: the monster makes its ENTRANCE (Shared/Entrances): it stays in "Spawn" for the length of its
+-- cinematic (no damage taken, no moving, no attacking) and the clients get the "Entrance" effect.
+function Ghost.spawn(level: number, pos: Vector3, monsterId: string?, evoTier: number?, entrance: boolean?)
 	Ghost.despawn()
 	Ragdoll.restoreWalls() -- walls she smashed through last time are back
 	Fire.clear() -- and the fires are out
@@ -206,6 +209,10 @@ function Ghost.spawn(level: number, pos: Vector3, monsterId: string?, evoTier: n
 	local SC = Config.Scaling
 	local extra = teamSize() - 1
 	local maxHp = math.floor((C.BaseHP + (level - 1) * C.HPPerLevel) * def.hp * Ghost.diff.hp * (1 + extra * SC.HpPerPlayer))
+	local intro = entrance and Entrances.of(def.id) or Entrances.plain
+	local late = intro - Entrances.plain -- its first attack, ability and power wait for the entrance to end
+	m:SetAttribute("EntranceTime", entrance and intro or 0)
+	m:SetAttribute("Hover", hover) -- root height above the floor (the entrances measure the body with it)
 	m:SetAttribute("HP", maxHp)
 	m:SetAttribute("MaxHP", maxHp)
 	m:SetAttribute("Level", level)
@@ -223,21 +230,24 @@ function Ghost.spawn(level: number, pos: Vector3, monsterId: string?, evoTier: n
 	pcall(function() hrp:SetNetworkOwner(nil) end)
 	local g = {
 		model = m, hrp = hrp, lv = lv, ao = ao, level = level, hp = maxHp, maxHp = maxHp,
-		vel = Vector3.zero, state = "Spawn", stateStart = os.clock(), stateUntil = os.clock() + 2.2,
-		nextAttack = os.clock() + 3, nextScare = os.clock() + rng:NextNumber(C.ScareMin, C.ScareMax),
+		vel = Vector3.zero, state = "Spawn", stateStart = os.clock(), stateUntil = os.clock() + intro,
+		nextAttack = os.clock() + 3 + late, nextScare = os.clock() + late + rng:NextNumber(C.ScareMin, C.ScareMax),
 		damageBy = {} :: { [Player]: number }, target = nil :: Player?, rp = structParams(),
 		frozenUntil = 0, slowMult = 1, slowUntil = 0, vulnMult = 1, vulnUntil = 0, burns = {}, ts = nil :: any, launch = nil :: any, fire = nil :: { Instance }?,
-		def = def, hover = hover, bob = def.walker and 0 or 0.35, ab = nil :: any, nextAbility = os.clock() + 5,
+		def = def, hover = hover, bob = def.walker and 0 or 0.35, ab = nil :: any, nextAbility = os.clock() + 5 + late,
 		speedMult = def.speed * Ghost.diff.speed * (1 + extra * SC.SpeedPerPlayer),
 		dmgMult = def.dmg * Ghost.diff.dmg * (1 + extra * SC.DmgPerPlayer),
-		evolved = (def :: any).evolved == true, evo = nil :: any, nextPower = os.clock() + 6,
+		evolved = (def :: any).evolved == true, evo = nil :: any, nextPower = os.clock() + 6 + late,
 		cdBase = ((def :: any).atk or 1) * math.max(0.6, 1 - extra * SC.CooldownPerPlayer),
 	}
 	Ghost.current = g
 	Fury.init(g)
 	if g.evolved then Evolved.onSpawn(g, Ghost) end
-	setState(g, "Spawn", 2.2)
-	Remotes.Fx:FireAllClients("GhostSpawn", pos, def.id)
+	setState(g, "Spawn", intro)
+	-- (pos, monster, evolved, entrance): the fight music is this monster's own; with an entrance its voice comes
+	-- from the cinematic
+	Remotes.Fx:FireAllClients("GhostSpawn", pos, def.id, g.evolved, entrance == true)
+	if entrance then Remotes.Fx:FireAllClients("Entrance", m, def.id, g.evolved, def.title, def.rarity, level, intro) end
 	return g
 end
 
@@ -304,9 +314,14 @@ function Ghost.damage(amount: number, by: Player?)
 end
 
 -- ultimate effects -------------------------------------------------------
-function Ghost.freeze(t: number)
+-- force = a time stop (the Flayed Giant shrugs off every other stun: Monsters noStagger)
+function Ghost.freeze(t: number, force: boolean?)
 	local g = Ghost.current
 	if not g or g.state == "Dead" then return end
+	if (g.def :: any).noStagger and not force then
+		Remotes.Fx:FireAllClients("FuryArmor", g.hrp.Position)
+		return
+	end
 	g.frozenUntil = math.max(g.frozenUntil, os.clock() + t)
 	if unstoppable(g) then
 		-- a special is paused, not cancelled: it goes on where it was once the stun wears off
@@ -328,7 +343,7 @@ function Ghost.timeStop(t: number, mult: number)
 	if not g or g.state == "Dead" then return end
 	g.ts = { untilT = os.clock() + t, stored = 0, mult = mult }
 	g.model:SetAttribute("TimeStop", true)
-	Ghost.freeze(t)
+	Ghost.freeze(t, true)
 end
 
 function Ghost.slow(mult: number, t: number)
@@ -368,7 +383,7 @@ function Ghost.shove(v: Vector3)
 	local g = Ghost.current
 	if not g or g.state == "Dead" or g.state == "Spawn" or g.state == "Launched" or g.state == "Ragdoll" then return end
 	if g.ts and os.clock() < g.ts.untilT then return end
-	if unstoppable(g) then return end
+	if unstoppable(g) or (g.def :: any).noStagger then return end
 	g.vel = v
 	if g.state ~= "Knocked" then setState(g, "Knocked", 0.12) end
 end
@@ -472,6 +487,15 @@ function Ghost.hit(by: Player?, dir: Vector3, knock: number, damage: number, obj
 	local ragVel = flat * math.clamp(knock * 0.75, 55, 115) + Vector3.new(0, 26 + knock * 0.1, 0)
 	if g.state == "Ragdoll" then
 		Ragdoll.kick(g, flat * math.clamp(knock * 0.7, 30, 100) + Vector3.new(0, 30, 0)) -- juggle her while she is down
+		return
+	end
+	-- the Flayed Giant is never staggered: anything short of a knockout blow hurts him but doesn't move him or
+	-- hold up his next swipe
+	if (g.def :: any).noStagger and knock < Ragdoll.MIN_KNOCK then
+		if os.clock() - (g.lastArmorFx or 0) > 0.5 then
+			g.lastArmorFx = os.clock()
+			Remotes.Fx:FireAllClients("FuryArmor", g.hrp.Position)
+		end
 		return
 	end
 	if knock >= Ragdoll.MIN_KNOCK then

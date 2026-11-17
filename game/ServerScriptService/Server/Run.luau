@@ -19,6 +19,7 @@ local Maps = require(RS.Shared.Maps)
 local MapLoader = require(script.Parent.MapLoader)
 local Quests = require(script.Parent.Quests)
 local Friends = require(script.Parent.Friends)
+local Bestiary = require(script.Parent.Bestiary)
 
 local Run = {}
 Run.mode = "Lobby" -- "Lobby" (public / Studio) or "Match" (reserved server)
@@ -180,9 +181,10 @@ function Run.startFight()
 	lastMonster = def.id
 	if evoTier then lastEvolved = def.id end
 	local shown = evoTier and Monsters.evolved(def.id, evoTier) or def
-	setState("Intro", shown.title .. " IS COMING...")
+	-- a short warning, then the monster makes its entrance (Ghost.spawn -> Client/Entrance): its name comes with it
+	setState("Intro", evoTier and "SOMETHING WORSE IS COMING..." or "SOMETHING IS COMING...")
 	for _, p in list do Remotes.Fx:FireClient(p, "Intro", level, shown.title, shown.rarity, evoTier ~= nil) end
-	task.wait(5)
+	task.wait(3)
 	if #Run.matchPlayers() == 0 then busy = false; return end
 	-- a random spot in the house, never right next to a player
 	local players = {}
@@ -190,7 +192,7 @@ function Run.startFight()
 		local hrp = hrpOf(p)
 		if hrp then table.insert(players, hrp.Position) end
 	end
-	Ghost.spawn(level, MapLoader.randomGhostSpawn(players, 28), def.id, evoTier)
+	Ghost.spawn(level, MapLoader.randomGhostSpawn(players, 28), def.id, evoTier, true)
 	setState("Fight", "")
 	busy = false
 end
@@ -218,6 +220,7 @@ local function onGhostDeath(g)
 		local r = math.floor(reward * cashMult(p))
 		p:SetAttribute("RunCash", (p:GetAttribute("RunCash") or 0) + r)
 		Data.winGhost(p, g.level)
+		Bestiary.record(p, (g.def and g.def.id) or "Woman", g.evolved == true, diff.id == "Nightmare") -- bestiary + badges
 		Quests.add(p, "kills")
 		Quests.add(p, "kill_" .. ((g.def and g.def.id) or "Woman"))
 		Quests.add(p, "wave", g.level)

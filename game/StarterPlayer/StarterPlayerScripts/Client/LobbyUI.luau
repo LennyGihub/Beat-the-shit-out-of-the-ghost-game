@@ -262,7 +262,8 @@ function LobbyUI.invite(hostName: string, partyId: string)
 end
 
 -- quests: opener, how many are ready to claim, and the signal that fires when that may change
-function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpener: (() -> ())?, questCount: (() -> number)?, questChanged: RBXScriptSignal?)
+function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpener: (() -> ())?, questCount: (() -> number)?, questChanged: RBXScriptSignal?,
+	bestiaryOpener: (() -> ())?)
 	openShop = shopOpener
 	onToggle = toggled
 	gui = Instance.new("ScreenGui")
@@ -271,17 +272,22 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 	gui.Parent = lp:WaitForChild("PlayerGui")
 
 	-- left column: PLAY / SHOP / QUESTS, drawn like the fight HUD's bars (health red, stamina mustard, brutality orange)
-	side = Grunge.frame(gui, { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 28, 0.5, 0), Size = UDim2.fromScale(0.2, 0.42) })
-	local sar = Instance.new("UIAspectRatioConstraint"); sar.AspectRatio = 1.05; sar.Parent = side
-	bigButton("PLAY", "FIND A FIGHT", Color3.fromRGB(150, 18, 20), 0, -1.2, function() setOpen(not panel.Visible) end, 0.24)
-	bigButton("SHOP", "ULTS - MAPS", Color3.fromRGB(176, 150, 40), 0.27, 0.8, function()
+	side = Grunge.frame(gui, { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 28, 0.5, 0), Size = UDim2.fromScale(0.2, 0.54) })
+	local sar = Instance.new("UIAspectRatioConstraint"); sar.AspectRatio = 0.82; sar.Parent = side
+	bigButton("PLAY", "FIND A FIGHT", Color3.fromRGB(150, 18, 20), 0, -1.2, function() setOpen(not panel.Visible) end, 0.19)
+	bigButton("SHOP", "ULTS - MAPS", Color3.fromRGB(176, 150, 40), 0.21, 0.8, function()
 		if panel.Visible then setOpen(false) end
 		if openShop then openShop() end
-	end, 0.24)
-	local questBtn = bigButton("QUESTS", "DAILY CASH", Color3.fromRGB(210, 86, 18), 0.54, -0.6, function()
+	end, 0.19)
+	local questBtn = bigButton("QUESTS", "DAILY CASH", Color3.fromRGB(210, 86, 18), 0.42, -0.6, function()
 		if panel.Visible then setOpen(false) end
 		if questOpener then questOpener() end
-	end, 0.24)
+	end, 0.19)
+	-- long-term goals: the monsters you have beaten and the badges (Client/BestiaryUI)
+	bigButton("BESTIARY", "BADGES", Color3.fromRGB(96, 52, 150), 0.63, 0.7, function()
+		if panel.Visible then setOpen(false) end
+		if bestiaryOpener then bestiaryOpener() end
+	end, 0.19)
 	-- red badge: quests ready to claim
 	local badge = Grunge.frame(questBtn.Parent :: Instance, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.98, 0.2), Size = UDim2.fromScale(0.2, 0.46), BackgroundTransparency = 0, BackgroundColor3 = Color3.fromRGB(200, 30, 24), ZIndex = 10, Visible = false })
 	local bc = Instance.new("UICorner"); bc.CornerRadius = UDim.new(0.5, 0); bc.Parent = badge
@@ -296,11 +302,11 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 	if questChanged then questChanged:Connect(refreshBadge) end
 	refreshBadge()
 	-- controller: D-pad up opens PLAY (the stick keeps moving the character)
-	local padTag = Grunge.text(side, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0, 0.92), Size = UDim2.fromScale(1.1, 0.07), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = ACCENT, Rotation = -1 })
+	local padTag = Grunge.text(side, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0, 0.94), Size = UDim2.fromScale(1.1, 0.055), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = ACCENT, Rotation = -1 })
 	local function padHint() padTag.Text = Platform.mode() == "gamepad" and "D-PAD UP: PLAY   D-PAD LEFT: SETTINGS" or "" end
 	padHint()
 	Platform.changed:Connect(padHint)
-	boostTag = Grunge.text(side, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0.02, 0.81), Size = UDim2.fromScale(1.1, 0.08), TextXAlignment = Enum.TextXAlignment.Left, Rotation = -1 })
+	boostTag = Grunge.text(side, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0.02, 0.85), Size = UDim2.fromScale(1.1, 0.065), TextXAlignment = Enum.TextXAlignment.Left, Rotation = -1 })
 
 	-- PLAY panel: a painted ink slab over a blood splat, the title over a red brush (like the ghost name over its bar)
 	panel = Grunge.slab(gui, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.55, 0.52), Size = UDim2.fromScale(0.62, 0.8), Visible = false, ZIndex = 8 }, Color3.fromRGB(21, 17, 15), 33, 6, false) -- no pen lines around the lobby's panels and bars

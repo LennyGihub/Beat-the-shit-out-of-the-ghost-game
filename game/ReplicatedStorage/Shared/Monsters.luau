@@ -8,6 +8,7 @@
 -- secret = never in the normal rotation: any ghost after the first has SECRET_CHANCE to be it instead (rarity 4).
 -- smasher = every last swipe of a combo launches you through the inside walls (like an enraged / evolved monster);
 -- smash = how hard.
+-- noStagger = never staggered or stunned, only knocked out (the Flayed Giant).
 export type Monster = {
 	id: string, name: string, title: string, rarity: number, template: string, color: Color3,
 	hp: number, speed: number, dmg: number, reward: number, hover: number, walker: boolean, scale: number,
@@ -44,8 +45,11 @@ local List: { Monster } = {
 		ability = { kind = "blackout", cd = 14, t = 10, dmg = 30, speed = 15, lightsOut = true },
 		desc = "A rotting party-mascot bear. It shuts every light off and hunts you in the dark: only its eyes glow." }),
 	m({ id = "Titan", name = "The Flayed Giant", title = "THE FLAYED GIANT", rarity = 2, template = "Titan", color = C(170, 58, 44),
-		hp = 1.6, speed = 0.82, dmg = 1.3, reward = 1.8, hover = 0, walker = true, scale = 1, solid = false,
+		hp = 1.6, speed = 1.04, dmg = 1.3, reward = 1.8, hover = 0, walker = true, scale = 1, solid = false,
 		reach = 1.6, -- long arms: attacks from further away
+		-- too big to be pushed around: a hit that does not knock him out never staggers him, and stuns (taser, freezing
+		-- ultimates, the leaf blower) do nothing. A knockout blow still ragdolls him (Ghost.hit / Ghost.freeze).
+		noStagger = true,
 		wallBreaker = true, -- too big for the doors: smashes through the inside walls in his way
 		-- grabs you; with another player standing he carries you over and swings you into them twice, then throws you
 		ability = { kind = "titanGrab", cd = 7.5, range = 15, swingRange = 60, swingReach = 13, carrySpeed = 26, dmg = 26, swingDmg = 20, power = 120 },

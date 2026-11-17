@@ -3,6 +3,7 @@
 -- white hit flash, dissolve on death. Every monster rig uses the same R15 joint names.
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local EP = require(script.Parent.EntrancePose) -- the body's part in each monster's entrance
 
 local GA = {}
 local current: Model? = nil
@@ -502,10 +503,17 @@ end
 
 local stateSeen, stateT = "", 0
 local warned = false
+local height = 8 -- the bound monster's height (entrances move the body by it)
 function GA.update(dt: number)
 	local g = workspace:FindFirstChild("Ghost") :: Model?
 	if g ~= current then
-		if g then bind(g) else current = nil end
+		if g then
+			bind(g)
+			stateSeen = "" -- a new monster: its first state starts now
+			height = EP.height(g)
+		else
+			current = nil
+		end
 	end
 	if not current or not current.Parent then return end
 	local t = os.clock()
@@ -530,6 +538,25 @@ function GA.update(dt: number)
 	if state == "Dead" then want = math.min(1, (t - stateT) / 2.5) end
 	if state == "Spawn" then want = 1 - math.min(1, (t - stateT) / 1.8) end
 	fade += (want - fade) * math.min(1, dt * (state == "Dead" and 3 or 6))
+	-- its ENTRANCE (Shared/Entrances): the body follows EntrancePose on the cinematic's clock, with no smoothing
+	local entrance: { [string]: CFrame }? = nil
+	if state == "Spawn" and (tonumber(current:GetAttribute("EntranceTime")) or 0) > 0 then
+		local s = EP.clock.model == current and EP.clock.s or (t - stateT)
+		local ep, alpha = EP.pose(current:GetAttribute("MonsterId") or "", current:GetAttribute("Evolved") == true, s, t, height)
+		if ep then
+			entrance = ep
+			fade = alpha
+			-- turned toward the cinematic's camera, and back to where the server has it looking at the very end
+			local face = EP.clock.model == current and EP.clock.face or nil
+			local root = current:FindFirstChild("HumanoidRootPart")
+			if face and root and root:IsA("BasePart") then
+				local dur = tonumber(current:GetAttribute("EntranceTime")) or 5
+				local l = root.CFrame:VectorToObjectSpace(face)
+				local back = math.clamp((s - (dur - 0.95)) / 0.6, 0, 1)
+				ep.Root = CFrame.Angles(0, math.atan2(-l.X, -l.Z) * (1 - back * back * (3 - 2 * back)), 0) * (ep.Root or CFrame.new())
+			end
+		end
+	end
 	if shadow and want >= 1 then fade = 1 end -- the lights cut: the Party Bear is gone at once
 	local neonEyes = shadow and state ~= "Dead"
 	for _, d in current:GetDescendants() do
@@ -558,9 +585,9 @@ function GA.update(dt: number)
 				highlight.FillTransparency = 1
 			end
 		end
-		local tp = target(state, t, t - stateT)
+		local tp = entrance or target(state, t, t - stateT)
 		local speed = (state == "Swipe" or state == "Knocked" or state == "Ability") and 22 or 12
-		local a = 1 - math.exp(-speed * dt)
+		local a = entrance and 1 or (1 - math.exp(-speed * dt))
 		for name, m in joints do
 			if frozen then m.Transform = pose[name]; continue end
 			local want = tp[name] or CFrame.new()

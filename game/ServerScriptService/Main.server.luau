@@ -32,6 +32,7 @@ local Leaderboards = require(Server.Leaderboards)
 local Quests = require(Server.Quests)
 local Vip = require(Server.Vip)
 local Sandbox = require(Server.Sandbox)
+local Bestiary = require(Server.Bestiary)
 
 local isMatchServer = game.PrivateServerId ~= "" and game.PrivateServerOwnerId == 0
 Run.mode = isMatchServer and "Match" or "Lobby"
@@ -53,6 +54,7 @@ Monetization.start()
 Vip.start()
 Quests.start()
 Leaderboards.start(Run.mode == "Lobby") -- the lobby's global leaderboards (kills, highest wave, money)
+Bestiary.start(Run.mode == "Lobby") -- the lobby's bestiary: display copies of every monster
 
 local expected = 1
 local firstJoin = nil :: number?
@@ -96,6 +98,7 @@ local function onPlayer(p: Player)
 	p:LoadCharacter()
 	Data.load(p)
 	Quests.setup(p)
+	Bestiary.setup(p) -- badges already earned by an older save
 	if Run.mode == "Match" then
 		firstJoin = firstJoin or os.clock()
 		-- start when the whole party has arrived (or after 15 s)
