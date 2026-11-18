@@ -14,6 +14,10 @@
 - This game's pictures use `--style ps2` (low-poly PS2 horror look; the default style is a bright cartoon). `--kind art` keeps the dark background (good for shop cards); `--upload-only` pushes + uploads a PNG that is already saved.
 - The lobby shop's pictures are a batch: `tools/art/shop_images.txt` (name | size | prompt) with `python3 tools/art/gen_shop_images.py gen [names] [--seed N]` (generate, no upload; review with a contact sheet), `upload` (ids into `tools/art/shop_ids.json`; don't start/stop a playtest while it runs) and `module <path>/ReplicatedStorage/Shared/ShopArt.luau` (writes the id table the shop reads). Don't write "PlayStation", "console" or "no game controller" in a prompt: the model then draws controllers and logos.
 
+## Game loops
+
+- Before designing or changing a loop, progression, economy, rebirth, a tutorial or retention features, read `.claude/game-loops.md` (what makes a good Roblox game loop; the user asked for it to be learned, 2026-11-18).
+
 ## 3D models: hand-built blocky PS2 parts only
 
 - **Never use Roblox's AI for anything in this game** (the user, 2026-11-18: "do it yourself or subagents"): not the Assistant's generation, not `generate_mesh`, `generate_scene`, `generate_texture` or any other AI generator. Running your own Luau through the bridge is fine (that is only code execution).
