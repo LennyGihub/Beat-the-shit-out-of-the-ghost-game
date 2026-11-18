@@ -1,5 +1,8 @@
--- THE GHOST SHIP, rebuilt bigger (2026-11): a galleon 156 studs long and 92 wide (the old one was 52 wide), THREE
--- DECKS inside the hull and cabins on top.
+-- THE GHOST SHIP, rebuilt bigger (2026-11): a galleon 92 wide (the old one was 52 wide), THREE DECKS inside the
+-- hull and cabins on top. LONGER since 2026-11-18: every lengthwise (x) coordinate goes through X() (x STRETCH, so
+-- about 203 studs instead of 156): walls, rooms, decks, masts, lamps, furniture and spawns. The stairs and the
+-- gangway keep their size (only their place moves), so the deck holes still fit the stairs. The masts are taller
+-- and the yards and sails higher and bigger.
 --   HOLD (y 2):      the brig aft (three cells), the big cargo hold amidships, the powder magazine forward.
 --   GUN DECK (y 23): the mess and the surgeon's cabin aft, the gun gallery amidships (cannons at both sides), the
 --                    crew's quarters forward.
@@ -38,7 +41,10 @@ beginMap("Ship", {
 	found = PLANK_D, door = BEAM, porch = PLANK, lanternColor = GLOWC,
 })
 local L1, L2, L3 = 2, 23, 44 -- the three decks
-local AX1, AX2, HZ = -74, 62, 46 -- the hull's straight part: x AX1..AX2, z -HZ..HZ; then the stepped bow to x 78
+local STRETCH = 1.3 -- how much longer than the 2026-11 build (x only)
+local function X(x: number): number return x * STRETCH end
+local AX1, AX2, HZ = X(-74), X(62), 46 -- the hull's straight part: x AX1..AX2, z -HZ..HZ; then the stepped bow to x X(78)
+local BOW1, BOW2 = X(70), X(78)
 
 -- THE HULL (Structure.Exterior) --------------------------------------------------------------------------------
 local ext = model(STR, "Exterior")
@@ -55,18 +61,18 @@ local function hull(y0, h, starboardOps, gate)
 	-- the bow, in two steps
 	wall(ext, "BowShoulderP", "z", AX2, -HZ, -34, y0, h, {}, EXT(-1))
 	wall(ext, "BowShoulderS", "z", AX2, 34, HZ, y0, h, {}, EXT(-1))
-	wall(ext, "BowSideP", "x", -34, AX2, 70, y0, h, {}, EXT(1))
-	wall(ext, "BowSideS", "x", 34, AX2, 70, y0, h, {}, EXT(-1))
-	wall(ext, "BowCheekP", "z", 70, -34, -20, y0, h, {}, EXT(-1))
-	wall(ext, "BowCheekS", "z", 70, 20, 34, y0, h, {}, EXT(-1))
-	wall(ext, "BowNoseP", "x", -20, 70, 78, y0, h, {}, EXT(1))
-	wall(ext, "BowNoseS", "x", 20, 70, 78, y0, h, {}, EXT(-1))
-	wall(ext, "Stem", "z", 78, -20, 20, y0, h, {}, EXT(-1))
+	wall(ext, "BowSideP", "x", -34, AX2, BOW1, y0, h, {}, EXT(1))
+	wall(ext, "BowSideS", "x", 34, AX2, BOW1, y0, h, {}, EXT(-1))
+	wall(ext, "BowCheekP", "z", BOW1, -34, -20, y0, h, {}, EXT(-1))
+	wall(ext, "BowCheekS", "z", BOW1, 20, 34, y0, h, {}, EXT(-1))
+	wall(ext, "BowNoseP", "x", -20, BOW1, BOW2, y0, h, {}, EXT(1))
+	wall(ext, "BowNoseS", "x", 20, BOW1, BOW2, y0, h, {}, EXT(-1))
+	wall(ext, "Stem", "z", BOW2, -20, 20, y0, h, {}, EXT(-1))
 end
 hull(-4, 27, {}) -- the keel and the hold
 hull(L2, 21, { dr(3.5, 7, 11) }) -- the gun deck: a door onto the gangway's landing
 hull(L3, 4, nil, { -40, -32 }) -- the main deck's bulwark, with the gangway's gate
-box(STR, "HullBottom", AX1, -5, -HZ, 78, -4, HZ, PLANK_D)
+box(STR, "HullBottom", AX1, -5, -HZ, BOW2, -4, HZ, PLANK_D)
 
 -- THE STAIRS (before the decks: each one gives the hole to leave in the deck above) ---------------------------
 local SK = { step = PLANK, trim = BEAM, wall = HULL_IN, kind = "balusters" }
@@ -79,10 +85,10 @@ local function well(x0, z0, y)
 	keepClear(x0 - 9, z0 - 9, x0, z0 + 9, y + 21) -- ...and the top stay open
 	return hole
 end
-local h1 = well(-56, 0, L1) -- hold <-> gun deck, aft
-local h2 = well(22, 0, L1) -- hold <-> gun deck, forward
-local h3 = well(-18, -26, L2) -- gun deck <-> main deck, port
-local h4 = well(-18, 26, L2) -- gun deck <-> main deck, starboard
+local h1 = well(X(-56), 0, L1) -- hold <-> gun deck, aft
+local h2 = well(X(22), 0, L1) -- hold <-> gun deck, forward
+local h3 = well(X(-18), -26, L2) -- gun deck <-> main deck, port
+local h4 = well(X(-18), 26, L2) -- gun deck <-> main deck, starboard
 
 -- THE DECKS (Structure.Floors): tiles, with the stairs' holes cut out ------------------------------------------
 local floors = model(STR, "Floors")
@@ -105,11 +111,12 @@ local function deck(name, y, holes, breakable)
 	local rects = {}
 	for i = 0, 7 do
 		for j = 0, 5 do
-			table.insert(rects, { AX1 + i * 17, -HZ + j * (2 * HZ / 6), AX1 + (i + 1) * 17, -HZ + (j + 1) * (2 * HZ / 6) })
+			local w = (AX2 - AX1) / 8
+			table.insert(rects, { AX1 + i * w, -HZ + j * (2 * HZ / 6), AX1 + (i + 1) * w, -HZ + (j + 1) * (2 * HZ / 6) })
 		end
 	end
-	table.insert(rects, { AX2, -34, 70, 0 }); table.insert(rects, { AX2, 0, 70, 34 })
-	table.insert(rects, { 70, -20, 78, 20 })
+	table.insert(rects, { AX2, -34, BOW1, 0 }); table.insert(rects, { AX2, 0, BOW1, 34 })
+	table.insert(rects, { BOW1, -20, BOW2, 20 })
 	for _, h in holes do rects = minus(rects, h) end
 	for _, r in rects do
 		if r[3] - r[1] > 0.05 and r[4] - r[2] > 0.05 then
@@ -126,50 +133,52 @@ deck("MainDeck", L3, { h3, h4 }, true)
 local inn = model(STR, "Interior")
 local I = INT()
 -- the hold
-wall(inn, "HoldAft", "z", -26, -45, 45, L1, 20, { dr(-28, 8, 12), dr(28, 8, 12) }, I)
-wall(inn, "HoldFore", "z", 14, -45, 45, L1, 20, { dr(-28, 8, 12), dr(28, 8, 12) }, I)
-wall(inn, "Brig", "x", -20, -73, -27, L1, 20, { dr(-65, 7, 11), dr(-51, 7, 11), dr(-37, 7, 11) }, I)
-wall(inn, "CellA", "z", -58, -45, -21, L1, 20, {}, I)
-wall(inn, "CellB", "z", -44, -45, -21, L1, 20, {}, I)
-wall(inn, "Magazine", "x", 20, 15, 61, L1, 20, { dr(28, 6, 11), dr(50, 6, 11) }, I)
+wall(inn, "HoldAft", "z", X(-26), -45, 45, L1, 20, { dr(-28, 8, 12), dr(28, 8, 12) }, I)
+wall(inn, "HoldFore", "z", X(14), -45, 45, L1, 20, { dr(-28, 8, 12), dr(28, 8, 12) }, I)
+wall(inn, "Brig", "x", -20, X(-73), X(-27), L1, 20, { dr(X(-65), 7, 11), dr(X(-51), 7, 11), dr(X(-37), 7, 11) }, I)
+wall(inn, "CellA", "z", X(-58), -45, -21, L1, 20, {}, I)
+wall(inn, "CellB", "z", X(-44), -45, -21, L1, 20, {}, I)
+wall(inn, "Magazine", "x", 20, X(15), X(61), L1, 20, { dr(X(28), 6, 11), dr(X(50), 6, 11) }, I)
 -- the gun deck
-wall(inn, "GunAft", "z", -26, -45, 45, L2, 20, { dr(-40, 6, 12), dr(40, 6, 12), dr(-22, 7, 12), dr(22, 7, 12) }, I) -- (no door on the centre line: the mast)
-wall(inn, "GunFore", "z", 14, -45, 45, L2, 20, { dr(-38, 7, 12), dr(38, 7, 12), dr(-12, 6, 12), dr(12, 6, 12) }, I)
-wall(inn, "Mess", "x", -14, -73, -27, L2, 20, { dr(-66, 6, 11), dr(-34, 6, 11) }, I)
-wall(inn, "Surgeon", "x", 14, -73, -27, L2, 20, { dr(-66, 6, 11), dr(-34, 6, 11) }, I)
-wall(inn, "QuartersP", "x", -16, 15, 61, L2, 20, { dr(19, 6, 11), dr(52, 6, 11) }, I)
-wall(inn, "QuartersS", "x", 16, 15, 61, L2, 20, { dr(19, 6, 11), dr(52, 6, 11) }, I)
+wall(inn, "GunAft", "z", X(-26), -45, 45, L2, 20, { dr(-40, 6, 12), dr(40, 6, 12), dr(-22, 7, 12), dr(22, 7, 12) }, I) -- (no door on the centre line: the mast)
+wall(inn, "GunFore", "z", X(14), -45, 45, L2, 20, { dr(-38, 7, 12), dr(38, 7, 12), dr(-12, 6, 12), dr(12, 6, 12) }, I)
+wall(inn, "Mess", "x", -14, X(-73), X(-27), L2, 20, { dr(X(-66), 6, 11), dr(X(-34), 6, 11) }, I)
+wall(inn, "Surgeon", "x", 14, X(-73), X(-27), L2, 20, { dr(X(-66), 6, 11), dr(X(-34), 6, 11) }, I)
+wall(inn, "QuartersP", "x", -16, X(15), X(61), L2, 20, { dr(X(19), 6, 11), dr(X(52), 6, 11) }, I)
+wall(inn, "QuartersS", "x", 16, X(15), X(61), L2, 20, { dr(X(19), 6, 11), dr(X(52), 6, 11) }, I)
 -- the main deck: the captain's cabin aft, the forecastle forward (12 high, a roof on each)
-wall(inn, "CabinFront", "z", -44, -38, 38, L3, 12, { dr(-20, 7, 10), dr(20, 7, 10) }, I)
-wall(inn, "CabinBack", "z", -72, -38, 38, L3, 12, {}, I)
-wall(inn, "CabinPort", "x", -38, -72, -44, L3, 12, {}, I)
-wall(inn, "CabinStarboard", "x", 38, -72, -44, L3, 12, {}, I)
-wall(inn, "ForecastleBack", "z", 40, -32, 32, L3, 12, { dr(-16, 7, 10), dr(16, 7, 10) }, I)
-wall(inn, "ForecastleFront", "z", 61, -32, 32, L3, 12, {}, I)
-wall(inn, "ForecastlePort", "x", -32, 40, 61, L3, 12, {}, I)
-wall(inn, "ForecastleStarboard", "x", 32, 40, 61, L3, 12, {}, I)
-box(floors, "PoopDeck", -73, L3 + 12, -39, -43, L3 + 13, 39, PLANK_D)
-box(floors, "ForecastleRoof", 39, L3 + 12, -33, 62, L3 + 13, 33, PLANK_D)
+wall(inn, "CabinFront", "z", X(-44), -38, 38, L3, 12, { dr(-20, 7, 10), dr(20, 7, 10) }, I)
+wall(inn, "CabinBack", "z", X(-72), -38, 38, L3, 12, {}, I)
+wall(inn, "CabinPort", "x", -38, X(-72), X(-44), L3, 12, {}, I)
+wall(inn, "CabinStarboard", "x", 38, X(-72), X(-44), L3, 12, {}, I)
+wall(inn, "ForecastleBack", "z", X(40), -32, 32, L3, 12, { dr(-16, 7, 10), dr(16, 7, 10) }, I)
+wall(inn, "ForecastleFront", "z", X(61), -32, 32, L3, 12, {}, I)
+wall(inn, "ForecastlePort", "x", -32, X(40), X(61), L3, 12, {}, I)
+wall(inn, "ForecastleStarboard", "x", 32, X(40), X(61), L3, 12, {}, I)
+box(floors, "PoopDeck", X(-73), L3 + 12, -39, X(-43), L3 + 13, 39, PLANK_D)
+box(floors, "ForecastleRoof", X(39), L3 + 12, -33, X(62), L3 + 13, 33, PLANK_D)
 -- the corridors and the gangways between the doors stay clear of furniture
-keepClear(-26, -4, 14, 4, L1); keepClear(-26, -4, 14, 4, L2)
-keepClear(-42, 38, 40, 45, L3) -- along the starboard rail, to the gate
+keepClear(X(-26), -4, X(14), 4, L1); keepClear(X(-26), -4, X(14), 4, L2)
+keepClear(X(-42), 38, X(40), 45, L3) -- along the starboard rail, to the gate
 
 -- MASTS: through every deck, from the hold to the sky (the yards and sails are only to look at) ---------------
 local masts = model(STR, "Masts")
 local rig = model(DEC, "Rigging")
 -- (the forward one stands clear of the forward stair: right in front of it, the monsters' pathfinding could not
 -- get round it)
-for i, x in { -30, 10 } do
-	local top = i == 1 and 104 or 112
-	cyl(masts, CFrame.new(), "Mast", 3.6, top - L1, x, (top + L1) / 2, 0, BEAM)
-	for j, y in { 62, 84 } do
-		local half = j == 1 and 34 or 26
+-- (taller since 2026-11-18: the yards hang higher and carry bigger sails)
+for i, x in { X(-30), X(10) } do
+	local top = i == 1 and 126 or 136
+	cyl(masts, CFrame.new(), "Mast", 3.8, top - L1, x, (top + L1) / 2, 0, BEAM)
+	for j, y in { 74, 104 } do
+		local half = j == 1 and 38 or 30
+		local drop = j == 1 and 24 or 22
 		box(rig, "Yard", x - 0.7, y, -half, x + 0.7, y + 1.4, half, BEAM, D())
-		box(rig, "Sail", x + 0.8, y - 17, -half + 2, x + 1.2, y, half - 2, SAIL, D())
+		box(rig, "Sail", x + 0.8, y - drop, -half + 2, x + 1.2, y, half - 2, SAIL, D())
 	end
 	box(rig, "CrowsNest", x - 3, top - 12, -3, x + 3, top - 11, 3, PLANK_D, D())
 end
-box(rig, "Bowsprit", 74, L3 + 3, -0.9, 100, L3 + 4.6, 0.9, BEAM, D())
+box(rig, "Bowsprit", BOW2 - 4, L3 + 3, -0.9, BOW2 + 22, L3 + 4.6, 0.9, BEAM, D())
 
 -- THE GANGWAY (Structure.Porch): outside the starboard side, from the gate down to the quay -------------------
 local porch = model(STR, "Porch")
@@ -189,12 +198,12 @@ for i = 1, 21 do -- the landing -> the quay
 end
 box(porch, "RailPanel", -40, L3, GZ2 - 0.4, -32, L3 + 3.6, GZ2, BEAM)
 box(porch, "RailPanel", -40.4, L3, HZ + 1, -40, L3 + 3.6, GZ2, BEAM)
-box(porch, "Pier", -46, L1 - 1, GZ1, 46, L1, 62, PLANK)
-box(porch, "PierStep", -46, L1 - 2, 62, 46, L1 - 1, 64.5, PLANK_D)
+box(porch, "Pier", X(-46), L1 - 1, GZ1, X(46), L1, 62, PLANK)
+box(porch, "PierStep", X(-46), L1 - 2, 62, X(46), L1 - 1, 64.5, PLANK_D)
 for _, x in { -40, -32, -0.5, 7.5 } do
 	for _, z in { GZ1 + 0.6, GZ2 - 0.6 } do box(porch, "GangwayPost", x - 0.5, L1, z - 0.5, x + 0.5, (x < -20) and (L3 - 1) or (L2 - 1), z + 0.5, BEAM) end
 end
-for _, x in { -44, -22, 0, 22, 44 } do box(DEC, "PierPost", x - 0.6, -2, 61, x + 0.6, L1 + 3, 62.2, BEAM, D()) end
+for _, x0 in { -44, -22, 0, 22, 44 } do local x = X(x0); box(DEC, "PierPost", x - 0.6, -2, 61, x + 0.6, L1 + 3, 62.2, BEAM, D()) end
 
 -- THE SEA, as it was --------------------------------------------------------------------------------------------
 if OLD then
@@ -208,15 +217,16 @@ for _, y in { L1, L2 } do
 	for _, x in { -64, -40, -6, 28, 50 } do
 		for _, z in { -30, 0, 30 } do
 			-- (not over a stair: the wells on the centre line, and under the main deck the two at the sides)
-			if not (z == 0 and (x == -40 or x == 28)) and not (y == L2 and x == -6 and z ~= 0) then bulb(x, y + 19.5, z, 3, GLOWC) end
+			if not (z == 0 and (x == -40 or x == 28)) and not (y == L2 and x == -6 and z ~= 0) then bulb(X(x), y + 19.5, z, 3, GLOWC) end
 		end
 	end
-	bulb(70, y + 19.5, 0, 3, GLOWC)
+	bulb(X(70), y + 19.5, 0, 3, GLOWC)
 end
-for _, p in { { -58, -20 }, { -58, 20 }, { 50, -16 }, { 50, 16 } } do bulb(p[1], L3 + 11.5, p[2], 2.5, GLOWC) end -- in the cabins
-for _, x in { -30, 0, 30, 68 } do -- on posts along both rails of the open deck
+for _, p in { { -58, -20 }, { -58, 20 }, { 50, -16 }, { 50, 16 } } do bulb(X(p[1]), L3 + 11.5, p[2], 2.5, GLOWC) end -- in the cabins
+for _, x0 in { -30, 0, 30, 68 } do -- on posts along both rails of the open deck
+	local x = X(x0)
 	for _, s in { -1, 1 } do
-		if not (s == 1 and x == -30) then -- (the gate)
+		if not (s == 1 and x0 == -30) then -- (the gate)
 			box(DEC, "LampPost", x - 0.3, L3, s * (HZ - 2.2) - 0.3, x + 0.3, L3 + 7, s * (HZ - 2.2) + 0.3, BEAM, D())
 			bulb(x, L3 + 9.6, s * (HZ - 2.2), 2.2, GLOWC)
 		end
@@ -240,43 +250,43 @@ local function put(kind, cf)
 end
 -- the gun gallery: a row of cannons at each side, their muzzles to the hull
 for _, x in { -20, -10, 8 } do
-	put("Cannon", CFrame.new(x == -10 and -22 or x, L2, -40) * CFrame.Angles(0, math.pi, 0))
-	put("Cannon", CFrame.new(x == -10 and -22 or x, L2, 40))
+	put("Cannon", CFrame.new(X(x == -10 and -22 or x), L2, -40) * CFrame.Angles(0, math.pi, 0))
+	put("Cannon", CFrame.new(X(x == -10 and -22 or x), L2, 40))
 end
-for _, s in { -1, 1 } do put("Cannon", CFrame.new(10, L2, s * 41) * CFrame.Angles(0, s < 0 and math.pi or 0, 0)) end
+for _, s in { -1, 1 } do put("Cannon", CFrame.new(X(10), L2, s * 41) * CFrame.Angles(0, s < 0 and math.pi or 0, 0)) end
 -- on the open deck
 for _, x in { -8, 26 } do
-	put("Cannon", CFrame.new(x, L3, -41) * CFrame.Angles(0, math.pi, 0))
-	put("Cannon", CFrame.new(x + 4, L3, 41))
+	put("Cannon", CFrame.new(X(x), L3, -41) * CFrame.Angles(0, math.pi, 0))
+	put("Cannon", CFrame.new(X(x + 4), L3, 41))
 end
-put("Chest", CFrame.new(-66, L3, -30)); put("Chest", CFrame.new(-66, L3, 30)); put("Chest", CFrame.new(-8, L1, 36)); put("Chest", CFrame.new(40, L1, 32))
-put("Rope", CFrame.new(34, L3, -40)); put("Rope", CFrame.new(-4, L3, 12)); put("Rope", CFrame.new(-20, L1, -38)); put("Rope", CFrame.new(66, L3, 12))
+put("Chest", CFrame.new(X(-66), L3, -30)); put("Chest", CFrame.new(X(-66), L3, 30)); put("Chest", CFrame.new(X(-8), L1, 36)); put("Chest", CFrame.new(X(40), L1, 32))
+put("Rope", CFrame.new(X(34), L3, -40)); put("Rope", CFrame.new(X(-4), L3, 12)); put("Rope", CFrame.new(X(-20), L1, -38)); put("Rope", CFrame.new(X(66), L3, 12))
 -- the cargo hold: stacks of crates and barrels
-for _, p in { { -18, -34 }, { -12, -36 }, { -18, 30 }, { 6, -32 }, { 4, 34 }, { -6, 22 } } do F.crate(at(p[1], L1, p[2], "N"), 3.6) end
-for _, p in { { -12, 36 }, { 8, 26 }, { -2, -24 }, { 0, -38 }, { -22, 12 } } do F.barrel(at(p[1], L1, p[2], "N")) end
+for _, p in { { -18, -34 }, { -12, -36 }, { -18, 30 }, { 6, -32 }, { 4, 34 }, { -6, 22 } } do F.crate(at(X(p[1]), L1, p[2], "N"), 3.6) end
+for _, p in { { -12, 36 }, { 8, 26 }, { -2, -24 }, { 0, -38 }, { -22, 12 } } do F.barrel(at(X(p[1]), L1, p[2], "N")) end
 -- the magazine and the brig
-for _, p in { { 24, 30 }, { 30, 38 }, { 44, 36 }, { 56, 28 } } do F.barrel(at(p[1], L1, p[2], "N")) end
-for _, x in { -68, -54, -40 } do F.bench(at(x + 3, L1, -40, "N"), 5, st(M.Wood, "PS2_DarkBeam1", C3(70, 52, 40))) end
+for _, p in { { 24, 30 }, { 30, 38 }, { 44, 36 }, { 56, 28 } } do F.barrel(at(X(p[1]), L1, p[2], "N")) end
+for _, x in { -68, -54, -40 } do F.bench(at(X(x + 3), L1, -40, "N"), 5, st(M.Wood, "PS2_DarkBeam1", C3(70, 52, 40))) end
 -- the mess: a long table and benches; the crew's bunks forward
-F.table(at(-50, L2, -30, "N"), 12, 5, 3.4, st(M.Wood, "PS2_DarkBeam1", C3(80, 58, 42)), "Table")
-F.bench(at(-50, L2, -25, "N"), 10, st(M.Wood, "PS2_DarkBeam1", C3(70, 52, 40)))
-F.bench(at(-50, L2, -35, "N"), 10, st(M.Wood, "PS2_DarkBeam1", C3(70, 52, 40)))
+F.table(at(X(-50), L2, -30, "N"), 12, 5, 3.4, st(M.Wood, "PS2_DarkBeam1", C3(80, 58, 42)), "Table")
+F.bench(at(X(-50), L2, -25, "N"), 10, st(M.Wood, "PS2_DarkBeam1", C3(70, 52, 40)))
+F.bench(at(X(-50), L2, -35, "N"), 10, st(M.Wood, "PS2_DarkBeam1", C3(70, 52, 40)))
 for _, x in { 26, 36, 46 } do
-	G2.bunk(at(x, L2, -38, "N")); G2.bunk(at(x, L2, 38, "S"))
+	G2.bunk(at(X(x), L2, -38, "N")); G2.bunk(at(X(x), L2, 38, "S"))
 end
 -- the captain's cabin
-F.table(at(-58, L3, 0, "E"), 10, 5, 3.4, st(M.Wood, "PS2_DarkBeam1", C3(80, 58, 42)), "Table")
-F.chair(at(-64, L3, 0, "E"), st(M.Wood, "PS2_DarkBeam1", C3(80, 58, 42)))
-F.barrel(at(46, L3, -24, "N")); F.crate(at(52, L3, 22, "N"), 3.4)
+F.table(at(X(-58), L3, 0, "E"), 10, 5, 3.4, st(M.Wood, "PS2_DarkBeam1", C3(80, 58, 42)), "Table")
+F.chair(at(X(-64), L3, 0, "E"), st(M.Wood, "PS2_DarkBeam1", C3(80, 58, 42)))
+F.barrel(at(X(46), L3, -24, "N")); F.crate(at(X(52), L3, 22, "N"), 3.4)
 
 -- WHERE THE MONSTERS COME IN ------------------------------------------------------------------------------------
-gspawn(-50, L1, 30); gspawn(-6, L1, -8); gspawn(40, L1, -30)
-gspawn(-50, L2, 30); gspawn(-4, L2, 0); gspawn(44, L2, -30)
-gspawn(-58, L3, 20); gspawn(50, L3, -16)
+gspawn(X(-50), L1, 30); gspawn(X(-6), L1, -8); gspawn(X(40), L1, -30)
+gspawn(X(-50), L2, 30); gspawn(X(-4), L2, 0); gspawn(X(44), L2, -30)
+gspawn(X(-58), L3, 20); gspawn(X(50), L3, -16)
 
 MAP:SetAttribute("AtSea", true)
 MAP:SetAttribute("MinY", 0)
-MAP:SetAttribute("CeilingY", 62)
-MAP:SetAttribute("SpawnInside", Vector3.new(-8, L3 + 3, 0))
+MAP:SetAttribute("CeilingY", 62) -- (the masts and sails reach far higher: decoration, not a ceiling)
+MAP:SetAttribute("SpawnInside", Vector3.new(X(-8), L3 + 3, 0))
 MAP:SetAttribute("Floors", "2,23,44")
 return endMap()
