@@ -32,6 +32,7 @@ local Inventory = require(script.Parent.Inventory)
 local Tutorial = {}
 local inIntro = {} :: { [Player]: boolean }
 local LESSON_HP = 0.35 -- her health never goes under this share before the fight
+local HP_MULT = 2 -- the tutorial's Woman has twice her health: the short fight lasts a little longer
 local SEAT_BACK = 22 -- the armchair this far from the TV
 local propOf = {} :: { [Player]: Model }
 
@@ -131,11 +132,17 @@ local function spawnHer(p: Player, pos: any)
 	if typeof(pos) ~= "Vector3" or not tv or (pos - tv:GetPivot().Position).Magnitude > 40 then return end
 	Ghost.passive = false
 	Ghost.spawn(1, pos, "Woman")
-	Ghost.tutorial = { pause = math.huge, nextAt = math.huge, minHp = LESSON_HP, held = true, holdWindup = false }
+	-- (her wind-up runs on, out of sight behind the client's copy of her, and she is held just before the claws come
+	-- down: the moment the player sees her she is already in her swing, and the release brings the claws straight
+	-- down - one attack, not a second wind-up)
+	Ghost.tutorial = { pause = math.huge, nextAt = math.huge, minHp = LESSON_HP, held = false, holdWindup = true }
 	local g = Ghost.current
 	if not g then return end
-	-- straight into her swing, facing the player, held just before the claws come down: the client's frozen
-	-- BLOCK lesson lets it go
+	g.maxHp *= HP_MULT
+	g.hp = g.maxHp
+	g.model:SetAttribute("MaxHP", g.maxHp)
+	g.model:SetAttribute("HP", g.hp)
+	-- straight into her swing, facing the player: the client's frozen BLOCK lesson lets it go
 	local hrp = p.Character and p.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	if hrp then
 		local to = Vector3.new(hrp.Position.X, pos.Y, hrp.Position.Z)
@@ -145,9 +152,7 @@ local function spawnHer(p: Player, pos: any)
 		end
 	end
 	g.comboLeft = 0
-	Ghost.setState(g, "WindUp", 0.3)
-	g.pauseFrom = os.clock()
-	g.model:SetAttribute("Held", true)
+	Ghost.setState(g, "WindUp", 0.5)
 end
 
 local function hold(on: boolean)

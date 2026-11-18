@@ -18,6 +18,12 @@ return {
 	TvHum = { ids = { 9114245635 }, volume = 0.3 },
 	DoorCreak = { ids = { 9120838740 }, volume = 1 },
 	Thunder = { ids = { 9120018172 }, volume = 0.9 },
+	-- the night train that brings the player to the park at the intro's end (Client/Intro; Pro Sound Effects)
+	TrainWhistle = { ids = { 9119627875 }, volume = 1 }, -- Steam Train Whistle Single Blows Airy 1
+	TrainRoll = { ids = { 9114301354 }, volume = 0.8 }, -- Elevated Subway Train 1 (the rumble on the rails)
+	TrainSteam = { ids = { 9120252795 }, volume = 0.9 }, -- Train Steam 1
+	TrainClank = { ids = { 9114534119 }, volume = 0.8 }, -- Freight Train Couple 1
+	TrainDoor = { ids = { 9116495722 }, volume = 0.7 }, -- Medium Pressure Air Release 2
 	Glass = { ids = { 9114592102 }, volume = 0.8 },
 	GhostScream = { ids = { 9114567451, 136111643195187 }, volume = 1 },
 	GhostWail = { ids = { 129823359634605 }, volume = 0.7 },
@@ -49,6 +55,8 @@ return {
 	Music_Conqueror_E = { ids = { 1844309360 }, volume = 1.6 }, -- Requiem: Dies Irae
 	Music_Rat = { ids = { 1837247400 }, volume = 1.6 }, -- The Speed of Light (the Sewer Rat: speed metal, like Black Plague)
 	Music_Rat_E = { ids = { 1837318901 }, volume = 1.6 }, -- Black Plague
+	-- the intro's way out (Client/Intro): Black Plague gives way to this once she is beaten
+	IntroOutro = { ids = { 9039353950 }, volume = 1.6 }, -- Strength of Will (Cezame Original Scores)
 	Music_Knight = { ids = { 9044584201 }, volume = 1.6 }, -- Evil Overlord (the Void Knight)
 	Music_Knight_E = { ids = { 80139755347360 }, volume = 1.6 }, -- Litany of Shadows (the Hollow Emperor)
 	-- the Sewer Rat's voice (real rat squeals, slowed down: speed) and its digging

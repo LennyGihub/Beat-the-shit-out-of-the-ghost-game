@@ -96,8 +96,8 @@
    "file": "ReplicatedStorage/Shared/Sounds.luau",
    "instance": "game.ReplicatedStorage.Shared.Sounds",
    "class": "ModuleScript",
-   "bytes": 8334,
-   "sha1": "b6476c9335f1815f5bca9e78c11317667d53c599"
+   "bytes": 9071,
+   "sha1": "09567758fc7c51adfb4481e2c21d141a9a32f155"
   },
   {
    "file": "ReplicatedStorage/Shared/Ultimates.luau",
@@ -327,8 +327,8 @@
    "file": "ServerScriptService/Server/Tutorial.luau",
    "instance": "game.ServerScriptService.Server.Tutorial",
    "class": "ModuleScript",
-   "bytes": 9568,
-   "sha1": "4fbfc7e1943034e7571356783831198a78edfa88"
+   "bytes": 9948,
+   "sha1": "1eff2cfa23178f8760ba4bd1ecaa444d7bd19dd0"
   },
   {
    "file": "ServerScriptService/Server/UltRunner.luau",
@@ -467,8 +467,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/Intro.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.Intro",
    "class": "ModuleScript",
-   "bytes": 46458,
-   "sha1": "3fea330a0ada861dcc2cc4625efa0722ab663ce6"
+   "bytes": 69759,
+   "sha1": "99091a049c001395c938cd6755269c005f637837"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/KeyHints.luau",
@@ -621,8 +621,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/TutorialUI.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.TutorialUI",
    "class": "ModuleScript",
-   "bytes": 4119,
-   "sha1": "277c2a0363909abf73381e30e6709207eb31555e"
+   "bytes": 7923,
+   "sha1": "b82f0fc4312ae51163e6281158b78481447a92e5"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/UltActs.luau",
