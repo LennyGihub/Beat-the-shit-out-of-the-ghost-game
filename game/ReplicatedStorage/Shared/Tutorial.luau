@@ -16,26 +16,22 @@
 --   key, controller button or touch button. taskCarry = the task once the furniture is in the hands;
 --   taskTouch = the task on touch controls, where it differs.
 export type Step = {
-	id: string, kind: string, goal: number, title: string, task: string, why: string,
+	id: string, kind: string, goal: number, title: string, task: string, why: string?,
 	taskCarry: string?, taskTouch: string?, give: string?, pause: number?, first: number?,
 }
 
+-- (short on purpose: one line to read per step, the count on the bar; why = an optional second line)
 local Steps: { Step } = {
 	{ id = "hits", kind = "hits", goal = 5, title = "ATTACK", pause = 5, first = 4,
-		task = "HIT HER 5 TIMES  {Punch}",
-		why = "Hits in a row are a COMBO: each one hits harder. After each swing she stops for a moment: that is your chance." },
+		task = "HIT HER  {Punch}" },
 	{ id = "charged", kind = "charged", goal = 1, title = "CHARGED ATTACK", pause = 5, first = 3,
-		task = "HOLD {Punch} UNTIL THE CHARGE IS FULL, THEN LET GO",
-		why = "A full charge hits 2.5 times harder and can knock a monster out. A knocked-out monster cannot fight back." },
+		task = "HOLD {Punch}, LET GO WHEN FULL" },
 	{ id = "block", kind = "blocked", goal = 2, title = "BLOCK", pause = 2.2, first = 1.2,
-		task = "WHEN SHE RAISES HER CLAWS, HOLD {Block}  -  BLOCK 2 HITS",
-		why = "Face her: a blocked hit does no damage but costs STAMINA, the yellow bar. With none left, your guard breaks." },
+		task = "HOLD {Block} WHEN SHE SWINGS" },
 	{ id = "ult", kind = "ult", goal = 1, title = "ULTIMATE",
-		task = "YOUR BRUTALITY BAR IS FULL: FINISH HER  {Ultimate}",
-		why = "Every hit fills the BRUTALITY bar. Full, it fires your ULTIMATE. More ultimates are sold in the lobby." },
+		task = "FINISH HER  {Ultimate}" },
 	{ id = "ready", kind = "end", goal = 1, title = "YOU ARE READY",
-		task = "PRESS PLAY IN THE PARK TO START A REAL RUN",
-		why = "In a run the monsters come one after another, each one stronger. Every run pays CASH and XP." },
+		task = "PRESS PLAY TO START A RUN" },
 }
 
 return { steps = Steps }

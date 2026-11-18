@@ -76,6 +76,7 @@ end
 
 -- THE OFFER -------------------------------------------------------------------------------------------------
 local refresh: () -> ()
+local layout: (compact: boolean) -> ()
 local function closeOffer()
 	pop.Visible = false
 	dim.Visible = false
@@ -136,7 +137,8 @@ function refresh()
 	if def.taskCarry and lp:GetAttribute("Carrying") then text = def.taskCarry
 	elseif def.taskTouch and mode == "touch" then text = def.taskTouch end
 	task_.Text = fill(text)
-	why.Text = def.why
+	why.Text = def.why or ""
+	layout(def.why == nil or def.why == "")
 	local done = lp:GetAttribute("TutorialDone") == n
 	local info = def.kind == "info" or def.kind == "end" -- (no bar: read it)
 	local prog = tonumber(lp:GetAttribute("TutorialProg")) or 0
@@ -165,6 +167,29 @@ function refresh()
 		TweenService:Create(s, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Scale = 1 }):Play()
 	elseif not done then
 		doneStamp.Visible = false
+	end
+end
+
+-- the card's two shapes: compact (a title and one line: the tutorial's steps) or with a second line (why)
+local compactNow: boolean? = nil
+local cardMin: UISizeConstraint
+function layout(compact: boolean)
+	if compactNow == compact then return end
+	compactNow = compact
+	local function at(g: GuiObject, x: number, y: number, w: number, h: number)
+		g.Position = UDim2.fromScale(x, y); g.Size = UDim2.fromScale(w, h)
+	end
+	why.Visible = not compact
+	if compact then
+		card.Size = UDim2.new(0.36, 0, 0.12, 12); cardMin.MinSize = Vector2.new(300, 74)
+		at(stepTag, 0.03, 0.06, 0.2, 0.2); at(title, 0.24, 0.03, 0.52, 0.32); at(quitBtn, 0.82, 0.06, 0.16, 0.24)
+		at(task_, 0.03, 0.37, 0.94, 0.33); at(track, 0.04, 0.76, 0.62, 0.17); at(count, 0.68, 0.73, 0.14, 0.24)
+		at(nextBtn, 0.68, 0.72, 0.29, 0.25); doneStamp.Position = UDim2.fromScale(0.86, 0.8); doneStamp.Size = UDim2.fromScale(0.24, 0.42)
+	else
+		card.Size = UDim2.new(0.46, 0, 0.2, 16); cardMin.MinSize = Vector2.new(330, 104)
+		at(stepTag, 0.03, 0.05, 0.2, 0.13); at(title, 0.24, 0.02, 0.52, 0.22); at(quitBtn, 0.82, 0.04, 0.16, 0.16)
+		at(task_, 0.03, 0.26, 0.94, 0.26); at(track, 0.04, 0.82, 0.62, 0.13); at(count, 0.68, 0.8, 0.14, 0.18)
+		at(nextBtn, 0.68, 0.79, 0.29, 0.19); doneStamp.Position = UDim2.fromScale(0.86, 0.84); doneStamp.Size = UDim2.fromScale(0.24, 0.3)
 	end
 end
 
@@ -208,6 +233,7 @@ function UI.init()
 	-- the card, under the monster's health bar
 	card = Grunge.slab(gui, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.09, 36), Size = UDim2.new(0.46, 0, 0.2, 16), Visible = false, ZIndex = 8 }, SLAB, 83, 4, false)
 	local cmin = Instance.new("UISizeConstraint"); cmin.MinSize = Vector2.new(330, 104); cmin.Parent = card
+	cardMin = cmin
 	stepTag = Grunge.text(card, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0.03, 0.05), Size = UDim2.fromScale(0.2, 0.13), TextXAlignment = Enum.TextXAlignment.Left,
 		TextColor3 = Color3.fromRGB(190, 180, 160), ZIndex = 11 })
 	title = Grunge.text(card, { Text = "", Font = Grunge.HORROR, Position = UDim2.fromScale(0.24, 0.02), Size = UDim2.fromScale(0.52, 0.22), TextColor3 = Color3.fromRGB(220, 40, 30), ZIndex = 11 })

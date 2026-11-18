@@ -31,7 +31,7 @@ type State = { step: number, prog: number, sprinting: boolean, nextAt: number?, 
 local runs = {} :: { [Player]: State }
 local lastAsk = {} :: { [Player]: number }
 local DONE_PAUSE = 1.3 -- seconds the finished step stays on screen (DONE) before the next one
-local END_TIME = 4.5 -- the last card ("end"), then back to the park
+local END_TIME = 3 -- the last card ("end"), then back to the park
 local MIN_HP = 0.2 -- her health never goes under this share before the ultimate's lesson
 local FINISH_HP = 20 -- ...and where it is put for the ultimate to finish her (the first ultimate, the Rage
 -- Shockwave, hits for 30)
@@ -108,7 +108,7 @@ end
 
 local function finish(p: Player)
 	stop(p)
-	Remotes.Fx:FireClient(p, "Toast", "TUTORIAL DONE - PRESS PLAY TO FIGHT FOR REAL", true)
+	Remotes.Fx:FireClient(p, "Toast", "TUTORIAL DONE", true)
 	Sandbox.leave(p)
 end
 

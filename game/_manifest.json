@@ -103,8 +103,8 @@
    "file": "ReplicatedStorage/Shared/Tutorial.luau",
    "instance": "game.ReplicatedStorage.Shared.Tutorial",
    "class": "ModuleScript",
-   "bytes": 2788,
-   "sha1": "86b24f8c7c3e2135d84bcf69a5b095c6287f8f3c"
+   "bytes": 2213,
+   "sha1": "ca52ae0cd97d1f4a7cbb3251915e8accd3345532"
   },
   {
    "file": "ReplicatedStorage/Shared/Ultimates.luau",
@@ -334,8 +334,8 @@
    "file": "ServerScriptService/Server/Tutorial.luau",
    "instance": "game.ServerScriptService.Server.Tutorial",
    "class": "ModuleScript",
-   "bytes": 9313,
-   "sha1": "9e4a5d69fae9693063c06c3f6116b09c19d43781"
+   "bytes": 9280,
+   "sha1": "2e04fef9813662e09500c46d2c59eea46400b914"
   },
   {
    "file": "ServerScriptService/Server/UltRunner.luau",
@@ -621,8 +621,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/TutorialUI.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.TutorialUI",
    "class": "ModuleScript",
-   "bytes": 15887,
-   "sha1": "6f967ba66e7bb7bf9f01d420a94f9d9017d100bf"
+   "bytes": 17330,
+   "sha1": "522e18e4f924cf767a98d231d5d08647a3c04eb0"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/UltActs.luau",
