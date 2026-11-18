@@ -5,6 +5,7 @@
 --   DEV (red)  = the staff (player attribute Dev, set by Server/Admin)
 --   VIP (gold) = VIP Game Pass owners (player attribute VIP, set by Server/Monetization); their name is gold too
 -- In a run the tag is gone (Roblox's name / the VIP's gold name there, see Server/Vip).
+-- Never your own: the lobby camera sits just behind your head, so your own plate would fill the top of the screen.
 -- Everything is sized in scale, so the tag shrinks cleanly with distance.
 local Players = game:GetService("Players")
 local Grunge = require(script.Parent.Grunge)
@@ -70,7 +71,7 @@ local function refresh(p: Player)
 	local old = tags[p]
 	if old then old:Destroy(); tags[p] = nil end
 	local ch = p.Character
-	if not ch or not p.Parent or p:GetAttribute("InMatch") == true then return end
+	if p == lp or not ch or not p.Parent or p:GetAttribute("InMatch") == true then return end
 	local head = ch:FindFirstChild("Head")
 	if head and head:IsA("BasePart") then tags[p] = build(p, head) end
 end

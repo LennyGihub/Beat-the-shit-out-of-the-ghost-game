@@ -1,7 +1,7 @@
 # Graph Report - Beat-the-shit-out-of-the-ghost-game  (2026-11-18)
 
 ## Corpus Check
-- 92 files · ~191,051 words
+- 92 files · ~191,078 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 3 file(s) not represented in the graph (top: (none) 3)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `700a80ff`
+- Built from commit: `f8b8180f`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -72,21 +72,21 @@
 5. `worn()` - 40 edges
 6. `Sfx.play()` - 40 edges
 7. `Kit.ring()` - 31 edges
-8. `Ghost.step()` - 29 edges
-9. `Sfx.at()` - 29 edges
+8. `Sfx.at()` - 29 edges
+9. `Ghost.step()` - 29 edges
 10. `Grunge.text()` - 27 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Ghost.step()` --calls--> `Fury.windUp()`  [INFERRED]
-  game/ServerScriptService/Server/Ghost.luau → game/ServerScriptService/Server/Fury.luau
 - `Ghost.hit()` --calls--> `Ragdoll.start()`  [INFERRED]
   game/ServerScriptService/Server/Ghost.luau → game/ServerScriptService/Server/Ragdoll.luau
+- `Ghost.step()` --calls--> `Fury.windUp()`  [INFERRED]
+  game/ServerScriptService/Server/Ghost.luau → game/ServerScriptService/Server/Fury.luau
 - `Abilities.clear()` --calls--> `Loot.clear()`  [INFERRED]
   game/ServerScriptService/Server/Abilities.luau → game/ServerScriptService/Server/GoblinLoot.luau
+- `CallerUI.call()` --calls--> `Sfx.play()`  [INFERRED]
+  game/StarterPlayer/StarterPlayerScripts/Client/CallerUI.luau → game/StarterPlayer/StarterPlayerScripts/Client/Sfx.luau
 - `UI.init()` --calls--> `Loading.isShown()`  [INFERRED]
   game/StarterPlayer/StarterPlayerScripts/Client/TutorialUI.luau → game/ReplicatedFirst/Loading.luau
-- `Input.init()` --calls--> `HUD.hint()`  [INFERRED]
-  game/StarterPlayer/StarterPlayerScripts/Client/Input.luau → game/StarterPlayer/StarterPlayerScripts/Client/HUD.luau
 
 ## Import Cycles
 - None detected.
@@ -280,14 +280,14 @@ Nodes (3): add(), CrewAnim.init(), joint()
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `ItemModels.build()` connect `ItemModels.luau` to `Run.luau`, `Events.luau`, `rs_shared_items`, `Abilities.luau`?**
-  _High betweenness centrality (0.087) - this node is a cross-community bridge._
+  _High betweenness centrality (0.072) - this node is a cross-community bridge._
 - **Should `MonsterFx.luau` be split into smaller, more focused modules?**
   _Cohesion score 0.08901515151515152 - nodes in this community are weakly interconnected._
 - **Why does `Sfx.play()` connect `Sfx.play` to `MonsterFx.luau`, `Entrance.luau`, `Input.luau`, `Spectate.init`, `CineKit.luau`, `RoomPickUI.luau`, `game/StarterPlayer/StarterPlayerScripts/Client/SandboxUI.luau`, `Sfx.at`, `script_parent_sfx`, `LobbyUI.luau`, `QuestUI.luau`, `Grunge.text`, `TutorialUI.luau`?**
-  _High betweenness centrality (0.055) - this node is a cross-community bridge._
+  _High betweenness centrality (0.065) - this node is a cross-community bridge._
 - **Should `ClientMain.client.luau` be split into smaller, more focused modules?**
   _Cohesion score 0.06060606060606061 - nodes in this community are weakly interconnected._
-- **Why does `Supplies.spawn()` connect `Run.luau` to `ItemModels.luau`, `Events.luau`, `Inventory.luau`?**
+- **Why does `Acts.timeStop()` connect `Sfx.at` to `Evolved.luau`, `Sfx.play`?**
   _High betweenness centrality (0.042) - this node is a cross-community bridge._
 - **Should `Input.luau` be split into smaller, more focused modules?**
   _Cohesion score 0.08597285067873303 - nodes in this community are weakly interconnected._

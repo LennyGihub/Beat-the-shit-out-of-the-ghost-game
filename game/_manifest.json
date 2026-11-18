@@ -481,8 +481,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/NameTags.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.NameTags",
    "class": "ModuleScript",
-   "bytes": 4736,
-   "sha1": "575b7e76ebdfcda14b03e6552b959972d0b9f7a0"
+   "bytes": 4863,
+   "sha1": "2097350d51f04c86b0b33f2925b6206df8c6953a"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/PlaneFx.luau",
