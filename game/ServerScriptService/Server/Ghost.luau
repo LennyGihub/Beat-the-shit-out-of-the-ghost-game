@@ -562,6 +562,14 @@ local function warded(p: Player?): boolean
 end
 
 local function claw(g, target: Player?, thrp: BasePart?)
+	-- the Void Knight's blade (def.saber): every swing cuts the inside walls and the furniture in front of him
+	if (g.def :: any).saber then
+		local look = g.hrp.CFrame.LookVector
+		local at = g.hrp.Position + look * 6
+		local cut = Ragdoll.breakWalls(at, look * 80, 14, 9)
+		for _, f in Furniture.near(at, 6.5) do Furniture.smash(f, look * 60 + Vector3.new(0, 25, 0), 90) end
+		Remotes.Fx:FireAllClients("SaberSwing", g.model, cut > 0 and at or nil, look)
+	end
 	if not target or not thrp or warded(target) or Fury.inGrace(target) then return end
 	local to = thrp.Position - g.hrp.Position
 	if to.Magnitude <= C.SwipeReach * ((g.def :: any).reach or 1) then
@@ -756,6 +764,7 @@ function Ghost.step(dt: number)
 			if r and r.Normal.Y < 0.6 and Ragdoll.breakWalls(r.Position + Vector3.new(0, 2, 0), v.Unit * 70, 9, 9) > 0 then
 				g.nextWallBreak = now + 0.35
 				Remotes.Fx:FireAllClients("WallSmash", r.Position, 110)
+				if (g.def :: any).saber then Remotes.Fx:FireAllClients("SaberCut", r.Position, v.Unit) end -- (cut, not punched)
 			end
 		end
 		g.lv.VectorVelocity = v + Vector3.new(0, (hoverY - pos.Y) * 4, 0)

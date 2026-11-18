@@ -61,8 +61,8 @@
    "file": "ReplicatedStorage/Shared/Monsters.luau",
    "instance": "game.ReplicatedStorage.Shared.Monsters",
    "class": "ModuleScript",
-   "bytes": 16925,
-   "sha1": "9b3eb750ef9f280dd92a1bccdb69a9bd6cbdd307"
+   "bytes": 18487,
+   "sha1": "7ee86415d062238ee144452176c9b3dfe51fafc3"
   },
   {
    "file": "ReplicatedStorage/Shared/Passes.luau",
@@ -89,8 +89,8 @@
    "file": "ReplicatedStorage/Shared/Sounds.luau",
    "instance": "game.ReplicatedStorage.Shared.Sounds",
    "class": "ModuleScript",
-   "bytes": 6937,
-   "sha1": "72f87904e65e66c43d47d859867bbcff5d36afb8"
+   "bytes": 7266,
+   "sha1": "acda684824dc214f7b2eb750fdbe6cf7f3fb70f1"
   },
   {
    "file": "ReplicatedStorage/Shared/Tutorial.luau",
@@ -117,15 +117,15 @@
    "file": "ServerScriptService/Server/Abilities.luau",
    "instance": "game.ServerScriptService.Server.Abilities",
    "class": "ModuleScript",
-   "bytes": 54114,
-   "sha1": "74b36cf938aaa77d85d29a9ab6710adc24af61ad"
+   "bytes": 54611,
+   "sha1": "db52127d760618cd41e1a45e80c03083ef22eeec"
   },
   {
    "file": "ServerScriptService/Server/Admin.luau",
    "instance": "game.ServerScriptService.Server.Admin",
    "class": "ModuleScript",
-   "bytes": 14457,
-   "sha1": "4012f943e9eb96bb4929d0accf81b72e21593847"
+   "bytes": 15110,
+   "sha1": "29e16295f3355a77906b0c551abf75db4166990e"
   },
   {
    "file": "ServerScriptService/Server/Bestiary.luau",
@@ -173,8 +173,8 @@
    "file": "ServerScriptService/Server/Evolved.luau",
    "instance": "game.ServerScriptService.Server.Evolved",
    "class": "ModuleScript",
-   "bytes": 39817,
-   "sha1": "7acdff7c879db422d345f95a98c25f9b730c7723"
+   "bytes": 40198,
+   "sha1": "c5d29bce6133861f4fc8879f4d5cd69aa0f69da1"
   },
   {
    "file": "ServerScriptService/Server/Fire.luau",
@@ -208,8 +208,8 @@
    "file": "ServerScriptService/Server/Ghost.luau",
    "instance": "game.ServerScriptService.Server.Ghost",
    "class": "ModuleScript",
-   "bytes": 38054,
-   "sha1": "03be0416df77b171316ed032f8c245b902984d99"
+   "bytes": 38631,
+   "sha1": "3d6cdf5b9192682cd00e619e998641c46f8bc797"
   },
   {
    "file": "ServerScriptService/Server/GoblinLoot.luau",
@@ -224,6 +224,13 @@
    "class": "ModuleScript",
    "bytes": 21623,
    "sha1": "e7ea2819df13b63ceb945e7867ec7262ca4d1fa4"
+  },
+  {
+   "file": "ServerScriptService/Server/Knight.luau",
+   "instance": "game.ServerScriptService.Server.Knight",
+   "class": "ModuleScript",
+   "bytes": 3939,
+   "sha1": "380c112b880a89e77f641c6dc25c047167c8a29e"
   },
   {
    "file": "ServerScriptService/Server/Leaderboards.luau",
@@ -418,8 +425,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/GhostAnim.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.GhostAnim",
    "class": "ModuleScript",
-   "bytes": 38798,
-   "sha1": "4362bb9bedf3010412fafebc0b4c8ba120073018"
+   "bytes": 41408,
+   "sha1": "dfba40b2359c407db5587dc6707db6ce3cb8e110"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/Grunge.luau",
@@ -474,8 +481,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/MonsterFx.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.MonsterFx",
    "class": "ModuleScript",
-   "bytes": 61252,
-   "sha1": "8a98d67483822c5a5399e500cd8127c8cb884568"
+   "bytes": 73010,
+   "sha1": "cecfc2185022713c52dd24dc3fb6d8b6fb7e36b7"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/NameTags.luau",
@@ -558,8 +565,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/Sfx.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.Sfx",
    "class": "ModuleScript",
-   "bytes": 3221,
-   "sha1": "05f16ef0a5f6a67f04a86f35125c8b849f6335c1"
+   "bytes": 3586,
+   "sha1": "46f8737977d135cadd0f4be117736ae0ac398df2"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/Spectate.luau",
@@ -642,8 +649,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/ClientMain.client.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.ClientMain",
    "class": "LocalScript",
-   "bytes": 8714,
-   "sha1": "216cd36020a3d3a1bcabe5629986f97d4d5fb384"
+   "bytes": 8805,
+   "sha1": "ca54811d0b011e7c911d43e4ea00687b506cc967"
   }
  ]
 }

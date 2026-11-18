@@ -113,6 +113,22 @@ local function abilityPose(ab: string, phase: string, t: number, since: number):
 			p.Root = A(0.15, 0, 0); p.Waist = A(0.25, 0.4, 0); p.Neck = A(-0.1, -0.6, 0)
 			p.RightShoulder = A(0.9, 0, 0.3); p.RightElbow = A(1.5, 0, 0); p.LeftShoulder = A(0.2, 0, -0.2)
 		end
+	elseif ab == "forcePush" then
+		-- the Void Knight: the blade low at his side, the open left hand reaching out (wind), raised with the player
+		-- in its grip (hold), then thrown forward (push)
+		p.RightShoulder = A(0.15, 0, 0.3); p.RightElbow = A(0.3, 0, 0)
+		p.RightHip = A(-0.22, 0, 0.1); p.LeftHip = A(0.28, 0, -0.1); p.LeftKnee = A(-0.2, 0, 0)
+		if phase == "wind" then
+			p.Root = A(-0.05 * a, 0, 0); p.Waist = A(-0.06 * a, 0.3 * a, 0); p.Neck = A(0.08, -0.25 * a, 0)
+			p.LeftShoulder = A(1.45 * a, 0, 0.12 * a); p.LeftElbow = A(0.25, 0, 0); p.LeftWrist = A(-0.9 * a + s(t * 26) * 0.05, 0, 0)
+		elseif phase == "hold" then
+			p.Root = A(-0.1, 0, 0); p.Waist = A(-0.12, 0.3, 0); p.Neck = A(0.2, -0.25, 0)
+			p.LeftShoulder = A(1.95 + s(t * 24) * 0.03, 0, 0.1); p.LeftElbow = A(0.5, 0, 0); p.LeftWrist = A(-1.1, 0, 0)
+		else
+			p.Root = A(0.18, 0, 0) * CFrame.new(0, -0.2, -0.6); p.Waist = A(0.2, -0.35, 0); p.Neck = A(-0.1, 0.3, 0)
+			p.LeftShoulder = A(1.5, 0, -0.35); p.LeftElbow = A(0.02, 0, 0); p.LeftWrist = A(0.5, 0, 0)
+			p.LeftHip = A(0.6, 0, 0); p.RightHip = A(-0.45, 0, 0); p.LeftKnee = A(-0.5, 0, 0)
+		end
 	elseif ab == "warp" then
 		if phase == "wind" then -- the gauntlet raised in front of him, tearing a portal open
 			p.Root = A(-0.08 * a, 0, 0); p.Waist = A(-0.1 * a, -0.25 * a, 0); p.Neck = A(0.1, 0.2 * a, 0)
@@ -420,6 +436,23 @@ local function pirateSlash(state: string, t: number, since: number): { [string]:
 	return p
 end
 
+-- the Void Knight's blade: drawn back over his right shoulder, then a long cut across and down (WindUp -> Swipe)
+local function saberSlash(state: string, _t: number, since: number): { [string]: CFrame }
+	local p = {}
+	local a = math.min(1, since / 0.35)
+	p.LeftShoulder = A(0.35, 0, -0.3); p.LeftElbow = A(0.6, 0, 0)
+	if state == "WindUp" then
+		p.Root = A(-0.06 * a, 0, 0); p.Waist = A(-0.08, -0.7 * a, 0); p.Neck = A(0.05, 0.55 * a, 0)
+		p.RightShoulder = A(2.5 * a, 0, 0.75 * a); p.RightElbow = A(0.7 * a, 0, 0); p.RightWrist = A(0.5 * a, 0, 0)
+		p.RightHip = A(-0.28, 0, 0.1); p.LeftHip = A(0.3, 0, -0.1)
+	else
+		p.Root = A(0.16, 0, 0) * CFrame.new(0, -0.25, -0.9); p.Waist = A(0.2, 0.85, 0); p.Neck = A(-0.1, -0.55, 0)
+		p.RightShoulder = A(0.95, 0, -1.0); p.RightElbow = A(0.05, 0, 0); p.RightWrist = A(-0.3, 0, 0)
+		p.LeftHip = A(0.6, 0, 0); p.RightHip = A(-0.45, 0, 0); p.LeftKnee = A(-0.45, 0, 0)
+	end
+	return p
+end
+
 local function target(state: string, t: number, sinceState: number): { [string]: CFrame }
 	local s = math.sin
 	local p = {}
@@ -467,6 +500,9 @@ local function target(state: string, t: number, sinceState: number): { [string]:
 	end
 	if (state == "WindUp" or state == "Swipe") and g:GetAttribute("MonsterId") == "Pirate" then
 		return pirateSlash(state, t, sinceState)
+	end
+	if (state == "WindUp" or state == "Swipe") and g:GetAttribute("MonsterId") == "Knight" then
+		return saberSlash(state, t, sinceState)
 	end
 	if state == "WindUp" then
 		local a = math.min(1, sinceState / 0.45)
@@ -533,6 +569,12 @@ local function target(state: string, t: number, sinceState: number): { [string]:
 			p.Waist = (p.Waist or CFrame.new()) * A(0.28, 0, 0)
 			p.Neck = A(-0.22, s(t * 1.3) * 0.12, 0.22)
 			p.RightShoulder = A(1.35 + s(t * 9) * 0.08, 0, 0.3); p.RightElbow = A(1.55, 0, 0); p.RightWrist = A(0.15, 0, 0)
+		elseif g:GetAttribute("MonsterId") == "Knight" then
+			-- upright and unhurried: the chest out, the blade held low beside him, the left fist at his belt
+			p.Waist = (p.Waist or CFrame.new()) * A(-0.06, 0, 0)
+			p.Neck = A(0.06, 0, 0)
+			p.RightShoulder = A(0.12, 0, 0.28); p.RightElbow = A(0.35, 0, 0); p.RightWrist = A(-0.15, 0, 0)
+			p.LeftShoulder = A(0.2 + s(t * 5) * 0.06, 0, -0.18); p.LeftElbow = A(0.9, 0, 0)
 		elseif g:GetAttribute("MonsterId") == "Pirate" then
 			p.Waist = (p.Waist or CFrame.new()) * A(0.18, 0, 0) -- a crooked skeleton walk, shield up, cutlass low
 			p.Neck = A(-0.15, s(t * 1.1) * 0.15, s(t * 2.7) * 0.1)

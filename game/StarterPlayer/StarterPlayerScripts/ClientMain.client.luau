@@ -120,7 +120,7 @@ TutorialUI.init() -- the tutorial: the offer in the lobby, the step card in the 
 -- player standing in the park (not InMatch) gets these too: they are dropped there (no screams, shakes, flashes
 -- or fight music for somebody else's training).
 local FIGHT = {} :: { [string]: boolean }
-for _, k in { "WallSmash", "GhostVanish", "ItemSwing", "Hit", "GoblinUse", "WallSlam", "UltFreeze", "Snap", "ItemBoom", "UltStrike", "UltShock",
+for _, k in { "ForceWind", "ForceGrab", "ForceHold", "ForcePush", "ForceMiss", "SaberCut", "SaberSwing", "WallSmash", "GhostVanish", "ItemSwing", "Hit", "GoblinUse", "WallSlam", "UltFreeze", "Snap", "ItemBoom", "UltStrike", "UltShock",
 	"TrapSnap", "Tracer", "TitanHeal", "TitanEat", "TimeStop", "PlayerHit", "LaserEnd", "GoblinDrop", "GhostWindUp", "GhostScream", "Ultimate",
 	"UltFling", "TimeResume", "Throw", "Tased", "SnapWind", "Smash", "ShotgunPump", "ShotgunFire", "ShotgunAim", "ShieldBlock", "RoarWind", "Roar",
 	"OnePunch", "LungeWind", "Lunge", "Lift", "LaserWind", "LaserBeam", "HouseOnFire", "GoblinSteal", "GhostSpawn", "GhostRagdoll", "GhostDeath",

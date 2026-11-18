@@ -4,6 +4,10 @@ return {
 	PunchLight = { ids = { 9113565276 }, volume = 0.9 },
 	PunchHeavy = { ids = { 118091370487168 }, volume = 1 },
 	Whoosh = { ids = { 111254855668531 }, volume = 0.5 },
+	-- the Void Knight's blade (Roblox's licensed "Pro Sound Effects" library): a constant buzzing low synth tone is
+	-- its hum (looped on the blade; its pitch bends on every swing, Client/MonsterFx), a deep airy swish on top
+	SaberHum = { ids = { 9119852202 }, volume = 0.55 },
+	SaberSwish = { ids = { 9120733055 }, volume = 1 },
 	WoodBreak = { ids = { 9120801590, 9120957493 }, volume = 1 },
 	Glass = { ids = { 9114592102 }, volume = 0.8 },
 	GhostScream = { ids = { 9114567451, 136111643195187 }, volume = 1 },

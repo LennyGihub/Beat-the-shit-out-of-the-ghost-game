@@ -28,6 +28,7 @@ local VOICES = {
 	Titan = { Spawn = "DemonRoar", WindUp = "DemonGrowl", Claw = "DemonHit", Hurt = "DemonHurt", Death = "DemonDeath" },
 	Animatronic = { Spawn = "AnimSpawn", WindUp = "AnimGrowl", Claw = "AnimGrowl", Hurt = "AnimHurt", Death = "AnimDeath" },
 	Goblin = { Spawn = "GoblinSpawn", WindUp = "GoblinGrowl", Claw = "GoblinCackle", Hurt = "GoblinHurt", Death = "GoblinDeath" },
+	Knight = { Spawn = "DemonRoar", WindUp = "SaberSwish", Claw = "DemonHit", Hurt = "DemonHurt", Death = "DemonDeath" },
 	Caller = { Spawn = "DemonLaugh", WindUp = "PirateSwing", Claw = "PirateSwing", Hurt = "PirateHurt", Death = "GhostDeath" },
 	Rat = { Spawn = "RatSpawn", WindUp = "RatSqueal", Claw = "RatSqueal", Hurt = "RatHurt", Death = "RatDeath" },
 	Conqueror = { Spawn = "DemonRoar", WindUp = "DemonGrowl", Claw = "DemonHit", Hurt = "DemonHurt", Death = "DemonDeath" },
@@ -62,6 +63,13 @@ function Sfx.at(name: string, pos: Vector3, props: { [string]: any }?): Sound?
 		s:Play()
 	end
 	task.delay(12, function() a:Destroy() end)
+	return s
+end
+
+-- a looped 3D sound on a part (it moves with it and is gone with it)
+function Sfx.on(name: string, parent: Instance, props: { [string]: any }?): Sound?
+	local s = make(name, parent, props)
+	if s then s.Looped = true; s:Play() end
 	return s
 end
 

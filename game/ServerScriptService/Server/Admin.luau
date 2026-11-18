@@ -317,6 +317,17 @@ function Admin.start()
 		return ok, msg
 	end
 	if RunService:IsStudio() then
+		-- Studio test hook: ReplicatedStorage attribute DebugAdmin = "<command line>" runs that admin command as the
+		-- first player (a server test script can then drive a playtest without a client script); the answer is put in
+		-- DebugAdminResult. Append " #n" to run the same line again.
+		RS:GetAttributeChangedSignal("DebugAdmin"):Connect(function()
+			local line = RS:GetAttribute("DebugAdmin")
+			local p = Players:GetPlayers()[1]
+			if type(line) == "string" and line ~= "" and p then
+				local ok, msg = Admin.run(p, (string.gsub(line, "%s*#.*$", "")))
+				RS:SetAttribute("DebugAdminResult", tostring(ok) .. ": " .. tostring(msg))
+			end
+		end)
 		-- Studio photo hooks (thumbnails): DebugGhostAt = CFrame puts the ghost there,
 		-- DebugKnock = Vector3 hits her that way (its length = knock power)
 		RS:GetAttributeChangedSignal("DebugGhostAt"):Connect(function()

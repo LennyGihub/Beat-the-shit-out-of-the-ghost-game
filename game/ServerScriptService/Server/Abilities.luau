@@ -12,6 +12,7 @@ local Furniture = require(script.Parent.Furniture)
 local Loot = require(script.Parent.GoblinLoot) -- the Goblin's "steal"
 local Ragdoll = require(script.Parent.Ragdoll)
 local Caller = require(script.Parent.Caller) -- the Caller's "ambush" (and his flanking)
+local Knight = require(script.Parent.Knight) -- the Void Knight's "forcePush"
 
 local Abilities = {}
 local rng = Random.new()
@@ -93,6 +94,7 @@ function Abilities.interrupt(g)
 	if g.ab.kind == "ratRush" then g.model:SetAttribute("Vanish", false) end -- (never left under the floor)
 	if g.ab.kind == "warp" then g.model:SetAttribute("Vanish", false) end
 	if g.ab.kind == "ambush" then Caller.interrupt(g) end
+	if g.ab.kind == "forcePush" then Knight.interrupt(g) end
 	if g.ab.kind == "steal" then Remotes.Fx:FireAllClients("GoblinUse", g.model, "", "stop", 0) end
 	if g.ab.kind == "levitateThrow" and g.ab.obj then Abilities.dropLevitated(g.ab) end
 	g.ab = nil
@@ -159,6 +161,8 @@ function Abilities.try(g, G, now: number, target: Player?, thrp: BasePart?, dist
 		return Loot.try(g, G, now, a, target, thrp, dist)
 	elseif k == "ambush" then
 		return Caller.try(g, G, now, a, target, thrp, dist)
+	elseif k == "forcePush" then
+		return Knight.try(g, G, now, a, target, thrp, dist)
 	elseif k == "shieldBash" then
 		if dist < a.min or dist > a.max or warded(target) then return false end
 		start(g, G, "brace", a.brace, {})
@@ -459,6 +463,7 @@ function Abilities.step(g, G, dt: number, now: number, target: Player?, thrp: Ba
 	local k = ab.kind
 	if k == "steal" then return Loot.step(g, G, dt, now, target, thrp, hoverY) end
 	if k == "ambush" then return Caller.step(g, G, dt, now, target, thrp, hoverY) end
+	if k == "forcePush" then return Knight.step(g, G, dt, now, target, thrp, hoverY) end
 	local function face(p: Vector3)
 		local f = Vector3.new(p.X, pos.Y, p.Z)
 		if (f - pos).Magnitude > 0.1 then g.ao.CFrame = CFrame.lookAt(pos, f).Rotation end
@@ -1217,6 +1222,10 @@ Loot.init({
 	hrpOf = hrpOf, matchPlayers = matchPlayers, fx = fx,
 })
 Caller.init({
+	setPhase = setPhase, start = start, finish = finish, hover = hover, flat = flat, warded = warded,
+	hrpOf = hrpOf, matchPlayers = matchPlayers, fx = fx, dmgScale = dmgScale,
+})
+Knight.init({
 	setPhase = setPhase, start = start, finish = finish, hover = hover, flat = flat, warded = warded,
 	hrpOf = hrpOf, matchPlayers = matchPlayers, fx = fx, dmgScale = dmgScale,
 })

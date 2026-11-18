@@ -81,6 +81,16 @@ local List: { Monster } = {
 		ability = { kind = "ratRush", cd = 6.5, wind = 0.9, dashSpeed = 112, dashTime = 0.95, dashDmg = 30, dashPower = 150, dizzy = 1.3,
 			dig = 0.75, underSpeed = 42, underTime = 3.4, warn = 0.55, popDmg = 28, popUp = 80, popRadius = 7, far = 26 },
 		desc = "A rat the size of a car. It charges in a straight line through furniture and walls, or digs under the floor and bursts out under your feet: never stand still." }),
+	-- THE VOID KNIGHT (hand-built: tools/build/knight.luau; Server/Knight): a black-armoured lord with a red energy
+	-- blade. saber = every swing cuts the inside walls and the furniture in front of him, and (wallBreaker) he cuts
+	-- his way through the walls instead of using a door. forcePush: he reaches out (wind seconds), lifts a player
+	-- he can see `lift` studs off the floor, holds them `hold` seconds and throws them into the walls at `power`.
+	-- min / max = from how far he tries it. Out of his sight, or knocking him back, breaks it.
+	m({ id = "Knight", name = "The Void Knight", title = "THE VOID KNIGHT", rarity = 2, template = "Knight", color = C(235, 40, 34),
+		hp = 1.4, speed = 0.92, dmg = 1.3, reward = 1.8, hover = 0, walker = true, scale = 1, solid = false,
+		reach = 1.35, wallBreaker = true, saber = true,
+		ability = { kind = "forcePush", cd = 8, min = 9, max = 62, wind = 1.0, hold = 0.9, lift = 7, power = 150, dmg = 24 },
+		desc = "A black-armoured lord with a red blade that cuts through every wall. He reaches out, lifts you off the floor without touching you and throws you into the walls: stay out of his sight." }),
 	-- THE SECRET ONE: a huge purple warlord with a golden gauntlet. Slow on his feet, so he steps through a portal
 	-- and comes out behind you (warp: from `min` studs away, `wind` seconds of warning); his fist sends you through
 	-- the walls, and he punches his own way through them rather than use a door.
@@ -154,6 +164,10 @@ local EVO: { [string]: { [string]: any } } = {
 		ability = { kind = "ratRush", cd = 5.5, wind = 0.75, dashSpeed = 126, dashTime = 0.95, dashDmg = 34, dashPower = 165, dizzy = 1.1, dashes = 2,
 			dig = 0.6, underSpeed = 52, underTime = 3.4, warn = 0.45, popDmg = 34, popUp = 88, popRadius = 9, far = 24 },
 		desc = "Bloated, green, crowned. It charges twice in a row and comes up through the floor before you have stopped running." },
+	-- his grip comes sooner, holds shorter and throws harder
+	Knight = { title = "THE HOLLOW EMPEROR", color = C(190, 90, 255), scale = 1.12, reach = 1.45,
+		ability = { kind = "forcePush", cd = 5.5, min = 8, max = 75, wind = 0.8, hold = 0.7, lift = 8, power = 185, dmg = 32 },
+		desc = "The armour is cracked and violet light pours out of it. His grip comes faster and throws harder, and no wall slows him down." },
 	Titan = { title = "THE BONE GIANT", color = C(226, 214, 190), scale = 1.08,
 		power = { kind = "eat", cd = 10, below = 0.85, range = 17, t = 1.5, heal = 0.07, wallHeal = 0.04 },
 		desc = "More bone than flesh. He eats the furniture and the walls to heal: hit him while he chews." },

@@ -379,6 +379,15 @@ DRESS.Conqueror = function(m)
 	end
 end
 
+-- THE HOLLOW EMPEROR (the Void Knight): everything that glowed red (the blade, the visor, the core) burns violet
+DRESS.Knight = function(m: Model)
+	local V = Color3.fromRGB(190, 90, 255)
+	for _, d in m:GetDescendants() do
+		if d:IsA("BasePart") and d.Material == Enum.Material.Neon then d.Color = V end
+		if d:IsA("PointLight") then d.Color = V; d.Brightness *= 1.3 end
+	end
+end
+
 function Evolved.dress(m: Model, def: any)
 	local f = DRESS[def.id]
 	if f then

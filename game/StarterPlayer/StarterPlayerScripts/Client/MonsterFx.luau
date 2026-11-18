@@ -22,6 +22,7 @@ local KINDS = {
 	RoarWind = true, Roar = true, LungeWind = true, Lunge = true, Enraged = true, CounterWind = true, FuryArmor = true, FurySmash = true, -- Fury
 	SnapWind = true, Snap = true, TitanEat = true, TitanHeal = true, TitanGrabWind = true, -- evolved monsters / the Giant's grab
 	DemonSummon = true, -- the Red Demon conjures furniture
+	ForceWind = true, ForceGrab = true, ForceHold = true, ForcePush = true, ForceMiss = true, SaberCut = true, SaberSwing = true, -- the Void Knight
 	RatDashWarn = true, RatDash = true, RatDizzy = true, RatDig = true, RatTrail = true, RatWarn = true, RatErupt = true, -- the Sewer Rat
 }
 local Settings = require(script.Parent.Settings)
@@ -310,6 +311,72 @@ local function beamTo(model: Instance?, from: Vector3, to: Vector3)
 	b.model = model; b.from = from; b.want = to; b.last = os.clock()
 end
 local lastLaserHit = 0
+
+-- the Void Knight ------------------------------------------------------------------------------------------
+local FORCE = Color3.fromRGB(210, 30, 40) -- his rings of force
+local SABER = Color3.fromRGB(255, 40, 30)
+local MOLTEN = Color3.fromRGB(255, 150, 40)
+-- HIS BLADE'S SOUND: a hum that never stops, on the blade itself (so it comes closer with him). It ignites when he
+-- appears (the pitch runs up from nothing); every swing bends the pitch up and back down, like the blade passing
+-- your ear; where it goes through a wall the hum screams for a moment at the cut.
+local HUM_PITCH, HUM_VOLUME = 1.0, 0.55
+local bladeHum: Sound? = nil
+local function hum(): Sound?
+	if bladeHum and not bladeHum.Parent then bladeHum = nil end
+	return bladeHum
+end
+local function bladeIgnite(g: Instance)
+	if g.Name ~= "Ghost" or not g:IsA("Model") then return end
+	task.spawn(function()
+		local blade = g:WaitForChild("Blade", 6)
+		if not blade or g:GetAttribute("MonsterId") ~= "Knight" or not g.Parent then return end
+		local s = Sfx.on("SaberHum", blade, { Volume = 0, PlaybackSpeed = 0.3 })
+		if not s then return end
+		s.RollOffMode = Enum.RollOffMode.InverseTapered
+		s.RollOffMinDistance = 9; s.RollOffMaxDistance = 120
+		bladeHum = s
+		TweenService:Create(s, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { PlaybackSpeed = HUM_PITCH, Volume = HUM_VOLUME }):Play()
+	end)
+end
+-- the pitch bend of a swing: up fast, back down slower
+local function bladeSwoosh(peak: number, loud: number)
+	local s = hum()
+	if not s then return end
+	TweenService:Create(s, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { PlaybackSpeed = HUM_PITCH * peak, Volume = HUM_VOLUME * loud }):Play()
+	task.delay(0.13, function()
+		if s.Parent then TweenService:Create(s, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { PlaybackSpeed = HUM_PITCH, Volume = HUM_VOLUME }):Play() end
+	end)
+end
+-- a flat ring (a thin disc) whose face looks along `axis`
+local function ringCF(pos: Vector3, axis: Vector3): CFrame
+	local up = math.abs(axis.Y) > 0.95 and Vector3.xAxis or Vector3.yAxis
+	return CFrame.lookAt(pos, pos + axis, up) * CFrame.Angles(0, math.pi / 2, 0)
+end
+local function forceRing(pos: Vector3, axis: Vector3, diameter: number, transparency: number): BasePart
+	return part({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.12, diameter, diameter), Color = FORCE, Transparency = transparency, CFrame = ringCF(pos, axis) })
+end
+-- the blade went through a wall here: glowing cuts across the hole, sparks, the hiss of hot metal
+local function saberCut(pos: Vector3, dir: Vector3)
+	local flatDir = Vector3.new(dir.X, 0, dir.Z)
+	flatDir = flatDir.Magnitude > 0.1 and flatDir.Unit or Vector3.new(0, 0, -1)
+	local face = CFrame.lookAt(pos + Vector3.new(0, 2.5, 0), pos + Vector3.new(0, 2.5, 0) + flatDir)
+	for i, ang in { 0.5, -0.7, 1.35 } do
+		local c = part({ Size = Vector3.new(0.3, 11 - i * 1.5, 0.3), Color = i == 1 and SABER or MOLTEN, Transparency = 0.05,
+			CFrame = face * CFrame.Angles(0, 0, ang) })
+		TweenService:Create(c, TweenInfo.new(1.1, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Transparency = 1, Size = Vector3.new(0.06, 11 - i * 1.5, 0.06) }):Play()
+		Debris:AddItem(c, 1.15)
+	end
+	emitter(pos + Vector3.new(0, 2.5, 0), { Color = ColorSequence.new(MOLTEN), LightEmission = 1, Size = NumberSequence.new(0.5, 0), Speed = NumberRange.new(18, 40),
+		Acceleration = Vector3.new(0, -60, 0), Lifetime = NumberRange.new(0.3, 0.7), Texture = "rbxasset://textures/particles/sparkles_main.dds" }, 46, 1.2)
+	-- the hum screams at the cut for a moment (a second voice of it, high and falling), and the blade's own bends
+	local scream = Sfx.at("SaberHum", pos, { PlaybackSpeed = 2.6, Volume = 1.5 })
+	if scream then
+		TweenService:Create(scream, TweenInfo.new(0.55, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { PlaybackSpeed = 1.3, Volume = 0 }):Play()
+		task.delay(0.6, function() scream:Stop() end)
+	end
+	Sfx.at("Breaker", pos, { PlaybackSpeed = 1.5, Volume = 0.45 })
+	bladeSwoosh(1.5, 1.6)
+end
 
 function MonsterFx.handle(kind: string, ...)
 	local a = { ... }
@@ -1000,6 +1067,135 @@ function MonsterFx.handle(kind: string, ...)
 			Debris:AddItem(sh, 1.5)
 		end
 		Sfx.at("Glass", pos, { Volume = 1.2 })
+	-- THE VOID KNIGHT (Server/Knight) --------------------------------------------------------------------
+	-- His grip is made visible with RINGS OF FORCE: flat rings of dark red light, always facing along the line
+	-- from his open hand to the player. They gather on his palm while he reaches (ForceWind), run from his hand to
+	-- the player and circle them while he holds them in the air (ForceGrab), and burst outward when he throws
+	-- (ForcePush).
+	elseif kind == "ForceWind" then
+		local model, victim, wind = a[1], a[2], a[3]
+		local hand = typeof(model) == "Instance" and (model:FindFirstChild("LeftHand") or model:FindFirstChild("HumanoidRootPart")) :: BasePart?
+		if hand then
+			Sfx.at("Telekinesis", hand.Position, { PlaybackSpeed = 0.7, Volume = 1.6 })
+			emitter(hand.Position, { Color = ColorSequence.new(FORCE), LightEmission = 1, Size = NumberSequence.new(1.4, 0), Speed = NumberRange.new(-16, -9),
+				Shape = Enum.ParticleEmitterShape.Sphere, ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface, Lifetime = NumberRange.new(0.35, 0.55) }, 36, 1.5)
+			-- rings closing on his palm, one after another
+			task.spawn(function()
+				local t0 = os.clock()
+				while os.clock() - t0 < (wind or 1) and hand.Parent do
+					local look = hand.CFrame.LookVector
+					local root = (model :: Instance):FindFirstChild("HumanoidRootPart") :: BasePart?
+					if root then look = root.CFrame.LookVector end
+					local r = forceRing(hand.Position + look * 1.2, look, 7, 0.55)
+					TweenService:Create(r, TweenInfo.new(0.32, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Size = Vector3.new(0.12, 0.6, 0.6), Transparency = 0.1 }):Play()
+					Debris:AddItem(r, 0.34)
+					task.wait(0.13)
+				end
+			end)
+		end
+		if victim == lp then HUD.toast("HE REACHES FOR YOU - GET BEHIND A WALL OR HIT HIM!", false) end
+	elseif kind == "ForceGrab" then
+		local model, victim, hold = a[1], a[2], a[3]
+		local hand = typeof(model) == "Instance" and (model:FindFirstChild("LeftHand") or model:FindFirstChild("HumanoidRootPart")) :: BasePart?
+		local ch = typeof(victim) == "Instance" and victim:IsA("Player") and victim.Character or nil
+		local body = ch and (ch:FindFirstChild("UpperTorso") or ch:FindFirstChild("HumanoidRootPart")) :: BasePart?
+		if hand and body then
+			Sfx.at("Telekinesis", body.Position, { PlaybackSpeed = 0.55, Volume = 2 })
+			Sfx.at("GhostWhisper", body.Position, { PlaybackSpeed = 0.6, Volume = 1.2 })
+			task.spawn(function()
+				local t0 = os.clock()
+				local n = 0
+				while os.clock() - t0 < (hold or 0.9) and hand.Parent and body.Parent do
+					n += 1
+					local from, to = hand.Position, body.Position
+					local dir = (to - from).Magnitude > 0.5 and (to - from).Unit or Vector3.new(0, 0, -1)
+					-- a ring leaves his palm and runs to the player, growing
+					local r = forceRing(from + dir * 1.5, dir, 1.4, 0.25)
+					TweenService:Create(r, TweenInfo.new(0.3, Enum.EasingStyle.Linear), { CFrame = ringCF(to, dir), Size = Vector3.new(0.12, 5.5, 5.5), Transparency = 0.75 }):Play()
+					Debris:AddItem(r, 0.32)
+					-- and rings close round the player, one flat, one upright, turning
+					if n % 2 == 1 then
+						local axis = n % 4 == 1 and Vector3.yAxis or dir
+						local c = forceRing(to, axis, 7.5, 0.7)
+						TweenService:Create(c, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Size = Vector3.new(0.12, 3.2, 3.2), Transparency = 0.3 }):Play()
+						Debris:AddItem(c, 0.32)
+					end
+					task.wait(0.085)
+				end
+			end)
+		end
+	elseif kind == "ForceHold" then
+		-- (the victim only) lifted off the floor and held there until he throws
+		local hold, lift = a[1], a[2]
+		local ch = lp.Character
+		local hrp = ch and ch:FindFirstChild("HumanoidRootPart") :: BasePart?
+		local hum = ch and ch:FindFirstChildOfClass("Humanoid")
+		if hrp and hum then
+			release()
+			hum.PlatformStand = true
+			HUD.flash(Color3.fromRGB(90, 0, 10), 0.7)
+			HUD.toast("HE HAS YOU IN HIS GRIP!")
+			local base = hrp.CFrame
+			local t0 = os.clock()
+			local untilT = t0 + (hold or 0.9) + 0.3 -- the server's throw ends it sooner
+			-- not up through the ceiling
+			local rp = RaycastParams.new()
+			rp.FilterType = Enum.RaycastFilterType.Include
+			local mansion = workspace:FindFirstChild("Mansion")
+			rp.FilterDescendantsInstances = { mansion and mansion:FindFirstChild("Structure") or workspace.Terrain }
+			local up = workspace:Raycast(base.Position, Vector3.new(0, 40, 0), rp)
+			local rise = math.min(lift or 7, up and math.max(0, up.Distance - 4) or 99)
+			holdConn = RunService.RenderStepped:Connect(function()
+				local now = os.clock()
+				if now > untilT or not hrp.Parent then release(); return end
+				local k = math.min(1, (now - t0) / 0.3)
+				hrp.AssemblyLinearVelocity = Vector3.zero
+				hrp.AssemblyAngularVelocity = Vector3.zero
+				hrp.CFrame = base * CFrame.new(0, rise * (1 - (1 - k) ^ 2) + math.sin(now * 9) * 0.15, 0) * CFrame.Angles(-0.25 * k, 0, math.sin(now * 6) * 0.08)
+				Fx.shake(0.06)
+			end)
+		end
+	elseif kind == "ForcePush" then
+		local model, pos, dir = a[1], a[2], a[3]
+		local hand = typeof(model) == "Instance" and (model:FindFirstChild("LeftHand") or model:FindFirstChild("HumanoidRootPart")) :: BasePart?
+		if typeof(pos) == "Vector3" and typeof(dir) == "Vector3" then
+			local from = hand and hand.Position or pos
+			Sfx.at("PunchHeavy", pos, { PlaybackSpeed = 0.45, Volume = 2 })
+			Sfx.at("Whoosh", pos, { PlaybackSpeed = 0.6, Volume = 1.6 })
+			-- a cone of rings blown out from his palm, through the player and on
+			for i = 0, 5 do
+				local r = forceRing(from + dir * (1.5 + i * 1.2), dir, 1.5 + i * 0.6, 0.15)
+				local reach = 10 + i * 9
+				TweenService:Create(r, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+					{ CFrame = ringCF(from + dir * reach, dir), Size = Vector3.new(0.12, 7 + i * 3.5, 7 + i * 3.5), Transparency = 1 }):Play()
+				Debris:AddItem(r, 0.45)
+			end
+			emitter(pos, { Color = ColorSequence.new(FORCE), LightEmission = 1, Size = NumberSequence.new(2.4, 0), Speed = NumberRange.new(30, 55),
+				Lifetime = NumberRange.new(0.2, 0.4) }, 36, 1)
+			Fx.shake(0.8 * near(pos, 60))
+		end
+	elseif kind == "ForceMiss" then
+		local victim, broken = a[2], a[3]
+		if victim == lp then HUD.toast(broken and "HIS GRIP BROKE!" or "HE LOST SIGHT OF YOU - THE GRIP MISSED", true) end
+	elseif kind == "SaberSwing" then
+		-- the red arc of his blade in front of him; where it met a wall, the cut glows (below)
+		local model, cutAt, look = a[1], a[2], a[3]
+		local root = typeof(model) == "Instance" and model:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if root then
+			local cf = root.CFrame * CFrame.new(0, 1.2, 0)
+			bladeSwoosh(1.9, 2.4)
+			Sfx.at("SaberSwish", cf.Position, { PlaybackSpeed = 0.6, Volume = 1.2 })
+			for i = -3, 3 do
+				local ang = i * 0.3
+				local p = part({ Size = Vector3.new(0.25, 0.25, 3.2), Color = SABER, Transparency = 0.15 + math.abs(i) * 0.08,
+					CFrame = cf * CFrame.Angles(0, -ang, 0) * CFrame.new(0, -i * 0.25, -5.2) * CFrame.Angles(0, math.pi / 2, 0.25) })
+				TweenService:Create(p, TweenInfo.new(0.28), { Transparency = 1, Size = Vector3.new(0.05, 0.05, 3.2) }):Play()
+				Debris:AddItem(p, 0.3)
+			end
+		end
+		if typeof(cutAt) == "Vector3" and typeof(look) == "Vector3" then saberCut(cutAt, look) end
+	elseif kind == "SaberCut" then
+		if typeof(a[1]) == "Vector3" and typeof(a[2]) == "Vector3" then saberCut(a[1], a[2]) end
 	end
 end
 
@@ -1007,6 +1203,10 @@ MonsterFx.release = release
 
 function MonsterFx.init(fx, hud, sfx)
 	Fx, HUD, Sfx = fx, hud, sfx
+	-- the Void Knight's blade starts to hum when he appears
+	workspace.ChildAdded:Connect(bladeIgnite)
+	local now = workspace:FindFirstChild("Ghost")
+	if now then bladeIgnite(now) end
 	if RunService:IsStudio() then
 		-- Studio test hook: player attribute DebugJumpscare = true plays the Party Bear jumpscare with the current
 		-- monster (DebugJumpscareHold = true keeps the last frame on screen until it is cleared)
