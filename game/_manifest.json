@@ -131,8 +131,15 @@
    "file": "ServerScriptService/Server/Caller.luau",
    "instance": "game.ServerScriptService.Server.Caller",
    "class": "ModuleScript",
-   "bytes": 25658,
-   "sha1": "d8737e51e8678e08880016f368e1c30e07e14e90"
+   "bytes": 22640,
+   "sha1": "3865bb740744f1debc874b5eee230abe466d3f43"
+  },
+  {
+   "file": "ServerScriptService/Server/CallerSpots.luau",
+   "instance": "game.ServerScriptService.Server.CallerSpots",
+   "class": "ModuleScript",
+   "bytes": 9368,
+   "sha1": "81576d5ae99972a7cf34954c1d82496cc92459b0"
   },
   {
    "file": "ServerScriptService/Server/Combat.luau",

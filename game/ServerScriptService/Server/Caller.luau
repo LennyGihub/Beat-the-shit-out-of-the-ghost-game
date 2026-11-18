@@ -2,8 +2,10 @@
 -- THE CALLER (Shared/Monsters "Caller"): a masked killer with a knife. Two things live here:
 --
 --   * AMBUSH (his ability, kind = "ambush"; Abilities hands try / step / interrupt / clear over, like the Goblin's
---     loot). He disappears and SITS DOWN IN A CORNER of a room (a real corner: a wall at his back and one at his
---     side, nothing standing in it), far from the players and out of their sight, as if asleep. A phone starts
+--     loot). He disappears and SITS DOWN IN A CORNER of a room (a wall at his back and one at his side, nothing
+--     standing in it; in a room with no free corner: with his back against a free stretch of wall), far from the
+--     players and out of their sight, as if asleep. Which room: Server/CallerSpots (every room of the floor as
+--     likely as the next, hardly ever one he used lately). A phone starts
 --     ringing on one of the map's telephone tables (<map>.PhoneSpots, built by tools/build/maps/phones.luau; the
 --     clients outline it in yellow and point an arrow at it: Client/CallerMarks). Whoever answers gets a call
 --     (Client/CallerUI): he talks them into going somewhere, and that somewhere is the room he sits in. He never
@@ -22,6 +24,7 @@
 local RunService = game:GetService("RunService")
 local Remotes = require(script.Parent.Remotes)
 local Furniture = require(script.Parent.Furniture)
+local Spots = require(script.Parent.CallerSpots)
 
 local Caller = {}
 local H: any = nil -- Abilities' helpers: setPhase, start, finish, hover, flat, warded, hrpOf, matchPlayers, fx, dmgScale
@@ -220,12 +223,14 @@ local function spawnPhone(g, target: BasePart, hide: Vector3)
 	end
 end
 
--- HIS CORNER ------------------------------------------------------------------------------------------------
-local WALL_NEAR, SIT_OFF = 6.5, 2 -- a wall this close on two sides makes a corner; he sits this far from both
+-- HIS HIDING PLACE -------------------------------------------------------------------------------------------
+-- Server/CallerSpots finds it: a corner, or a free stretch of wall, in a room drawn fairly among the rooms of the
+-- floor, and hardly ever a room he sat in lately (with corners alone he sat in the Mansion's fireplace room three
+-- times out of four: nearly every other corner has furniture standing in it).
+local recentHides = {} :: { Vector3 } -- his last hiding places in this server, newest first
 
--- A corner to sit in, on the target's floor: a wall at his back and one at his side, nothing standing in it, open
--- floor in front, far from every player and out of their sight. Returns where he sits (root height), a point in
--- front of him (he faces out of the corner) and the floor's height.
+-- Where he sits (root height), a point in front of him (he faces out of his corner / away from his wall) and the
+-- floor's height: on the target's floor, far from every player and out of their sight.
 local function hideSpot(g, G, target: BasePart): (Vector3?, Vector3?, number?)
 	local B = G.houseBounds()
 	local under = workspace:Raycast(target.Position, Vector3.new(0, -14, 0), g.rp)
@@ -236,87 +241,17 @@ local function hideSpot(g, G, target: BasePart): (Vector3?, Vector3?, number?)
 		local hrp = H.hrpOf(p)
 		if hrp then table.insert(players, hrp.Position) end
 	end
-	local fp = OverlapParams.new()
-	fp.FilterType = Enum.RaycastFilterType.Include
-	local ff = Furniture.folder()
-	fp.FilterDescendantsInstances = { ff or workspace.Terrain }
-	local best: Vector3?, bestInto: Vector3?, bestScore = nil, nil, -math.huge
-	for _, minDist in { 26, 17 } do
-		for x = B.min.X + 4, B.max.X - 4, 4 do
-			for z = B.min.Z + 4, B.max.Z - 4, 4 do
-				local f = workspace:Raycast(Vector3.new(x, floorY + 6, z), Vector3.new(0, -9, 0), g.rp)
-				if f and f.Normal.Y > 0.9 and math.abs(f.Position.Y - floorY) < 1.5 then
-					local c = f.Position + Vector3.new(0, 4, 0)
-					-- the nearest wall along X and along Z
-					local wx: number?, sx = nil, 0
-					local wz: number?, sz = nil, 0
-					for _, sg in { 1, -1 } do
-						local rx = workspace:Raycast(c, Vector3.new(sg * WALL_NEAR, 0, 0), g.rp)
-						if rx and math.abs(rx.Normal.X) > 0.9 and (not wx or rx.Distance < math.abs((wx :: number) - x)) then wx, sx = rx.Position.X, sg end
-						local rz = workspace:Raycast(c, Vector3.new(0, 0, sg * WALL_NEAR), g.rp)
-						if rz and math.abs(rz.Normal.Z) > 0.9 and (not wz or rz.Distance < math.abs((wz :: number) - z)) then wz, sz = rz.Position.Z, sg end
-					end
-					if wx and wz then
-						local sit = Vector3.new(wx - sx * SIT_OFF, f.Position.Y, wz - sz * SIT_OFF)
-						local chest = sit + Vector3.new(0, 3, 0)
-						local into = Vector3.new(-sx, 0, -sz).Unit
-						local f2 = workspace:Raycast(sit + Vector3.new(0, 3, 0), Vector3.new(0, -5, 0), g.rp)
-						-- still a corner from where he sits (both walls really there), a floor under him, head room,
-						-- open floor ahead, nothing standing in the corner
-						if f2 and math.abs(f2.Position.Y - f.Position.Y) < 0.6
-							and workspace:Raycast(chest, Vector3.new(sx * (SIT_OFF + 1.5), 0, 0), g.rp)
-							and workspace:Raycast(chest, Vector3.new(0, 0, sz * (SIT_OFF + 1.5)), g.rp)
-							and not workspace:Raycast(sit + Vector3.new(0, 0.5, 0), Vector3.new(0, 8, 0), g.rp)
-							and not workspace:Raycast(chest, into * 9, g.rp)
-							and #workspace:GetPartBoundsInBox(CFrame.new(sit + Vector3.new(0, 2.6, 0)), Vector3.new(4.2, 5, 4.2), fp) == 0 then
-							local near, seen = math.huge, false
-							for _, pp in players do
-								near = math.min(near, (pp - sit).Magnitude)
-								if not workspace:Raycast(chest, pp - chest, g.rp) then seen = true; break end
-							end
-							if not seen and near >= minDist then
-								local ahead = workspace:Raycast(chest, into * 30, g.rp)
-								local score = math.min(ahead and ahead.Distance or 30, 24) * 0.4 - math.abs(near - 42) * 0.25 + rng:NextNumber(0, 10)
-								if score > bestScore then best, bestInto, bestScore = sit + Vector3.new(0, g.hover, 0), into, score end
-							end
-						end
-					end
-				end
-			end
-		end
-		if best then break end
-	end
-	if not best or not bestInto then return nil, nil, nil end
-	return best, best + bestInto * 6, floorY
+	local spot = Spots.find({ rp = g.rp, furniture = Furniture.folder(), min = B.min, max = B.max, floorY = floorY,
+		players = players, recent = recentHides, rng = rng })
+	if not spot then return nil, nil, nil end
+	local at = spot.sit + Vector3.new(0, g.hover, 0)
+	return at, at + spot.into * 6, floorY
 end
 
--- The room round his corner, as a box: how far the walls are along +X -X +Z -Z. Each side is the median of a fan
--- of rays, so a doorway (rays that run on into the next room) or a railing does not decide it.
+-- the room round his hiding place, as a box (outlined for the players when he names it)
 local function roomBox(g, G, hide: Vector3, floorY: number): (CFrame, Vector3)
 	local B = G.houseBounds()
-	local c = Vector3.new(hide.X, floorY + 4, hide.Z)
-	local function reach(dir: Vector3): number
-		local lat = Vector3.new(-dir.Z, 0, dir.X)
-		local ds = {}
-		for _, h in { 0, 5 } do
-			local o0 = c + Vector3.new(0, h, 0)
-			for _, k in { -7, -3.5, 0, 3.5, 7 } do
-				if k == 0 or not workspace:Raycast(o0, lat * k, g.rp) then
-					local r = workspace:Raycast(o0 + lat * k, dir * 120, g.rp)
-					table.insert(ds, r and r.Distance or 120)
-				end
-			end
-		end
-		table.sort(ds)
-		return ds[math.max(1, math.ceil(#ds / 2))]
-	end
-	local x1 = math.max(c.X - reach(-Vector3.xAxis), B.min.X)
-	local x2 = math.min(c.X + reach(Vector3.xAxis), B.max.X)
-	local z1 = math.max(c.Z - reach(-Vector3.zAxis), B.min.Z)
-	local z2 = math.min(c.Z + reach(Vector3.zAxis), B.max.Z)
-	local up = workspace:Raycast(c, Vector3.new(0, 40, 0), g.rp)
-	local h = math.clamp((up and up.Distance or 16) + 4, 8, 20)
-	return CFrame.new((x1 + x2) / 2, floorY + h / 2, (z1 + z2) / 2), Vector3.new(math.max(x2 - x1, 4), h, math.max(z2 - z1, 4))
+	return Spots.roomBox(g.rp, B.min, B.max, hide, floorY)
 end
 
 local function cleanup(g)
@@ -337,6 +272,9 @@ function Caller.try(g, G, now: number, a, target: Player, thrp: BasePart, dist: 
 		g.ambushReady = now + 4 -- no free corner right now: look again soon
 		return false
 	end
+	-- remembered: the next ambushes go to other rooms
+	table.insert(recentHides, 1, Vector3.new(hide.X, (floorY :: number) + 3, hide.Z))
+	while #recentHides > 3 do table.remove(recentHides) end
 	H.start(g, G, "vanish", 0.9, { hide = hide, lure = face, floorY = floorY, victimHrp = thrp, seen = {} })
 	g.model:SetAttribute("Vanish", true)
 	Remotes.Fx:FireAllClients("GhostVanish", g.hrp.Position)
