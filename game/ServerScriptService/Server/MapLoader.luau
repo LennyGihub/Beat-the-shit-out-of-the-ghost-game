@@ -80,15 +80,35 @@ function MapLoader.setSea(on: boolean)
 	end
 end
 
--- parts with the Rescue attribute (the sea): a player who falls in is put back at the map's spawn point
+-- parts with the Rescue attribute (the sea): a player who falls in is put back at the map's spawn point. The sea
+-- also runs under the ship's decks (just below the lowest one): a touch from inside the hull (a hard landing on the
+-- bottom deck sinks the feet into it) does not count
 function MapLoader.hookRescue(live: Instance)
+	-- the hull: the box of the outside walls
+	local hullMin, hullMax = nil :: Vector3?, nil :: Vector3?
+	local ext = live:FindFirstChild("Structure") and live.Structure:FindFirstChild("Exterior")
+	if ext then
+		local mn, mx = Vector3.new(math.huge, math.huge, math.huge), Vector3.new(-math.huge, -math.huge, -math.huge)
+		for _, d in ext:GetDescendants() do
+			if d:IsA("BasePart") and d.CanCollide and d.Size.Y > 6 then
+				local half = d.CFrame:VectorToWorldSpace(d.Size / 2)
+				half = Vector3.new(math.abs(half.X), math.abs(half.Y), math.abs(half.Z))
+				mn = mn:Min(d.Position - half); mx = mx:Max(d.Position + half)
+			end
+		end
+		if mx.X > mn.X then hullMin, hullMax = mn, mx end
+	end
+	local function inHull(pos: Vector3): boolean
+		return hullMin ~= nil and hullMax ~= nil and pos.X > hullMin.X and pos.X < hullMax.X and pos.Z > hullMin.Z
+			and pos.Z < hullMax.Z and pos.Y > hullMin.Y - 1
+	end
 	for _, d in live:GetDescendants() do
 		if d:IsA("BasePart") and d:GetAttribute("Rescue") then
 			d.Touched:Connect(function(hit)
 				local ch = hit.Parent
 				local p = ch and game:GetService("Players"):GetPlayerFromCharacter(ch)
 				local hrp = ch and ch:FindFirstChild("HumanoidRootPart") :: BasePart?
-				if p and hrp and not ch:GetAttribute("Rescuing") then
+				if p and hrp and not ch:GetAttribute("Rescuing") and not inHull(hrp.Position) then
 					ch:SetAttribute("Rescuing", true)
 					hrp.AssemblyLinearVelocity = Vector3.zero
 					ch:PivotTo(CFrame.new(MapLoader.spawnInside() + Vector3.new(0, 3, 0)))

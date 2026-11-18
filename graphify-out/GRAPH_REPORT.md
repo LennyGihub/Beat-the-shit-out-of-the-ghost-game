@@ -1,17 +1,17 @@
 # Graph Report - Beat-the-shit-out-of-the-ghost-game  (2026-11-18)
 
 ## Corpus Check
-- 95 files · ~200,034 words
+- 95 files · ~200,384 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 3 file(s) not represented in the graph (top: (none) 3)
 
 ## Summary
-- 1137 nodes · 3124 edges · 57 communities (41 shown, 16 thin omitted)
+- 1137 nodes · 3125 edges · 57 communities (41 shown, 16 thin omitted)
 - Extraction: 77% EXTRACTED · 23% INFERRED · 0% AMBIGUOUS · INFERRED: 706 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `700832bb`
+- Built from commit: `f957d664`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -258,16 +258,16 @@ Nodes (4): alive(), Supplies.clear(), Supplies.pick(), Supplies.spawn()
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `ItemModels.build()` connect `ItemModels.luau` to `Supplies.luau`, `Events.luau`, `Abilities.luau`?**
-  _High betweenness centrality (0.076) - this node is a cross-community bridge._
+- **Why does `Sfx.play()` connect `Sfx.play` to `MonsterFx.luau`, `Entrance.luau`, `Input.luau`, `Spectate.init`, `CineKit.luau`, `Admin.luau`, `RoomPickUI.luau`, `game/StarterPlayer/StarterPlayerScripts/Client/SandboxUI.luau`, `Sfx.at`, `Grunge.text`, `TutorialUI.luau`?**
+  _High betweenness centrality (0.068) - this node is a cross-community bridge._
 - **Should `Ghost.luau` be split into smaller, more focused modules?**
   _Cohesion score 0.1111111111111111 - nodes in this community are weakly interconnected._
-- **Why does `Sfx.play()` connect `Sfx.play` to `MonsterFx.luau`, `Entrance.luau`, `Input.luau`, `Spectate.init`, `CineKit.luau`, `Admin.luau`, `RoomPickUI.luau`, `game/StarterPlayer/StarterPlayerScripts/Client/SandboxUI.luau`, `Sfx.at`, `Grunge.text`, `TutorialUI.luau`?**
-  _High betweenness centrality (0.056) - this node is a cross-community bridge._
+- **Why does `ItemModels.build()` connect `ItemModels.luau` to `Supplies.luau`, `Events.luau`, `Abilities.luau`?**
+  _High betweenness centrality (0.062) - this node is a cross-community bridge._
 - **Should `MonsterFx.luau` be split into smaller, more focused modules?**
   _Cohesion score 0.13405797101449277 - nodes in this community are weakly interconnected._
-- **Why does `stock()` connect `Events.luau` to `ItemModels.luau`?**
-  _High betweenness centrality (0.036) - this node is a cross-community bridge._
+- **Why does `Acts.timeStop()` connect `Sfx.at` to `Evolved.luau`, `Sfx.play`?**
+  _High betweenness centrality (0.041) - this node is a cross-community bridge._
 - **Should `ClientMain.client.luau` be split into smaller, more focused modules?**
   _Cohesion score 0.058823529411764705 - nodes in this community are weakly interconnected._
 - **Should `Data.luau` be split into smaller, more focused modules?**

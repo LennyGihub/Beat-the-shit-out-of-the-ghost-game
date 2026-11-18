@@ -646,9 +646,30 @@ local function bringBack(g)
 	if g.state == "Ragdoll" then Ragdoll.stop(g) end
 	g.launch = nil
 	local from = g.hrp.Position
+	-- only just past the outside walls (a body thrown or tumbling against the side of the house, a walker pressed
+	-- to it): it is put back inside right there, on the floor it is on (the ship's decks: not up to another deck)
+	local B = houseBounds()
+	local m = 2.5
+	local inX = math.clamp(from.X, B.min.X + m, B.max.X - m)
+	local inZ = math.clamp(from.Z, B.min.Z + m, B.max.Z - m)
+	if math.abs(inX - from.X) < 8 and math.abs(inZ - from.Z) < 8 and from.Y > B.min.Y - 10 and from.Y < B.max.Y then
+		local fy = floorBelow(Vector3.new(inX, from.Y + 1, inZ), g.rp)
+		if from.Y + 1 - fy < 12 then
+			local at = Vector3.new(inX, fy + g.hover, inZ)
+			local look = g.hrp.CFrame.LookVector
+			look = Vector3.new(look.X, 0, look.Z)
+			look = look.Magnitude > 0.1 and look.Unit or Vector3.new(0, 0, -1)
+			g.model:PivotTo(CFrame.lookAt(at, at + look))
+			g.vel = Vector3.zero
+			g.lv.VectorVelocity = Vector3.zero
+			return
+		end
+	end
+	-- really out: the nearest of the map's spawn points, one on the same floor if there is one (height counts 3x)
 	local best, bestD = nil, math.huge
 	for _, sp in MapLoader.ghostSpawns() do
-		local d = (sp - from).Magnitude
+		local dv = sp - from
+		local d = Vector3.new(dv.X, 0, dv.Z).Magnitude + math.abs(dv.Y) * 3
 		if d < bestD then best, bestD = sp, d end
 	end
 	local sp = best or MapLoader.spawnInside()
