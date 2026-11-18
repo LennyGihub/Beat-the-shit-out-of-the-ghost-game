@@ -141,7 +141,9 @@ Ghost.passive = false
 -- (a slower wind-up, no chain), then stands still for `pause` seconds and takes the hits; no specials, no scare, no
 -- roar or lunge, never enraged, and her health never goes under minHp (a share of it) until the last lesson.
 -- nextAt = when she may come at you again. nil = a normal fight.
-Ghost.tutorial = nil :: { pause: number, nextAt: number, minHp: number }?
+-- held = she is stopped where she is (a lesson is frozen on the player's screen: the model attribute Held tells the
+-- clients, Client/GhostAnim holds her pose); holdWindup = she is held just before her next swing lands.
+Ghost.tutorial = nil :: { pause: number, nextAt: number, minHp: number, held: boolean?, holdWindup: boolean? }?
 
 function Ghost.alive(): boolean
 	return Ghost.current ~= nil and Ghost.current.state ~= "Dead"
@@ -777,6 +779,12 @@ function Ghost.step(dt: number)
 		return
 	end
 	if s == "Launched" then return stepLaunched(g, dt) end
+	-- the tutorial holds her (her timers wait: shiftTimers below once she goes on)
+	if Ghost.tutorial and Ghost.tutorial.held then
+		g.pauseFrom = g.pauseFrom or now
+		g.lv.VectorVelocity = Vector3.zero
+		return
+	end
 	-- Fury: a long beating doesn't stunlock it: it roars or swipes back straight out of a stagger
 	if (s == "Knocked" or s == "Recover") and now >= g.frozenUntil and not Ghost.passive and not Ghost.tutorial then
 		if Fury.roarCheck(g, Ghost, now, target) or Fury.counterCheck(g, Ghost, now, target, thrp) then return end
@@ -873,7 +881,21 @@ function Ghost.step(dt: number)
 			return
 		end
 	elseif s == "WindUp" then
-		if thrp then face(thrp.Position); moveToward(thrp.Position, 4) end
+		local T = Ghost.tutorial
+		if T and T.holdWindup and now > g.stateUntil - 0.12 then
+			-- the tutorial: held with her claws up, just before they come down
+			T.holdWindup = false
+			T.held = true
+			g.pauseFrom = now
+			g.lv.VectorVelocity = Vector3.zero
+			g.model:SetAttribute("Held", true)
+			return
+		end
+		if thrp then
+			face(thrp.Position)
+			-- (the tutorial: she stays where she is while her claws go up, so the player sees them)
+			if T then g.lv.VectorVelocity = Vector3.new(0, (hoverY - pos.Y) * 4, 0) else moveToward(thrp.Position, 4) end
+		end
 		if now > g.stateUntil then
 			setState(g, "Swipe", 0.35)
 			claw(g, target, thrp)

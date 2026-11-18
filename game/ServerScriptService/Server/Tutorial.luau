@@ -1,223 +1,198 @@
 --!strict
--- THE TUTORIAL (server): the first 30 seconds of the game. A new player is put straight into a fight with the
--- Woman in the sandbox (Server/Sandbox: the house of the first map in the lobby's own server, no teleport) and
--- learns, one step at a time (Shared/Tutorial): attack, the charged attack, blocking her hits, the ultimate. She
--- really fights (Ghost.tutorial), with a pause after each swing; the player can't go down. This module watches what
--- the player really does and moves on when the step's goal is met. The client (Client/TutorialUI) shows the card.
---   Remotes.Tutorial: "auto" (the client, once the loading screen is gone: starts it if the save says it was never
---   played), "start" (the lobby's HOW TO PLAY button, any time), "skip" (never asked again), "next" (an info card).
---   Player attributes: Tutorial = true while in it, TutorialStep = the step's number (#steps + 1 = finished),
---   TutorialProg = progress on it (hits, seconds...), TutorialDone = the number of the step just completed,
---   TutorialSlot = the hotbar slot of the weapon handed out.
---   Saved (Server/Data): the tutorial was offered once (player attribute TutorialSeen): it does not start again.
--- What the player did comes from: Quests.watch (hits, fully charged hits, blocked hits, furniture thrown into her),
--- the Sprint remote, and the player's own attributes (Blocking, UltActive, Sel).
--- Lobby servers only (ReplicatedStorage attribute TutorialOn: the clients ask for it there and nowhere else).
--- Leaving: the sandbox's LEAVE (QUIT on the card) ends it like any sandbox; this module notices and tidies up.
+-- THE TUTORIAL (server side of Client/Intro, a new player's first minute). It happens in the house of the first map
+-- (the Mansion, in the lobby's own server: Server/Sandbox), in its TV room. The client plays the cinematic (the
+-- Woman coming out of the TV is the client's own copy of her); from the moment she lunges, the Woman is the real
+-- monster (Ghost.tutorial: she only goes for players in the tutorial, never takes them under 40% health, and waits
+-- between her swings), so the lessons and the short fight after them use the game itself: blocking, punching,
+-- lifting and throwing the armchair, the ultimate, knock-outs and wall smashes.
+--   Remotes.Tutorial (from the player in it, in this order):
+--     "seen"    it started (saved: it never starts by itself again; Server/Data)     "skip" = the same
+--     "enter"   into the house, in front of the TV room's armchair (player attribute IntroHouse = true / false)
+--     "spawn"   (position) the real Woman, where the client's copy of her is (she stands and waits)
+--     "windup"  she comes at the player and is held with her claws up, just before they come down
+--     "hold"    she is held where she is              "release"  she goes on (model attribute Held)
+--     "ult"     the player's brutality bar is filled
+--     "fight"   the short fight: she swings, waits, swings again, and can be beaten
+--     "exit"    she goes; the player is put inside the front door (player attribute IntroExit = true)
+--     "done"    back to the park (the sandbox's way out)
+-- Player attribute Tutorial = true while in it (Combat: never under 40% health, never knocked down).
+-- Lobby servers only (ReplicatedStorage attribute TutorialOn: the clients start it there and nowhere else).
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 local Remotes = require(script.Parent.Remotes)
-local Sandbox = require(script.Parent.Sandbox)
-local Combat = require(script.Parent.Combat)
-local Ghost = require(script.Parent.Ghost)
-local Quests = require(script.Parent.Quests)
-local Inventory = require(script.Parent.Inventory)
 local Data = require(script.Parent.Data)
-local Steps = require(RS.Shared.Tutorial).steps
+local Sandbox = require(script.Parent.Sandbox)
+local Ghost = require(script.Parent.Ghost)
+local Combat = require(script.Parent.Combat)
+local Furniture = require(script.Parent.Furniture)
 
 local Tutorial = {}
-type State = { step: number, prog: number, sprinting: boolean, nextAt: number?, entering: boolean, ultFired: boolean, endAt: number? }
-local runs = {} :: { [Player]: State }
-local lastAsk = {} :: { [Player]: number }
-local DONE_PAUSE = 1.3 -- seconds the finished step stays on screen (DONE) before the next one
-local END_TIME = 3 -- the last card ("end"), then back to the park
-local MIN_HP = 0.2 -- her health never goes under this share before the ultimate's lesson
-local FINISH_HP = 20 -- ...and where it is put for the ultimate to finish her (the first ultimate, the Rage
--- Shockwave, hits for 30)
+local inIntro = {} :: { [Player]: boolean }
+local LESSON_HP = 0.35 -- her health never goes under this share before the fight
 
--- how she fights during this step (Ghost.tutorial)
-local function fightFor(def: any)
-	local now = os.clock()
-	local final = def.kind == "ult" or def.kind == "end"
-	Ghost.tutorial = {
-		pause = def.pause or math.huge,
-		nextAt = def.pause and (now + (def.first or def.pause)) or math.huge,
-		minHp = final and 0 or MIN_HP,
-	}
-	-- the ultimate's lesson: she is low, the ultimate beats her
-	local g = Ghost.current
-	if def.kind == "ult" and g and Ghost.alive() and g.hp > FINISH_HP then
-		g.hp = FINISH_HP
-		g.model:SetAttribute("HP", g.hp)
+-- the TV room: the TV and the armchair facing it (Client/Intro finds them the same way)
+local function tvRoom(): (Model?, Model?)
+	local m = workspace:FindFirstChild("Mansion")
+	local f = m and m:FindFirstChild("Furniture")
+	local tv = f and f:FindFirstChild("TV")
+	if not f or not tv or not tv:IsA("Model") then return nil, nil end
+	local best, bestD = nil :: Model?, math.huge
+	for _, c in f:GetChildren() do
+		if c.Name == "Armchair" and c:IsA("Model") then
+			local d = (c:GetPivot().Position - tv:GetPivot().Position).Magnitude
+			if d < bestD then best, bestD = c, d end
+		end
 	end
+	return tv, best
 end
 
-local function setStep(p: Player, s: State, n: number)
-	s.step = n
-	s.prog = 0
-	s.nextAt = nil
-	s.ultFired = false
-	s.endAt = nil
-	p:SetAttribute("TutorialProg", 0)
-	p:SetAttribute("TutorialStep", n)
-	local def = Steps[n]
-	if not def then return end
-	fightFor(def)
-	if def.give then
-		Inventory.give(p, def.give)
-		p:SetAttribute("TutorialSlot", p:GetAttribute("Sel")) -- (give selects the new item's slot)
-		Inventory.select(p, 0) -- ...but the lesson is to take it in the hand
-	end
-	if def.kind == "ult" then
-		Combat.endUltimate(p)
-		Combat.fillBrutality(p)
-	end
+-- where the player stands up in front of the armchair, facing the TV
+local function standSpot(tv: Model, chair: Model): CFrame
+	local cf, size = chair:GetBoundingBox()
+	local floorY = cf.Position.Y - size.Y / 2
+	local to = tv:GetPivot().Position - cf.Position
+	to = Vector3.new(to.X, 0, to.Z).Unit
+	local p = Vector3.new(cf.Position.X, floorY + 3, cf.Position.Z) + to * 2.8
+	return CFrame.lookAt(p, p + to)
+end
+
+local function tutorialFight(): any
+	return Ghost.tutorial
 end
 
 local function stop(p: Player)
-	runs[p] = nil
+	inIntro[p] = nil
 	if p.Parent then
 		p:SetAttribute("Tutorial", nil)
-		p:SetAttribute("TutorialStep", nil)
-		p:SetAttribute("TutorialProg", nil)
-		p:SetAttribute("TutorialDone", nil)
-		p:SetAttribute("TutorialSlot", nil)
+		p:SetAttribute("IntroHouse", nil)
+		p:SetAttribute("IntroExit", nil)
 	end
-	-- the last one out: the house is a plain sandbox again (a still dummy) if someone is still trying ultimates in it
-	if next(runs) == nil then
+	if next(inIntro) == nil then
 		Ghost.tutorial = nil
+		Sandbox.holdDummy = false
 		Ghost.passive = Sandbox.active()
 	end
 end
 
--- the step's goal is met: DONE for a moment, then the next one
-local function complete(p: Player, s: State)
-	if s.nextAt then return end
-	s.nextAt = os.clock() + DONE_PAUSE
-	p:SetAttribute("TutorialDone", s.step)
-end
-
-local function progress(p: Player, s: State, value: number)
-	local def = Steps[s.step]
-	if not def or s.nextAt then return end
-	s.prog = value
-	p:SetAttribute("TutorialProg", math.floor(math.min(value, def.goal) * 10 + 0.5) / 10)
-	if value >= def.goal then complete(p, s) end
-end
-
-local function finish(p: Player)
-	stop(p)
-	Remotes.Fx:FireClient(p, "Toast", "TUTORIAL DONE", true)
-	Sandbox.leave(p)
-end
-
-local function start(p: Player)
-	if runs[p] or p:GetAttribute("InMatch") then return end
+local function enter(p: Player)
+	if inIntro[p] or p:GetAttribute("InMatch") then return end
 	Data.setTutorialSeen(p)
-	local s: State = { step = 0, prog = 0, sprinting = false, entering = true, ultFired = false }
-	runs[p] = s
-	Sandbox.enter(p, nil, true) -- (waits while the house is sent to the player)
-	if runs[p] ~= s then return end
-	s.entering = false
-	if not p.Parent or not p:GetAttribute("Sandbox") then -- the house is in use, or the player is down
+	local tv, chair = tvRoom()
+	if not tv or not chair then p:SetAttribute("IntroHouse", false); return end
+	inIntro[p] = true
+	Sandbox.holdDummy = true
+	Sandbox.enter(p, nil, true, true) -- (waits while the house is sent to the player; no still dummy)
+	if not inIntro[p] then return end
+	if not p.Parent or not p:GetAttribute("Sandbox") then
 		stop(p)
+		if p.Parent then p:SetAttribute("IntroHouse", false) end
 		return
 	end
+	-- the room as it should be, nobody else's Woman in it
+	if Ghost.current then Ghost.despawn() end
+	Furniture.reset()
+	-- the armchair further from the TV, facing it: room for her to crawl out between them (back next reset)
+	local tvCF = tv:GetPivot()
+	local look = Vector3.new(tvCF.LookVector.X, 0, tvCF.LookVector.Z).Unit
+	local at = Vector3.new(tvCF.Position.X, chair:GetPivot().Position.Y, tvCF.Position.Z) + look * 14
+	chair:PivotTo(CFrame.lookAt(at, at - look))
+	local spot = standSpot(tv, chair)
+	pcall(function() p:RequestStreamAroundAsync(spot.Position, 5) end)
+	local c = p.Character
+	if c then c:PivotTo(spot) end
 	p:SetAttribute("Tutorial", true)
-	Ghost.passive = false -- (the sandbox's dummy stands still; the tutorial's Woman fights)
-	Combat.clearBrutality(p) -- the bar fills with the player's own hits here (Combat: no free refill in the tutorial)
-	setStep(p, s, 1)
+	Combat.clearBrutality(p)
+	p:SetAttribute("IntroHouse", true)
 end
 
--- isLobby: the tutorial only exists on lobby servers (the sandbox's house); the clients read TutorialOn
+local function spawnHer(pos: any)
+	local tv = tvRoom()
+	if typeof(pos) ~= "Vector3" or not tv or (pos - tv:GetPivot().Position).Magnitude > 40 then return end
+	Ghost.passive = false
+	Ghost.spawn(1, pos, "Woman")
+	Ghost.tutorial = { pause = math.huge, nextAt = math.huge, minHp = LESSON_HP, held = false, holdWindup = false }
+	local g = Ghost.current
+	if g then g.model:SetAttribute("Held", false) end
+end
+
+local function hold(on: boolean)
+	local T = tutorialFight()
+	local g = Ghost.current
+	if not T or not g then return end
+	T.held = on
+	if on then g.pauseFrom = g.pauseFrom or os.clock() end
+	g.model:SetAttribute("Held", on)
+end
+
+local function frontDoor(): CFrame?
+	local m = workspace:FindFirstChild("Mansion")
+	local st = m and m:FindFirstChild("Structure")
+	local front = st and st:FindFirstChild("Front1", true)
+	if not front then return nil end
+	local sum, n = Vector3.zero, 0
+	for _, d in front:GetDescendants() do
+		if d:IsA("BasePart") and d.Name == "DoorLeaf" then sum += d.Position; n += 1 end
+	end
+	if n == 0 then return nil end
+	local at = sum / n
+	local out = Vector3.new(at.X, 0, at.Z).Unit -- (the house's middle is the origin: outward)
+	local p = Vector3.new(at.X, at.Y - 4.5, at.Z) - out * 7
+	return CFrame.lookAt(p, p + out)
+end
+
 function Tutorial.start(isLobby: boolean)
 	RS:SetAttribute("TutorialOn", isLobby)
-	Remotes.Tutorial.OnServerEvent:Connect(function(p: Player, action: any)
-		local now = os.clock()
-		if now - (lastAsk[p] or 0) < 0.3 then return end
-		lastAsk[p] = now
-		if action == "auto" then
-			-- a new player's first seconds: straight into it (never if the save says it was already played)
-			local d = Data.get(p)
-			if isLobby and d and d.Tutorial ~= true then start(p) end
-		elseif action == "start" then
-			start(p)
-		elseif action == "skip" then
+	Remotes.Tutorial.OnServerEvent:Connect(function(p: Player, action: any, arg: any)
+		-- (no rate limit: the steps come in quick pairs, and each one only acts in its own moment)
+		if action == "seen" or action == "skip" then
 			Data.setTutorialSeen(p)
-		elseif action == "next" then
-			local s = runs[p]
-			local def = s and Steps[s.step]
-			if s and def and def.kind == "info" and not s.nextAt then
-				-- (no DONE pause on a card that was only read)
-				if s.step >= #Steps then finish(p) else setStep(p, s, s.step + 1) end
+			return
+		elseif action == "enter" then
+			if isLobby then enter(p) end
+			return
+		end
+		if not inIntro[p] then
+			-- (an intro that never came into the house still ends in the park)
+			if action == "done" then Data.setTutorialSeen(p) end
+			return
+		end
+		local T = tutorialFight()
+		if action == "spawn" then
+			spawnHer(arg)
+		elseif action == "windup" and T then
+			T.nextAt = 0
+			T.pause = math.huge
+			T.holdWindup = true
+		elseif action == "hold" then
+			hold(true)
+		elseif action == "release" then
+			hold(false)
+		elseif action == "ult" then
+			Combat.endUltimate(p)
+			Combat.fillBrutality(p)
+		elseif action == "fight" and T then
+			hold(false)
+			T.pause = 3.2
+			T.nextAt = os.clock() + 2.2
+			T.minHp = 0
+			T.holdWindup = false
+		elseif action == "exit" then
+			if Ghost.current then Ghost.despawn() end
+			local at = frontDoor()
+			local c = p.Character
+			if at and c then
+				pcall(function() p:RequestStreamAroundAsync(at.Position, 5) end)
+				if p.Character == c and c.Parent then c:PivotTo(at) end
 			end
+			p:SetAttribute("IntroExit", true)
+		elseif action == "done" then
+			Data.setTutorialSeen(p)
+			stop(p)
+			Sandbox.leave(p)
 		end
 	end)
-	Remotes.Sprint.OnServerEvent:Connect(function(p: Player, on: any)
-		local s = runs[p]
-		if s then s.sprinting = on == true end
-	end)
-	-- hits, charged hits, blocked hits and thrown furniture, as the game itself counts them (in the sandbox they count
-	-- for nothing else)
-	Quests.watch = function(p: Player, stat: string, _n: number)
-		local s = runs[p]
-		local def = s and Steps[s.step]
-		if not s or not def or s.nextAt then return end
-		if stat == "hits" then
-			if def.kind == "hits" then
-				progress(p, s, s.prog + 1)
-			elseif def.kind == "item" and (p:GetAttribute("Sel") or 0) == p:GetAttribute("TutorialSlot") then
-				progress(p, s, s.prog + 1)
-			end
-		elseif stat == "charged" and def.kind == "charged" then
-			progress(p, s, s.prog + 1)
-		elseif stat == "blocks" and def.kind == "blocked" then
-			progress(p, s, s.prog + 1)
-		elseif stat == "throws" and def.kind == "throw" then
-			progress(p, s, s.prog + 1)
-		end
-	end
 	Players.PlayerRemoving:Connect(function(p)
-		if runs[p] then stop(p) end
-		lastAsk[p] = nil
-	end)
-	RunService.Heartbeat:Connect(function(dt: number)
-		local now = os.clock()
-		for p, s in runs do
-			if s.entering then continue end
-			if not p.Parent or not p:GetAttribute("Sandbox") then -- left with LEAVE, or the sandbox closed
-				stop(p)
-				continue
-			end
-			if s.nextAt then
-				if now >= s.nextAt then
-					if s.step >= #Steps then finish(p) else setStep(p, s, s.step + 1) end
-				end
-				continue
-			end
-			local def = Steps[s.step]
-			if not def then continue end
-			local ch = p.Character
-			local hum = ch and ch:FindFirstChildOfClass("Humanoid")
-			local hrp = ch and ch:FindFirstChild("HumanoidRootPart") :: BasePart?
-			if def.kind == "walk" then
-				local g = Ghost.current
-				if g and hrp and Ghost.alive() and (g.hrp.Position - hrp.Position).Magnitude <= def.goal then progress(p, s, def.goal) end
-			elseif def.kind == "block" then
-				if p:GetAttribute("Blocking") == true then progress(p, s, s.prog + dt) end
-			elseif def.kind == "sprint" then
-				if s.sprinting and hum and hum.MoveDirection.Magnitude > 0.1 then progress(p, s, s.prog + dt) end
-			elseif def.kind == "ult" then
-				-- fired (half the bar), then she is beaten (or the ultimate is over): done
-				local on = p:GetAttribute("UltActive") == true
-				if on and not s.ultFired then s.ultFired = true; progress(p, s, 0.5) end
-				if (s.ultFired and (not on or not Ghost.alive())) or not Ghost.alive() then progress(p, s, 1) end
-			elseif def.kind == "end" then
-				s.endAt = s.endAt or (now + END_TIME)
-				if now >= s.endAt then finish(p) end
-			end
-		end
+		if inIntro[p] then stop(p) end
 	end)
 end
 

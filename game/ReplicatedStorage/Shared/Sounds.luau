@@ -13,6 +13,11 @@ return {
 	KnightBreath = { ids = { 9113073910 }, volume = 1 }, -- Air Regulator Scuba Tank 2 (Pro Sound Effects): a breath through a scuba regulator, cut into inhale + exhale by Client/MaskBreath
 	SaberBurn = { ids = { 9119992534 }, volume = 0.8 },
 	WoodBreak = { ids = { 9120801590, 9120957493 }, volume = 1 },
+	-- the intro (Client/Intro): the old TV, the front door, the storm (Pro Sound Effects)
+	TvStatic = { ids = { 9126097291 }, volume = 0.5 },
+	TvHum = { ids = { 9114245635 }, volume = 0.3 },
+	DoorCreak = { ids = { 9120838740 }, volume = 1 },
+	Thunder = { ids = { 9120018172 }, volume = 0.9 },
 	Glass = { ids = { 9114592102 }, volume = 0.8 },
 	GhostScream = { ids = { 9114567451, 136111643195187 }, volume = 1 },
 	GhostWail = { ids = { 129823359634605 }, volume = 0.7 },

@@ -27,6 +27,8 @@ local rng = Random.new()
 local RESPAWN = 3.2 -- seconds between her knockout and the new dummy (her death plays out first)
 
 function Sandbox.active(): boolean return active end
+-- the intro (Server/Tutorial) is in the house: a beaten Woman does not come back as a dummy
+Sandbox.holdDummy = false
 
 -- the middle of the house on the ground floor, or the nearest clear spot to it (the exact middle can be a wall)
 local function center(): Vector3
@@ -92,7 +94,8 @@ local function toast(p: Player, text: string, good: boolean?)
 end
 
 -- quiet = no "SANDBOX - TRYING" message (the tutorial, Server/Tutorial, runs in the sandbox and says its own things)
-local function enter(p: Player, id: any, quiet: boolean?)
+-- noDummy = no still Woman when it opens (the intro, Server/Tutorial, brings its own)
+local function enter(p: Player, id: any, quiet: boolean?, noDummy: boolean?)
 	if Run.mode ~= "Lobby" then return end
 	sweep()
 	local u = (type(id) == "string" and Ultimates.byId[id]) or Ultimates.byId[Data.equipped(p)] or Ultimates.byId[Ultimates.default]
@@ -130,7 +133,7 @@ local function enter(p: Player, id: any, quiet: boolean?)
 		Ghost.passive = true
 		Run.setSandbox(true)
 		Inventory.clearWorld()
-		spawnDummy()
+		if not noDummy then spawnDummy() end
 	end
 	Combat.healAll({ p })
 	Combat.endUltimate(p)
@@ -165,7 +168,7 @@ function Sandbox.start()
 		token += 1
 		local mine = token
 		task.wait(RESPAWN)
-		if active and mine == token then spawnDummy() end
+		if active and mine == token and not Sandbox.holdDummy then spawnDummy() end
 	end
 	Remotes.Sandbox.OnServerEvent:Connect(function(p: Player, action: any, id: any)
 		local now = os.clock()

@@ -49,6 +49,7 @@ local CrewAnim = require(Client.CrewAnim)
 local Vip = require(Client.Vip)
 local NameTags = require(Client.NameTags)
 local TutorialUI = require(Client.TutorialUI)
+local Intro = require(Client.Intro)
 local LevelUI = require(Client.LevelUI)
 local CallerUI = require(Client.CallerUI)
 local CallerMarks = require(Client.CallerMarks)
@@ -116,7 +117,8 @@ Entrance.init(Fx, HUD) -- each monster's entrance cinematic
 LobbyUI.init(function() UltShop.open() end, function(open) Input.setShopOpen(open) end, function() QuestUI.open() end, QuestUI.claimable, QuestUI.changed,
 	function() BestiaryUI.open() end)
 Input.openPlay = LobbyUI.togglePlay
-TutorialUI.init() -- the tutorial: the offer in the lobby, the step card in the house
+Intro.init(Fx, HUD) -- the new player's intro (the TV, the Woman, the frozen lessons, the way out)
+TutorialUI.init() -- starts it on the first join; HOW TO PLAY in the lobby
 
 -- What the server tells EVERYONE about a fight in the house. The sandbox runs in the lobby's own server, so a
 -- player standing in the park (not InMatch) gets these too: they are dropped there (no screams, shakes, flashes

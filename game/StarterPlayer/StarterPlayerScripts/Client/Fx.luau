@@ -11,6 +11,7 @@ local Config = require(RS.Shared.Config)
 local Sfx = require(script.Parent.Sfx)
 local SawAudio = require(script.Parent.SawAudio)
 local HUD = require(script.Parent.HUD)
+local Platform = require(script.Parent.Platform)
 local VM = require(script.Parent.Viewmodel)
 local GA = require(script.Parent.GhostAnim)
 local Grunge = require(script.Parent.Grunge)
@@ -102,7 +103,9 @@ end
 -- FIGHT MUSIC: every monster and every evolved form has its own track (Shared/Sounds Music_<id> / Music_<id>_E).
 -- It starts with the monster's entrance and fades out when it is beaten. A new monster cross-fades into its own.
 local musicName = ""
+local chargeHinted = false
 local function setMusic(fight: boolean, monsterId: string?, evolved: boolean?)
+	if Fx.musicLock then return end -- (Client/Intro plays its own track)
 	local name = ""
 	if fight then
 		name = "Music_" .. (monsterId or "Woman") .. (evolved and "_E" or "")
@@ -449,6 +452,13 @@ function Fx.handle(kind: string, ...)
 	elseif kind == "Tired" then
 		HUD.flash(Color3.fromRGB(120, 110, 40), 0.25)
 	elseif kind == "Intro" then
+		-- a new player's first fight (no XP yet): once, how to charge a hit (the intro does not teach it)
+		if not chargeHinted and (lp:GetAttribute("XP") or 0) == 0 and args[1] == 1 then
+			chargeHinted = true
+			task.delay(8, function()
+				if lp:GetAttribute("InMatch") then HUD.toast("HOLD " .. Platform.label("Punch") .. " TO CHARGE A HARDER HIT", true) end
+			end)
+		end
 		-- args: ghost number, monster title, rarity
 		local rar = args[3] or 0
 		local tag = rar == 4 and "SECRET MONSTER - " or (rar == 3 and "LEGENDARY - " or (rar == 2 and "RARE - " or ""))
@@ -586,6 +596,7 @@ function Fx.init()
 		end
 		local zone = pos.Z > 600 and "lobby" or ((pos.X > hmn.X and pos.X < hmx.X and pos.Z > hmn.Z and pos.Z < hmx.Z and pos.Y < 45) and "inside" or "yard")
 		if Fx.cine and zone == "yard" then zone = "cine" end
+		if Fx.zoneOverride then zone = Fx.zoneOverride end -- (Client/Intro: its set is far from everything)
 		Fx.applyZone(zone, dt)
 		-- WILDFIRE (the flamethrower set the house alight; the server counts the fires in RS.WildFires): a deep roar
 		-- that grows with it and a warm, flickering glow over the picture

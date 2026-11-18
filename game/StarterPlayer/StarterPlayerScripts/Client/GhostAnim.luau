@@ -614,6 +614,7 @@ local function target(state: string, t: number, sinceState: number): { [string]:
 end
 
 local stateSeen, stateT = "", 0
+local heldTotal = 0 -- (time spent held by the tutorial: model attribute Held, Server/Tutorial; her pose stops)
 local warned = false
 local height = 8 -- the bound monster's height (entrances move the body by it)
 function GA.update(dt: number)
@@ -628,7 +629,8 @@ function GA.update(dt: number)
 		end
 	end
 	if not current or not current.Parent then return end
-	local t = os.clock()
+	if current:GetAttribute("Held") == true then heldTotal += dt end
+	local t = os.clock() - heldTotal
 	local state = current:GetAttribute("State") or "Chase"
 	-- Fury moves reuse the attack poses: roar / lunge crouch = wind-up, lunge dash = swipe
 	if state == "Evo" and current:GetAttribute("EvoPower") == "laser" then state = "Laser"

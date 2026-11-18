@@ -49,7 +49,7 @@ UltRunner.start()
 Inventory.start()
 Run.start()
 Sandbox.start() -- after Run.start: it takes over the monster's death while a sandbox is on
-Tutorial.start(Run.mode == "Lobby") -- the step-by-step lesson with the Woman (runs in the sandbox)
+Tutorial.start(Run.mode == "Lobby") -- the intro's server side (saved as played, the character brought back to the park)
 Lobby.start()
 Admin.start()
 Friends.start()
