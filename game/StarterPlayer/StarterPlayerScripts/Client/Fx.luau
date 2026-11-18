@@ -415,9 +415,24 @@ function Fx.handle(kind: string, ...)
 	elseif kind == "ItemUsed" then
 		Sfx.play("Cash", { PlaybackSpeed = 1.6, Volume = 0.5 })
 	elseif kind == "RunOver" then
-		local reason, cash, k = args[1], args[2], args[3]
-		HUD.banner(reason == "died" and "YOU DIED" or "RUN OVER", "+$" .. tostring(cash) .. "  (" .. tostring(k) .. " GHOSTS)", 5)
+		-- (cash, ghosts beaten, XP, level before and after: Shared/Levels)
+		local reason, cash, k, xp, before, after = args[1], args[2], args[3], args[4], args[5], args[6]
+		local sub = "+$" .. tostring(cash) .. "  (" .. tostring(k) .. " GHOSTS)"
+		if type(xp) == "number" and xp > 0 then sub ..= "   +" .. xp .. " XP" end
+		HUD.banner(reason == "died" and "YOU DIED" or "RUN OVER", sub, 5)
 		Sfx.play("Cash")
+		if type(before) == "number" and type(after) == "number" and after > before then
+			task.delay(5.3, function()
+				local Levels = require(RS.Shared.Levels)
+				local name, _, fresh = Levels.title(after)
+				for l = before + 1, after - 1 do -- (several levels at once: a new title on the way counts too)
+					local n2, _, f2 = Levels.title(l)
+					if f2 then name, fresh = n2, true end
+				end
+				HUD.banner("LEVEL " .. after .. "!", fresh and ("NEW TITLE: " .. name) or name, 4)
+				Sfx.play("Cash", { PlaybackSpeed = 0.8 })
+			end)
+		end
 	elseif kind == "Toast" then
 		HUD.toast(args[1], args[2])
 	elseif kind == "UltSwapped" then -- Double Ultimate pass: the other ultimate is the one that fires now

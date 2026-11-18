@@ -5,7 +5,10 @@
 -- (house x -80..80, z -60..60, front door at z = 60 facing the yard), so the run, events and yard all fit.
 -- light = the "inside" lighting the client uses for that map (tint, ambient, colour grade).
 export type Map = { id: string, name: string, price: number, desc: string, color: Color3, light: { [string]: any } }
-export type Difficulty = { id: string, name: string, hp: number, dmg: number, speed: number, reward: number, color: Color3, desc: string }
+-- enrage = its monsters ENRAGE (Server/Fury: below half health, faster and harder, smash punches); bosses = every 3rd
+-- monster is an EVOLVED boss
+export type Difficulty = { id: string, name: string, hp: number, dmg: number, speed: number, reward: number, color: Color3, desc: string,
+	enrage: boolean, bosses: boolean }
 
 local function C(r, g, b) return Color3.fromRGB(r, g, b) end
 -- exposure: optional, the camera exposure inside that map (darker below 0)
@@ -47,10 +50,14 @@ local List: { Map } = {
 }
 
 local Difficulties: { Difficulty } = {
-	{ id = "Easy", name = "EASY", hp = 0.7, dmg = 0.6, speed = 0.9, reward = 0.6, color = C(110, 200, 90), desc = "Weaker monsters, x0.6 cash" },
-	{ id = "Normal", name = "NORMAL", hp = 1, dmg = 1, speed = 1, reward = 1, color = C(220, 210, 180), desc = "The real thing, x1 cash" },
-	{ id = "Hard", name = "HARD", hp = 1.45, dmg = 1.35, speed = 1.1, reward = 1.6, color = C(240, 140, 50), desc = "Tougher and faster, x1.6 cash" },
-	{ id = "Nightmare", name = "NIGHTMARE", hp = 2.1, dmg = 1.8, speed = 1.2, reward = 2.5, color = C(220, 40, 40), desc = "Good luck, x2.5 cash" },
+	{ id = "Easy", name = "EASY", hp = 0.7, dmg = 0.6, speed = 0.9, reward = 0.6, color = C(110, 200, 90), desc = "Weaker monsters, no bosses, x0.6 cash",
+		enrage = false, bosses = false },
+	{ id = "Normal", name = "NORMAL", hp = 1, dmg = 1, speed = 1, reward = 1, color = C(220, 210, 180), desc = "The real thing, x1 cash",
+		enrage = false, bosses = true },
+	{ id = "Hard", name = "HARD", hp = 1.45, dmg = 1.35, speed = 1.1, reward = 1.6, color = C(240, 140, 50), desc = "Tougher and faster, monsters enrage, x1.6 cash",
+		enrage = true, bosses = true },
+	{ id = "Nightmare", name = "NIGHTMARE", hp = 2.1, dmg = 1.8, speed = 1.2, reward = 2.5, color = C(220, 40, 40), desc = "Monsters enrage. Good luck, x2.5 cash",
+		enrage = true, bosses = true },
 }
 
 local byId: { [string]: Map } = {}

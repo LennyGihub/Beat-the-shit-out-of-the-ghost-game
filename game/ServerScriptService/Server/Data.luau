@@ -2,12 +2,13 @@
 -- Double Ultimate pass, Equipped2), settings (volumes + keybinds), and the Robux
 -- purchases already granted (Receipts: the last 100 PurchaseIds, so a cash pack is never given twice).
 -- Long-term goals (Server/Bestiary): Bestiary (monster key -> times beaten), Badges (set of unlocked badge ids),
--- Nightmare (monsters beaten on NIGHTMARE).
+-- Nightmare (monsters beaten on NIGHTMARE). XP: the player's total XP (Shared/Levels: the level and its title).
 -- Never overwrites a save that failed to load; saves on leave, every 90 s and on shutdown.
 local DSS = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local Remotes = require(script.Parent.Remotes)
+local Levels = require(game:GetService("ReplicatedStorage").Shared.Levels)
 
 local Data = {}
 -- v2 (2026-11-17): every save was wiped before release (the testers' saves held gifted cash) by starting a new store.
@@ -17,7 +18,7 @@ local profiles = {} -- [Player] = { loaded = bool, data = table }
 
 local function fresh()
 	return { Cash = 0, Owned = {}, GhostLevel = 1, Kills = 0, Ults = { Rage = true }, Equipped = "Rage", Receipts = {},
-		Bestiary = {} :: { [string]: number }, Badges = {} :: { [string]: boolean }, Nightmare = 0,
+		Bestiary = {} :: { [string]: number }, Badges = {} :: { [string]: boolean }, Nightmare = 0, XP = 0,
 		Tutorial = false } -- Tutorial = the tutorial was offered (taken or refused): the lobby's popup is not shown again
 end
 local MAX_RECEIPTS = 100
@@ -72,6 +73,8 @@ local function publish(player)
 	player:SetAttribute("Badges", table.concat(badges, ","))
 	player:SetAttribute("Kills", p.data.Kills)
 	player:SetAttribute("NightmareKills", p.data.Nightmare)
+	player:SetAttribute("XP", p.data.XP)
+	player:SetAttribute("Level", (Levels.of(p.data.XP))) -- (over the head in the lobby: Client/NameTags)
 	player:SetAttribute("TutorialSeen", p.data.Tutorial == true) -- false: Client/TutorialUI offers the tutorial
 	local ls = player:FindFirstChild("leaderstats")
 	if ls then
@@ -119,6 +122,7 @@ function Data.load(player: Player)
 						for id, v in res.Badges do if type(id) == "string" and #id <= 40 and v == true then prof.data.Badges[id] = true end end
 					end
 					prof.data.Nightmare = math.max(0, math.floor(tonumber(res.Nightmare) or 0))
+					prof.data.XP = math.max(0, math.floor(tonumber(res.XP) or 0))
 					prof.data.Tutorial = res.Tutorial == true
 					if type(res.Receipts) == "table" then
 						for _, id in res.Receipts do if type(id) == "string" then table.insert(prof.data.Receipts, id) end end
@@ -140,7 +144,7 @@ function Data.save(player: Player): boolean
 	local prof = profiles[player]
 	if not prof or not prof.loaded or not okStore then return false end
 	local snap = { Cash = prof.data.Cash, GhostLevel = prof.data.GhostLevel, Kills = prof.data.Kills, Owned = table.clone(prof.data.Owned), Ults = table.clone(prof.data.Ults), Equipped = prof.data.Equipped, Equipped2 = prof.data.Equipped2, Settings = prof.data.Settings, Receipts = table.clone(prof.data.Receipts),
-		Bestiary = table.clone(prof.data.Bestiary), Badges = table.clone(prof.data.Badges), Nightmare = prof.data.Nightmare,
+		Bestiary = table.clone(prof.data.Bestiary), Badges = table.clone(prof.data.Badges), Nightmare = prof.data.Nightmare, XP = prof.data.XP,
 		Tutorial = prof.data.Tutorial == true,
 		Quests = prof.data.Quests and HttpService:JSONDecode(HttpService:JSONEncode(prof.data.Quests)) or nil }
 	for i = 1, 3 do
@@ -253,6 +257,16 @@ end
 function Data.setTutorialSeen(player: Player)
 	local d = Data.get(player)
 	if d and not d.Tutorial then d.Tutorial = true; publish(player) end
+end
+
+-- XP for a run (Server/Run.payout): returns the level before and after
+function Data.addXP(player: Player, n: number): (number, number)
+	local d = Data.get(player)
+	if not d then return 1, 1 end
+	local before = (Levels.of(d.XP))
+	d.XP += math.max(0, math.floor(n))
+	publish(player)
+	return before, (Levels.of(d.XP))
 end
 
 function Data.winGhost(player: Player, level: number)

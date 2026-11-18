@@ -16,6 +16,7 @@ local Inventory = require(script.Parent.Inventory)
 local Events = require(script.Parent.Events)
 local Monsters = require(RS.Shared.Monsters)
 local Maps = require(RS.Shared.Maps)
+local Levels = require(RS.Shared.Levels)
 local MapLoader = require(script.Parent.MapLoader)
 local Quests = require(script.Parent.Quests)
 local Friends = require(script.Parent.Friends)
@@ -113,8 +114,11 @@ function Run.payout(p: Player, reason: string): number
 	if g and g.damageBy[p] then st.damage += g.damageBy[p]; g.damageBy[p] = 0 end
 	local cash = math.floor((st.earned + st.damage / Config.Payout.DamageDiv * diff.reward) * cashMult(p))
 	Data.addCash(p, cash)
+	-- and the XP for the player's level (Shared/Levels)
+	local xp = Levels.runXP(st.kills, st.damage, diff.id)
+	local before, after = Data.addXP(p, xp)
 	task.spawn(Data.save, p)
-	Remotes.Fx:FireClient(p, "RunOver", reason, cash, st.kills)
+	Remotes.Fx:FireClient(p, "RunOver", reason, cash, st.kills, xp, before, after)
 	return cash
 end
 
@@ -151,10 +155,10 @@ function Run.startFight()
 	-- ghost 1 is always the Woman; after that the run meets every monster once (the Conqueror too, same odds) before
 	-- any comes again, and never one of the last two you fought (Monsters.pickFresh; Studio hook: RS attribute
 	-- DebugMonster = id). Every 3rd ghost is an EVOLVED variant (tier 1 = the first one of the run, kept beatable):
-	-- those have their own "met" set.
+	-- those have their own "met" set. EASY has no bosses (Maps difficulty.bosses).
 	local def
 	local evoTier: number? = nil
-	if Monsters.isEvolvedWave(level) then
+	if Monsters.isEvolvedWave(level) and diff.bosses then
 		evoTier = level // 3
 		def = Monsters.pickFresh(seenEvolved, { lastMonster, prevMonster }, rng) -- not the last two you fought
 	elseif level <= 1 then
@@ -464,7 +468,7 @@ function Run.configure(mapId: string?, diffId: string?, friendlyFire: boolean?)
 	RS:SetAttribute("FriendlyFire", friendlyFire ~= false)
 	MapLoader.load(mapId or Maps.default)
 	diff = Maps.diffById[diffId or ""] or Maps.diffById[Maps.defaultDiff]
-	Ghost.diff = { hp = diff.hp, dmg = diff.dmg, speed = diff.speed }
+	Ghost.diff = { hp = diff.hp, dmg = diff.dmg, speed = diff.speed, enrage = diff.enrage }
 	RS:SetAttribute("Difficulty", diff.id)
 end
 

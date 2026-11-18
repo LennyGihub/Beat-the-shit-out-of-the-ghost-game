@@ -170,7 +170,10 @@ function Combat.damagePlayer(player: Player, amount: number, staminaDrain: numbe
 		if mult < 1 then blowFromMonster = false end -- blocked: doesn't count toward the knockdown
 	end
 	if player:GetAttribute("Warded") or player:GetAttribute("AdminGod") then return end
-	if blowFromMonster and knockdownHit(player, s) then knockDown(player, from) end
+	-- the tutorial (Server/Tutorial): never knocked down, never under 40% health
+	local tut = player:GetAttribute("Tutorial") == true
+	if tut then amount = math.min(amount, math.max(0, hum.Health - hum.MaxHealth * 0.4)) end
+	if blowFromMonster and not tut and knockdownHit(player, s) then knockDown(player, from) end
 	-- a monster can't take more than a set share of your health in a few seconds (Config.Fury.BurstCap)
 	if from ~= Vector3.zero then amount = Fury.cap(player, amount, hum.MaxHealth) end
 	if s.shield > 0 then

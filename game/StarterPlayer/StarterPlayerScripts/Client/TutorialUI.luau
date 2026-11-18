@@ -1,7 +1,10 @@
 --!strict
 -- THE TUTORIAL on the client (Server/Tutorial runs it, Shared/Tutorial holds the steps).
---   * THE OFFER: a popup in the lobby the first time a player joins (player attribute TutorialSeen = false, set by
---     Server/Data): PLAY THE TUTORIAL / NO THANKS. Either answer is saved; it is not shown again.
+--   * A NEW PLAYER (player attribute TutorialSeen = false, set by Server/Data) is put straight into it once the
+--     loading screen is gone: no question asked. In Studio (where the save never loads) only with the
+--     ReplicatedStorage attribute DebugAutoTutorial = true.
+--   * BLOCK NOW: in the block lesson, big on the screen while she winds up a swing.
+--   * THE OFFER (a popup: PLAY THE TUTORIAL / NO THANKS) is only the Studio hook below now.
 --   * HOW TO PLAY: a small button under the lobby's header line, to take (or retake) the tutorial at any time.
 --   * THE CARD, in the house: STEP n / N, what to do right now with the player's own key / controller button /
 --     touch button in yellow, what it is for, and a bar that fills as they do it; DONE is stamped on it when the
@@ -40,6 +43,7 @@ local nextBtn: TextButton
 local quitBtn: TextButton
 local track: Frame
 local fillBar: Frame
+local blockNow: TextLabel
 local shownProg = -1
 local lastNext = 0
 
@@ -134,7 +138,7 @@ function refresh()
 	task_.Text = fill(text)
 	why.Text = def.why
 	local done = lp:GetAttribute("TutorialDone") == n
-	local info = def.kind == "info"
+	local info = def.kind == "info" or def.kind == "end" -- (no bar: read it)
 	local prog = tonumber(lp:GetAttribute("TutorialProg")) or 0
 	local f = done and 1 or math.clamp(prog / math.max(def.goal, 0.01), 0, 1)
 	track.Visible = not info
@@ -146,10 +150,10 @@ function refresh()
 		shownProg = f
 	end
 	-- a count for the steps that are counted, nothing for the timed ones
-	local counted = (def.kind == "hits" or def.kind == "item" or def.kind == "charged" or def.kind == "throw") and def.goal > 1
+	local counted = (def.kind == "hits" or def.kind == "item" or def.kind == "charged" or def.kind == "throw" or def.kind == "blocked") and def.goal > 1
 	count.Text = counted and (math.floor(done and def.goal or prog) .. " / " .. def.goal) or ""
 	count.Visible = not info
-	nextBtn.Visible = info
+	nextBtn.Visible = def.kind == "info"
 	setLabel(nextBtn, n >= #Steps and (mode == "gamepad" and "FINISH  [A]" or (mode == "touch" and "FINISH" or "FINISH  [ENTER]"))
 		or (mode == "gamepad" and "NEXT  [A]" or (mode == "touch" and "NEXT" or "NEXT  [ENTER]")))
 	setLabel(quitBtn, mode == "gamepad" and "QUIT  [X]" or (mode == "touch" and "QUIT" or "QUIT  [L]"))
@@ -234,13 +238,37 @@ function UI.init()
 	Settings.changed:Connect(function(k) if k == "binds" then refresh() end end)
 	refresh()
 
-	-- the offer, once the player's save says it was never made (and the loading screen is gone)
+	-- BLOCK NOW, while she winds up a swing in the block lesson
+	blockNow = Grunge.text(gui, { Text = "", RichText = true, Font = Grunge.HORROR, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.63),
+		Size = UDim2.fromScale(0.44, 0.1), TextColor3 = Color3.fromRGB(240, 60, 40), TextStrokeTransparency = 0, Visible = false, ZIndex = 20 })
+	local bnScale = Instance.new("UIScale"); bnScale.Parent = blockNow
+	RunService.Heartbeat:Connect(function()
+		local n = lp:GetAttribute("TutorialStep")
+		local def = type(n) == "number" and Steps[n] or nil
+		local g = workspace:FindFirstChild("Ghost")
+		local on = inTutorial() and def ~= nil and def.kind == "blocked" and lp:GetAttribute("TutorialDone") ~= n
+			and g ~= nil and g:GetAttribute("State") == "WindUp"
+		if on and not blockNow.Visible then
+			blockNow.Text = "BLOCK NOW!  " .. fill("{Block}")
+			bnScale.Scale = 1.8
+			TweenService:Create(bnScale, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+		end
+		blockNow.Visible = on
+		if on then blockNow.Rotation = math.sin(os.clock() * 22) * 2.5 end
+	end)
+
+	-- A NEW PLAYER: straight into the fight once the loading screen is gone and they stand in the park (the server
+	-- checks the save: Server/Tutorial "auto")
 	task.spawn(function()
 		while lp:GetAttribute("TutorialSeen") == nil do lp:GetAttributeChangedSignal("TutorialSeen"):Wait() end
 		if lp:GetAttribute("TutorialSeen") then return end
-		while Loading.isShown() do task.wait(0.3) end
-		task.wait(1.5)
-		if not lp:GetAttribute("TutorialSeen") then offer() end
+		if RunService:IsStudio() and RS:GetAttribute("DebugAutoTutorial") ~= true then return end
+		while Loading.isShown() do task.wait(0.2) end
+		while not (lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")) do task.wait(0.2) end
+		task.wait(0.4)
+		if not lp:GetAttribute("TutorialSeen") and RS:GetAttribute("TutorialOn") and not lp:GetAttribute("InMatch") then
+			remote():FireServer("auto")
+		end
 	end)
 	if RunService:IsStudio() then
 		lp:GetAttributeChangedSignal("DebugTutorial"):Connect(function()

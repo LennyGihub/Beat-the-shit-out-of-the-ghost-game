@@ -4,11 +4,14 @@
 -- painted plate, like the HUD, and above it the player's titles as small painted stamps:
 --   DEV (red)  = the staff (player attribute Dev, set by Server/Admin)
 --   VIP (gold) = VIP Game Pass owners (player attribute VIP, set by Server/Monetization); their name is gold too
+-- and over everything the player's LEVEL and its title (player attribute Level, Server/Data; Shared/Levels), the
+-- title in its own colour.
 -- In a run the tag is gone (Roblox's name / the VIP's gold name there, see Server/Vip).
 -- Never your own: the lobby camera sits just behind your head, so your own plate would fill the top of the screen.
 -- Everything is sized in scale, so the tag shrinks cleanly with distance.
 local Players = game:GetService("Players")
 local Grunge = require(script.Parent.Grunge)
+local Levels = require(game:GetService("ReplicatedStorage").Shared.Levels)
 
 local NameTags = {}
 local lp = Players.LocalPlayer
@@ -27,20 +30,38 @@ local function build(p: Player, head: BasePart): BillboardGui
 	local bb = Instance.new("BillboardGui")
 	bb.Name = "NameTag_" .. p.Name
 	bb.Adornee = head
-	bb.Size = UDim2.fromScale(6.4, 2.3) -- studs
-	bb.StudsOffsetWorldSpace = Vector3.new(0, 2.55, 0)
+	bb.Size = UDim2.fromScale(6.4, 3.1) -- studs (the top 0.8: the level line)
+	bb.StudsOffsetWorldSpace = Vector3.new(0, 2.95, 0)
 	bb.MaxDistance = 85
 	bb.LightInfluence = 0
 	bb.ResetOnSpawn = false
 	bb.ZIndexBehavior = Enum.ZIndexBehavior.Global
+	-- (rows in the 2.3-stud tag of before: y and height from it, the new top line above)
+	local function Y(y: number): number return (y * 2.3 + 0.8) / 3.1 end
+	local function H(h: number): number return h * 2.3 / 3.1 end
 	-- titles: painted stamps side by side over the plate
 	local mine = {} :: { Title }
 	for _, t in TITLES do if p:GetAttribute(t.attr) == true then table.insert(mine, t) end end
+	-- the level line: LV n in paper, the title in its colour, on a dark stroke; over the stamps (or in their place)
+	local level = p:GetAttribute("Level")
+	if type(level) == "number" then
+		local name, color = Levels.title(level)
+		local text = "LV " .. level .. "  " .. name
+		local lw = math.clamp(0.16 + (utf8.len(text) or 12) * 0.036, 0.4, 0.98)
+		local row = Grunge.brush(bb, {
+			AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, #mine > 0 and 0.02 or Y(0.06)), Size = UDim2.fromScale(lw, 0.22),
+			Rotation = 1, ZIndex = 5,
+		}, Color3.fromRGB(26, 20, 18), seed + 11, 10, false)
+		Grunge.text(row, {
+			Text = '<font color="#E8E0CD">LV ' .. level .. '</font>  ' .. name, RichText = true, AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.92, 0.8), TextColor3 = color, TextStrokeTransparency = 0.2, ZIndex = 8,
+		})
+	end
 	local total = #mine * CHIP_W + (#mine - 1) * CHIP_GAP
 	for i, t in mine do
 		local x = 0.5 - total / 2 + (i - 1) * (CHIP_W + CHIP_GAP)
 		local chip = Grunge.brush(bb, {
-			Position = UDim2.fromScale(x, 0.04), Size = UDim2.fromScale(CHIP_W, 0.36), Rotation = i % 2 == 1 and -4 or 3, ZIndex = 6,
+			Position = UDim2.fromScale(x, Y(0.04)), Size = UDim2.fromScale(CHIP_W, H(0.36)), Rotation = i % 2 == 1 and -4 or 3, ZIndex = 6,
 		}, t.paint, seed + i * 7, 9, false)
 		Grunge.text(chip, {
 			Text = t.text, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.8, 0.86),
@@ -51,7 +72,7 @@ local function build(p: Player, head: BasePart): BillboardGui
 	-- paper shows as a ragged edge), the name in marker. No Grunge pen outline: those lines are in pixels, too heavy
 	-- on a far-away tag.
 	local w = math.clamp(0.3 + (utf8.len(p.DisplayName) or 10) * 0.046, 0.5, 0.94)
-	local plate = Grunge.frame(bb, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.44), Size = UDim2.fromScale(w, 0.52), Rotation = -1.2, ZIndex = 2 })
+	local plate = Grunge.frame(bb, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, Y(0.44)), Size = UDim2.fromScale(w, H(0.52)), Rotation = -1.2, ZIndex = 2 })
 	Grunge.splat(plate, {
 		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.52, 0.5), Size = UDim2.fromScale(1.15, 2.2),
 		ImageColor3 = Color3.fromRGB(90, 12, 12), ImageTransparency = 0.5, Rotation = seed * 4, ZIndex = 1,
@@ -81,7 +102,7 @@ local function onPlayer(p: Player)
 		ch:WaitForChild("Head", 10)
 		if p.Character == ch then refresh(p) end
 	end)
-	for _, a in { "InMatch", "VIP", "Dev" } do
+	for _, a in { "InMatch", "VIP", "Dev", "Level" } do
 		p:GetAttributeChangedSignal(a):Connect(function() refresh(p) end)
 	end
 	p:GetPropertyChangedSignal("DisplayName"):Connect(function() refresh(p) end)

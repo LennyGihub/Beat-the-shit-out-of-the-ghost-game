@@ -29,7 +29,7 @@ Ghost.hitPlayer = nil :: any
 Ghost.guardPlayer = nil :: any -- Combat.guard: (player, damage, from?) -> damage multiplier (0 = blocked)
 Ghost.rootPlayer = nil :: any
 -- difficulty of the current run (set by Run): multipliers on monster hp / damage / speed
-Ghost.diff = { hp = 1, dmg = 1, speed = 1 }
+Ghost.diff = { hp = 1, dmg = 1, speed = 1, enrage = false } -- (the run's difficulty, Run.configure; enrage: Hard and Nightmare only)
 local rng = Random.new()
 
 local function structParams(): RaycastParams
@@ -137,6 +137,11 @@ end
 -- the sandbox's training dummy (Server/Sandbox): she stands where she is, watches the nearest player and never
 -- attacks, roars or gets enraged; hits, knockbacks, freezes and burns work as always
 Ghost.passive = false
+-- THE TUTORIAL's fight (Server/Tutorial): she goes only for players in the tutorial, comes at you and swings once
+-- (a slower wind-up, no chain), then stands still for `pause` seconds and takes the hits; no specials, no scare, no
+-- roar or lunge, never enraged, and her health never goes under minHp (a share of it) until the last lesson.
+-- nextAt = when she may come at you again. nil = a normal fight.
+Ghost.tutorial = nil :: { pause: number, nextAt: number, minHp: number }?
 
 function Ghost.alive(): boolean
 	return Ghost.current ~= nil and Ghost.current.state ~= "Dead"
@@ -329,8 +334,9 @@ function Ghost.damage(amount: number, by: Player?)
 	-- Studio test hook: ReplicatedStorage attribute DebugGhostGod = true, she takes the hits but never dies
 	if game:GetService("RunService"):IsStudio() and RS:GetAttribute("DebugGhostGod") then amount = math.min(amount, g.hp - 1) end
 	g.hp = math.max(0, g.hp - amount)
+	if Ghost.tutorial and Ghost.tutorial.minHp > 0 then g.hp = math.max(g.hp, math.ceil(g.maxHp * Ghost.tutorial.minHp)) end
 	g.model:SetAttribute("HP", g.hp)
-	if g.hp <= 0 then die(g) elseif not Ghost.passive then Fury.checkEnrage(g) end
+	if g.hp <= 0 then die(g) elseif not Ghost.passive and Ghost.diff.enrage == true then Fury.checkEnrage(g) end
 end
 
 -- ultimate effects -------------------------------------------------------
@@ -750,6 +756,7 @@ function Ghost.step(dt: number)
 	local target, thrp = pickTarget(g)
 	local watch = thrp -- (passive) the player she turns to
 	if Ghost.passive then target, thrp = nil, nil end -- nobody to chase or hit
+	if Ghost.tutorial and target and not target:GetAttribute("Tutorial") then target, thrp = nil, nil end -- (the tutorial's players only)
 	g.target = target
 	local pos = g.hrp.Position
 	if s == "Ragdoll" then
@@ -771,7 +778,7 @@ function Ghost.step(dt: number)
 	end
 	if s == "Launched" then return stepLaunched(g, dt) end
 	-- Fury: a long beating doesn't stunlock it: it roars or swipes back straight out of a stagger
-	if (s == "Knocked" or s == "Recover") and now >= g.frozenUntil and not Ghost.passive then
+	if (s == "Knocked" or s == "Recover") and now >= g.frozenUntil and not Ghost.passive and not Ghost.tutorial then
 		if Fury.roarCheck(g, Ghost, now, target) or Fury.counterCheck(g, Ghost, now, target, thrp) then return end
 	end
 	if s == "Knocked" then return stepKnocked(g, dt, now) end
@@ -824,6 +831,21 @@ function Ghost.step(dt: number)
 		end
 		face(thrp.Position)
 		local dist = (Vector3.new(thrp.Position.X, 0, thrp.Position.Z) - Vector3.new(pos.X, 0, pos.Z)).Magnitude
+		local T = Ghost.tutorial
+		if T then
+			-- the tutorial: between her swings she stands still and takes the hits, then comes at you for one swing
+			if now < T.nextAt then
+				g.lv.VectorVelocity = Vector3.new(0, (hoverY - pos.Y) * 4, 0)
+				return
+			end
+			moveToward(thrp.Position, C.Speed * 0.8)
+			if dist < C.AttackRange * ((g.def :: any).reach or 1) and now > g.nextAttack and not Fury.inGrace(target) then
+				g.comboLeft = 0
+				setState(g, "WindUp", Fury.windUp(g, false) * 1.6)
+				Remotes.Fx:FireAllClients("GhostWindUp", pos)
+			end
+			return
+		end
 		local speed = (C.Speed + (g.level - 1) * C.SpeedPerLevel) * g.speedMult * g.furySpeed * (now < g.slowUntil and g.slowMult or 1)
 		-- the Caller, woken in his corner (Server/Caller): a few seconds of flat-out running, no stop-and-go
 		local rushing = g.rushUntil ~= nil and now < g.rushUntil
@@ -861,7 +883,7 @@ function Ghost.step(dt: number)
 		if now > g.stateUntil then
 			-- chain: a quicker follow-up swipe while you are still in reach
 			local reach = C.AttackRange * ((g.def :: any).reach or 1) * 1.4
-			if g.comboLeft > 0 and target and thrp and not Fury.inGrace(target)
+			if g.comboLeft > 0 and not Ghost.tutorial and target and thrp and not Fury.inGrace(target)
 				and (thrp.Position - pos).Magnitude < reach then
 				g.comboLeft -= 1
 				setState(g, "WindUp", Fury.windUp(g, true))
@@ -869,6 +891,7 @@ function Ghost.step(dt: number)
 			else
 				g.comboLeft = 0
 				g.nextAttack = now + C.AttackCooldown * g.cdMult
+				if Ghost.tutorial then Ghost.tutorial.nextAt = now + Ghost.tutorial.pause end -- (the tutorial: her pause)
 				setState(g, "Chase")
 			end
 		end
