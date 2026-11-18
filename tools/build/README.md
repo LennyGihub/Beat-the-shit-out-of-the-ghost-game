@@ -46,6 +46,14 @@ The PS2 textures are MaterialVariants in MaterialService.AssistantMaterials (mad
    doorways, stairs (9 studs round them), KeepClear zones and the players' start, and are spread over the floors.
 -> `maps/facade_fix.luau` (standalone, one-off, already run): pushed the detail pass's ivy / rust patches flush onto the
    outside walls and removed the ones that hung across doorways and windows; `detail` now places them that way itself.
+-> `maps/ship.luau` (prepend `lib2 furn_lib maplib`): THE GHOST SHIP, rebuilt in 2026-11 with three decks (hold y 2, gun deck y 23,
+   main deck y 44) in a hull 156 x 92, four half-turn stairs from the stair kit, cabins fore and aft, a gangway down the outside
+   of the hull to a quay. The old ship is kept in ServerStorage.MapBackups.Ship_v1 (the sea and the cannon / chest / rope
+   prototypes are copied from it). Map attribute `Floors = "2,23,44"`: MapLoader.randomGhostSpawn searches each deck.
+   `maps/station.luau`: EREBUS STATION (a dead warship: hangar with a hand-built interceptor, cells, reactor, bridge; two storeys
+   on maplib's shell). After either: furnish (ONLY), detail (TARGET), phones, doors_clear. Both were checked without a picture
+   (ray-cast floor plans and PathfindingService routes in a playtest), not by eye.
+-> `knight` (standalone): ServerStorage.Monsters.Knight, the Void Knight.
 -> `demon`, `animatronic`, `titan` (hand-built part monsters: ServerStorage.Monsters.Demon / .Animatronic = The Party Bear / .Titan = The Flayed Giant;
    standalone, no lib2 needed: `python3 tools/studio.py luau Edit tools/build/animatronic.luau`).
 

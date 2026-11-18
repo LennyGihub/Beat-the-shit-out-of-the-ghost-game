@@ -23,6 +23,8 @@ local THEMES = {
 	Motel = { function(c) F.bed(c, 6, 8) end, function(c) F.nightstand(c) end, function(c) F.tv(c) end, function(c) F.armchair(c, Fab.brown, 4) end,
 		function(c) F.dresser(c, 6) end, function(c) F.chair(c, Wd.mid, Fab.red) end, function(c) F.sideTable(c, true) end,
 		function(c) G2.vending(c, C3(170, 40, 60)) end },
+	Station = { function(c) G2.steelTable(c) end, function(c) G2.locker(c, C3(70, 76, 90)) end, function(c) F.crate(c, 3.5) end, function(c) F.crate(c, 3) end,
+		function(c) F.barrel(c) end, function(c) F.bench(c, 6) end, function(c) G2.bunk(c) end, function(c) F.cabinet(c, 6, 9) end },
 	Ship = { function(c) F.barrel(c) end, function(c) F.crate(c, 3.5) end, function(c) F.crate(c, 3) end, function(c) F.table(c, 7, 4, 3.4, Wd.dark, "Table") end,
 		function(c) F.chair(c, Wd.dark, Fab.brown) end, function(c) F.bench(c, 6) end, function(c) G2.bunk(c) end, function(c) F.toyChest(c) end },
 	Farm = { function(c) G2.hay(c) end, function(c) G2.hay(c) end, function(c) F.crate(c, 3.5) end, function(c) F.barrel(c) end,
