@@ -1,5 +1,5 @@
 --!strict
--- The 13 maps (the Mansion is free, the rest are bought at the Hooded Dealer) and the 4 difficulties.
+-- The 14 maps (the Mansion is free, the rest are bought at the Hooded Dealer) and the 4 difficulties.
 -- Prices: one good run (8-10 kills on Normal, ~1800-2600 cash) unlocks the next map.
 -- Every map is a ServerStorage.Maps.<id> model built on the same footprint as the Mansion
 -- (house x -80..80, z -60..60, front door at z = 60 facing the yard), so the run, events and yard all fit.
@@ -24,7 +24,7 @@ local List: { Map } = {
 		light = light(C(255, 220, 190), C(40, 30, 32), -0.3, 0.28, 1.5) },
 	{ id = "Motel", name = "Last Stop Motel", price = 1800, desc = "A row of cheap rooms off a buzzing neon hallway.", color = C(230, 80, 120),
 		light = light(C(255, 210, 230), C(34, 22, 30), -0.2, 0.25) },
-	{ id = "Ship", name = "The Ghost Ship", price = 2000, desc = "A rotting galleon adrift at sea: the hold, the deck, the captain's cabin. Don't fall in.", color = C(60, 120, 160),
+	{ id = "Ship", name = "The Ghost Ship", price = 2000, desc = "A huge rotting galleon adrift at sea, three decks deep: the hold and its brig, the gun deck, the open deck with the captain's cabin. Don't fall in.", color = C(60, 120, 160),
 		light = light(C(210, 228, 255), C(22, 30, 40), -0.3, 0.25, 1.3) },
 	{ id = "Farm", name = "Hollow Creek Farm", price = 2200, desc = "A farmhouse and its barn, hay everywhere.", color = C(190, 140, 70),
 		light = light(C(255, 226, 180), C(34, 28, 20), -0.3, 0.22) },
@@ -41,6 +41,9 @@ local List: { Map } = {
 	-- (tools/build/maps/sewer.luau) the waterworks: a canal hall of green water, pump rooms, overflow chambers
 	{ id = "Sewer", name = "The Old Sewer", price = 3400, desc = "The city waterworks: a brick canal hall of green water, pump rooms and overflow chambers. Something big lives down here.", color = C(110, 160, 90),
 		light = light(C(214, 240, 200), C(20, 28, 20), -0.4, 0.3, 1.1, -0.2) },
+	-- (tools/build/maps/station.luau) a dead warship that came down in the woods: steel, strip lights, a live reactor
+	{ id = "Station", name = "Erebus Station", price = 3600, desc = "A dead warship that fell out of the sky: the hangar and its last interceptor, the cells, the bridge, and a reactor still burning in the middle of it.", color = C(120, 170, 230),
+		light = light(C(214, 228, 255), C(20, 24, 32), -0.4, 0.3, 1.2, -0.1) },
 }
 
 local Difficulties: { Difficulty } = {

@@ -54,8 +54,8 @@
    "file": "ReplicatedStorage/Shared/Maps.luau",
    "instance": "game.ReplicatedStorage.Shared.Maps",
    "class": "ModuleScript",
-   "bytes": 5134,
-   "sha1": "1285a651bff79bb93985aefd85381ad33211e9ac"
+   "bytes": 5627,
+   "sha1": "4187f68fc57be744e19b6ee7c0c0155835d083d3"
   },
   {
    "file": "ReplicatedStorage/Shared/Monsters.luau",
@@ -250,8 +250,8 @@
    "file": "ServerScriptService/Server/MapLoader.luau",
    "instance": "game.ServerScriptService.Server.MapLoader",
    "class": "ModuleScript",
-   "bytes": 6680,
-   "sha1": "7c4352e1cffaccf3e680c3f0c796486e027f30f3"
+   "bytes": 7328,
+   "sha1": "024e57ec1f81bbab709edf4773e31d06fb42e776"
   },
   {
    "file": "ServerScriptService/Server/Mobile.luau",

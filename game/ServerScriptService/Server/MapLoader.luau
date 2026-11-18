@@ -135,12 +135,24 @@ function MapLoader.randomGhostSpawn(players: { Vector3 }, minDist: number): Vect
 		local op = OverlapParams.new()
 		op.FilterType = Enum.RaycastFilterType.Include
 		op.FilterDescendantsInstances = { live }
+		-- a map with its own floor levels (attribute Floors = "2,23,44": the ship's three decks) is searched on
+		-- each of them; the others on the usual two storeys
+		local levels = {} :: { number }
+		local fl = live:GetAttribute("Floors")
+		if type(fl) == "string" then
+			for n in string.gmatch(fl, "%-?[%d%.]+") do table.insert(levels, tonumber(n) :: number) end
+		end
 		for _ = 1, 40 do
 			-- the house footprint (x -80..80, z -60..60); from below the upper floor or from above it
 			local x, z = spawnRng:NextNumber(-74, 74), spawnRng:NextNumber(-54, 54)
-			local down = workspace:Raycast(Vector3.new(x, spawnRng:NextNumber() < 0.6 and 18 or 42, z), Vector3.new(0, -30, 0), rp)
+			local startY, maxY, minY = spawnRng:NextNumber() < 0.6 and 18 or 42, 30, -math.huge
+			if #levels > 0 then
+				local f = levels[spawnRng:NextInteger(1, #levels)]
+				startY, maxY, minY = f + 16, f + 2, f - 2 -- (that level's own floor, not the one seen through a stairwell)
+			end
+			local down = workspace:Raycast(Vector3.new(x, startY, z), Vector3.new(0, -30, 0), rp)
 			-- floors only up to the upper storey (y 23): above 30 is the top of a tall hall's ceiling (the attic)
-			if down and down.Normal.Y > 0.9 and down.Position.Y < 30 then
+			if down and down.Normal.Y > 0.9 and down.Position.Y < maxY and down.Position.Y > minY then
 				local floorY = down.Position.Y
 				local at = Vector3.new(x, floorY + 4.6, z)
 				local roof = workspace:Raycast(Vector3.new(x, floorY + 3, z), Vector3.new(0, 40, 0), rp)
