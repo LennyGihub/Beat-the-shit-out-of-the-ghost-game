@@ -46,6 +46,11 @@ return {
 	Music_Animatronic = { ids = { 1837432993 }, volume = 1.6 }, -- Freak Circus
 	Music_Animatronic_E = { ids = { 9044887799 }, volume = 1.6 }, -- Psycho Clown
 	Music_Titan = { ids = { 9039352479 }, volume = 1.6 }, -- The Heroic Battle of Giants
+	-- Camp Hollowmere's monsters (licensed production music)
+	Music_Antlered = { ids = { 1836983505 }, volume = 1.6 }, -- Half Light
+	Music_LakeWitch = { ids = { 1847041997 }, volume = 1.6 }, -- Drowning 3
+	Music_Counselor = { ids = { 1843739421 }, volume = 1.6 }, -- Heavy Drone 9
+	Music_Scarecrow = { ids = { 1842084891 }, volume = 1.6 }, -- Cinematic Texture Toolkit
 	Music_Titan_E = { ids = { 9039352746 }, volume = 1.6 }, -- The Fall of the Titans
 	Music_Goblin = { ids = { 1841594035 }, volume = 1.6 }, -- Mischievous Elves (sneaky, not epic)
 	Music_Goblin_E = { ids = { 1839900676 }, volume = 1.6 }, -- In the Hall of the Mountain King

@@ -13,6 +13,7 @@ local Loot = require(script.Parent.GoblinLoot) -- the Goblin's "steal"
 local Ragdoll = require(script.Parent.Ragdoll)
 local Caller = require(script.Parent.Caller) -- the Caller's "ambush" (and his flanking)
 local Knight = require(script.Parent.Knight) -- the Void Knight's "forcePush"
+local CampMonsters = require(script.Parent.CampMonsters) -- Camp Hollowmere: rafterDrop, hookPull, firebrand, scareSwap
 
 local Abilities = {}
 local rng = Random.new()
@@ -95,6 +96,7 @@ function Abilities.interrupt(g)
 	if g.ab.kind == "warp" then g.model:SetAttribute("Vanish", false) end
 	if g.ab.kind == "ambush" then Caller.interrupt(g) end
 	if g.ab.kind == "forcePush" then Knight.interrupt(g) end
+	if g.ab.kind == "hookPull" then CampMonsters.interrupt(g) end
 	if g.ab.kind == "steal" then Remotes.Fx:FireAllClients("GoblinUse", g.model, "", "stop", 0) end
 	if g.ab.kind == "levitateThrow" and g.ab.obj then Abilities.dropLevitated(g.ab) end
 	g.ab = nil
@@ -163,6 +165,10 @@ function Abilities.try(g, G, now: number, target: Player?, thrp: BasePart?, dist
 		return Caller.try(g, G, now, a, target, thrp, dist)
 	elseif k == "forcePush" then
 		return Knight.try(g, G, now, a, target, thrp, dist)
+	elseif k == "rafterDrop" or k == "hookPull" or k == "firebrand" then
+		return CampMonsters.try(g, G, now, a, target, thrp, dist)
+	elseif k == "scareSwap" then
+		return false -- (his whole move is in chaseHold)
 	elseif k == "shieldBash" then
 		if dist < a.min or dist > a.max or warded(target) then return false end
 		start(g, G, "brace", a.brace, {})
@@ -464,6 +470,7 @@ function Abilities.step(g, G, dt: number, now: number, target: Player?, thrp: Ba
 	if k == "steal" then return Loot.step(g, G, dt, now, target, thrp, hoverY) end
 	if k == "ambush" then return Caller.step(g, G, dt, now, target, thrp, hoverY) end
 	if k == "forcePush" then return Knight.step(g, G, dt, now, target, thrp, hoverY) end
+	if k == "rafterDrop" or k == "hookPull" or k == "firebrand" then return CampMonsters.step(g, G, dt, now, target, thrp, hoverY) end
 	local function face(p: Vector3)
 		local f = Vector3.new(p.X, pos.Y, p.Z)
 		if (f - pos).Magnitude > 0.1 then g.ao.CFrame = CFrame.lookAt(pos, f).Rotation end
@@ -1022,6 +1029,7 @@ end
 -- (Studio photo hook: RS attribute DebugFreezeGhost also holds the doubles and the crew where they are)
 function Abilities.tick(G, dt: number, now: number)
 	Loot.tick(G, dt, now)
+	CampMonsters.tick(G, now) -- (the Lake Witch's flood)
 	-- TIME STOP (Ghost.timeStop) holds everything the monster sent out too: the Captain's crew, the Widow's doubles,
 	-- gas clouds and hellfire marks wait where they are until time moves again
 	local cur = G.current
@@ -1197,6 +1205,7 @@ end
 function Abilities.clear()
 	Loot.clear()
 	Caller.clear()
+	CampMonsters.clear()
 	flyers = {}
 	for _, h in hurled do if h.obj.Parent then smashHurled(h.obj, Vector3.zero, 20) end end
 	hurled = {}
@@ -1229,6 +1238,13 @@ Knight.init({
 	setPhase = setPhase, start = start, finish = finish, hover = hover, flat = flat, warded = warded,
 	hrpOf = hrpOf, matchPlayers = matchPlayers, fx = fx, dmgScale = dmgScale,
 })
+CampMonsters.init({
+	setPhase = setPhase, start = start, finish = finish, hover = hover, flat = flat, warded = warded,
+	hrpOf = hrpOf, matchPlayers = matchPlayers, fx = fx, dmgScale = dmgScale, spawnClones = Abilities.spawnClones,
+	clones = function() return clones end,
+})
+-- the Scarecrow holds still while he is watched (Ghost's Chase state asks this first)
+Abilities.chaseHold = CampMonsters.chaseHold
 -- the Caller: found in his corner (Ghost.hit), and where his chase heads for (Ghost.step)
 Abilities.ambushHit = Caller.onHit
 Abilities.flankGoal = Caller.flankGoal

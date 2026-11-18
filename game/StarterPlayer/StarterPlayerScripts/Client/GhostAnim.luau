@@ -351,6 +351,38 @@ local function abilityPose(ab: string, phase: string, t: number, since: number):
 		p.RightShoulder = A(2.6 * a, 0, -0.5 * a); p.LeftShoulder = A(2.6 * a, 0, 0.5 * a)
 		p.RightElbow = A(0.2, 0, 0); p.LeftElbow = A(0.2, 0, 0)
 		p.RightWrist = A(-0.4 + s(t * 25) * 0.2, 0, 0); p.LeftWrist = A(-0.4 - s(t * 25) * 0.2, 0, 0)
+	elseif ab == "rafterDrop" then -- the Antlered One
+		if phase == "climb" or phase == "lurk" or phase == "warn" then
+			-- hanging from the rafters: arms up round the beam, legs dangling, the skull turned down at you
+			p.RightShoulder = A(3.0, 0, -0.2); p.LeftShoulder = A(3.0, 0, 0.2); p.RightElbow = A(0.4, 0, 0); p.LeftElbow = A(0.4, 0, 0)
+			p.Neck = A(-0.7, s(t * 2) * 0.35, 0)
+			p.RightHip = A(0.25 + s(t * 1.3) * 0.1, 0, 0.1); p.LeftHip = A(-0.1, 0, -0.1); p.RightKnee = A(-0.5, 0, 0); p.LeftKnee = A(-0.3, 0, 0)
+		elseif phase == "fall" then
+			p.RightShoulder = A(2.5, 0, -0.9); p.LeftShoulder = A(2.5, 0, 0.9); p.RightHip = A(0.7, 0, 0); p.LeftHip = A(0.7, 0, 0)
+			p.RightKnee = A(-1.1, 0, 0); p.LeftKnee = A(-1.1, 0, 0); p.Neck = A(0.3, 0, 0)
+		else
+			-- dazed: down on one knee, head lolling, the time to hit him
+			p.Root = CFrame.new(0, -2.4, 0) * A(0.3, 0, 0); p.Neck = A(0.5, s(t * 3) * 0.4, s(t * 2) * 0.3)
+			p.RightHip = A(1.4, 0, 0); p.RightKnee = A(-2.2, 0, 0); p.LeftHip = A(-0.2, 0, 0); p.LeftKnee = A(-1.6, 0, 0)
+			p.RightShoulder = A(0.3, 0, -0.3); p.LeftShoulder = A(0.3, 0, 0.3)
+		end
+	elseif ab == "hookPull" then -- the Lake Witch
+		if phase == "wind" then
+			p.RightShoulder = A(2.6 * a, 0, -0.4); p.RightElbow = A(0.8, 0, 0); p.Waist = A(0, -0.5 * a, 0); p.LeftShoulder = A(0.6, 0, 0.3)
+		elseif phase == "throw" then
+			p.RightShoulder = A(1.4, 0, 0); p.RightElbow = A(0, 0, 0); p.Waist = A(0.15, 0.4, 0)
+		elseif phase == "pull" then
+			p.RightShoulder = A(0.6 + s(t * 10) * 0.2, 0, 0); p.RightElbow = A(1.6, 0, 0); p.LeftShoulder = A(0.8, 0, 0); p.LeftElbow = A(1.4, 0, 0)
+			p.Waist = A(-0.25, 0, 0); p.Root = A(-0.15, 0, 0)
+		elseif phase == "flood" then
+			p.RightShoulder = A(2.9 * a, 0, -0.4); p.LeftShoulder = A(2.9 * a, 0, 0.4); p.Neck = A(-0.5 * a, 0, 0); p.Waist = A(-0.2, 0, 0)
+		end
+	elseif ab == "firebrand" then -- the Burned Counselor
+		if phase == "wind" then
+			p.RightShoulder = A(2.7 * a, 0, -0.3); p.RightElbow = A(1.0, 0, 0); p.Waist = A(-0.1, -0.6 * a, 0); p.LeftShoulder = A(1.0, 0, 0.4)
+		else
+			p.RightShoulder = A(1.2, 0, 0); p.RightElbow = A(0.1, 0, 0); p.Waist = A(0.25, 0.5, 0)
+		end
 	elseif ab == "charge" then
 		if phase == "wind" then
 			p.Root = A(0.15, 0, 0); p.Waist = A(0, -0.6 * a, 0)
@@ -457,6 +489,10 @@ local function target(state: string, t: number, sinceState: number): { [string]:
 	local s = math.sin
 	local p = {}
 	local g = current :: Model
+	-- the Scarecrow while someone looks at him: dead still, arms out like the others in the barn
+	if g:GetAttribute("MonsterId") == "Scarecrow" and g:GetAttribute("Watched") and (state == "Chase" or state == "Spawn" or state == "Recover") then
+		return { RightShoulder = A(0, 0, -1.4), LeftShoulder = A(0, 0, 1.4), Neck = A(0.15, 0, 0.35) }
+	end
 	if state == "Ability" then
 		return abilityPose(g:GetAttribute("Ability") or "", g:GetAttribute("AbilityPhase") or "", t, sinceState)
 	end
@@ -602,6 +638,31 @@ local function target(state: string, t: number, sinceState: number): { [string]:
 			p.RightShoulder = A(0.85 + s(t * 9) * 0.1, 0, -0.2); p.LeftShoulder = A(0.85 - s(t * 9) * 0.1, 0, 0.2)
 			p.RightElbow = A(1.1, 0, 0); p.LeftElbow = A(1.1, 0, 0)
 			p.RightWrist = A(0.4, 0, 0); p.LeftWrist = A(0.4, 0, 0)
+		elseif g:GetAttribute("MonsterId") == "Antlered" then
+			-- stooped under the ceiling, the long arms swinging low, the skull bobbing
+			p.Waist = (p.Waist or CFrame.new()) * A(0.35, 0, 0)
+			p.Neck = A(-0.35, s(t * 1.1) * 0.2, s(t * 0.7) * 0.15)
+			p.RightShoulder = A(0.3 + s(t * 4) * 0.35, 0, 0.12); p.LeftShoulder = A(0.3 - s(t * 4) * 0.35, 0, -0.12)
+			p.RightElbow = A(0.2, 0, 0); p.LeftElbow = A(0.2, 0, 0)
+		elseif g:GetAttribute("MonsterId") == "LakeWitch" then
+			-- head hanging to one side, arms limp, the hook dragging
+			p.Neck = A(0.25, 0, 0.45 + s(t * 0.8) * 0.08)
+			p.Waist = (p.Waist or CFrame.new()) * A(0.12, 0, s(t * 1.6) * 0.06)
+			p.RightShoulder = A(0.15, 0, 0.1); p.LeftShoulder = A(0.1 + s(t * 3) * 0.1, 0, -0.1)
+		elseif g:GetAttribute("MonsterId") == "Counselor" then
+			-- a limp (the left leg drags), the torch held up high
+			p.LeftHip = A(-0.15 + s(t * 6) * 0.2, 0, 0); p.LeftKnee = A(-0.2, 0, 0)
+			p.Waist = (p.Waist or CFrame.new()) * A(0.1, 0, s(t * 6) * 0.08)
+			p.RightShoulder = A(1.9, 0, -0.2); p.RightElbow = A(0.7, 0, 0)
+		elseif g:GetAttribute("MonsterId") == "Scarecrow" then
+			-- stiff and jerky, arms half out, the head cocked
+			for k, v in p do
+				local rx, ry, rz = v:ToEulerAnglesXYZ()
+				local q = 0.25
+				p[k] = CFrame.new(v.Position) * A(math.floor(rx / q + 0.5) * q, math.floor(ry / q + 0.5) * q, math.floor(rz / q + 0.5) * q)
+			end
+			p.RightShoulder = (p.RightShoulder or CFrame.new()) * A(0, 0, -0.7); p.LeftShoulder = (p.LeftShoulder or CFrame.new()) * A(0, 0, 0.7)
+			p.Neck = A(0.1, 0, 0.4)
 		elseif g:GetAttribute("MonsterId") == "Goblin" then
 			p.Waist = (p.Waist or CFrame.new()) * A(0.3, 0, 0) -- hunched, sneaky
 			p.Neck = A(-0.35, s(t * 1.7) * 0.25, s(t * 2.3) * 0.08) -- looking around for something to steal

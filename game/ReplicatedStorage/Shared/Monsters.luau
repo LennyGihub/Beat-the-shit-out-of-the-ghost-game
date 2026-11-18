@@ -70,6 +70,34 @@ local List: { Monster } = {
 		atk = 0.7, flank = true,
 		ability = { kind = "ambush", cd = 30, first = 10, hide = 30, wake = 45, enter = 34, react = 0.45, rise = 0.7, rush = 4, dmg = 46, bonus = 2.5, lunge = 70 },
 		desc = "A masked killer with a knife. He sits in a corner and phones you to lure you in: walk in without seeing him and he stabs you in the back. Spot him and he just comes at you." }),
+	-- CAMP HOLLOWMERE (Shared/Campaign; hand-built: tools/build/camp_monsters.luau; moves: Server/CampMonsters)
+	-- THE ANTLERED ONE (the Bunkhouse): tall, thin, a deer skull with antlers. rafterDrop: he climbs into the rafters
+	-- (climb), follows you from up there (lurk at lurkSpeed), a red ring warns where he comes down (warn), he
+	-- drops (radius / dmg / power), then he is dazed (daze) - hit him then.
+	m({ id = "Antlered", name = "The Antlered One", title = "THE ANTLERED ONE", rarity = 1, template = "Antlered", color = C(214, 204, 176),
+		hp = 1.0, speed = 0.95, dmg = 0.9, reward = 1.2, hover = 7.2, walker = true, scale = 1, solid = false, reach = 1.35,
+		ability = { kind = "rafterDrop", cd = 11, min = 10, climb = 0.9, lurk = 2.4, lurkSpeed = 26, warn = 1.0, radius = 8, dmg = 30, power = 70, daze = 2.4 },
+		desc = "Too tall for the cabins. He climbs into the rafters, follows you from up there and drops on you: watch for the red ring, then hit him while he gets up." }),
+	-- THE LAKE WITCH (the Boathouse): a drowned woman with a hook on a chain. hookPull: the hook is thrown (walls stop
+	-- it); whoever it catches is dragged into the water (pull) and held under (dmg). Every floodEvery-th move she
+	-- floods the floor for `flood` seconds: everyone in the water is slowed to floodSlow.
+	m({ id = "LakeWitch", name = "The Lake Witch", title = "THE LAKE WITCH", rarity = 1, template = "LakeWitch", color = C(120, 200, 190),
+		hp = 1.05, speed = 1.0, dmg = 0.95, reward = 1.3, hover = 5.35, walker = true, scale = 1, solid = false,
+		ability = { kind = "hookPull", cd = 8, min = 8, max = 55, wind = 0.8, hookSpeed = 95, pull = 1.3, pullSpeed = 34, dmg = 24, floodEvery = 3, flood = 7, floodSlow = 0.6 },
+		desc = "She walks out of the lake with a hook on a chain. Get behind something when she draws it back, or she drags you under. Sometimes the water rises with her." }),
+	-- THE BURNED COUNSELOR (the Mess Hall): charred, a burning torch. firebrand: he lobs the torch where you stand and
+	-- the wood catches fire (the wildfire system, Server/Fire); fire never hurts him (fireImmune).
+	m({ id = "Counselor", name = "The Burned Counselor", title = "THE BURNED COUNSELOR", rarity = 1, template = "Counselor", color = C(255, 120, 40),
+		hp = 1.15, speed = 1.0, dmg = 1.05, reward = 1.4, hover = 5.4, walker = true, scale = 1, solid = false, fireImmune = true,
+		ability = { kind = "firebrand", cd = 7, min = 10, max = 60, wind = 0.7, flight = 1.0, radius = 7, fires = 4, dmg = 14 },
+		desc = "Lights out was his job once. Now he throws his torch at you and the cabin goes up in flames. Fire can't hurt him: keep moving." }),
+	-- THE SCARECROW (the Barn): scareSwap: copies of him stand all over the barn (decoys at the barn's ScarecrowSpots,
+	-- punching one bursts it); he does not move while ANY player looks at him (cone / range), and swaps places with
+	-- a decoy every `cd` seconds.
+	m({ id = "Scarecrow", name = "The Scarecrow", title = "THE SCARECROW", rarity = 1, template = "Scarecrow", color = C(214, 182, 96),
+		hp = 1.1, speed = 1.45, dmg = 1.1, reward = 1.5, hover = 5.45, walker = true, scale = 1, solid = false,
+		ability = { kind = "scareSwap", cd = 11, decoys = 8, cone = 0.55, range = 80 },
+		desc = "One of the scarecrows in the barn is him. He only moves when nobody is looking at him, and then he moves fast." }),
 	-- THE SEWER RAT (hand-built: tools/build/rat.luau): a rat the size of a car. ratRush = two moves (Server/Abilities):
 	-- the CHARGE (wind seconds of warning along a red line, then dashSpeed studs/s in a straight line for dashTime
 	-- seconds: furniture, inside walls and players in the way are all sent flying, and he is dizzy for a moment after)

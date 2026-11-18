@@ -87,10 +87,24 @@ local function refresh()
 		img.Position = UDim2.fromScale(0.03, 0.1); img.Size = UDim2.fromScale(0.32, 0.6); img.ZIndex = 12
 		img.ImageTransparency = locked and 0.6 or 0; img.Parent = card
 		if img.Image == "" then
-			-- (no picture yet: a block of the vial's colour)
-			local sw = Grunge.frame(card, { BackgroundTransparency = 0, BackgroundColor3 = v.color, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.19, 0.4),
-				Size = UDim2.fromScale(0.1, 0.45), Rotation = 12, ZIndex = 12 })
-			local _ = sw
+			-- (no picture: a little jar / bottle drawn with frames - glass, the glowing contents, a lid or a cork)
+			local jarF = Grunge.frame(card, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.19, 0.42), Size = UDim2.fromScale(0.2, 0.62), Rotation = -6, ZIndex = 12 })
+			local ar = Instance.new("UIAspectRatioConstraint"); ar.AspectRatio = 0.72; ar.Parent = jarF
+			local function fr(props: { [string]: any }): Frame
+				props.BorderSizePixel = 0
+				return Grunge.frame(jarF, props)
+			end
+			local glass = fr({ BackgroundTransparency = 0.55, BackgroundColor3 = Color3.fromRGB(200, 225, 215), Position = UDim2.fromScale(0.05, 0.18), Size = UDim2.fromScale(0.9, 0.8), ZIndex = 12 })
+			local gc = Instance.new("UICorner"); gc.CornerRadius = UDim.new(0.18, 0); gc.Parent = glass
+			local goo = fr({ BackgroundTransparency = locked and 0.6 or 0, BackgroundColor3 = v.color, Position = UDim2.fromScale(0.14, 0.38), Size = UDim2.fromScale(0.72, 0.54), ZIndex = 13 })
+			local gc2 = Instance.new("UICorner"); gc2.CornerRadius = UDim.new(0.2, 0); gc2.Parent = goo
+			local shine = fr({ BackgroundTransparency = 0.5, BackgroundColor3 = Color3.new(1, 1, 1), Position = UDim2.fromScale(0.18, 0.26), Size = UDim2.fromScale(0.1, 0.55), ZIndex = 14 })
+			local _ = shine
+			if kind == "stim" then
+				fr({ BackgroundTransparency = 0, BackgroundColor3 = Color3.fromRGB(70, 66, 60), Position = UDim2.fromScale(0, 0.06), Size = UDim2.fromScale(1, 0.15), ZIndex = 14 })
+			else
+				fr({ BackgroundTransparency = 0, BackgroundColor3 = Color3.fromRGB(150, 110, 70), Position = UDim2.fromScale(0.35, 0), Size = UDim2.fromScale(0.3, 0.2), ZIndex = 14 })
+			end
 		end
 		Grunge.text(card, { Text = v.name, Font = Grunge.FONT, Position = UDim2.fromScale(0.37, 0.06), Size = UDim2.fromScale(0.6, 0.17),
 			TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = locked and Color3.fromRGB(120, 110, 100) or v.color, ZIndex = 13 })

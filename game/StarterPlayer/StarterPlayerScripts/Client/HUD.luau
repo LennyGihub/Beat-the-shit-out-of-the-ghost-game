@@ -241,7 +241,7 @@ function HUD.update(dt: number)
 	local obj = inMatch and (RS:GetAttribute("Objective") or "") or ""
 	if not inMatch then
 		local q = lp:GetAttribute("QueueRoom")
-		obj = q and "WAITING FOR PLAYERS..." or (lp:GetAttribute("PartyId") and "IN A LOBBY - THE HOST PRESSES START" or "PRESS PLAY OR STEP ON A ROOM PAD")
+		obj = q and "WAITING FOR PLAYERS..." or (lp:GetAttribute("PartyId") and "IN A LOBBY - THE HOST PRESSES START" or "PRESS PLAY OR BOARD THE TRAIN AT THE STATION")
 		if Platform.windowOpen() then obj = "" end -- a window is open: no line of text behind (or sticking out above) it
 	end
 	objective.Text = obj

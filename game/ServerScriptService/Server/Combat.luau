@@ -666,6 +666,7 @@ end
 function Combat.start()
 	Ghost.damagePlayer = Combat.damagePlayer
 	Ghost.hitPlayer = Combat.hitPlayer
+	Ghost.slowPlayer = Combat.speedBuff
 	Ghost.guardPlayer = Combat.guard
 	Ghost.rootPlayer = Combat.root
 	Remotes.Punch.OnServerEvent:Connect(onPunch)

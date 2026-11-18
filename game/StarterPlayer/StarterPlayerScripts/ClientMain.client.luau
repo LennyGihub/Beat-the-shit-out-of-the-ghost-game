@@ -67,6 +67,7 @@ local StageUI = require(Client.StageUI) -- a cleared building's result screen
 local SellerUI = require(Client.SellerUI) -- Doc Mercy's ectoplasm, Mother Moth's potions
 local FormCine = require(Client.FormCine) -- the first-person ectoplasm jar / potion
 local FormLook = require(Client.FormLook) -- worn forms on every character
+local CampFx = require(Client.CampFx) -- Camp Hollowmere's monsters' moves (rafter drop, hook, flood, torch, straw)
 
 Platform.init()
 -- the server is told which controls this player uses: touch players reach further, lift from far and face a weaker
@@ -116,6 +117,8 @@ TrainRide.init(Fx, HUD)
 SellerUI.init()
 FormCine.init(Fx, HUD)
 FormLook.init()
+CampFx.init(Fx)
+for _, k in CampFx.KINDS do FIGHT[k] = true end
 -- lobby screen: PLAY (create / join lobbies) and SHOP buttons, friend booster
 QuestUI.init(function(open)
 	Input.setShopOpen(open)
@@ -149,6 +152,7 @@ end
 
 Remotes.Fx.OnClientEvent:Connect(function(kind: string, ...)
 	if FIGHT[kind] and not lp:GetAttribute("InMatch") then return end
+	if kind == "Released" then CampFx.released() end -- (the Lake Witch's pull stops too)
 	if kind == "Teleporting" then
 		Loading.teleport(...) -- the loading screen (ReplicatedFirst/Loading)
 	elseif kind == "TeleportFailed" then
@@ -219,6 +223,8 @@ Remotes.Fx.OnClientEvent:Connect(function(kind: string, ...)
 		local Forms = require(RS.Shared.Forms)
 		local fm = Forms.byId[select(2, ...)]
 		if fm then Fx.handle("Toast", "NOW WEARING " .. fm.name, true) end
+	elseif CampFx.handles(kind) then
+		CampFx.handle(kind, ...)
 	elseif MonsterFx.handles(kind) then
 		MonsterFx.handle(kind, ...)
 	else

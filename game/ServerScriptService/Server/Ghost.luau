@@ -26,6 +26,7 @@ Ghost.onDeath = nil :: ((g: any) -> ())?
 Ghost.damagePlayer = nil :: ((p: Player, n: number, staminaDrain: number?, from: Vector3?) -> ())?
 -- injected by Combat: damage + fling a player, and pin a player in place
 Ghost.hitPlayer = nil :: any
+Ghost.slowPlayer = nil :: ((p: Player, mult: number, t: number) -> ())? -- (Combat.speedBuff: the Lake Witch's flood)
 Ghost.guardPlayer = nil :: any -- Combat.guard: (player, damage, from?) -> damage multiplier (0 = blocked)
 Ghost.rootPlayer = nil :: any
 -- difficulty of the current run (set by Run): multipliers on monster hp / damage / speed
@@ -408,6 +409,7 @@ end
 function Ghost.burn(dps: number, t: number, color: Color3?, by: Player?, bleed: boolean?)
 	local g = Ghost.current
 	if not g or g.state == "Dead" then return end
+	if not bleed and (g.def :: any).fireImmune then return end -- (the Burned Counselor: fire is his)
 	table.insert(g.burns, { dps = dps, untilT = os.clock() + t, color = color or Color3.fromRGB(255, 110, 30), by = by, bleed = bleed == true })
 end
 
@@ -877,6 +879,8 @@ function Ghost.step(dt: number)
 			return
 		end
 		face(thrp.Position)
+		-- the Scarecrow: frozen while anyone looks at him (Server/CampMonsters)
+		if Abilities.chaseHold and Abilities.chaseHold(g, Ghost, now, thrp, hoverY) then return end
 		local dist = (Vector3.new(thrp.Position.X, 0, thrp.Position.Z) - Vector3.new(pos.X, 0, pos.Z)).Magnitude
 		local T = Ghost.tutorial
 		if T then
