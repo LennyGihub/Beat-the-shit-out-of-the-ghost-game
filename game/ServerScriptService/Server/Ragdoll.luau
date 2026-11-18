@@ -107,7 +107,9 @@ local function chunks(cf: CFrame, size: Vector3, src: BasePart, push: Vector3)
 	freezeLater(made)
 end
 
-local function carve(p: BasePart, holeCF: CFrame, holeSize: Vector3, push: Vector3): boolean
+-- plugInto: instead of rubble, the hole's own piece of the part is kept as a copy in that folder (the Void
+-- Knight's doorway: Ragdoll.cutDoor)
+local function carve(p: BasePart, holeCF: CFrame, holeSize: Vector3, push: Vector3, plugInto: Instance?): boolean
 	local S = p.Size
 	-- the hole box in the part's own space (walls are axis-aligned, maybe turned 90 degrees)
 	local c = p.CFrame:PointToObjectSpace(holeCF.Position)
@@ -120,6 +122,27 @@ local function carve(p: BasePart, holeCF: CFrame, holeSize: Vector3, push: Vecto
 	local thinX = S.X <= S.Z
 	if thinX then lo = Vector3.new(-S.X / 2, lo.Y, lo.Z); hi = Vector3.new(S.X / 2, hi.Y, hi.Z)
 	else lo = Vector3.new(lo.X, lo.Y, -S.Z / 2); hi = Vector3.new(hi.X, hi.Y, S.Z / 2) end
+	-- a doorway (plugInto): something hung on the wall that does not reach past both sides of it (a painting, a
+	-- mirror, a short trim) comes down whole, with the cut-out, instead of being cut in half
+	if plugInto then
+		local a0, a1, half = if thinX then lo.Z else lo.X, if thinX then hi.Z else hi.X, if thinX then S.Z / 2 else S.X / 2
+		if a0 <= -half + 0.01 or a1 >= half - 0.01 then
+			local q = p:Clone()
+			q.Name = "Plug"
+			q.Anchored = true
+			q:SetAttribute("CarvedPiece", nil)
+			q.Parent = plugInto
+			if p:GetAttribute("CarvedPiece") then
+				local i = table.find(pieces, p)
+				if i then table.remove(pieces, i) end
+				p:Destroy()
+			else
+				table.insert(broken, { part = p, parent = p.Parent :: Instance })
+				p.Parent = nil
+			end
+			return true
+		end
+	end
 	local function piece(a0: Vector3, a1: Vector3)
 		local size = a1 - a0
 		if size.X < 0.05 or size.Y < 0.05 or size.Z < 0.05 then return end
@@ -142,7 +165,17 @@ local function carve(p: BasePart, holeCF: CFrame, holeSize: Vector3, push: Vecto
 		piece(Vector3.new(lo.X, hi.Y, -S.Z / 2), Vector3.new(hi.X, S.Y / 2, S.Z / 2))
 		piece(Vector3.new(lo.X, -S.Y / 2, -S.Z / 2), Vector3.new(hi.X, lo.Y, S.Z / 2))
 	end
-	chunks(p.CFrame * CFrame.new((lo + hi) / 2), hi - lo, p, push)
+	if plugInto then
+		local q = p:Clone()
+		q.Name = "Plug"
+		q.Size = hi - lo
+		q.CFrame = p.CFrame * CFrame.new((lo + hi) / 2)
+		q.Anchored = true
+		q:SetAttribute("CarvedPiece", nil)
+		q.Parent = plugInto
+	else
+		chunks(p.CFrame * CFrame.new((lo + hi) / 2), hi - lo, p, push)
+	end
 	-- an original wall is kept to put back later; a piece of an earlier hole is just removed
 	if p:GetAttribute("CarvedPiece") then
 		local i = table.find(pieces, p)
@@ -153,6 +186,25 @@ local function carve(p: BasePart, holeCF: CFrame, holeSize: Vector3, push: Vecto
 		p.Parent = nil
 	end
 	return true
+end
+
+-- every breakable interior part whose box overlaps the hole box (not a spatial query: the wainscot and rails have
+-- CanQuery off, so queries would miss them and leave the bottom of the wall standing)
+local function overlapping(st: Instance, holeCF: CFrame, holeSize: Vector3): { BasePart }
+	local hmin, hmax = holeCF.Position - holeSize / 2, holeCF.Position + holeSize / 2
+	local hits = {}
+	for _, p in st:GetDescendants() do
+		if p:IsA("BasePart") then
+			local half = p.CFrame:VectorToWorldSpace(p.Size / 2)
+			half = Vector3.new(math.abs(half.X), math.abs(half.Y), math.abs(half.Z))
+			local c = p.Position
+			if c.X - half.X < hmax.X and c.X + half.X > hmin.X and c.Y - half.Y < hmax.Y and c.Y + half.Y > hmin.Y
+				and c.Z - half.Z < hmax.Z and c.Z + half.Z > hmin.Z and breakable(p, st) then
+				table.insert(hits, p)
+			end
+		end
+	end
+	return hits
 end
 
 -- smash the walls where she hits (or where something explodes): returns how many wall pieces were cut.
@@ -166,24 +218,22 @@ function Ragdoll.breakWalls(pos: Vector3, vel: Vector3, width: number?, up: numb
 	local holeCF = CFrame.new(pos.X, (bottom + top) / 2, pos.Z)
 	local holeSize = Vector3.new(w, top - bottom, w)
 	local push = vel.Magnitude > 1 and vel.Unit or Vector3.new(0, 0.6, 0)
-	local hmin, hmax = holeCF.Position - holeSize / 2, holeCF.Position + holeSize / 2
-	-- every interior part whose box overlaps the hole (not a spatial query: the wainscot and rails have
-	-- CanQuery off, so queries would miss them and leave the bottom of the wall standing)
-	local hits = {}
-	for _, p in st:GetDescendants() do
-		if p:IsA("BasePart") then
-			local half = p.CFrame:VectorToWorldSpace(p.Size / 2)
-			half = Vector3.new(math.abs(half.X), math.abs(half.Y), math.abs(half.Z))
-			local c = p.Position
-			if c.X - half.X < hmax.X and c.X + half.X > hmin.X and c.Y - half.Y < hmax.Y and c.Y + half.Y > hmin.Y
-				and c.Z - half.Z < hmax.Z and c.Z + half.Z > hmin.Z and breakable(p, st) then
-				table.insert(hits, p)
-			end
-		end
-	end
 	local n = 0
-	for _, p in hits do
+	for _, p in overlapping(st, holeCF, holeSize) do
 		if p.Parent and carve(p, holeCF, holeSize, push) then n += 1 end
+	end
+	return n
+end
+
+-- THE VOID KNIGHT'S DOORWAY (Server/KnightDoor): every interior wall layer in the box is cut around it, with no
+-- rubble; the doorway's own piece of each layer is kept as a plug in `plugs`, so the wall still looks whole until
+-- his entrance knocks it out. Put back by restoreWalls like any hole. Returns how many layers were cut.
+function Ragdoll.cutDoor(holeCF: CFrame, holeSize: Vector3, plugs: Instance): number
+	local st = structure()
+	if not st then return 0 end
+	local n = 0
+	for _, p in overlapping(st, holeCF, holeSize) do
+		if p.Parent and carve(p, holeCF, holeSize, Vector3.zero, plugs) then n += 1 end
 	end
 	return n
 end

@@ -17,6 +17,7 @@ local Fury = require(script.Parent.Fury)
 local Evolved = require(script.Parent.Evolved)
 local Entrances = require(RS.Shared.Entrances)
 local Mobile = require(script.Parent.Mobile)
+local KnightDoor = require(script.Parent.KnightDoor)
 local C = Config.Ghost
 
 local Ghost = {}
@@ -216,6 +217,20 @@ function Ghost.spawn(level: number, pos: Vector3, monsterId: string?, evoTier: n
 	local intro = entrance and Entrances.of(def.id) or Entrances.plain
 	local late = intro - Entrances.plain -- its first attack, ability and power wait for the entrance to end
 	m:SetAttribute("EntranceTime", entrance and intro or 0)
+	-- the Void Knight comes in through one of the map's real walls (Server/KnightDoor): he spawns in the room in front
+	-- of a wall that his blade cuts open
+	if entrance and def.id == "Knight" then
+		local spot = KnightDoor.pick(28)
+		if spot then
+			local head = m:FindFirstChild("Head") :: BasePart?
+			local h = head and (head.Position.Y + head.Size.Y / 2 - (hrp.Position.Y - hover)) or 8
+			local at = KnightDoor.open(m, spot, h, intro)
+			if at then
+				pos = at
+				m:PivotTo(CFrame.lookAt(pos, pos + (spot.CFrame.LookVector * Vector3.new(1, 0, 1))))
+			end
+		end
+	end
 	m:SetAttribute("Hover", hover) -- root height above the floor (the entrances measure the body with it)
 	m:SetAttribute("HP", maxHp)
 	m:SetAttribute("MaxHP", maxHp)

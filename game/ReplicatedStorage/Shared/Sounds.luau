@@ -10,7 +10,7 @@ return {
 	SaberSwish = { ids = { 9120733055 }, volume = 1 },
 	-- the Void Knight's breathing through his mask (a slow bag breath, slowed and muffled: Client/Entrance,
 	-- Client/MonsterFx) and the blade burning through a wall (his entrance). Pro Sound Effects library.
-	KnightBreath = { ids = { 9113243294 }, volume = 1.1, speed = 0.82 },
+	KnightBreath = { ids = { 9113073910 }, volume = 1 }, -- Air Regulator Scuba Tank 2 (Pro Sound Effects): a breath through a scuba regulator, cut into inhale + exhale by Client/MaskBreath
 	SaberBurn = { ids = { 9119992534 }, volume = 0.8 },
 	WoodBreak = { ids = { 9120801590, 9120957493 }, volume = 1 },
 	Glass = { ids = { 9114592102 }, volume = 0.8 },
@@ -29,7 +29,7 @@ return {
 	Music_Woman = { ids = { 94597327890629 }, volume = 1.6 }, -- Ghost Stalker
 	Music_Woman_E = { ids = { 109753218180637 }, volume = 1.6 }, -- Wailing Walls (the Violet Widow)
 	Music_Demon = { ids = { 1837853076 }, volume = 1.6 }, -- See You In Hell
-	Music_Demon_E = { ids = { 1848110242 }, volume = 1.6 }, -- Demonic Ritual (the Demon Lord)
+	Music_Demon_E = { ids = { 1837246602 }, volume = 1.6 }, -- Demonic Torment (the Demon Lord: metal, like Black Plague)
 	Music_Pirate = { ids = { 1842925663 }, volume = 1.6 }, -- Pirate Battle
 	Music_Pirate_E = { ids = { 1835322563 }, volume = 1.6 }, -- Pirate King
 	Music_Animatronic = { ids = { 1837432993 }, volume = 1.6 }, -- Freak Circus
@@ -42,7 +42,7 @@ return {
 	Music_Caller_E = { ids = { 117622854482826 }, volume = 1.6 }, -- Maniac (underscore)
 	Music_Conqueror = { ids = { 9039352752 }, volume = 1.6 }, -- Soul Conqueror
 	Music_Conqueror_E = { ids = { 1844309360 }, volume = 1.6 }, -- Requiem: Dies Irae
-	Music_Rat = { ids = { 9045716961 }, volume = 1.6 }, -- Bad Omen (the Sewer Rat)
+	Music_Rat = { ids = { 1837247400 }, volume = 1.6 }, -- The Speed of Light (the Sewer Rat: speed metal, like Black Plague)
 	Music_Rat_E = { ids = { 1837318901 }, volume = 1.6 }, -- Black Plague
 	Music_Knight = { ids = { 9044584201 }, volume = 1.6 }, -- Evil Overlord (the Void Knight)
 	Music_Knight_E = { ids = { 80139755347360 }, volume = 1.6 }, -- Litany of Shadows (the Hollow Emperor)

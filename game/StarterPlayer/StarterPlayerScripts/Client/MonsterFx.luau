@@ -26,6 +26,7 @@ local KINDS = {
 	RatDashWarn = true, RatDash = true, RatDizzy = true, RatDig = true, RatTrail = true, RatWarn = true, RatErupt = true, -- the Sewer Rat
 }
 local Settings = require(script.Parent.Settings)
+local MaskBreath = require(script.Parent.MaskBreath)
 local Items = require(game:GetService("ReplicatedStorage").Shared.Items)
 local GOBLIN = Color3.fromRGB(130, 230, 70)
 local GOLD = Color3.fromRGB(255, 205, 60)
@@ -336,18 +337,15 @@ local function bladeIgnite(g: Instance)
 		s.RollOffMinDistance = 9; s.RollOffMaxDistance = 120
 		bladeHum = s
 		TweenService:Create(s, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { PlaybackSpeed = HUM_PITCH, Volume = HUM_VOLUME }):Play()
-		-- HIS BREATHING: slow and heavy through the mask, on his head, all fight long (muffled and a little crushed,
-		-- like air through a respirator; you hear it coming before you see him)
+		-- HIS BREATHING (Client/MaskBreath): a deep inhale, a pause, a deep exhale, on his head all fight long. It
+		-- starts once his entrance (which has its own breath) is over. Loud on purpose: full strength within 25 studs,
+		-- still heard across the house (140)
 		local head = g:FindFirstChild("Head")
 		if head then
-			-- loud on purpose: full strength within 25 studs, still heard across the house (140)
-			local b = Sfx.on("KnightBreath", head, { Volume = 3.5 })
-			if b then
-				b.RollOffMode = Enum.RollOffMode.InverseTapered
-				b.RollOffMinDistance = 25; b.RollOffMaxDistance = 140
-				local eq = Instance.new("EqualizerSoundEffect"); eq.LowGain = 6; eq.MidGain = 4; eq.HighGain = -2; eq.Parent = b
-				local ds = Instance.new("DistortionSoundEffect"); ds.Level = 0.25; ds.Parent = b
-			end
+			local et = g:GetAttribute("EntranceTime")
+			task.delay(type(et) == "number" and et > 0 and et + 1 or 0, function()
+				if g.Parent and head.Parent then MaskBreath.start(head, 2, { rollMin = 25, rollMax = 140 }) end
+			end)
 		end
 	end)
 end

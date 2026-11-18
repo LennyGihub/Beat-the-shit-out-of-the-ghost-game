@@ -20,6 +20,7 @@ local EP = require(script.Parent.EntrancePose)
 local Sfx = require(script.Parent.Sfx)
 local Settings = require(script.Parent.Settings)
 local Grunge = require(script.Parent.Grunge)
+local MaskBreath = require(script.Parent.MaskBreath)
 
 local Entrance = {}
 local lp = Players.LocalPlayer
@@ -58,6 +59,8 @@ type Ctx = {
 	c1: Color3, c2: Color3, folder: Folder, gui: ScreenGui, dark: Frame, flashF: Frame,
 	events: { { t: number, fn: () -> () } }, frames: { (s: number, dt: number) -> () },
 	camera: ((s: number) -> (Vector3, Vector3))?, card: () -> (), alive: () -> boolean, cleanup: { () -> () },
+	-- the Void Knight's doorway in a real wall of the map (Server/KnightDoor), nil elsewhere
+	door: { pos: Vector3, look: Vector3, w: number, h: number, plugs: { BasePart }, model: Instance? }?,
 }
 
 -- helpers ---------------------------------------------------------------------------------------------------
@@ -767,48 +770,89 @@ SCRIPTS.Rat = function(x)
 	end
 end
 
--- THE VOID KNIGHT: in the dark, his breathing behind a wall. The red blade burns a doorway through it (sparks, a
--- molten outline); the cut-out falls flat (the Hollow Emperor blasts it away with the force), and he steps through
--- and raises the blade before his face, his left hand held out.
--- his breathing through the mask: the sound muffled and a little crushed, like air through a respirator
+-- THE VOID KNIGHT: in the dark, his breathing behind a wall of the map itself (one of its KnightSpots: Server/
+-- KnightDoor). The red blade burns a doorway through it (sparks, a molten outline); the cut-out falls flat (the
+-- Hollow Emperor blasts it away with the force), and he steps through and raises the blade before his face, his left
+-- hand held out. On a map without spots a wall is built for the shot.
+-- his breathing through the mask (Client/MaskBreath): one long breath, a deep inhale, a pause, a deep exhale
 local function maskBreath(vol: number)
-	local b = Sfx.play("KnightBreath", { Volume = vol })
-	if not b then return end
-	local eq = Instance.new("EqualizerSoundEffect"); eq.LowGain = 6; eq.MidGain = 4; eq.HighGain = -2; eq.Parent = b
-	local ds = Instance.new("DistortionSoundEffect"); ds.Level = 0.25; ds.Parent = b
+	MaskBreath.start(nil, vol, { once = true })
 end
 SCRIPTS.Knight = function(x)
 	local T = EP.T.Knight
 	local glow = x.c1
 	local hot = C(255, 175, 70)
-	local W = 14
-	local Ht = math.min(x.ceil - 0.05, math.max(x.H + 5, 11))
-	local DW, DH = 5.6, math.min(x.H + 1.2, Ht - 1.4)
-	local TH = 0.7
-	local wz = 3.6 -- the wall stands this far (times x.back) behind where he ends up
-	local base = CFrame.lookAt(body(x, wz, 0), body(x, wz, 0) + x.look) -- local -Z = toward the camera
-	-- the wall looks like the room's own walls (the nearest one), plaster if there is none
-	local rp = RaycastParams.new()
-	rp.FilterType = Enum.RaycastFilterType.Include
-	local mansion = workspace:FindFirstChild("Mansion")
-	rp.FilterDescendantsInstances = { (mansion and mansion:FindFirstChild("Structure")) or mansion or workspace.Terrain }
-	local look = { Color = C(196, 182, 160), Material = Enum.Material.SmoothPlastic, MaterialVariant = "" }
-	local chest = x.floor + UP * math.min(x.H * 0.5, x.ceil - 1)
-	for _, d in { -x.look, x.cright, -x.cright, x.look } do
-		local r = workspace:Raycast(chest, d * 30, rp)
-		if r and r.Instance:IsA("BasePart") and r.Normal.Y < 0.5 then
-			look = { Color = r.Instance.Color, Material = r.Instance.Material, MaterialVariant = r.Instance.MaterialVariant }
-			break
+	local door = x.door
+	local DW: number, DH: number
+	local base: CFrame -- the wall's middle at the doorway's foot; local -Z = toward the camera
+	local wz: number -- the wall's middle is this far (times x.back) behind where he ends up
+	local fz: number, bz: number -- the wall's front face (camera side) and back face, from its middle along x.look
+	local slabs = {} :: { BasePart } -- what falls: the doorway's piece of the wall (every layer of it)
+	-- the look of the nearest wall of the room (plaster if there is none)
+	local function wallLook(): { Color: Color3, Material: Enum.Material, MaterialVariant: string }
+		local rp = RaycastParams.new()
+		rp.FilterType = Enum.RaycastFilterType.Include
+		local mansion = workspace:FindFirstChild("Mansion")
+		rp.FilterDescendantsInstances = { (mansion and mansion:FindFirstChild("Structure")) or mansion or workspace.Terrain }
+		local chest = x.floor + UP * math.min(x.H * 0.5, x.ceil - 1)
+		for _, d in { -x.look, x.cright, -x.cright, x.look } do
+			local r = workspace:Raycast(chest, d * 30, rp)
+			if r and r.Instance:IsA("BasePart") and r.Normal.Y < 0.5 then
+				return { Color = r.Instance.Color, Material = r.Instance.Material, MaterialVariant = r.Instance.MaterialVariant }
+			end
 		end
+		return { Color = C(196, 182, 160), Material = Enum.Material.SmoothPlastic, MaterialVariant = "" }
 	end
+	local look = { Color = C(196, 182, 160), Material = Enum.Material.SmoothPlastic, MaterialVariant = "" }
 	local function slabPart(size: Vector3, cf: CFrame): Part
 		return part(x, { Size = size, CFrame = cf, Color = look.Color, Material = look.Material, MaterialVariant = look.MaterialVariant, CastShadow = true })
 	end
-	local side = (W - DW) / 2
-	slabPart(Vector3.new(side, Ht, TH), base * CFrame.new(-(DW / 2 + side / 2), Ht / 2, 0))
-	slabPart(Vector3.new(side, Ht, TH), base * CFrame.new(DW / 2 + side / 2, Ht / 2, 0))
-	slabPart(Vector3.new(DW, Ht - DH, TH), base * CFrame.new(0, DH + (Ht - DH) / 2, 0))
-	local slab = slabPart(Vector3.new(DW, DH, TH), base * CFrame.new(0, DH / 2, 0))
+	if door then
+		-- A REAL WALL: the server cut the doorway out of it and left the doorway's pieces in place (the plugs); they
+		-- are copied for the shot (the copies fall) and the real ones hidden on this screen
+		DW, DH = door.w, door.h
+		base = CFrame.lookAt(door.pos, door.pos + x.look)
+		wz = (x.floor - door.pos):Dot(x.look)
+		fz, bz = 0.3, -0.3
+		local biggest = 0
+		for _, p in door.plugs do
+			local c = p:Clone()
+			c.Anchored = true; c.CanCollide = false; c.CanQuery = false; c.CanTouch = false
+			c.LocalTransparencyModifier = 0
+			c.Parent = x.folder
+			table.insert(slabs, c)
+			p.LocalTransparencyModifier = 1
+			for _, d in p:GetDescendants() do
+				if d:IsA("Decal") or d:IsA("Texture") then d.Transparency = 1 end
+			end
+			local off = (p.Position - door.pos):Dot(x.look)
+			local l = p.CFrame:VectorToObjectSpace(x.look)
+			local half = math.abs(l.X) * p.Size.X / 2 + math.abs(l.Y) * p.Size.Y / 2 + math.abs(l.Z) * p.Size.Z / 2
+			fz = math.max(fz, off + half); bz = math.min(bz, off - half)
+			local vol = p.Size.X * p.Size.Y * p.Size.Z
+			if vol > biggest then biggest = vol; look = { Color = p.Color, Material = p.Material, MaterialVariant = p.MaterialVariant } end
+		end
+		if #slabs == 0 then
+			-- (the plugs did not reach this screen) a stand-in in the wall's look fills the doorway
+			look = wallLook()
+			table.insert(slabs, slabPart(Vector3.new(DW, DH, fz - bz), base * CFrame.new(0, DH / 2, -(fz + bz) / 2)))
+		end
+	else
+		-- no spot on this map: a wall is built for the shot, in the look of the room's own walls
+		local W = 14
+		local Ht = math.min(x.ceil - 0.05, math.max(x.H + 5, 11))
+		local TH = 0.7
+		DW, DH = 5.6, math.min(x.H + 1.2, Ht - 1.4)
+		wz = 3.6
+		base = CFrame.lookAt(body(x, wz, 0), body(x, wz, 0) + x.look)
+		fz, bz = TH / 2, -TH / 2
+		look = wallLook()
+		local side = (W - DW) / 2
+		slabPart(Vector3.new(side, Ht, TH), base * CFrame.new(-(DW / 2 + side / 2), Ht / 2, 0))
+		slabPart(Vector3.new(side, Ht, TH), base * CFrame.new(DW / 2 + side / 2, Ht / 2, 0))
+		slabPart(Vector3.new(DW, Ht - DH, TH), base * CFrame.new(0, DH + (Ht - DH) / 2, 0))
+		table.insert(slabs, slabPart(Vector3.new(DW, DH, TH), base * CFrame.new(0, DH / 2, 0)))
+	end
 	-- the cut: up the right side of the doorway, across the top, down the left (wall coordinates, front face)
 	local path = { Vector2.new(DW / 2, 0.1), Vector2.new(DW / 2, DH), Vector2.new(-DW / 2, DH), Vector2.new(-DW / 2, 0.1) }
 	local lens = {}
@@ -816,7 +860,7 @@ SCRIPTS.Knight = function(x)
 	for i = 1, #path - 1 do lens[i] = (path[i + 1] - path[i]).Magnitude; total += lens[i] end
 	local lines = {}
 	for i = 1, #path - 1 do lines[i] = part(x, { Color = hot, Transparency = 1, Size = Vector3.new(0.18, 0.18, 0.1) }) end
-	local front = -TH / 2 - 0.05
+	local front = -fz - 0.05
 	local function wallPt(v: Vector2, z: number): Vector3 return (base * CFrame.new(v.X, v.Y, z)).Position end
 	local tip = part(x, { Color = glow, Transparency = 1, Size = Vector3.new(0.22, 0.22, 1.8) })
 	local cutLight = light(x, wallPt(path[1], front - 0.6), glow, 16, 0)
@@ -826,7 +870,7 @@ SCRIPTS.Knight = function(x)
 	local burn: Sound? = nil
 	at(x, T.breath, function()
 		darkness(x, 0.55, 0)
-		maskBreath(4.5)
+		maskBreath(1.8)
 	end)
 	at(x, T.cut0, function()
 		Sfx.play("SaberHum", { Volume = 0.9, PlaybackSpeed = 1.4 })
@@ -878,30 +922,53 @@ SCRIPTS.Knight = function(x)
 			flash(x, glow, 0.35, 0.3)
 			Sfx.play("Explosion", { Volume = 0.7, PlaybackSpeed = 1.1 })
 			shake(0.7)
-			chunks(x, slab.Position, 18, look.Color, look.Material, 40)
+			chunks(x, (base * CFrame.new(0, DH / 2, -fz)).Position, 18, look.Color, look.Material, 40)
 		end
 	end)
-	local slab0 = slab.CFrame
+	-- (the pieces move as one: each keeps its place relative to the hinge, or to the middle when it is blasted)
+	local hinge = base * CFrame.new(0, 0, -fz) -- the front face's bottom edge
+	local mid = base * CFrame.new(0, DH / 2, -(fz + bz) / 2)
+	local relH, relM = {} :: { CFrame }, {} :: { CFrame }
+	for i, p in slabs do relH[i] = hinge:ToObjectSpace(p.CFrame); relM[i] = mid:ToObjectSpace(p.CFrame) end
 	each(x, function(sNow)
 		if sNow < T.kick then return end
 		local k = seg(sNow, T.kick, T.fall)
 		if x.evolved then
-			slab.CFrame = slab0 + x.look * (22 * ss(k)) + UP * (2 * math.sin(k * math.pi))
-			slab.CFrame *= CFrame.Angles(k * 2.4, k * 0.8, 0)
-			slab.Transparency = seg(sNow, T.kick + 0.2, T.fall)
+			local c = (mid + x.look * (22 * ss(k)) + UP * (2 * math.sin(k * math.pi))) * CFrame.Angles(k * 2.4, k * 0.8, 0)
+			for i, p in slabs do
+				p.CFrame = c * relM[i]
+				p.Transparency = seg(sNow, T.kick + 0.2, T.fall)
+			end
 		else
-			local ang = (math.pi / 2) * k * k
-			slab.CFrame = base * CFrame.new(0, 0, -TH / 2) * CFrame.Angles(-ang, 0, 0) * CFrame.new(0, DH / 2, TH / 2)
+			local h = hinge * CFrame.Angles(-(math.pi / 2) * k * k, 0, 0)
+			for i, p in slabs do p.CFrame = h * relH[i] end
 		end
 	end)
+	-- the fallen piece stays on the floor through the fight (on this screen; gone with him, or after two minutes)
+	if not x.evolved then
+		table.insert(x.cleanup, function()
+			if x.s < T.fall then return end
+			local old = workspace:FindFirstChild("KnightSlab")
+			if old then old:Destroy() end
+			local keep = Instance.new("Folder")
+			keep.Name = "KnightSlab"
+			keep.Parent = workspace
+			for _, p in slabs do if p.Parent then p.Parent = keep end end
+			local m = x.model
+			task.spawn(function()
+				local t = 0
+				while keep.Parent and m.Parent and t < 120 do t += task.wait(1) end
+				keep:Destroy()
+			end)
+		end)
+	end
 	at(x, T.fall, function()
 		shake(0.65); kick(6)
 		Sfx.play("WoodBreak", { Volume = 1.2, PlaybackSpeed = 0.75 })
-		local landed = wallPt(Vector2.new(0, 0), -DH / 2)
+		local landed = wallPt(Vector2.new(0, 0), -fz - DH / 2)
 		burst(x, landed + UP * 0.6, with(SMOKE_FLOOR, { Color = ColorSequence.new(look.Color:Lerp(C(120, 110, 100), 0.5)) }), 26)
 		if not x.evolved then chunks(x, landed + UP, 8, look.Color, look.Material, 18) end
 	end)
-	at(x, T.step0 + 0.5, function() maskBreath(4) end)
 	-- the blade raised: its hum swells, the card
 	at(x, T.raise, function()
 		Sfx.play("SaberSwish", { Volume = 1.2, PlaybackSpeed = 0.65 })
@@ -910,7 +977,6 @@ SCRIPTS.Knight = function(x)
 		flash(x, glow, 0.18, 0.35)
 		x.card()
 	end)
-	at(x, T.calm, function() maskBreath(3.5) end)
 	x.camera = function(sNow)
 		local walk = seg(sNow, T.step0, T.step1)
 		local out = ss(seg(sNow, T.kick, T.step0 + 0.4))
@@ -971,12 +1037,34 @@ function Entrance.play(model: Model?, id: string, evolved: boolean, title: strin
 		local H = EP.height(m)
 		local chest = floor + UP * math.min(H * 0.6, ceil - 1)
 		-- the camera stands in front of the monster if there is room, else on the freest side
+		-- the Void Knight comes through a real wall of the map (Server/KnightDoor): the camera stands in the room he
+		-- steps into, facing that wall
+		local door = nil
+		local dcf = m:GetAttribute("KnightDoor")
+		if id == "Knight" and typeof(dcf) == "CFrame" then
+			local dm = workspace:FindFirstChild("KnightDoor") or workspace:WaitForChild("KnightDoor", 1)
+			local plugs = {} :: { BasePart }
+			if dm then
+				for _, p in dm:GetDescendants() do
+					if p:IsA("BasePart") then table.insert(plugs, p) end
+				end
+			end
+			local dw, dh = m:GetAttribute("KnightDoorW"), m:GetAttribute("KnightDoorH")
+			door = {
+				pos = dcf.Position, look = Vector3.new(dcf.LookVector.X, 0, dcf.LookVector.Z).Unit, plugs = plugs, model = dm,
+				w = type(dw) == "number" and dw or 5.6, h = type(dh) == "number" and dh or math.min(H + 1.2, 10),
+			}
+		end
 		local best, bestD = look, -1.0
-		for _, deg in { 0, 25, -25, 50, -50, 80, -80, 115, -115, 180 } do
-			local dir = (CFrame.Angles(0, math.rad(deg), 0) * look) :: Vector3
-			local d = freeDist(chest, dir, 17, rp)
-			if d >= 12 then best, bestD = dir, d; break end
-			if d > bestD then best, bestD = dir, d end
+		if door then
+			best, bestD = door.look, freeDist(chest, door.look, 17, rp)
+		else
+			for _, deg in { 0, 25, -25, 50, -50, 80, -80, 115, -115, 180 } do
+				local dir = (CFrame.Angles(0, math.rad(deg), 0) * look) :: Vector3
+				local d = freeDist(chest, dir, 17, rp)
+				if d >= 12 then best, bestD = dir, d; break end
+				if d > bestD then best, bestD = dir, d end
+			end
 		end
 		local pal = (COLORS[id] or COLORS.Woman)[evolved and 2 or 1]
 		local folder = Instance.new("Folder")
@@ -1004,7 +1092,7 @@ function Entrance.play(model: Model?, id: string, evolved: boolean, title: strin
 			model = m, hrp = hrp, id = id, evolved = evolved, D = dur, s = 0,
 			-- the monster is turned to face the camera (EntrancePose.clock.face), so "its front" is the camera's side
 			floor = floor, look = best, cdir = best, cright = best:Cross(UP), clear = bestD, ceil = ceil, H = H,
-			back = math.clamp(freeDist(chest, -best, 18, rp) / 18, 0.25, 1),
+			back = door and 1 or math.clamp(freeDist(chest, -best, 18, rp) / 18, 0.25, 1), door = door,
 			c1 = pal[1], c2 = pal[2], folder = folder, gui = gui, dark = dark, flashF = flashF,
 			events = {}, frames = {}, camera = nil, card = function() end, cleanup = {},
 			alive = function() return my == token and folder.Parent ~= nil end,
@@ -1048,6 +1136,7 @@ function Entrance.play(model: Model?, id: string, evolved: boolean, title: strin
 		-- and the effects
 		local hiddenParts = {} :: { BasePart }
 		local ignore = { m, folder } :: { Instance }
+		if x.door and x.door.model then table.insert(ignore, x.door.model) end
 		do
 			local mansion = workspace:FindFirstChild("Mansion")
 			local st = mansion and mansion:FindFirstChild("Structure")

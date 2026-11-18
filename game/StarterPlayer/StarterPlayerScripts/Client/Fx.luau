@@ -490,6 +490,8 @@ PRESETS.cine.AtmHaze = 1.0
 local currentZone = ""
 local Maps = require(RS.Shared.Maps)
 function Fx.applyZone(zone: string, dt: number)
+	-- Studio photo hook: player attribute DebugBright = true lights everything like an event cinematic (bright moon)
+	if game:GetService("RunService"):IsStudio() and game:GetService("Players").LocalPlayer:GetAttribute("DebugBright") then zone = "cine" end
 	local p = PRESETS[zone]
 	-- each map has its own interior look (tint, ambient, grade)
 	if zone == "inside" then
