@@ -5,7 +5,7 @@
 -- hover = root height above the floor (floaters ~4.6, walkers = their hip height).
 -- ability = what the Abilities module runs (cd = seconds between uses).
 -- objTaken = damage multiplier for thrown objects (furniture, thrown items); 1 if left out.
--- secret = never in the normal rotation: any ghost after the first has SECRET_CHANCE to be it instead (rarity 4).
+-- secret = shown as a mystery (bestiary, badges, rarity 4); it is in the normal rotation like every other monster.
 -- smasher = every last swipe of a combo launches you through the inside walls (like an enraged / evolved monster);
 -- smash = how hard.
 -- noStagger = never staggered or stunned, only knocked out (the Flayed Giant).
@@ -100,9 +100,6 @@ local List: { Monster } = {
 		ability = { kind = "warp", cd = 9, min = 20, wind = 0.9 },
 		desc = "A warlord from somewhere else. Slow, but he steps out of a portal behind you, and one punch sends you through the walls." }),
 }
--- chance that a ghost (after the first) is the secret monster: far below any other monster's
-local SECRET_CHANCE = 0.03
-
 local byId: { [string]: Monster } = {}
 for _, d in List do byId[d.id] = d end
 
@@ -205,37 +202,28 @@ end
 -- every 3rd ghost is evolved
 local function isEvolvedWave(wave: number): boolean return wave >= 3 and wave % 3 == 0 end
 
--- WHO COMES NEXT: every monster has the same chance, except that the ones this run hasn't met yet (not in `seen`)
--- are UNSEEN_WEIGHT times as likely, and the ones in `avoid` (the last two you fought) can't come at all. Once every
--- monster has come they are all even again. The run keeps one `seen` set for the normal ghosts and one for the
--- evolved ones. (`_weighted` is no longer used: rarity doesn't change the odds.)
-local UNSEEN_WEIGHT = 3
+-- WHO COMES NEXT: a run meets EVERY monster once before any of them comes again (the Conqueror too, with the same
+-- odds as the others), picked evenly among the ones it hasn't met yet; once all have come, `seen` starts over. The
+-- ones in `avoid` (the last two you fought) never come, even when a new round starts. The run keeps one `seen` set
+-- for the normal ghosts and one for the evolved ones. (`_weighted` is no longer used: rarity doesn't change the odds.)
 local function pickFresh(seen: { [string]: boolean }, avoid: { string? }, rng: Random, _weighted: boolean?): Monster
-	local list, total = {}, 0
-	for _, d in List do
-		if not (d :: any).secret and d.id ~= avoid[1] and d.id ~= avoid[2] then
-			local w = seen[d.id] and 1 or UNSEEN_WEIGHT
-			table.insert(list, { d = d, w = w })
-			total += w
+	local function pool(): { Monster }
+		local out = {}
+		for _, d in List do
+			if not seen[d.id] and d.id ~= avoid[1] and d.id ~= avoid[2] then table.insert(out, d) end
 		end
+		return out
+	end
+	local list = pool()
+	if #list == 0 then
+		-- every monster has come (or only the last two are left): a new round
+		table.clear(seen)
+		list = pool()
 	end
 	if #list == 0 then return byId.Woman end
-	local x = rng:NextNumber(0, total)
-	local choice = list[#list].d
-	for _, e in list do
-		x -= e.w
-		if x <= 0 then choice = e.d; break end
-	end
+	local choice = list[rng:NextInteger(1, #list)]
 	seen[choice.id] = true
 	return choice
 end
 
--- the secret monster, when this ghost is one (roll once per ghost)
-local function secretRoll(rng: Random): Monster?
-	if rng:NextNumber() >= SECRET_CHANCE then return nil end
-	for _, d in List do if (d :: any).secret then return d end end
-	return nil
-end
-
-return { list = List, byId = byId, rarity = RARITY, pick = pick, pickFresh = pickFresh, evolved = evolved, isEvolvedWave = isEvolvedWave, evo = EVO,
-	secretRoll = secretRoll, secretChance = SECRET_CHANCE }
+return { list = List, byId = byId, rarity = RARITY, pick = pick, pickFresh = pickFresh, evolved = evolved, isEvolvedWave = isEvolvedWave, evo = EVO }

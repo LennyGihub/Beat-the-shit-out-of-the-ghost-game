@@ -336,6 +336,18 @@ local function bladeIgnite(g: Instance)
 		s.RollOffMinDistance = 9; s.RollOffMaxDistance = 120
 		bladeHum = s
 		TweenService:Create(s, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { PlaybackSpeed = HUM_PITCH, Volume = HUM_VOLUME }):Play()
+		-- HIS BREATHING: slow and heavy through the mask, on his head, all fight long (muffled and a little crushed,
+		-- like air through a respirator; you hear it coming before you see him)
+		local head = g:FindFirstChild("Head")
+		if head then
+			local b = Sfx.on("KnightBreath", head, { Volume = 0.7 })
+			if b then
+				b.RollOffMode = Enum.RollOffMode.InverseTapered
+				b.RollOffMinDistance = 7; b.RollOffMaxDistance = 70
+				local eq = Instance.new("EqualizerSoundEffect"); eq.LowGain = 4; eq.MidGain = 1; eq.HighGain = -9; eq.Parent = b
+				local ds = Instance.new("DistortionSoundEffect"); ds.Level = 0.18; ds.Parent = b
+			end
+		end
 	end)
 end
 -- the pitch bend of a swing: up fast, back down slower

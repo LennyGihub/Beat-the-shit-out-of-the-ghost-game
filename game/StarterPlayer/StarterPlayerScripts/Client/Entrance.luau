@@ -49,6 +49,7 @@ local COLORS: { [string]: { { Color3 } } } = {
 	Caller = { { C(236, 238, 244), C(120, 124, 136) }, { C(255, 48, 44), C(110, 10, 12) } },
 	Conqueror = { { C(170, 96, 255), C(70, 20, 130) }, { C(255, 204, 76), C(160, 80, 255) } },
 	Rat = { { C(150, 128, 104), C(70, 54, 40) }, { C(150, 220, 80), C(50, 76, 34) } },
+	Knight = { { C(255, 40, 30), C(120, 10, 10) }, { C(190, 90, 255), C(70, 20, 120) } },
 }
 
 type Ctx = {
@@ -766,6 +767,164 @@ SCRIPTS.Rat = function(x)
 	end
 end
 
+-- THE VOID KNIGHT: in the dark, his breathing behind a wall. The red blade burns a doorway through it (sparks, a
+-- molten outline); the cut-out falls flat (the Hollow Emperor blasts it away with the force), and he steps through
+-- and raises the blade before his face, his left hand held out.
+-- his breathing through the mask: the sound muffled and a little crushed, like air through a respirator
+local function maskBreath(vol: number)
+	local b = Sfx.play("KnightBreath", { Volume = vol })
+	if not b then return end
+	local eq = Instance.new("EqualizerSoundEffect"); eq.LowGain = 4; eq.MidGain = 1; eq.HighGain = -9; eq.Parent = b
+	local ds = Instance.new("DistortionSoundEffect"); ds.Level = 0.18; ds.Parent = b
+end
+SCRIPTS.Knight = function(x)
+	local T = EP.T.Knight
+	local glow = x.c1
+	local hot = C(255, 175, 70)
+	local W = 14
+	local Ht = math.min(x.ceil - 0.05, math.max(x.H + 5, 11))
+	local DW, DH = 5.6, math.min(x.H + 1.2, Ht - 1.4)
+	local TH = 0.7
+	local wz = 3.6 -- the wall stands this far (times x.back) behind where he ends up
+	local base = CFrame.lookAt(body(x, wz, 0), body(x, wz, 0) + x.look) -- local -Z = toward the camera
+	-- the wall looks like the room's own walls (the nearest one), plaster if there is none
+	local rp = RaycastParams.new()
+	rp.FilterType = Enum.RaycastFilterType.Include
+	local mansion = workspace:FindFirstChild("Mansion")
+	rp.FilterDescendantsInstances = { (mansion and mansion:FindFirstChild("Structure")) or mansion or workspace.Terrain }
+	local look = { Color = C(196, 182, 160), Material = Enum.Material.SmoothPlastic, MaterialVariant = "" }
+	local chest = x.floor + UP * math.min(x.H * 0.5, x.ceil - 1)
+	for _, d in { -x.look, x.cright, -x.cright, x.look } do
+		local r = workspace:Raycast(chest, d * 30, rp)
+		if r and r.Instance:IsA("BasePart") and r.Normal.Y < 0.5 then
+			look = { Color = r.Instance.Color, Material = r.Instance.Material, MaterialVariant = r.Instance.MaterialVariant }
+			break
+		end
+	end
+	local function slabPart(size: Vector3, cf: CFrame): Part
+		return part(x, { Size = size, CFrame = cf, Color = look.Color, Material = look.Material, MaterialVariant = look.MaterialVariant, CastShadow = true })
+	end
+	local side = (W - DW) / 2
+	slabPart(Vector3.new(side, Ht, TH), base * CFrame.new(-(DW / 2 + side / 2), Ht / 2, 0))
+	slabPart(Vector3.new(side, Ht, TH), base * CFrame.new(DW / 2 + side / 2, Ht / 2, 0))
+	slabPart(Vector3.new(DW, Ht - DH, TH), base * CFrame.new(0, DH + (Ht - DH) / 2, 0))
+	local slab = slabPart(Vector3.new(DW, DH, TH), base * CFrame.new(0, DH / 2, 0))
+	-- the cut: up the right side of the doorway, across the top, down the left (wall coordinates, front face)
+	local path = { Vector2.new(DW / 2, 0.1), Vector2.new(DW / 2, DH), Vector2.new(-DW / 2, DH), Vector2.new(-DW / 2, 0.1) }
+	local lens = {}
+	local total = 0
+	for i = 1, #path - 1 do lens[i] = (path[i + 1] - path[i]).Magnitude; total += lens[i] end
+	local lines = {}
+	for i = 1, #path - 1 do lines[i] = part(x, { Color = hot, Transparency = 1, Size = Vector3.new(0.18, 0.18, 0.1) }) end
+	local front = -TH / 2 - 0.05
+	local function wallPt(v: Vector2, z: number): Vector3 return (base * CFrame.new(v.X, v.Y, z)).Position end
+	local tip = part(x, { Color = glow, Transparency = 1, Size = Vector3.new(0.22, 0.22, 1.8) })
+	local cutLight = light(x, wallPt(path[1], front - 0.6), glow, 16, 0)
+	local sparks = stream(x, T.cut0, T.cut1, wallPt(path[1], front), { Texture = SPARK, Color = ColorSequence.new(hot, glow), LightEmission = 1,
+		Size = NumberSequence.new(0.35, 0), Lifetime = NumberRange.new(0.25, 0.6), Speed = NumberRange.new(8, 18), SpreadAngle = Vector2.new(60, 60),
+		Acceleration = Vector3.new(0, -40, 0), EmissionDirection = Enum.NormalId.Top }, 90)
+	local burn: Sound? = nil
+	at(x, T.breath, function()
+		darkness(x, 0.55, 0)
+		maskBreath(1.4)
+	end)
+	at(x, T.cut0, function()
+		Sfx.play("SaberHum", { Volume = 0.9, PlaybackSpeed = 1.4 })
+		burn = Sfx.play("SaberBurn", { Volume = 1, Looped = true })
+		darkness(x, 0.3, 0.6)
+	end)
+	each(x, function(sNow)
+		local p = ss(seg(sNow, T.cut0, T.cut1)) * total
+		local cutting = sNow >= T.cut0 and sNow < T.cut1
+		local acc = 0
+		local cur = path[1]
+		for i = 1, #path - 1 do
+			local a, b = path[i], path[i + 1]
+			local k = math.clamp((p - acc) / lens[i], 0, 1)
+			local e = a:Lerp(b, k)
+			if k > 0 then
+				local mid = (a + e) / 2
+				local len = (e - a).Magnitude
+				local horizontal = math.abs(b.Y - a.Y) < 0.01
+				lines[i].Size = horizontal and Vector3.new(len + 0.18, 0.2, 0.12) or Vector3.new(0.2, len + 0.18, 0.12)
+				lines[i].CFrame = base * CFrame.new(mid.X, mid.Y, front)
+				-- molten while fresh, cooling to a dark red glow once the slab has fallen
+				local cool = seg(sNow, T.fall, T.fall + 1.4)
+				lines[i].Color = hot:Lerp(glow, 0.35 + 0.4 * cool)
+				lines[i].Transparency = 0.05 + 0.6 * cool
+			end
+			if k > 0 and k < 1 then cur = e end
+			if k >= 1 then cur = b end
+			acc += lens[i]
+		end
+		-- the blade's point, poking through the wall where it cuts
+		local wob = math.sin(sNow * 40) * 0.05
+		tip.CFrame = base * CFrame.new(cur.X + wob, cur.Y, front - 0.9)
+		tip.Transparency = cutting and 0.05 or 1
+		cutLight.Brightness = cutting and (2.2 + math.sin(sNow * 50) * 0.6) or 0
+		;(cutLight.Parent :: BasePart).Position = wallPt(cur, front - 0.6)
+		;(sparks.Parent :: Attachment).WorldPosition = wallPt(cur, front)
+		if cutting and rng:NextNumber() < 0.12 then shake(0.05) end
+	end)
+	at(x, T.cut1, function()
+		if burn then burn:Destroy() end
+		Sfx.play("SaberSwish", { Volume = 1, PlaybackSpeed = 0.8 })
+	end)
+	-- the slab goes: it falls flat toward the camera, hinged at its bottom edge (the Hollow Emperor blasts it away)
+	at(x, T.kick, function()
+		Sfx.play("Crash", { Volume = 0.8, PlaybackSpeed = 0.9 })
+		darkness(x, 0, 0.5)
+		if x.evolved then
+			flash(x, glow, 0.35, 0.3)
+			Sfx.play("Explosion", { Volume = 0.7, PlaybackSpeed = 1.1 })
+			shake(0.7)
+			chunks(x, slab.Position, 18, look.Color, look.Material, 40)
+		end
+	end)
+	local slab0 = slab.CFrame
+	each(x, function(sNow)
+		if sNow < T.kick then return end
+		local k = seg(sNow, T.kick, T.fall)
+		if x.evolved then
+			slab.CFrame = slab0 + x.look * (22 * ss(k)) + UP * (2 * math.sin(k * math.pi))
+			slab.CFrame *= CFrame.Angles(k * 2.4, k * 0.8, 0)
+			slab.Transparency = seg(sNow, T.kick + 0.2, T.fall)
+		else
+			local ang = (math.pi / 2) * k * k
+			slab.CFrame = base * CFrame.new(0, 0, -TH / 2) * CFrame.Angles(-ang, 0, 0) * CFrame.new(0, DH / 2, TH / 2)
+		end
+	end)
+	at(x, T.fall, function()
+		shake(0.65); kick(6)
+		Sfx.play("WoodBreak", { Volume = 1.2, PlaybackSpeed = 0.75 })
+		local landed = wallPt(Vector2.new(0, 0), -DH / 2)
+		burst(x, landed + UP * 0.6, with(SMOKE_FLOOR, { Color = ColorSequence.new(look.Color:Lerp(C(120, 110, 100), 0.5)) }), 26)
+		if not x.evolved then chunks(x, landed + UP, 8, look.Color, look.Material, 18) end
+	end)
+	at(x, T.step0 + 0.5, function() maskBreath(1.25) end)
+	-- the blade raised: its hum swells, the card
+	at(x, T.raise, function()
+		Sfx.play("SaberSwish", { Volume = 1.2, PlaybackSpeed = 0.65 })
+		Sfx.play("SaberHum", { Volume = 1, PlaybackSpeed = 0.75 })
+		shake(0.35)
+		flash(x, glow, 0.18, 0.35)
+		x.card()
+	end)
+	at(x, T.calm, function() maskBreath(1.0) end)
+	x.camera = function(sNow)
+		local walk = seg(sNow, T.step0, T.step1)
+		local out = ss(seg(sNow, T.kick, T.step0 + 0.4))
+		local up = ss(seg(sNow, T.raise - 0.3, T.raise + 0.6))
+		local p0 = spot(x, 7.5, 1.6, x.H * 0.55)
+		local p1 = spot(x, 11.5, -2, x.H * 0.5)
+		local p2 = spot(x, 8.5, -2.6, x.H * 0.3)
+		local at0 = body(x, wz, DH * 0.6)
+		local at1 = body(x, 7 * (1 - walk), x.H * 0.6)
+		local at2 = body(x, 0, x.H * 0.78)
+		return p0:Lerp(p1, out):Lerp(p2, up), at0:Lerp(at1, out):Lerp(at2, up)
+	end
+end
+
 -- the stage ---------------------------------------------------------------------------------------------------
 local function structure(): RaycastParams
 	local rp = RaycastParams.new()
@@ -874,7 +1033,9 @@ function Entrance.play(model: Model?, id: string, evolved: boolean, title: strin
 			TweenService:Create(top, TweenInfo.new(0.3), { TextTransparency = 0 }):Play()
 			task.delay(0.35, function() TweenService:Create(desc, TweenInfo.new(0.4), { TextTransparency = 0 }):Play() end)
 		end
-		SCRIPTS[id](x)
+		-- (a broken effect must not stop the cinematic: it is reported and the rest plays on)
+		local built, why = pcall(SCRIPTS[id], x)
+		if not built then warn("[Entrance] " .. id .. ": " .. tostring(why)) end
 		table.sort(x.events, function(a, b) return a.t < b.t end)
 		EP.clock.model = m
 		EP.clock.s = 0
@@ -945,7 +1106,13 @@ function Entrance.play(model: Model?, id: string, evolved: boolean, title: strin
 				nextEvent += 1
 				task.spawn(e.fn)
 			end
-			for _, f in x.frames do f(s, dt) end
+			for i = #x.frames, 1, -1 do
+				local ok, why = pcall(x.frames[i], s, dt)
+				if not ok then
+					warn("[Entrance] " .. id .. " frame: " .. tostring(why))
+					table.remove(x.frames, i)
+				end
+			end
 			if x.camera then
 				local eye, target = x.camera(s)
 				-- a small room (the camera can't step back): a wider lens, and the camera comes level with the

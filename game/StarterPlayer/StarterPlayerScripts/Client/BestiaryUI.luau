@@ -177,7 +177,7 @@ local function refreshMonsters(): number
 	dTag.TextColor3 = known and rar[2] or DIM
 	dAbility.Text = known and ("POWER: " .. e.ability) or "POWER: ? ? ?"
 	dDesc.Text = known and e.desc
-		or (e.secret and "Nobody agrees on what it is. It does not belong in the house, and it almost never comes."
+		or (e.secret and "Nobody agrees on what it is. It does not belong in the house."
 			or (e.evolved and "Every third ghost of a run is an evolved monster. Beat this one to write its page."
 				or "Beat it in a run to write its page."))
 	dCount.Text = known and ("BEATEN " .. n .. (n == 1 and " TIME" or " TIMES")) or "BEATEN 0 TIMES"

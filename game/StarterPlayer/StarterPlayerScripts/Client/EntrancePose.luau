@@ -21,6 +21,7 @@ EP.T = {
 	Caller = { flash1 = 0.9, flash2 = 1.9, flash3 = 2.8, raise = 3.1, pump = 3.95 },
 	Conqueror = { portal = 0.1, step0 = 1.4, step1 = 3.0, close = 3.1, fist = 3.4, clench = 3.9, calm = 4.9 },
 	Rat = { burst = 1.7, peak = 1.98, land = 2.4, rear = 3.4, calm = 4.2 },
+	Knight = { breath = 0.15, cut0 = 0.9, cut1 = 2.7, kick = 2.95, fall = 3.4, step0 = 3.3, step1 = 4.5, raise = 4.65, calm = 5.7 },
 }
 EP.FLASH = 0.16 -- how long each of the Caller's flashes shows him
 -- the running entrance's clock, written by Client/Entrance every frame: which monster, the seconds so far, and
@@ -241,6 +242,28 @@ POSES.Rat = function(p, s, t, H)
 	p.RightHip = A(1.2 * four, 0, 0.1); p.LeftHip = A(1.2 * four, 0, -0.1)
 	p.RightKnee = A(-1.3 * four, 0, 0); p.LeftKnee = A(-1.3 * four, 0, 0)
 	return s < T.burst and 1 or 0
+end
+
+-- THE VOID KNIGHT: behind the wall while his blade cuts it (hidden: the wall is in front of him); once the slab
+-- falls he walks out through the hole, the blade held low, then raises it before his face, his left hand held out
+POSES.Knight = function(p, s, t, H)
+	local T = EP.T.Knight
+	local walk = seg(s, T.step0, T.step1)
+	local am = seg(s, T.step0, T.step0 + 0.2) * (1 - seg(s, T.step1 - 0.2, T.step1))
+	local ph = (s - T.step0) * 2 * pi * 0.85
+	stride(p, ph, am * 0.7)
+	local raise = ss(seg(s, T.raise, T.raise + 0.35)) * (1 - seg(s, T.calm, T.calm + 0.45))
+	p.Root = CFrame.new(0, math.abs(sin(ph)) * 0.15 * am, 7 * EP.clock.back * (1 - walk)) * A(-0.04 + 0.08 * raise, 0, 0)
+	p.Waist = A(0.05 * raise, 0, 0)
+	p.Neck = A(-0.1 + 0.14 * raise, 0, 0)
+	local low = A(0.35 + sin(ph + pi) * 0.12 * am, 0, 0.12)
+	p.RightShoulder = low:Lerp(A(2.2, 0, -0.28), raise)
+	p.RightElbow = A(0.35 + 0.8 * raise, 0, 0)
+	p.RightWrist = A(-0.25 * raise, 0, 0)
+	p.LeftShoulder = A(sin(ph) * 0.15 * am + 1.45 * raise, 0, -0.1 - 0.25 * raise)
+	p.LeftElbow = A(0.25 - 0.15 * raise, 0, 0)
+	p.LeftWrist = A(-0.6 * raise, 0, 0)
+	return s < T.kick and 1 or 0
 end
 
 -- the pose and the see-through amount (0 = solid, 1 = gone) of monster `id`, s seconds into its entrance

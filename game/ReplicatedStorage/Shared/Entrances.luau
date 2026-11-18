@@ -13,6 +13,7 @@ local TIME: { [string]: number } = {
 	Caller = 5.4, -- the phone rings in the dark; each flash of light shows him closer
 	Conqueror = 5.6, -- a portal tears open and he walks out of it, fist raised
 	Rat = 4.8, -- the floor bulges and cracks, he bursts out of it and shrieks
+	Knight = 6.2, -- breathing behind a wall; his blade burns a doorway through it and he steps out
 }
 return {
 	time = TIME,
