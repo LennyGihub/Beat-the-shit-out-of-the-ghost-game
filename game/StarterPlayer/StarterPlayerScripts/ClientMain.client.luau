@@ -14,6 +14,12 @@ end
 camMode()
 lp:GetAttributeChangedSignal("InMatch"):Connect(camMode)
 lp:GetAttributeChangedSignal("Spectating"):Connect(camMode) -- spectating a teammate: third person
+lp:GetAttributeChangedSignal("InMatch"):Connect(function()
+	if not lp:GetAttribute("InMatch") then
+		local tr = script.Parent:FindFirstChild("Client") and script.Parent.Client:FindFirstChild("TrainRide")
+		if tr then (require(tr) :: any).reset() end
+	end
+end)
 workspace.CurrentCamera.FieldOfView = 74
 local Remotes = RS:WaitForChild("Remotes")
 
@@ -56,6 +62,11 @@ local CallerMarks = require(Client.CallerMarks)
 local SandboxUI = require(Client.SandboxUI)
 local BestiaryUI = require(Client.BestiaryUI)
 local Entrance = require(Client.Entrance)
+local TrainRide = require(Client.TrainRide) -- every trip to a map's building goes by train
+local StageUI = require(Client.StageUI) -- a cleared building's result screen
+local SellerUI = require(Client.SellerUI) -- Doc Mercy's ectoplasm, Mother Moth's potions
+local FormCine = require(Client.FormCine) -- the first-person ectoplasm jar / potion
+local FormLook = require(Client.FormLook) -- worn forms on every character
 
 Platform.init()
 -- the server is told which controls this player uses: touch players reach further, lift from far and face a weaker
@@ -101,6 +112,10 @@ NameTags.init() -- the lobby's name tags (name plate + DEV / VIP titles, level a
 LevelUI.init() -- your own level in the lobby's corner
 CallerUI.init() -- the Caller's phone call
 CallerMarks.init() -- his ringing phone (outline + arrow) and the outline of the room he sits in
+TrainRide.init(Fx, HUD)
+SellerUI.init()
+FormCine.init(Fx, HUD)
+FormLook.init()
 -- lobby screen: PLAY (create / join lobbies) and SHOP buttons, friend booster
 QuestUI.init(function(open)
 	Input.setShopOpen(open)
@@ -180,6 +195,30 @@ Remotes.Fx.OnClientEvent:Connect(function(kind: string, ...)
 		CallerMarks.roomOff()
 	elseif kind == "PartyInvite" then
 		LobbyUI.invite(...)
+	elseif kind == "OpenPlay" then
+		LobbyUI.openPlay()
+	elseif kind == "TrainDepart" then
+		StageUI.close()
+		task.spawn(TrainRide.depart, ...)
+	elseif kind == "TrainArrive" then
+		StageUI.close()
+		task.spawn(TrainRide.arrive, ...)
+	elseif kind == "StageClear" then
+		StageUI.show(...)
+	elseif kind == "OpenSeller" then
+		if not FormCine.busy() then SellerUI.open(...) end
+	elseif kind == "FormResult" then
+		SellerUI.result(...)
+	elseif kind == "FormRolled" then
+		-- the vial was bought: the first-person cinematic, then the seller's panel again
+		local args = table.pack(...)
+		local k = SellerUI.rolled()
+		FormCine.onDone = function() if k and not lp:GetAttribute("InMatch") then SellerUI.open(k) end end
+		task.spawn(FormCine.play, args[1], args[2], args[3], args[4], args[5], args[6])
+	elseif kind == "FormEquipped" then
+		local Forms = require(RS.Shared.Forms)
+		local fm = Forms.byId[select(2, ...)]
+		if fm then Fx.handle("Toast", "NOW WEARING " .. fm.name, true) end
 	elseif MonsterFx.handles(kind) then
 		MonsterFx.handle(kind, ...)
 	else

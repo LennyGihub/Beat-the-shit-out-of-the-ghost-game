@@ -1,13 +1,15 @@
 --!strict
 -- Lobby screen (grunge, like the fight HUD): PLAY, SHOP and QUESTS buttons on the left (QUESTS shows how many
 -- quests are ready to claim), the friend booster tag, and the
--- PLAY panel: create a lobby (map you own, difficulty, 1-4 players) or join an open one, then the host presses START.
+-- PLAY panel: create a lobby (a campaign MAP and one of its BUILDINGS you have opened - Shared/Campaign -,
+-- difficulty, 1-4 players) or join an open one, then the host presses START: the party boards the train.
 -- Lobbies live on the server (Lobby.luau, Remotes.Party); the list comes in the ReplicatedStorage attribute "Parties".
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local HttpService = game:GetService("HttpService")
 local TweenService = game:GetService("TweenService")
 local Maps = require(RS.Shared.Maps)
+local Campaign = require(RS.Shared.Campaign)
 local Grunge = require(script.Parent.Grunge)
 local Platform = require(script.Parent.Platform)
 local Sfx = require(script.Parent.Sfx)
@@ -26,7 +28,10 @@ local mineInfo: TextLabel
 local mineNames: TextLabel
 local startBtn: TextButton
 local status: TextLabel
-local pickMap, pickDiff, pickSize = Maps.default, Maps.defaultDiff, 2
+local pickMap, pickDiff, pickSize = "Camp_Bunkhouse", Maps.defaultDiff, 2 -- pickMap = a building (stage id)
+local pickCamp = "Camp" -- the campaign map shown
+local campBtns = {} :: { [string]: TextButton }
+local stageRows = {} :: { [string]: { b: TextButton, info: TextLabel } }
 local pickPrivate = false
 local pickFF = true -- friendly fire in the run you create
 local privBtn: TextButton
@@ -136,11 +141,34 @@ local function bigButton(text: string, sub: string, color: Color3, y: number, ro
 	return b
 end
 
+local function progress(): Campaign.Progress
+	local ok, t = pcall(function() return HttpService:JSONDecode(lp:GetAttribute("Campaign") or "{}") end)
+	return Campaign.clean(ok and t or {})
+end
 local function refreshPicks()
-	local om = ownedMaps()
-	for id, b in mapBtns do
-		paint(b, id == pickMap and RED or (om[id] and DARK or LOCKED))
-		setTextColor(b, Grunge.PAPER, om[id] and 0 or 0.6)
+	local prog = progress()
+	-- (the picked building must be open: else the furthest open one)
+	if not Campaign.stageOpen(prog, pickMap) then
+		local g = Campaign.goal(prog)
+		pickMap = g and g.id or "Camp_Bunkhouse"
+	end
+	for id, b in campBtns do
+		local cm = Campaign.mapById[id]
+		local open = Campaign.mapOpen(prog, id)
+		paint(b, id == pickCamp and RED or (open and DARK or LOCKED))
+		setTextColor(b, Grunge.PAPER, open and 0 or 0.55)
+		local done, total = Campaign.cleared(prog, id)
+		setText(b, cm.name .. (cm.soon and "\nSOON" or ("\n" .. done .. "/" .. total)))
+	end
+	for id, r in stageRows do
+		local stg = Campaign.stage(id)
+		local open = Campaign.stageOpen(prog, id)
+		local best = prog[id] or 0
+		paint(r.b, id == pickMap and RED or (open and DARK or LOCKED))
+		setTextColor(r.b, Grunge.PAPER, open and 0 or 0.55)
+		local dd = best > 0 and Maps.diffById[Campaign.rankDiff[best]]
+		r.info.Text = not open and "LOCKED" or (dd and ("CLEARED: " .. dd.name) or (stg and stg.phases > 1 and "BOSS - 2 PHASES" or "NOT CLEARED"))
+		r.info.TextColor3 = dd and dd.color or (open and Color3.fromRGB(255, 150, 80) or Color3.fromRGB(120, 110, 100))
 	end
 	for id, b in diffBtns do
 		local d = Maps.diffById[id]
@@ -176,7 +204,7 @@ local function refreshList()
 		local d = Maps.diffById[pt.diff]
 		Grunge.frame(row, { BackgroundTransparency = 0, BackgroundColor3 = m and m.color or RED, Position = UDim2.new(0, 4, 0.12, 0), Size = UDim2.new(0, 5, 0.76, 0), Rotation = 2, ZIndex = 12 })
 		Grunge.text(row, { Text = string.upper(pt.host) .. "'S LOBBY" .. (pt.private and "  [PRIVATE]" or ""), Position = UDim2.new(0, 14, 0.05, 0), Size = UDim2.new(0.62, 0, 0.5, 0), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 12 })
-		Grunge.text(row, { Text = string.upper((m and m.name or pt.map) .. " - " .. (d and d.name or pt.diff)) .. "   " .. #pt.names .. "/" .. pt.size .. (pt.ff == false and "   FF OFF" or ""),
+		Grunge.text(row, { Text = string.upper((m and m.name or pt.map) .. " - " .. (d and d.name or pt.diff)) .. "   " .. #pt.names .. "/" .. pt.size .. (pt.ff == false and "   FF OFF" or ""), -- (m = the building)
 			Font = Grunge.TYPE, Position = UDim2.new(0, 14, 0.56, 0), Size = UDim2.new(0.62, 0, 0.36, 0), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = d and d.color or Grunge.PAPER, ZIndex = 12 })
 		local full = #pt.names >= pt.size
 		local b = button(row, pt.id == myId and "YOURS" or (full and "FULL" or (invited and "JOIN!" or "JOIN")), { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -6, 0.5, 0), Size = UDim2.new(0.26, 0, 0.72, 0),
@@ -240,6 +268,10 @@ end
 function LobbyUI.togglePlay()
 	if panel and not lp:GetAttribute("InMatch") then setOpen(not panel.Visible) end
 end
+-- the train's prompt at the station (Fx "OpenPlay")
+function LobbyUI.openPlay()
+	if panel and not lp:GetAttribute("InMatch") and not panel.Visible then setOpen(true) end
+end
 
 local function refreshVisible()
 	local inMatch = lp:GetAttribute("InMatch") == true
@@ -275,8 +307,8 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 	-- left column: PLAY / SHOP / QUESTS, drawn like the fight HUD's bars (health red, stamina mustard, brutality orange)
 	side = Grunge.frame(gui, { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 28, 0.5, 0), Size = UDim2.fromScale(0.2, 0.54) })
 	local sar = Instance.new("UIAspectRatioConstraint"); sar.AspectRatio = 0.82; sar.Parent = side
-	bigButton("PLAY", "FIND A FIGHT", Color3.fromRGB(150, 18, 20), 0, -1.2, function() setOpen(not panel.Visible) end, 0.19)
-	bigButton("SHOP", "ULTS - MAPS", Color3.fromRGB(176, 150, 40), 0.21, 0.8, function()
+	bigButton("PLAY", "TAKE THE TRAIN", Color3.fromRGB(150, 18, 20), 0, -1.2, function() setOpen(not panel.Visible) end, 0.19)
+	bigButton("SHOP", "ULTIMATES", Color3.fromRGB(176, 150, 40), 0.21, 0.8, function()
 		if panel.Visible then setOpen(false) end
 		if openShop then openShop() end
 	end, 0.19)
@@ -322,17 +354,51 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 
 	-- left half: create a lobby
 	createPage = Grunge.frame(panel, { Position = UDim2.fromScale(0.04, 0.14), Size = UDim2.fromScale(0.46, 0.82), ZIndex = 10 })
-	heading(createPage, "PICK A HOUSE", 0, 0, 1, 11)
-	local mg = Grunge.frame(createPage, { Position = UDim2.fromScale(0, 0.08), Size = UDim2.fromScale(1, 0.48), ZIndex = 11 })
-	local grid = Instance.new("UIGridLayout"); grid.CellSize = UDim2.fromScale(0.32, 0.17); grid.CellPadding = UDim2.fromScale(0.015, 0.02); grid.SortOrder = Enum.SortOrder.LayoutOrder; grid.Parent = mg
-	for i, m in Maps.list do
-		local b = button(mg, string.upper(m.name), { LayoutOrder = i, ZIndex = 12, Font = Grunge.TYPE })
+	-- the campaign: a row of maps, then the picked map's buildings (fought top to bottom)
+	heading(createPage, "PICK A MAP", 0, 0, 1, 11)
+	local mg = Grunge.frame(createPage, { Position = UDim2.fromScale(0, 0.065), Size = UDim2.fromScale(1, 0.085), ZIndex = 11 })
+	local ml = Instance.new("UIListLayout"); ml.FillDirection = Enum.FillDirection.Horizontal; ml.Padding = UDim.new(0.01, 0); ml.SortOrder = Enum.SortOrder.LayoutOrder; ml.Parent = mg
+	local stageList: Frame
+	local function buildStages()
+		for _, c in stageList:GetChildren() do if c:IsA("TextButton") then c:Destroy() end end
+		table.clear(stageRows)
+		local cm = Campaign.mapById[pickCamp]
+		for i, stg in cm.stages do
+			local b = button(stageList, i .. "   " .. stg.name, { LayoutOrder = i, Size = UDim2.fromScale(1, 0.185), ZIndex = 12, Font = Grunge.FONT })
+			local lbl = b:FindFirstChild("Label") :: TextLabel
+			lbl.TextXAlignment = Enum.TextXAlignment.Left; lbl.Size = UDim2.fromScale(0.56, 0.58); lbl.AnchorPoint = Vector2.new(0, 0.5); lbl.Position = UDim2.fromScale(0.04, 0.5)
+			local info = Grunge.text(b, { Text = "", Font = Grunge.TYPE, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.fromScale(0.97, 0.5), Size = UDim2.fromScale(0.38, 0.42),
+				TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 15 })
+			b.Activated:Connect(function()
+				Sfx.play("Click")
+				if Campaign.stageOpen(progress(), stg.id) then
+					pickMap = stg.id
+					status.Text = stg.desc
+				else
+					status.Text = "CLEAR THE BUILDING BEFORE " .. stg.name .. " FIRST"
+				end
+				refreshPicks()
+			end)
+			stageRows[stg.id] = { b = b, info = info }
+		end
+		if #cm.stages == 0 then status.Text = cm.name .. " IS COMING SOON" end
+	end
+	for i, cm in Campaign.list do
+		local b = button(mg, cm.name, { LayoutOrder = i, Size = UDim2.fromScale(0.192, 1), ZIndex = 12, Font = Grunge.TYPE })
 		b.Activated:Connect(function()
 			Sfx.play("Click")
-			if ownedMaps()[m.id] then pickMap = m.id; refreshPicks() else status.Text = "BUY " .. string.upper(m.name) .. " IN THE SHOP (MAPS)" end
+			if cm.soon then status.Text = cm.name .. " IS COMING SOON"; return end
+			if not Campaign.mapOpen(progress(), cm.id) then status.Text = "BEAT EVERY BUILDING OF THE MAP BEFORE IT FIRST"; return end
+			pickCamp = cm.id
+			buildStages()
+			refreshPicks()
 		end)
-		mapBtns[m.id] = b
+		campBtns[cm.id] = b
 	end
+	heading(createPage, "PICK A BUILDING", 0, 0.165, 1, 11)
+	stageList = Grunge.frame(createPage, { Position = UDim2.fromScale(0, 0.225), Size = UDim2.fromScale(1, 0.34), ZIndex = 11 })
+	local sll = Instance.new("UIListLayout"); sll.Padding = UDim.new(0.015, 0); sll.SortOrder = Enum.SortOrder.LayoutOrder; sll.Parent = stageList
+	buildStages()
 	heading(createPage, "DIFFICULTY", 0, 0.57, 1, 11)
 	local dg = Grunge.frame(createPage, { Position = UDim2.fromScale(0, 0.635), Size = UDim2.fromScale(1, 0.09), ZIndex = 11 })
 	local dl = Instance.new("UIListLayout"); dl.FillDirection = Enum.FillDirection.Horizontal; dl.Padding = UDim.new(0.015, 0); dl.SortOrder = Enum.SortOrder.LayoutOrder; dl.Parent = dg
@@ -405,7 +471,7 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 	Players.PlayerAdded:Connect(refreshList)
 	Players.PlayerRemoving:Connect(function() task.defer(refreshList) end)
 	RS:GetAttributeChangedSignal("Parties"):Connect(refreshList)
-	for _, a in { "PartyId", "Owned" } do lp:GetAttributeChangedSignal(a):Connect(function() refreshPicks(); refreshList() end) end
+	for _, a in { "PartyId", "Owned", "Campaign" } do lp:GetAttributeChangedSignal(a):Connect(function() refreshPicks(); refreshList() end) end
 	for _, a in { "InMatch", "FriendBoost", "FriendCount" } do lp:GetAttributeChangedSignal(a):Connect(refreshVisible) end
 	Platform.windowChanged:Connect(refreshVisible)
 	Platform.changed:Connect(refreshVisible)

@@ -1,6 +1,12 @@
 -- A run (one per match server): fight ghost after ghost in the house. Each kill pays RUN cash; events
 -- (plane / van / train) open a shop that sells physical items for run cash and lasts for the next 3 ghosts.
 -- Dying or leaving ends your run: you get real cash (for ultimates) based on kills, ghost levels and damage.
+-- CAMPAIGN STAGES (Shared/Campaign; the map id is a stage id): one building per trip. The party ARRIVES by train
+-- in the yard (Fx "TrainArrive", state "Arrive"), walks in (state "Approach": the fight starts once someone is
+-- inside), fights the building's one monster (its last building's monster comes back EVOLVED as phase 2), and
+-- the building is CLEARED (saved per player: Data.clearStage, best difficulty): cash + XP paid, Fx "StageClear",
+-- state "Cleared". Then Remotes.Stage: "next" (the next building), "again" (same one) - the train leaves
+-- (Fx "TrainDepart") and comes back to the other building in this same server - or "lobby".
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -22,6 +28,7 @@ local Quests = require(script.Parent.Quests)
 local Friends = require(script.Parent.Friends)
 local Bestiary = require(script.Parent.Bestiary)
 local Supplies = require(script.Parent.Supplies)
+local Campaign = require(RS.Shared.Campaign)
 
 local Run = {}
 Run.mode = "Lobby" -- "Lobby" (public / Studio) or "Match" (reserved server)
@@ -46,6 +53,15 @@ local temp = {} :: { Instance }
 local rng = Random.new()
 local DOOR = Vector3.new(0, 7, 62)
 local diff = Maps.diffById[Maps.defaultDiff] -- difficulty of this run (monster stats + cash multiplier)
+-- the campaign building of this match (nil = the old endless house run: the Mansion, admin 'start')
+local stage: Campaign.Stage? = nil
+local phase = 1 -- 2 = the last building's monster came back evolved
+local arrived = false -- the party got off the train (startFight from Main is the arrival then)
+local approachUntil = 0
+local choiceUntil = 0
+local TRAIN_ARRIVE = 8.5 -- seconds of the client's arrival cinematic (Client/TrainRide)
+local TRAIN_DEPART = 5.5 -- seconds of the client's departure cinematic
+local YARD = Vector3.new(0, 3.4, 141) -- where the train lets you off (the yard's railway runs at z = 150)
 
 local function setState(s: string, objective: string?)
 	state = s
@@ -104,10 +120,11 @@ function Run.removeFromMatch(p: Player)
 	if sp then p.RespawnLocation = sp :: SpawnLocation end
 end
 
--- real cash for the run so far (paid once)
-function Run.payout(p: Player, reason: string): number
+-- real cash for the run so far (paid once). bonusXP: a cleared campaign building's extra XP. reason "cleared" =
+-- the caller shows the result (Fx "StageClear"), not the run-over screen. Returns cash, xp, level before, after.
+function Run.payout(p: Player, reason: string, bonusXP: number?): (number, number, number, number)
 	local st = stats[p]
-	if not st or st.paid then return 0 end
+	if not st or st.paid then return 0, 0, 0, 0 end
 	st.paid = true
 	if st.kills > 0 then Quests.add(p, "runs") end -- a finished run (at least one monster knocked out)
 	local g = Ghost.current
@@ -115,11 +132,11 @@ function Run.payout(p: Player, reason: string): number
 	local cash = math.floor((st.earned + st.damage / Config.Payout.DamageDiv * diff.reward) * cashMult(p))
 	Data.addCash(p, cash)
 	-- and the XP for the player's level (Shared/Levels)
-	local xp = Levels.runXP(st.kills, st.damage, diff.id)
+	local xp = Levels.runXP(st.kills, st.damage, diff.id) + math.floor((bonusXP or 0) * Levels.diffMult(diff.id))
 	local before, after = Data.addXP(p, xp)
 	task.spawn(Data.save, p)
-	Remotes.Fx:FireClient(p, "RunOver", reason, cash, st.kills, xp, before, after)
-	return cash
+	if reason ~= "cleared" then Remotes.Fx:FireClient(p, "RunOver", reason, cash, st.kills, xp, before, after) end
+	return cash, xp, before, after
 end
 
 local function doorPrompt()
@@ -135,10 +152,12 @@ local function doorPrompt()
 end
 
 function Run.startFight()
+	-- a campaign building: the party arrives by train first (Main calls this once the party is in)
+	if stage and not arrived then task.spawn(Run.startStage); return end
 	if busy or #Run.matchPlayers() == 0 then return end
 	busy = true
 	if Run.respawnSpectators then Run.respawnSpectators() end -- (normally done when the last wave ended)
-	level = kills + 1
+	level = stage and stage.level or kills + 1
 	clearTemp()
 	setWaypoint(nil)
 	Ghost.despawn()
@@ -158,7 +177,11 @@ function Run.startFight()
 	-- those have their own "met" set. EASY has no bosses (Maps difficulty.bosses).
 	local def
 	local evoTier: number? = nil
-	if Monsters.isEvolvedWave(level) and diff.bosses then
+	if stage then
+		-- a campaign building: its own monster; phase 2 = the same monster EVOLVED (tier by difficulty)
+		def = Monsters.byId[stage.monster] or Monsters.byId.Woman
+		if phase >= 2 and Monsters.evo[def.id] then evoTier = math.clamp((Campaign.diffRank[diff.id] or 2) - 1, 1, 3) end
+	elseif Monsters.isEvolvedWave(level) and diff.bosses then
 		evoTier = level // 3
 		def = Monsters.pickFresh(seenEvolved, { lastMonster, prevMonster }, rng) -- not the last two you fought
 	elseif level <= 1 then
@@ -186,7 +209,7 @@ function Run.startFight()
 	if evoTier then lastEvolved = def.id end
 	local shown = evoTier and Monsters.evolved(def.id, evoTier) or def
 	-- a short warning, then the monster makes its entrance (Ghost.spawn -> Client/Entrance): its name comes with it
-	setState("Intro", evoTier and "SOMETHING WORSE IS COMING..." or "SOMETHING IS COMING...")
+	setState("Intro", (stage and phase >= 2) and "IT'S NOT DEAD YET..." or (evoTier and "SOMETHING WORSE IS COMING..." or "SOMETHING IS COMING..."))
 	for _, p in list do Remotes.Fx:FireClient(p, "Intro", level, shown.title, shown.rarity, evoTier ~= nil) end
 	task.wait(3)
 	if #Run.matchPlayers() == 0 then busy = false; return end
@@ -237,6 +260,19 @@ local function onGhostDeath(g)
 	end
 	-- the wave is over: teammates who died during it are back (inside, ready for the break and the next wave)
 	Run.respawnSpectators()
+	-- a campaign building: the last monster's phase 2, or the building is cleared
+	if stage then
+		if phase < stage.phases then
+			phase += 1
+			setState("Victory", "IT'S NOT OVER...")
+			task.wait(3.5)
+			if #Run.matchPlayers() > 0 and stage then Run.startFight() end
+		else
+			task.wait(2.5)
+			Run.stageCleared()
+		end
+		return
+	end
 	-- a new event is due after the first kill and every EventLife kills after that
 	if event then eventLeft -= 1 end
 	if not event or eventLeft <= 0 then
@@ -293,6 +329,111 @@ local function onBuy(p: Player, id: string, at: Vector3)
 	p:SetAttribute("RunCash", cash - it.price)
 	Quests.add(p, "buys")
 	Remotes.Fx:FireClient(p, "BuyResult", true, it.name, at)
+end
+
+-- CAMPAIGN: the train brings the party to the building (players stand in the yard, the client rides in)
+-- during a train ride the body waits out of sight (anchored under the yard); out = let it off the train
+local function holdBody(p: Player, out: Vector3?)
+	local ch = p.Character
+	local hrp = ch and ch:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not ch or not hrp then return end
+	if out then
+		ch:PivotTo(CFrame.lookAt(out, out + Vector3.new(0, 0, -1)))
+		hrp.AssemblyLinearVelocity = Vector3.zero
+		hrp.Anchored = false
+	else
+		hrp.Anchored = true
+		ch:PivotTo(CFrame.new(YARD + Vector3.new(0, -60, 0)))
+	end
+end
+local function freshStats(p: Player)
+	stats[p] = { earned = 0, damage = 0, kills = 0, paid = false, revives = 0, secondChance = false }
+	p:SetAttribute("RunCash", 0)
+	p:SetAttribute("RunKills", 0)
+end
+function Run.startStage()
+	if busy or not stage or #Run.matchPlayers() == 0 then return end
+	busy = true
+	arrived = true
+	phase = 1
+	if Run.respawnSpectators then Run.respawnSpectators() end
+	clearTemp()
+	setWaypoint(nil)
+	Ghost.despawn()
+	Ghost.restoreWalls()
+	require(script.Parent.Fire).clear()
+	Furniture.reset()
+	Inventory.clearWorld()
+	Supplies.clear()
+	level = stage.level
+	local list = Run.matchPlayers()
+	Combat.healAll(list)
+	setState("Arrive", "")
+	RS:SetAttribute("Stage", stage.id)
+	for i, p in list do
+		local st = stats[p]
+		if not st or st.paid then freshStats(p) end
+		holdBody(p)
+		Remotes.Fx:FireClient(p, "TrainArrive", stage.id, diff.id)
+	end
+	task.wait(TRAIN_ARRIVE - 0.6)
+	-- the door opens: everyone steps off into the yard, in a row facing the building
+	local now = Run.matchPlayers()
+	for i, p in now do holdBody(p, YARD + Vector3.new((i - (#now + 1) / 2) * 3.5, 0, 0)) end
+	task.wait(0.6)
+	busy = false
+	if #Run.matchPlayers() == 0 or not stage then return end
+	setState("Approach", "GO INTO " .. stage.name)
+	setWaypoint(DOOR, stage.name)
+	approachUntil = os.clock() + 50
+end
+
+-- the building's monster is beaten (both phases): saved, paid, and the result screen
+function Run.stageCleared()
+	if not stage then return end
+	local s0 = stage
+	setState("Cleared", s0.name .. " CLEARED")
+	setWaypoint(nil)
+	local rank = Campaign.diffRank[diff.id] or 2
+	local nxt = Campaign.nextStage(s0.id)
+	for _, p in Run.matchPlayers() do
+		local first = false
+		if Campaign.stageOpen(Data.campaign(p), s0.id) then first = Data.clearStage(p, s0.id, rank) end
+		local st = stats[p]
+		local kills0 = st and st.kills or 0
+		local cash, xp, before, after = Run.payout(p, "cleared", first and (60 + 25 * s0.index) or 25)
+		local prog = Data.campaign(p)
+		local done, total = Campaign.cleared(prog, s0.map)
+		local goal = Campaign.goal(prog)
+		Quests.add(p, "stage")
+		Remotes.Fx:FireClient(p, "StageClear", {
+			stage = s0.id, diff = diff.id, first = first, cash = cash, xp = xp, before = before, after = after, kills = kills0,
+			nextId = (nxt and Campaign.stageOpen(prog, nxt.id)) and nxt.id or nil,
+			done = done, total = total, mapDone = Campaign.mapDone(prog, s0.map), goal = goal and goal.id or nil,
+			best = prog[s0.id] or rank, choice = 60,
+		})
+	end
+	choiceUntil = os.clock() + 60
+end
+
+-- the result screen's buttons (Remotes.Stage): "next" / "again" take everyone still here; "lobby" only you
+local function onStageChoice(p: Player, choice: any)
+	if state ~= "Cleared" or not stage or not p:GetAttribute("InMatch") then return end
+	if choice == "lobby" then Run.leave(p, "left"); return end
+	if choice ~= "next" and choice ~= "again" then return end
+	local target = choice == "again" and stage or Campaign.nextStage(stage.id)
+	if not target then return end
+	if choice == "next" and not Campaign.stageOpen(Data.campaign(p), target.id) then return end
+	setState("Depart", "")
+	setWaypoint(nil)
+	for _, o in Run.matchPlayers() do Remotes.Fx:FireClient(o, "TrainDepart", target.id, diff.id, p.DisplayName) end
+	task.wait(0.6)
+	for _, o in Run.matchPlayers() do holdBody(o) end
+	task.wait(TRAIN_DEPART - 0.6)
+	if #Run.matchPlayers() == 0 then Run.endMatch(); return end
+	Run.configure(target.id, diff.id, RS:GetAttribute("FriendlyFire") ~= false)
+	arrived = false
+	Run.startStage()
 end
 
 local leaving = {} :: { [Player]: boolean }
@@ -468,6 +609,9 @@ function Run.configure(mapId: string?, diffId: string?, friendlyFire: boolean?)
 	RS:SetAttribute("FriendlyFire", friendlyFire ~= false)
 	MapLoader.load(mapId or Maps.default)
 	diff = Maps.diffById[diffId or ""] or Maps.diffById[Maps.defaultDiff]
+	stage = Campaign.stage(mapId)
+	if stage and not MapLoader.exists(stage.id) then warn("[Run] the building " .. stage.id .. " is not built yet: the Mansion stands in for it") end
+	RS:SetAttribute("Stage", stage and stage.id or "")
 	Ghost.diff = { hp = diff.hp, dmg = diff.dmg, speed = diff.speed, enrage = diff.enrage }
 	RS:SetAttribute("Difficulty", diff.id)
 end
@@ -476,6 +620,7 @@ end
 function Run.beginMatch(list: { Player }, mapId: string?, diffId: string?, friendlyFire: boolean?)
 	Run.configure(mapId, diffId, friendlyFire)
 	kills, level, eventLeft, lastKind, lastMonster = 0, 1, 0, "", ""
+	arrived, phase = false, 1
 	lastEvolved = ""
 	prevMonster = ""
 	table.clear(seenMonsters)
@@ -508,6 +653,7 @@ function Run.endMatch()
 	Inventory.clearWorld()
 	Supplies.clear()
 	setWaypoint(nil)
+	arrived, phase = false, 1
 	setState("Idle", "")
 end
 
@@ -520,6 +666,7 @@ function Run.start()
 	Ghost.onDeath = function(g) task.spawn(onGhostDeath, g) end
 	Events.onBuy = onBuy
 	Events.onLeave = function(p) Run.leave(p, "left") end
+	Remotes.Stage.OnServerEvent:Connect(function(p, choice) task.spawn(onStageChoice, p, choice) end)
 	Remotes.NextGhost.OnServerEvent:Connect(function(p)
 		if state == "Break" and p:GetAttribute("InMatch") then task.spawn(Run.startFight) end
 	end)
@@ -604,6 +751,18 @@ function Run.start()
 				end
 			end
 			if state == "Outside" and now > breakUntil then task.spawn(spawnEvent, DOOR + Vector3.new(0, 0, 10)) end
+		elseif state == "Approach" then
+			-- off the train: the fight starts once someone walks in (or after a while)
+			local inside = now > approachUntil
+			for _, p in Run.matchPlayers() do
+				local hrp = hrpOf(p)
+				if hrp and insideHouse(hrp.Position) and hrp.Position.Z < Config.OutsideZ - 6 then inside = true end
+			end
+			if inside and not busy then task.spawn(Run.startFight) end
+		elseif state == "Cleared" and now > choiceUntil then
+			-- nobody picked: back to the park
+			choiceUntil = math.huge
+			for _, p in Run.matchPlayers() do task.spawn(Run.leave, p, "left") end
 		elseif state == "Break" and now - lastTick > 0.5 then
 			lastTick = now
 			local left = math.max(0, math.ceil(breakUntil - now))

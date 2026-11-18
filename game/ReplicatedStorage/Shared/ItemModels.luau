@@ -815,17 +815,19 @@ function B.pills(m, c)
 	p(m, V(0.2, 0.06, 0.02), at(0, 0.22, -0.51), Color3.fromRGB(200, 30, 30))
 	mark(m, "Tip", at(0, 0.6, -0.3))
 end
-function B.syringe(m, c)
-	p(m, V(0.08, 0.3, 0.3), at(0, 0.02, 0.45), Color3.fromRGB(230, 230, 225)) -- thumb pad
-	p(m, V(0.06, 0.06, 0.5), at(0, 0.02, 0.2), Color3.fromRGB(230, 230, 225)) -- plunger
-	p(m, V(0.4, 0.08, 0.08), at(0, 0.02, -0.05), Color3.fromRGB(230, 230, 225)) -- finger flange
-	local glass = p(m, V(0.2, 0.2, 0.85), at(0, 0.02, -0.5), Color3.fromRGB(220, 235, 240), M.Glass)
-	glass.Transparency = 0.5
-	local fluid = p(m, V(0.14, 0.14, 0.6), at(0, 0.02, -0.6), c, M.Neon)
+-- a fantasy potion flask: a round glass belly, a neck, a cork, the glowing potion inside (the Speed / Rage Potion)
+function B.flask(m, c)
+	local glass = p(m, V(0.5, 0.5, 0.5), at(0, 0.15, -0.3), Color3.fromRGB(210, 230, 225), M.Glass)
+	glass.Shape = Enum.PartType.Ball
+	glass.Transparency = 0.45
+	local fluid = p(m, V(0.4, 0.4, 0.4), at(0, 0.12, -0.3), c, M.Neon)
+	fluid.Shape = Enum.PartType.Ball
 	moving(m, fluid, "flicker")
-	p(m, V(0.1, 0.1, 0.1), at(0, 0.02, -0.98), Color3.fromRGB(200, 200, 200))
-	p(m, V(0.03, 0.03, 0.5), at(0, 0.02, -1.28), STEEL, M.Metal) -- needle
-	mark(m, "Tip", at(0, 0.02, -1.5))
+	local neck = p(m, V(0.14, 0.26, 0.14), at(0, 0.47, -0.3), Color3.fromRGB(210, 230, 225), M.Glass)
+	neck.Transparency = 0.45
+	p(m, V(0.15, 0.13, 0.15), at(0, 0.64, -0.3), Color3.fromRGB(150, 110, 70), M.Wood) -- cork
+	p(m, V(0.17, 0.04, 0.17), at(0, 0.53, -0.3), Color3.fromRGB(120, 70, 40), M.Fabric) -- string round the neck
+	mark(m, "Tip", at(0, 0.7, -0.3))
 end
 function B.vest(m, c)
 	local v = worn(c, 0.08)

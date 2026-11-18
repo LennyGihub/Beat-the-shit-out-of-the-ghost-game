@@ -1323,6 +1323,17 @@ function Intro.play(onDone: (() -> ())?)
 			return
 		end
 		lp:SetAttribute("IntroPhase", "arrive")
+		-- (the park's own train waits at this platform, Lobby.Station.ParkedTrain: hidden on this screen while this
+		-- one comes in, shown again in its place once this one's door has shut)
+		local parked = workspace:FindFirstChild("Lobby") and (workspace :: any).Lobby:FindFirstChild("Station") and (workspace :: any).Lobby.Station:FindFirstChild("ParkedTrain")
+		local function showParked(on: boolean)
+			if not parked then return end
+			for _, d in parked:GetDescendants() do
+				if d:IsA("BasePart") then d.LocalTransparencyModifier = on and 0 or 1 end
+			end
+		end
+		showParked(false)
+		table.insert(restores, function() showParked(true) end)
 		hrpP.Anchored = true -- (where the server put them, out of sight, until the door opens)
 		train.glass(true)
 		local stopCF = train.cf
@@ -1439,6 +1450,12 @@ function Intro.play(onDone: (() -> ())?)
 			local tq = os.clock()
 			while os.clock() - tq < 0.6 and train.model.Parent do train.door = 1 - ss((os.clock() - tq) / 0.6); train.place(); task.wait() end
 			train.door = 0
+			-- (it stays: the park's own train takes its place, the one you board for every trip)
+			if parked then
+				tf:Destroy()
+				showParked(true)
+				return
+			end
 			task.wait(0.8)
 			local snd = Sfx.on("TrainRoll", train.root, { Volume = 0.6 })
 			train.smoke(14)

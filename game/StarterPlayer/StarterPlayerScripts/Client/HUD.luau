@@ -199,7 +199,7 @@ function HUD.update(dt: number)
 	local ch = lp.Character
 	local hum = ch and ch:FindFirstChildOfClass("Humanoid")
 	if hum then health:set(hum.Health / math.max(1, hum.MaxHealth), dt) end
-	stamina:set((lp:GetAttribute("Stamina") or 100) / Config.Stamina.Max, dt)
+	stamina:set((lp:GetAttribute("Stamina") or 100) / math.max(1, lp:GetAttribute("StaminaMax") or Config.Stamina.Max), dt) -- (a body form raises the max)
 	local b = (lp:GetAttribute("Brutality") or 0) / Config.Brutality.Max
 	brut:set(b, dt)
 	local ultOn = lp:GetAttribute("UltActive") == true

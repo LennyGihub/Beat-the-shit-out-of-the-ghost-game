@@ -4,7 +4,8 @@
 -- Every map is a ServerStorage.Maps.<id> model built on the same footprint as the Mansion
 -- (house x -80..80, z -60..60, front door at z = 60 facing the yard), so the run, events and yard all fit.
 -- light = the "inside" lighting the client uses for that map (tint, ambient, colour grade).
-export type Map = { id: string, name: string, price: number, desc: string, color: Color3, light: { [string]: any } }
+-- campaign = a building of a campaign map (Shared/Campaign: reached by train, never bought or picked on its own)
+export type Map = { id: string, name: string, price: number, desc: string, color: Color3, light: { [string]: any }, campaign: boolean? }
 -- enrage = its monsters ENRAGE (Server/Fury: below half health, faster and harder, smash punches); bosses = every 3rd
 -- monster is an EVOLVED boss
 export type Difficulty = { id: string, name: string, hp: number, dmg: number, speed: number, reward: number, color: Color3, desc: string,
@@ -47,6 +48,17 @@ local List: { Map } = {
 	-- (tools/build/maps/station.luau) a dead warship that came down in the woods: steel, strip lights, a live reactor
 	{ id = "Station", name = "Erebus Station", price = 3600, desc = "A dead warship that fell out of the sky: the hangar and its last interceptor, the cells, the bridge, and a reactor still burning in the middle of it.", color = C(120, 170, 230),
 		light = light(C(214, 228, 255), C(20, 24, 32), -0.4, 0.3, 1.2, -0.1) },
+	-- CAMP HOLLOWMERE (Shared/Campaign): its five buildings, one monster each (tools/build/maps/camp_*.luau)
+	{ id = "Camp_Bunkhouse", name = "The Bunkhouse", price = 0, campaign = true, desc = "Rows of bunks under high rafters.", color = C(150, 110, 70),
+		light = light(C(255, 226, 190), C(26, 22, 18), -0.35, 0.26, 1.2, -0.15) },
+	{ id = "Camp_Boathouse", name = "The Boathouse", price = 0, campaign = true, desc = "The lake comes right inside.", color = C(70, 120, 130),
+		light = light(C(206, 232, 240), C(18, 26, 30), -0.4, 0.28, 1.1, -0.2) },
+	{ id = "Camp_MessHall", name = "The Mess Hall", price = 0, campaign = true, desc = "Long tables and a burnt kitchen.", color = C(200, 110, 50),
+		light = light(C(255, 214, 170), C(30, 22, 16), -0.3, 0.26, 1.3, -0.1) },
+	{ id = "Camp_Barn", name = "The Barn", price = 0, campaign = true, desc = "Hay, stalls and a lot of scarecrows.", color = C(170, 130, 70),
+		light = light(C(255, 224, 176), C(26, 22, 16), -0.38, 0.28, 1.1, -0.2) },
+	{ id = "Camp_Lodge", name = "The Main Lodge", price = 0, campaign = true, desc = "The camp office and the great room.", color = C(180, 50, 40),
+		light = light(C(255, 220, 196), C(28, 22, 20), -0.35, 0.28, 1.2, -0.15) },
 }
 
 local Difficulties: { Difficulty } = {

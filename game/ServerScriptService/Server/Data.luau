@@ -3,12 +3,16 @@
 -- purchases already granted (Receipts: the last 100 PurchaseIds, so a cash pack is never given twice).
 -- Long-term goals (Server/Bestiary): Bestiary (monster key -> times beaten), Badges (set of unlocked badge ids),
 -- Nightmare (monsters beaten on NIGHTMARE). XP: the player's total XP (Shared/Levels: the level and its title).
+-- Campaign: stage id -> best difficulty rank cleared (Shared/Campaign). Forms: the fist / body forms got from Doc
+-- Mercy's ectoplasm and Mother Moth's potions (id -> true), FormStim / FormPotion = the ones worn (Shared/Forms).
 -- Never overwrites a save that failed to load; saves on leave, every 90 s and on shutdown.
 local DSS = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local Remotes = require(script.Parent.Remotes)
 local Levels = require(game:GetService("ReplicatedStorage").Shared.Levels)
+local Campaign = require(game:GetService("ReplicatedStorage").Shared.Campaign)
+local Forms = require(game:GetService("ReplicatedStorage").Shared.Forms)
 
 local Data = {}
 -- v2 (2026-11-17): every save was wiped before release (the testers' saves held gifted cash) by starting a new store.
@@ -19,6 +23,7 @@ local profiles = {} -- [Player] = { loaded = bool, data = table }
 local function fresh()
 	return { Cash = 0, Owned = {}, GhostLevel = 1, Kills = 0, Ults = { Rage = true }, Equipped = "Rage", Receipts = {},
 		Bestiary = {} :: { [string]: number }, Badges = {} :: { [string]: boolean }, Nightmare = 0, XP = 0,
+		Campaign = {} :: { [string]: number }, Forms = {} :: { [string]: boolean }, FormStim = nil :: string?, FormPotion = nil :: string?,
 		Tutorial = false } -- Tutorial = the tutorial was offered (taken or refused): the lobby's popup is not shown again
 end
 local MAX_RECEIPTS = 100
@@ -76,6 +81,14 @@ local function publish(player)
 	player:SetAttribute("XP", p.data.XP)
 	player:SetAttribute("Level", (Levels.of(p.data.XP))) -- (over the head in the lobby: Client/NameTags)
 	player:SetAttribute("TutorialSeen", p.data.Tutorial == true) -- false: Client/TutorialUI offers the tutorial
+	-- the campaign (JSON: stage id -> best difficulty rank) and the forms (owned list, worn ones)
+	player:SetAttribute("Campaign", HttpService:JSONEncode(p.data.Campaign))
+	local forms = {}
+	for id in p.data.Forms do table.insert(forms, id) end
+	table.sort(forms)
+	player:SetAttribute("Forms", table.concat(forms, ","))
+	player:SetAttribute("FormStim", p.data.FormStim or "")
+	player:SetAttribute("FormPotion", p.data.FormPotion or "")
 	local ls = player:FindFirstChild("leaderstats")
 	if ls then
 		(ls :: any).Cash.Value = p.data.Cash;
@@ -124,6 +137,15 @@ function Data.load(player: Player)
 					prof.data.Nightmare = math.max(0, math.floor(tonumber(res.Nightmare) or 0))
 					prof.data.XP = math.max(0, math.floor(tonumber(res.XP) or 0))
 					prof.data.Tutorial = res.Tutorial == true
+					prof.data.Campaign = Campaign.clean(res.Campaign)
+					if type(res.Forms) == "table" then
+						for id, v in res.Forms do if type(id) == "string" and Forms.byId[id] and v == true then prof.data.Forms[id] = true end end
+					end
+					for _, key in { "FormStim", "FormPotion" } do
+						local id = res[key]
+						local fm = type(id) == "string" and Forms.byId[id] or nil
+						if fm and prof.data.Forms[fm.id] and fm.kind == (key == "FormStim" and "stim" or "potion") then prof.data[key] = fm.id end
+					end
 					if type(res.Receipts) == "table" then
 						for _, id in res.Receipts do if type(id) == "string" then table.insert(prof.data.Receipts, id) end end
 					end
@@ -146,6 +168,7 @@ function Data.save(player: Player): boolean
 	local snap = { Cash = prof.data.Cash, GhostLevel = prof.data.GhostLevel, Kills = prof.data.Kills, Owned = table.clone(prof.data.Owned), Ults = table.clone(prof.data.Ults), Equipped = prof.data.Equipped, Equipped2 = prof.data.Equipped2, Settings = prof.data.Settings, Receipts = table.clone(prof.data.Receipts),
 		Bestiary = table.clone(prof.data.Bestiary), Badges = table.clone(prof.data.Badges), Nightmare = prof.data.Nightmare, XP = prof.data.XP,
 		Tutorial = prof.data.Tutorial == true,
+		Campaign = table.clone(prof.data.Campaign), Forms = table.clone(prof.data.Forms), FormStim = prof.data.FormStim, FormPotion = prof.data.FormPotion,
 		Quests = prof.data.Quests and HttpService:JSONDecode(HttpService:JSONEncode(prof.data.Quests)) or nil }
 	for i = 1, 3 do
 		local ok, err = pcall(function()
@@ -267,6 +290,48 @@ function Data.addXP(player: Player, n: number): (number, number)
 	d.XP += math.max(0, math.floor(n))
 	publish(player)
 	return before, (Levels.of(d.XP))
+end
+
+-- CAMPAIGN: a building cleared on a difficulty (rank 1..4). Returns true the first time it is cleared at all.
+function Data.clearStage(player: Player, stageId: string, rank: number): boolean
+	local d = Data.get(player)
+	if not d or not Campaign.stage(stageId) then return false end
+	local before = d.Campaign[stageId] or 0
+	d.Campaign[stageId] = math.max(before, math.clamp(math.floor(rank), 1, 4))
+	publish(player)
+	return before <= 0
+end
+function Data.campaign(player: Player): { [string]: number }
+	local d = Data.get(player)
+	return d and d.Campaign or {}
+end
+
+-- FORMS: add one to the collection (true = it is new)
+function Data.addForm(player: Player, id: string): boolean
+	local d = Data.get(player)
+	if not d or not Forms.byId[id] then return false end
+	local new = not d.Forms[id]
+	d.Forms[id] = true
+	publish(player)
+	return new
+end
+function Data.ownsForm(player: Player, id: string): boolean
+	local d = Data.get(player)
+	return d ~= nil and d.Forms[id] == true
+end
+-- wear an owned form (its kind's slot)
+function Data.equipForm(player: Player, id: string): boolean
+	local d = Data.get(player)
+	local fm = Forms.byId[id]
+	if not d or not fm or not d.Forms[id] then return false end
+	if fm.kind == "stim" then d.FormStim = id else d.FormPotion = id end
+	publish(player)
+	return true
+end
+function Data.formOf(player: Player, kind: string): string?
+	local d = Data.get(player)
+	if not d then return nil end
+	return kind == "stim" and d.FormStim or d.FormPotion
 end
 
 function Data.winGhost(player: Player, level: number)

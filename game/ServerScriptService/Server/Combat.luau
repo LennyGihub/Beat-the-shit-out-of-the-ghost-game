@@ -6,6 +6,7 @@ local RunService = game:GetService("RunService")
 local Config = require(RS.Shared.Config)
 local Items = require(RS.Shared.Items)
 local Ultimates = require(RS.Shared.Ultimates)
+local Forms = require(RS.Shared.Forms)
 local Remotes = require(script.Parent.Remotes)
 local Data = require(script.Parent.Data)
 local Furniture = require(script.Parent.Furniture)
@@ -21,10 +22,25 @@ local state = {} :: { [Player]: any }
 Combat.runUltimate = nil :: ((player: Player, def: any, center: Vector3) -> ())?
 Combat.explode = nil :: ((player: Player, pos: Vector3, radius: number, color: Color3) -> ())?
 
--- upgrades were removed: stats are neutral (kept so call sites stay simple)
-function Combat.stat(_player: Player, key: string): number
-	return (key == "health" or key == "lifesteal") and 0 or 1
+-- the player's FORMS (Shared/Forms, worn ones in the player attributes FormStim / FormPotion, set by Server/Data):
+-- the fist form (Doc Mercy's stims) multiplies damage and knockback, the body form (Mother Moth's potions) adds max
+-- health ("health" = extra max health points) and multiplies max stamina and its refill. Everything else is neutral.
+function Combat.stat(player: Player, key: string): number
+	if key == "lifesteal" then return 0 end
+	if key == "health" or key == "stamina" or key == "staminaMax" then
+		local fm = Forms.byId[player:GetAttribute("FormPotion") or ""]
+		if key == "health" then return fm and math.floor(Config.Player.MaxHealth * (fm.hp or 0)) or 0 end
+		return 1 + (fm and fm.sta or 0)
+	end
+	if key == "damage" or key == "knock" then
+		local fm = Forms.byId[player:GetAttribute("FormStim") or ""]
+		if not fm then return 1 end
+		return 1 + ((key == "damage" and fm.dmg or fm.knock) or 0)
+	end
+	return 1
 end
+local function maxSt(player: Player): number return ST.Max * Combat.stat(player, "staminaMax") end
+Combat.maxStamina = maxSt
 
 local function st(player: Player)
 	local s = state[player]
@@ -50,6 +66,7 @@ local function sync(player: Player, s, force: boolean?)
 	if not force and now - s.lastSync < 0.08 then return end
 	s.lastSync = now
 	player:SetAttribute("Stamina", math.floor(s.stamina + 0.5))
+	player:SetAttribute("StaminaMax", maxSt(player))
 	player:SetAttribute("Brutality", math.floor(s.brut + 0.5))
 	player:SetAttribute("UltActive", ult(s))
 	player:SetAttribute("Combo", s.combo)
@@ -198,7 +215,7 @@ Combat.heal = heal
 
 function Combat.refillStamina(player: Player)
 	local s = st(player)
-	s.stamina = ST.Max
+	s.stamina = maxSt(player)
 	sync(player, s, true)
 end
 
@@ -340,13 +357,13 @@ function Combat.registerHit(player: Player, dir: Vector3, hitPos: Vector3, baseD
 	s.lastHit = now
 	local cscale = math.min(1 + math.max(s.combo - 1, 0) * P.ComboDamageStep, P.MaxComboScale)
 	local isUlt = ult(s)
-	local dmg = baseDmg * cscale * bmul(s, "damage")
+	local dmg = baseDmg * cscale * bmul(s, "damage") * Combat.stat(player, "damage") -- (the fist form too)
 	if buff(s, "onePunch") and s.onePunch then
 		dmg *= 20
 		s.onePunch = false
 		Remotes.Fx:FireAllClients("OnePunch", hitPos, player)
 	end
-	local knock = math.min(baseKnock + s.combo * (knockPerCombo or P.KnockPerCombo), P.MaxKnock) * bmul(s, "knock")
+	local knock = math.min(baseKnock + s.combo * (knockPerCombo or P.KnockPerCombo), P.MaxKnock) * bmul(s, "knock") * Combat.stat(player, "knock")
 	local c = charge or 0
 	if c > 0 then
 		dmg *= 1 + c * CH.DamageBonus
@@ -604,7 +621,7 @@ end
 local function setupCharacter(player: Player, ch: Model)
 	local s = st(player)
 	s.carrying = nil
-	s.stamina = ST.Max
+	s.stamina = maxSt(player)
 	s.combo = 0
 	s.ultUntil = 0
 	s.shield = 0
@@ -641,7 +658,7 @@ function Combat.healAll(list: { Player }?)
 		local hum = alive(p)
 		if hum then hum.Health = hum.MaxHealth end
 		local s = st(p)
-		s.stamina = ST.Max
+		s.stamina = maxSt(p)
 		sync(p, s, true)
 	end
 end
@@ -698,8 +715,8 @@ function Combat.start()
 				s.stamina = math.max(0, s.stamina - ST.SprintPerSecond * dt)
 				s.lastUse = now
 				if s.stamina <= 0 then setWalk(p, s) end
-			elseif not s.blocking and now - s.lastUse > ST.RegenDelay and s.stamina < ST.Max then
-				s.stamina = math.min(ST.Max, s.stamina + ST.Regen * Combat.stat(p, "stamina") * dt)
+			elseif not s.blocking and now - s.lastUse > ST.RegenDelay and s.stamina < maxSt(p) then
+				s.stamina = math.min(maxSt(p), s.stamina + ST.Regen * Combat.stat(p, "stamina") * dt)
 			end
 			if ult(s) then
 				s.brut = math.max(0, BR.Max * (s.ultUntil - now) / s.ultDur)

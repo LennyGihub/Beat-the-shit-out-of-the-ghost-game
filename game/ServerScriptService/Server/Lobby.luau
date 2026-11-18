@@ -1,12 +1,17 @@
 -- PS2 park lobby: queue rooms for 1-4 players (step on the pad), countdown, then the party goes to its own
 -- reserved match server. In Studio (no teleports) the party plays a local match in this server instead.
 -- Also runs the ultimate shop (vendor in the park) and sends players back to the lobby.
+-- CAMPAIGN (Shared/Campaign): a party picks a BUILDING (its stage id is the "map") and a difficulty; the host must
+-- have that building open. Every trip goes by TRAIN: the party boards the train waiting at the park's station
+-- (Fx "TrainDepart" plays the ride out, Client/TrainRide), then the match starts / the teleport goes. The old
+-- queue pads in the cabins are off (the train is the only way out of the park).
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TeleportService = game:GetService("TeleportService")
 local Ultimates = require(RS.Shared.Ultimates)
 local Maps = require(RS.Shared.Maps)
+local Campaign = require(RS.Shared.Campaign)
 local Remotes = require(script.Parent.Remotes)
 local Data = require(script.Parent.Data)
 local Run = require(script.Parent.Run)
@@ -70,8 +75,25 @@ local function setSign(room, title: string, line: string, color: Color3?)
 	end
 end
 
+local TRAIN_DEPART = 5.5 -- seconds of the client's ride out of the station (Client/TrainRide)
 local function launch(room, members: { Player })
 	room.countdownStart = nil
+	-- all aboard: the train pulls out of the park's station (each client rides it), then the trip itself
+	local st = Campaign.stage(room.map)
+	if st then
+		for _, p in members do
+			p:SetAttribute("Boarding", true)
+			Remotes.Fx:FireClient(p, "TrainDepart", st.id, room.diff, nil, true)
+		end
+		task.wait(TRAIN_DEPART)
+		local still = {}
+		for _, p in members do
+			p:SetAttribute("Boarding", nil)
+			if p.Parent and not p:GetAttribute("InMatch") then table.insert(still, p) end
+		end
+		members = still
+		if #members == 0 then return end
+	end
 	-- the loading screen (ReplicatedFirst/Loading) comes up for everyone who goes
 	local function loading(text: string) for _, p in members do Remotes.Fx:FireClient(p, "Teleporting", text) end end
 	local function failed() for _, p in members do Remotes.Fx:FireClient(p, "TeleportFailed") end end
@@ -80,12 +102,12 @@ local function launch(room, members: { Player })
 			for _, p in members do Remotes.Fx:FireClient(p, "Toast", "A match is already running in this Studio test") end
 			return
 		end
-		loading("LOADING THE HOUSE...")
+		loading(st and ("TO " .. st.name .. "...") or "LOADING THE HOUSE...")
 		task.wait(0.4) -- (the card is up before the map is built)
 		Run.beginMatch(members, room.map, room.diff, room.ff ~= false)
 		return
 	end
-	loading("TELEPORTING TO THE HOUSE...")
+	loading(st and ("TO " .. st.name .. "...") or "TELEPORTING TO THE HOUSE...")
 	setSign(room, room.size .. " PLAYER" .. (room.size > 1 and "S" or ""), "TELEPORTING...", Color3.fromRGB(150, 220, 110))
 	local ok, code = pcall(function() return TeleportService:ReserveServer(game.PlaceId) end)
 	if not ok then
@@ -190,7 +212,10 @@ local function onParty(p: Player, action: any, a: any, b: any, c: any, d: any, e
 		local private = d == true
 		local m, dd = Maps.byId[a], Maps.diffById[b]
 		if not m or not dd then return end
-		if not Data.ownsMap(p, m.id) then Remotes.Fx:FireClient(p, "Toast", "Buy " .. m.name .. " at the dealer first"); return end
+		-- a campaign building the host has opened (the old houses are gone from the lobby)
+		local stg = Campaign.stage(m.id)
+		if not stg then return end
+		if not Campaign.stageOpen(Data.campaign(p), stg.id) then Remotes.Fx:FireClient(p, "Toast", "Clear the building before " .. stg.name .. " first"); return end
 		leaveParty(p)
 		local id = tostring(p.UserId)
 		parties[id] = { id = id, host = p, members = { p }, map = m.id, diff = dd.id, size = math.clamp(math.floor(c), 1, 4), private = private, invited = {},
@@ -280,7 +305,8 @@ end
 function Lobby.start()
 	local lobby = workspace:WaitForChild("Lobby", 10)
 	local roomFolder = lobby and lobby:FindFirstChild("Rooms")
-	if roomFolder then
+	-- (the queue pads are off: trips start at the train. Lobby attribute UseRoomPads = true brings them back)
+	if roomFolder and lobby:GetAttribute("UseRoomPads") == true then
 		for _, r in roomFolder:GetChildren() do
 			local pad = r:FindFirstChild("Pad", true) :: BasePart?
 			if pad then
@@ -323,6 +349,18 @@ function Lobby.start()
 		pp.Style = Enum.ProximityPromptStyle.Custom
 		pp.Parent = apart
 		pp.Triggered:Connect(function(p) Remotes.Fx:FireClient(p, "OpenBestiary") end)
+	end
+	-- the train at the station (tools/build/lobby_station.luau ParkedTrain): its door opens the PLAY panel
+	local station = lobby and lobby:FindFirstChild("Station")
+	local parked = station and station:FindFirstChild("ParkedTrain")
+	local board = parked and parked:FindFirstChild("BoardPrompt", true) :: BasePart?
+	if board then
+		local pp = Instance.new("ProximityPrompt")
+		pp.ActionText = "Board the train"; pp.ObjectText = "To the maps"; pp.HoldDuration = 0
+		pp.MaxActivationDistance = 14; pp.RequiresLineOfSight = false; pp.KeyboardKeyCode = Enum.KeyCode.F
+		pp.Style = Enum.ProximityPromptStyle.Custom
+		pp.Parent = board
+		pp.Triggered:Connect(function(p) if not p:GetAttribute("InMatch") then Remotes.Fx:FireClient(p, "OpenPlay") end end)
 	end
 	Remotes.BuyUlt.OnServerEvent:Connect(onBuyUlt)
 	Remotes.Party.OnServerEvent:Connect(onParty)

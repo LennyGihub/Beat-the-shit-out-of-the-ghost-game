@@ -126,4 +126,19 @@ return {
 	Breaker = { ids = { 9116617140 }, volume = 1 },
 	-- the Caller's phone (the ring itself is a Sound on the phone, Server/Caller)
 	PhoneRing = { ids = { 9117304268 }, volume = 1 },
+	-- FORMS (Client/FormCine, the first-person ectoplasm jar / potion; "Pro Sound Effects"): a low thump played twice
+	-- is the heartbeat, a wet squish (the goo), a hiss (the jar's lid), the cork, gulps, rising power-ups, a growly
+	-- magic whoosh (the potion), bone cracks and a knuckle crack (the goo), an electric burst (the reveal)
+	FormThump = { ids = { 9113042060 }, volume = 1 },
+	FormSquish = { ids = { 9119990452 }, volume = 0.7 },
+	FormHiss = { ids = { 9117895638 }, volume = 0.45 },
+	FormCork = { ids = { 9113943660 }, volume = 0.9 },
+	FormGulp = { ids = { 9114172296 }, volume = 0.9 },
+	FormRise = { ids = { 9117297453 }, volume = 0.6 },
+	FormRise2 = { ids = { 9119816710 }, volume = 0.6 },
+	FormMagic = { ids = { 9125645227 }, volume = 0.7 },
+	FormCrack = { ids = { 9113542363, 9119559518 }, volume = 0.8 },
+	FormKnuckle = { ids = { 9116202331 }, volume = 1 },
+	FormZap = { ids = { 9116274975 }, volume = 0.6 },
+	Cauldron = { ids = { 9120305560 }, volume = 0.35 },
 }

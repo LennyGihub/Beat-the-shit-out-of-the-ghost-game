@@ -59,6 +59,7 @@ end
 -- the XP a finished run pays: something for playing, more for each monster beaten and for the damage dealt, times
 -- the difficulty. Nothing for a run without a single hit (no XP for standing still).
 local DIFF = { Easy = 0.75, Normal = 1, Hard = 1.4, Nightmare = 2 } :: { [string]: number }
+function Levels.diffMult(diffId: string): number return DIFF[diffId] or 1 end
 function Levels.runXP(kills: number, damage: number, diffId: string): number
 	if kills <= 0 and damage <= 0 then return 0 end
 	local base = 20 + kills * 30 + math.min(damage / 40, 400)

@@ -65,6 +65,31 @@ local HELP = "cash <n> | runcash <n> | give <item> | clearitems | ult <id> | all
 local CMD: { [string]: (p: Player, a: string?, b: string?) -> (boolean, string) } = {}
 
 CMD.help = function() return true, HELP end
+-- XP for the player's level (the sellers' better vials need levels)
+CMD.xp = function(p, a)
+	local n = tonumber(a) or 500
+	local before, after = Data.addXP(p, n)
+	return true, "+" .. n .. " XP (level " .. before .. " -> " .. after .. ")"
+end
+-- the campaign: "camp all" clears every building, "camp reset" wipes the progress, "camp <n>" clears the first n
+CMD.camp = function(p, a)
+	local Campaign = require(game:GetService("ReplicatedStorage").Shared.Campaign)
+	local d = Data.get(p)
+	if not d then return false, "No save" end
+	if a == "reset" then
+		d.Campaign = {}
+		Data.refresh(p)
+		return true, "Campaign progress wiped"
+	end
+	local n = a == "all" and 99 or (tonumber(a) or 99)
+	local k = 0
+	for _, m in Campaign.list do
+		for _, st in m.stages do
+			if k < n then Data.clearStage(p, st.id, 2); k += 1 end
+		end
+	end
+	return true, k .. " building(s) cleared"
+end
 
 CMD.cash = function(p, a)
 	local n = num(a) or 0

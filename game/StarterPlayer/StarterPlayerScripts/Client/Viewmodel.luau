@@ -1,7 +1,7 @@
 -- First-person hands: guard pose, alternating jabs, hooks on high combos, carry pose, the ultimates' cast
 -- animations (CASTS: one keyframed two-hand animation per kind of ultimate) and the glow and aura on the fists,
 -- and the held item with a keyframed animation per weapon style (wind-up -> strike -> follow-through),
--- hit-stop on impact, swing trails, two-handed grips, pump/recoil for guns, drink/inject for consumables.
+-- hit-stop on impact, swing trails, two-handed grips, pump/recoil for guns, drink/apply for consumables.
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local ItemModels = require(RS.Shared.ItemModels)
@@ -99,7 +99,7 @@ local STYLE = {
 	Katana = "slash", DemonBlade = "demon", Machete = "slash", HolyCross = "thrust", Chainsaw = "saw",
 	NailGun = "pistol", Taser = "pistol", Glock18 = "glock", FlareGun = "pistol", SilverRevolver = "pistol",
 	SaltShotgun = "shotgun", PotatoCannon = "longgun", StakeCrossbow = "longgun", HarpoonGun = "longgun",
-	EnergyDrink = "drink", Painkillers = "drink", Adrenaline = "inject", RageSerum = "inject",
+	EnergyDrink = "drink", Painkillers = "drink", Adrenaline = "drink", RageSerum = "drink", -- (the two potions are drunk)
 	Medkit = "apply", KevlarVest = "apply", Talisman = "raise", PocketWatch = "raise", BearTrap = "place",
 }
 local DUR = { heavy = 0.78, bat = 0.42, golf = 0.5, slash = 0.3, demon = 0.36, thrust = 0.34, saw = 0.12, pistol = 0.22, glock = 0.1, shotgun = 0.62,

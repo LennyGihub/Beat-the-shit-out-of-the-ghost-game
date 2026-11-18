@@ -69,9 +69,9 @@ local List: { Item } = {
 	I({ id = "Medkit", name = "Medkit", rarity = 1, price = 120, kind = "use", shape = "medkit", color = C(230, 230, 225), desc = "Heal 50.", uses = 1, heal = 50 }),
 	I({ id = "Painkillers", name = "Painkillers", rarity = 1, price = 90, kind = "use", shape = "pills", color = C(240, 140, 40), desc = "Heal 25. Two doses.", uses = 2, heal = 25 }),
 	I({ id = "EnergyDrink", name = "Energy Drink", rarity = 1, price = 80, kind = "use", shape = "can", color = C(60, 200, 80), desc = "Full stamina, +30% speed 8 s.", uses = 1, stamina = true, speed = 1.3, speedT = 8 }),
-	I({ id = "Adrenaline", name = "Adrenaline Shot", rarity = 2, price = 200, kind = "use", shape = "syringe", color = C(220, 60, 60), desc = "+50% speed 10 s, heal 20.", uses = 1, heal = 20, speed = 1.5, speedT = 10 }),
+	I({ id = "Adrenaline", name = "Speed Potion", rarity = 2, price = 200, kind = "use", shape = "flask", color = C(220, 60, 60), desc = "+50% speed 10 s, heal 20.", uses = 1, heal = 20, speed = 1.5, speedT = 10 }),
 	I({ id = "KevlarVest", name = "Kevlar Vest", rarity = 2, price = 240, kind = "use", shape = "vest", color = C(60, 70, 60), desc = "Absorbs the next 60 damage.", uses = 1, shield = 60 }),
-	I({ id = "RageSerum", name = "Rage Serum", rarity = 3, price = 450, kind = "use", shape = "syringe", color = C(255, 80, 20), desc = "Instantly fills your brutality.", uses = 1, brut = true }),
+	I({ id = "RageSerum", name = "Rage Potion", rarity = 3, price = 450, kind = "use", shape = "flask", color = C(255, 80, 20), desc = "Instantly fills your brutality.", uses = 1, brut = true }),
 	I({ id = "Talisman", name = "Paper Talisman", rarity = 3, price = 350, kind = "use", shape = "talisman", color = C(230, 210, 150), desc = "She can't scare or claw you for 20 s.", uses = 1, ward = 20 }),
 	I({ id = "PocketWatch", name = "Cursed Pocket Watch", rarity = 5, price = 1000, kind = "use", shape = "watch", color = C(210, 170, 60), desc = "Stops her in time for 6 s.", uses = 1, ghostFreeze = 6 }),
 	-- TRAP -------------------------------------------------------------------
