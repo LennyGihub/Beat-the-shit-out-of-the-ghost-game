@@ -631,6 +631,9 @@ local function houseBounds()
 	local minY, ceil = live and live:GetAttribute("MinY"), live and live:GetAttribute("CeilingY")
 	if type(minY) == "number" then bounds.min = Vector3.new(bounds.min.X, minY + 10, bounds.min.Z) end
 	if type(ceil) == "number" then bounds.max = Vector3.new(bounds.max.X, ceil, bounds.max.Z) end
+	-- the clients light the inside of the house with it (Client/Fx)
+	RS:SetAttribute("MapMin", bounds.min)
+	RS:SetAttribute("MapMax", bounds.max)
 	return bounds
 end
 Ghost.houseBounds = houseBounds

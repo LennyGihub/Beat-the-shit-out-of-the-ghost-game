@@ -67,8 +67,13 @@ end
 local function hrpOf(p: Player): BasePart?
 	return p.Character and p.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 end
+-- in the house: the usual house box, grown to the loaded map's own outside walls (Ghost.houseBounds: the ship is
+-- 200 studs long, its ends are past the box)
 local function insideHouse(pos: Vector3): boolean
 	local mn, mx = Config.House.Min, Config.House.Max
+	local B = Ghost.houseBounds()
+	mn = Vector3.new(math.min(mn.X, B.min.X), mn.Y, math.min(mn.Z, B.min.Z))
+	mx = Vector3.new(math.max(mx.X, B.max.X), mx.Y, math.max(mx.Z, B.max.Z))
 	return pos.X > mn.X and pos.X < mx.X and pos.Z > mn.Z and pos.Z < mx.Z and pos.Y < 60
 end
 local function clearTemp() for _, i in temp do i:Destroy() end temp = {} end

@@ -562,7 +562,14 @@ function Fx.init()
 		cam.FieldOfView = (Fx.cineFov or baseFov) + fovKick -- CineKit zooms with Fx.cineFov
 		-- zone lighting: green park fog (lobby), dark PS2 interior (house), brighter yard outside
 		local pos = cam.CFrame.Position
-		local zone = pos.Z > 600 and "lobby" or ((pos.X > Config.House.Min.X and pos.X < Config.House.Max.X and pos.Z > Config.House.Min.Z and pos.Z < Config.House.Max.Z and pos.Y < 45) and "inside" or "yard")
+		-- (the house box, grown to the loaded map's outside walls: the server sends them, RS MapMin / MapMax)
+		local hmn, hmx = Config.House.Min, Config.House.Max
+		local mmn, mmx = RS:GetAttribute("MapMin"), RS:GetAttribute("MapMax")
+		if typeof(mmn) == "Vector3" and typeof(mmx) == "Vector3" then
+			hmn = Vector3.new(math.min(hmn.X, mmn.X), hmn.Y, math.min(hmn.Z, mmn.Z))
+			hmx = Vector3.new(math.max(hmx.X, mmx.X), hmx.Y, math.max(hmx.Z, mmx.Z))
+		end
+		local zone = pos.Z > 600 and "lobby" or ((pos.X > hmn.X and pos.X < hmx.X and pos.Z > hmn.Z and pos.Z < hmx.Z and pos.Y < 45) and "inside" or "yard")
 		if Fx.cine and zone == "yard" then zone = "cine" end
 		Fx.applyZone(zone, dt)
 		-- WILDFIRE (the flamethrower set the house alight; the server counts the fires in RS.WildFires): a deep roar

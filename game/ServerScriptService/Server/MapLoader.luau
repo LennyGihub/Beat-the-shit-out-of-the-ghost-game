@@ -143,8 +143,15 @@ function MapLoader.randomGhostSpawn(players: { Vector3 }, minDist: number): Vect
 			for n in string.gmatch(fl, "%-?[%d%.]+") do table.insert(levels, tonumber(n) :: number) end
 		end
 		for _ = 1, 40 do
-			-- the house footprint (x -80..80, z -60..60); from below the upper floor or from above it
-			local x, z = spawnRng:NextNumber(-74, 74), spawnRng:NextNumber(-54, 54)
+			-- the house footprint (x -80..80, z -60..60, or the loaded map's own outside walls when it is bigger: the
+			-- ship, RS MapMin / MapMax from Ghost.houseBounds); from below the upper floor or from above it
+			local x0, x1, z0, z1 = -74, 74, -54, 54
+			local mmn, mmx = RS:GetAttribute("MapMin"), RS:GetAttribute("MapMax")
+			if typeof(mmn) == "Vector3" and typeof(mmx) == "Vector3" then
+				x0, x1 = math.min(x0, mmn.X + 6), math.max(x1, mmx.X - 6)
+				z0, z1 = math.min(z0, mmn.Z + 6), math.max(z1, mmx.Z - 6)
+			end
+			local x, z = spawnRng:NextNumber(x0, x1), spawnRng:NextNumber(z0, z1)
 			local startY, maxY, minY = spawnRng:NextNumber() < 0.6 and 18 or 42, 30, -math.huge
 			if #levels > 0 then
 				local f = levels[spawnRng:NextInteger(1, #levels)]
