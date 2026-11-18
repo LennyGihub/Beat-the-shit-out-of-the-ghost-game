@@ -1,17 +1,17 @@
 # Graph Report - Beat-the-shit-out-of-the-ghost-game  (2026-11-18)
 
 ## Corpus Check
-- 97 files · ~206,969 words
+- 97 files · ~207,514 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 3 file(s) not represented in the graph (top: (none) 3)
 
 ## Summary
-- 1169 nodes · 3182 edges · 57 communities (43 shown, 14 thin omitted)
-- Extraction: 77% EXTRACTED · 23% INFERRED · 0% AMBIGUOUS · INFERRED: 723 edges (avg confidence: 0.85)
+- 1169 nodes · 3185 edges · 57 communities (43 shown, 14 thin omitted)
+- Extraction: 77% EXTRACTED · 23% INFERRED · 0% AMBIGUOUS · INFERRED: 725 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `1c1c6055`
+- Built from commit: `d8f59330`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -73,16 +73,16 @@
 10. `Grunge.text()` - 28 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `setState()` --calls--> `Evolved.interrupt()`  [INFERRED]
-  game/ServerScriptService/Server/Ghost.luau → game/ServerScriptService/Server/Evolved.luau
-- `Ghost.hit()` --calls--> `Ragdoll.kick()`  [INFERRED]
-  game/ServerScriptService/Server/Ghost.luau → game/ServerScriptService/Server/Ragdoll.luau
-- `Ghost.hit()` --calls--> `Ragdoll.start()`  [INFERRED]
-  game/ServerScriptService/Server/Ghost.luau → game/ServerScriptService/Server/Ragdoll.luau
-- `stepKnocked()` --calls--> `Furniture.weight()`  [INFERRED]
-  game/ServerScriptService/Server/Ghost.luau → game/ServerScriptService/Server/Furniture.luau
+- `actionOf()` --calls--> `Settings.input()`  [INFERRED]
+  game/StarterPlayer/StarterPlayerScripts/Client/Intro.luau → game/StarterPlayer/StarterPlayerScripts/Client/Settings.luau
+- `startMusic()` --calls--> `Sfx.loop()`  [INFERRED]
+  game/StarterPlayer/StarterPlayerScripts/Client/Intro.luau → game/StarterPlayer/StarterPlayerScripts/Client/Sfx.luau
 - `Ghost.step()` --calls--> `Fury.windUp()`  [INFERRED]
   game/ServerScriptService/Server/Ghost.luau → game/ServerScriptService/Server/Fury.luau
+- `setState()` --calls--> `Evolved.interrupt()`  [INFERRED]
+  game/ServerScriptService/Server/Ghost.luau → game/ServerScriptService/Server/Evolved.luau
+- `TC.init()` --calls--> `LockOn.isOn()`  [INFERRED]
+  game/StarterPlayer/StarterPlayerScripts/Client/TouchControls.luau → game/StarterPlayer/StarterPlayerScripts/Client/LockOn.luau
 
 ## Import Cycles
 - None detected.
@@ -268,15 +268,15 @@ Nodes (3): alive(), Supplies.pick(), Supplies.spawn()
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `ItemModels.build()` connect `ItemModels.luau` to `Supplies.luau`, `Events.luau`, `Abilities.luau`, `AdminPanel.luau`?**
-  _High betweenness centrality (0.070) - this node is a cross-community bridge._
+  _High betweenness centrality (0.060) - this node is a cross-community bridge._
 - **Should `Intro.luau` be split into smaller, more focused modules?**
   _Cohesion score 0.06207482993197279 - nodes in this community are weakly interconnected._
 - **Why does `Sfx.play()` connect `Sfx.play` to `Entrance.luau`, `Input.luau`, `Fire.luau`, `rs_shared_config`, `Spectate.init`, `TutorialUI.luau`, `RoomPickUI.luau`, `game/StarterPlayer/StarterPlayerScripts/Client/SandboxUI.luau`, `ReviveUI.luau`, `Sfx.at`, `LobbyUI.luau`, `script_parent_grunge`, `Grunge.text`, `QuestUI.luau`?**
   _High betweenness centrality (0.059) - this node is a cross-community bridge._
 - **Should `ClientMain.client.luau` be split into smaller, more focused modules?**
   _Cohesion score 0.058823529411764705 - nodes in this community are weakly interconnected._
-- **Why does `UI.init()` connect `TutorialUI.luau` to `Sfx.play`, `Grunge.text`, `Grunge.brush`?**
-  _High betweenness centrality (0.043) - this node is a cross-community bridge._
+- **Why does `Acts.timeStop()` connect `Sfx.at` to `Evolved.luau`, `Sfx.play`?**
+  _High betweenness centrality (0.036) - this node is a cross-community bridge._
 - **Should `Data.luau` be split into smaller, more focused modules?**
   _Cohesion score 0.06935908691834942 - nodes in this community are weakly interconnected._
 - **Should `Input.luau` be split into smaller, more focused modules?**

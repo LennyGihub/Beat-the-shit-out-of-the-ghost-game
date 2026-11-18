@@ -9,8 +9,9 @@
 --     screen's own copy (ReplicatedStorage.Intro.Woman, tools/build/intro_set.luau); at the drop the real monster
 --     takes her place (Server/Tutorial "spawn").
 --   2 THE LESSONS, each one frozen (the world stops, the colour drains, the music sinks; one word and the key), on
---     the real Woman with the game's own moves: BLOCK (her claws come down on the guard), ATTACK (and a few more
---     punches), LIFT (the armchair you sat in), THROW (into her), ULTIMATE (the Rage Shockwave knocks her flying).
+--     the real Woman with the game's own moves: BLOCK (frozen on her lunge: the press is when the game begins, her
+--     claws coming down on the guard), ATTACK (and a few more punches), LIFT (the chair beside you), THROW (into
+--     her), ULTIMATE (the Rage Shockwave knocks her flying).
 --   3 THE FIGHT: a short real fight (she swings, waits, swings again): charged hits knock her out and smash her
 --     through the walls (the ragdoll). It ends when she is beaten (or after a while).
 --   4 THE WAY OUT: in the front hall, the doors burst open; out onto the porch, the yard, up over the house to the
@@ -452,7 +453,10 @@ function Intro.play(onDone: (() -> ())?)
 			local p = screenAt + look * d
 			return Vector3.new(p.X, floorY + h, p.Z)
 		end
-		local herStand = inRoom(4.6, 6.7)
+		-- (her moves follow the armchair: D = from the glass to where the player stands up in front of it)
+		local flatStand = Vector3.new(hrpP.Position.X, 0, hrpP.Position.Z)
+		local D = math.max(9, (flatStand - Vector3.new(screenAt.X, 0, screenAt.Z)):Dot(look))
+		local herStand = inRoom(D * 0.42, 6.7)
 
 		-- the player: held still and out of sight in front of the armchair
 		hrpP.Anchored = true
@@ -574,6 +578,14 @@ function Intro.play(onDone: (() -> ())?)
 			end
 		end)
 
+		-- the lens: tight on the TV from the far armchair, wider as she comes out, normal again when she lunges
+		local fov, fovGoal = 46, 46
+		table.insert(frameFns, function(dt)
+			if not frozen then fov += (fovGoal - fov) * math.min(1, dt * 1.5) end
+			if Fx then Fx.cineFov = fov end
+		end)
+		table.insert(restores, function() if Fx then Fx.cineFov = nil end end)
+
 		-- 1 THE TV ------------------------------------------------------------------------------------------------
 		lp:SetAttribute("IntroPhase", "tv")
 		letterbox(true, 0)
@@ -624,6 +636,7 @@ function Intro.play(onDone: (() -> ())?)
 		setPose(function(t) return reach(t, seg(t, 0, 0.3)) end, 14)
 		sleep(0.6)
 		-- she drags herself out head first, her hands going down to the floor
+		fovGoal = 56
 		setPose(drag, 8)
 		local d0 = S
 		herGoal = function(s)
@@ -651,7 +664,8 @@ function Intro.play(onDone: (() -> ())?)
 		tvShake = 0.6
 		sleep(0.55)
 		-- she scuttles to the armchair in jerks, her head cocked
-		local crawlTo = inRoom(4.4, 3.6)
+		fovGoal = 64
+		local crawlTo = inRoom(D * 0.4, 3.6)
 		local c0 = S
 		setPose(function(t) return scuttle(t, (t % 0.55) < 0.32 and 1 or 0) end, 16)
 		herGoal = function(s)
@@ -689,22 +703,24 @@ function Intro.play(onDone: (() -> ())?)
 		staticDark = 0
 		sleep(0.9)
 
-		-- 2 SHE LUNGES - THE MUSIC DROPS - THE REAL ONE --------------------------------------------------------------------
+		-- 2 SHE LUNGES - THE MUSIC DROPS - FROZEN ON HER CLAWS: BLOCK ------------------------------------------------------
+		-- the real one is put in her place at once, held in the same swing and out of sight until the press
 		setPose(windup, 10)
 		local l0 = S
-		local close = inRoom(6.1, 6.7)
+		local close = inRoom(D - 5, 6.7)
 		herGoal = function(s)
-			local k = ss(seg(s - l0, 0, 0.35))
+			local k = ss(seg(s - l0, 0, 0.45))
 			return CFrame.lookAt(herStand:Lerp(close, k), close + look)
 		end
-		sleep(0.3)
-		startMusic()
-		flash(Color3.new(1, 1, 1), 0.65, 0.4)
-		shake(0.9); kick(8)
-		letterbox(false, 0.3)
 		rem:FireServer("spawn", close)
-		-- up out of the armchair: first person, in front of it
+		fovGoal = 74
+		startMusic()
+		flash(Color3.new(1, 1, 1), 0.6, 0.45)
+		shake(0.9); kick(8)
+		letterbox(false, 0.35)
+		-- up out of the armchair into the player's eyes, following her
 		camRate = 9
+		camFn = function() return CFrame.lookAt(standEye, wroot.Position + UP * 2) end
 		local function eyesOn(target: () -> Vector3): (s: number) -> CFrame
 			return function() return CFrame.lookAt(standEye, target()) end
 		end
@@ -714,15 +730,31 @@ function Intro.play(onDone: (() -> ())?)
 			local r = g and g:FindFirstChild("HumanoidRootPart") :: BasePart?
 			return r and (r.Position + UP * 2) or (close + UP * 1.5)
 		end
-		camFn = eyesOn(herChest)
+		local function realSeen(on: boolean)
+			-- (Client/GhostAnim fades her out while the attribute is on: set on this screen only)
+			local g = real()
+			if g then g:SetAttribute("IntroHidden", if on then nil else true) end
+		end
+		local hideReal = true
+		table.insert(frameFns, function() if hideReal then realSeen(false) end end)
+		sleep(0.5)
+		freeze("Block")
+		-- the press: the game begins - the real one where she was, her claws coming down on the guard
+		R.Block:FireServer(true)
 		local w0 = os.clock()
-		while not real() and os.clock() - w0 < 2.5 do task.wait() end
+		while not real() and os.clock() - w0 < 2 do task.wait() end
+		hideReal = false
+		realSeen(true)
 		woman:Destroy()
 		lightsBack()
 		staticOn = false
 		for _, c in cells do c.BackgroundColor3 = Color3.new(0.04, 0.04, 0.05) end
 		tvLight.Brightness = 0.3
 		if tvSound then tvSound:Destroy(); tvSound = nil end
+		camFn = eyesOn(herChest)
+		lp:SetAttribute("IntroPhase", "lesson")
+		task.wait(0.03)
+		rem:FireServer("release")
 		local function waitHeld(t: number): boolean
 			local h0 = os.clock()
 			repeat
@@ -739,15 +771,6 @@ function Intro.play(onDone: (() -> ())?)
 			VM.punch(combo)
 			R.Punch:FireServer(aim(), 0)
 		end
-
-		-- BLOCK: her claws come down on the guard
-		lp:SetAttribute("IntroPhase", "lesson")
-		rem:FireServer("windup")
-		waitHeld(7)
-		freeze("Block")
-		R.Block:FireServer(true)
-		task.wait(0.05)
-		rem:FireServer("release")
 		sleep(1.1)
 		R.Block:FireServer(false)
 		sleep(0.4)
@@ -760,13 +783,17 @@ function Intro.play(onDone: (() -> ())?)
 		onFree = function(a) if a == "Punch" then punch() end end
 		sleep(2.4)
 		onFree = nil
-		-- LIFT: the armchair you sat in
+		-- LIFT: the chair beside you (Server/Tutorial put it there: model attribute IntroProp; else the armchair)
+		local liftThis: Model = chairM
+		for _, c in (workspace.Mansion:FindFirstChild("Furniture") :: Instance):GetChildren() do
+			if c:IsA("Model") and c:GetAttribute("IntroProp") then liftThis = c end
+		end
 		rem:FireServer("hold")
 		camRate = 5
-		camFn = eyesOn(function() return chairM:GetPivot().Position + UP * 0.5 end)
+		camFn = eyesOn(function() return liftThis:GetPivot().Position + UP * 0.3 end)
 		sleep(0.8)
 		freeze("Lift")
-		R.Grab:FireServer(chairM)
+		R.Grab:FireServer(liftThis)
 		local g0 = os.clock()
 		while not lp:GetAttribute("Carrying") and os.clock() - g0 < 1.5 do task.wait() end
 		camFn = eyesOn(herChest)

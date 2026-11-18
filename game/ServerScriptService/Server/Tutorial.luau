@@ -8,7 +8,8 @@
 --   Remotes.Tutorial (from the player in it, in this order):
 --     "seen"    it started (saved: it never starts by itself again; Server/Data)     "skip" = the same
 --     "enter"   into the house, in front of the TV room's armchair (player attribute IntroHouse = true / false)
---     "spawn"   (position) the real Woman, where the client's copy of her is (she stands and waits)
+--     "spawn"   (position) the real Woman, where the client's copy of her is, held with her claws up just
+--               before they come down (the first lesson: blocking them)
 --     "windup"  she comes at the player and is held with her claws up, just before they come down
 --     "hold"    she is held where she is              "release"  she goes on (model attribute Held)
 --     "ult"     the player's brutality bar is filled
@@ -25,10 +26,13 @@ local Sandbox = require(script.Parent.Sandbox)
 local Ghost = require(script.Parent.Ghost)
 local Combat = require(script.Parent.Combat)
 local Furniture = require(script.Parent.Furniture)
+local Inventory = require(script.Parent.Inventory)
 
 local Tutorial = {}
 local inIntro = {} :: { [Player]: boolean }
 local LESSON_HP = 0.35 -- her health never goes under this share before the fight
+local SEAT_BACK = 22 -- the armchair this far from the TV
+local propOf = {} :: { [Player]: Model }
 
 -- the TV room: the TV and the armchair facing it (Client/Intro finds them the same way)
 local function tvRoom(): (Model?, Model?)
@@ -62,6 +66,9 @@ end
 
 local function stop(p: Player)
 	inIntro[p] = nil
+	local prop = propOf[p]
+	propOf[p] = nil
+	if prop and prop.Parent then prop:SetAttribute("IntroProp", nil) end
 	if p.Parent then
 		p:SetAttribute("Tutorial", nil)
 		p:SetAttribute("IntroHouse", nil)
@@ -91,28 +98,66 @@ local function enter(p: Player)
 	-- the room as it should be, nobody else's Woman in it
 	if Ghost.current then Ghost.despawn() end
 	Furniture.reset()
-	-- the armchair further from the TV, facing it: room for her to crawl out between them (back next reset)
+	-- the armchair far back from the TV, facing it: the whole scene in view, room for her to crawl out (back next
+	-- reset, like all the furniture)
 	local tvCF = tv:GetPivot()
 	local look = Vector3.new(tvCF.LookVector.X, 0, tvCF.LookVector.Z).Unit
-	local at = Vector3.new(tvCF.Position.X, chair:GetPivot().Position.Y, tvCF.Position.Z) + look * 14
+	local at = Vector3.new(tvCF.Position.X, chair:GetPivot().Position.Y, tvCF.Position.Z) + look * SEAT_BACK
 	chair:PivotTo(CFrame.lookAt(at, at - look))
 	local spot = standSpot(tv, chair)
+	-- a wooden chair right beside the player, in front and to the right: the one the lesson lifts and throws
+	-- (model attribute IntroProp, for Client/Intro)
+	local f = workspace.Mansion:FindFirstChild("Furniture")
+	local prop, best = nil :: Model?, math.huge
+	if f then
+		for _, c in f:GetChildren() do
+			if c.Name == "Chair" and c:IsA("Model") and Furniture.isValid(c) then
+				local d = (c:GetPivot().Position - spot.Position).Magnitude
+				if d < best then prop, best = c, d end
+			end
+		end
+	end
+	if prop then
+		local pcf, psize = prop:GetBoundingBox()
+		local lift = prop:GetPivot().Position.Y - (pcf.Position.Y - psize.Y / 2)
+		local floorY = spot.Position.Y - 3
+		local pp = spot.Position + spot.RightVector * 3.4 + spot.LookVector * 1.6
+		pp = Vector3.new(pp.X, floorY + lift, pp.Z)
+		prop:PivotTo(CFrame.lookAt(pp, pp - spot.RightVector))
+		prop:SetAttribute("IntroProp", true)
+		propOf[p] = prop
+	end
 	pcall(function() p:RequestStreamAroundAsync(spot.Position, 5) end)
 	local c = p.Character
 	if c then c:PivotTo(spot) end
 	p:SetAttribute("Tutorial", true)
 	Combat.clearBrutality(p)
+	Inventory.select(p, 0) -- (bare fists for the lessons, whatever is in the hotbar)
 	p:SetAttribute("IntroHouse", true)
 end
 
-local function spawnHer(pos: any)
+local function spawnHer(p: Player, pos: any)
 	local tv = tvRoom()
 	if typeof(pos) ~= "Vector3" or not tv or (pos - tv:GetPivot().Position).Magnitude > 40 then return end
 	Ghost.passive = false
 	Ghost.spawn(1, pos, "Woman")
-	Ghost.tutorial = { pause = math.huge, nextAt = math.huge, minHp = LESSON_HP, held = false, holdWindup = false }
+	Ghost.tutorial = { pause = math.huge, nextAt = math.huge, minHp = LESSON_HP, held = true, holdWindup = false }
 	local g = Ghost.current
-	if g then g.model:SetAttribute("Held", false) end
+	if not g then return end
+	-- straight into her swing, facing the player, held just before the claws come down: the client's frozen
+	-- BLOCK lesson lets it go
+	local hrp = p.Character and p.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if hrp then
+		local to = Vector3.new(hrp.Position.X, pos.Y, hrp.Position.Z)
+		if (to - pos).Magnitude > 0.1 then
+			g.model:PivotTo(CFrame.lookAt(pos, to))
+			g.ao.CFrame = CFrame.lookAt(pos, to).Rotation
+		end
+	end
+	g.comboLeft = 0
+	Ghost.setState(g, "WindUp", 0.3)
+	g.pauseFrom = os.clock()
+	g.model:SetAttribute("Held", true)
 end
 
 local function hold(on: boolean)
@@ -158,7 +203,7 @@ function Tutorial.start(isLobby: boolean)
 		end
 		local T = tutorialFight()
 		if action == "spawn" then
-			spawnHer(arg)
+			spawnHer(p, arg)
 		elseif action == "windup" and T then
 			T.nextAt = 0
 			T.pause = math.huge

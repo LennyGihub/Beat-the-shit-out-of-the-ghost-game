@@ -679,6 +679,7 @@ function GA.update(dt: number)
 		end
 	end
 	if shadow and want >= 1 then fade = 1 end -- the lights cut: the Party Bear is gone at once
+	if current:GetAttribute("IntroHidden") then fade = 1 end -- (Client/Intro: its own copy of her stands there; this screen only)
 	local neonEyes = shadow and state ~= "Dead"
 	for _, d in current:GetDescendants() do
 		-- parts with the Glow attribute (the Party Bear's eyes) stay visible in the dark; DarkNeon parts light up there

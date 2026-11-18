@@ -327,8 +327,8 @@
    "file": "ServerScriptService/Server/Tutorial.luau",
    "instance": "game.ServerScriptService.Server.Tutorial",
    "class": "ModuleScript",
-   "bytes": 7782,
-   "sha1": "310e69a58e81da0ac90a49498d9e174a33e5ac3c"
+   "bytes": 9706,
+   "sha1": "1e5edb5c0ad097f57cb5be2a8c63be683ad5b14f"
   },
   {
    "file": "ServerScriptService/Server/UltRunner.luau",
@@ -432,8 +432,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/GhostAnim.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.GhostAnim",
    "class": "ModuleScript",
-   "bytes": 41598,
-   "sha1": "877ff3bbfc466588b38abaf2f6e396b62a9500b6"
+   "bytes": 41726,
+   "sha1": "a36c88b3e4f68360ff1760011c377562998afd39"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/Grunge.luau",
@@ -467,8 +467,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/Intro.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.Intro",
    "class": "ModuleScript",
-   "bytes": 43817,
-   "sha1": "a80a6043c641be92a122bbf4d4f0afae92661df3"
+   "bytes": 45408,
+   "sha1": "d18c7bdebac9b0c00070b4e9c0ce115412d48397"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/KeyHints.luau",
