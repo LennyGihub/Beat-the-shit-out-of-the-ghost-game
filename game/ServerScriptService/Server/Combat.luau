@@ -130,6 +130,9 @@ local function guard(player: Player, s, amount: number, from: Vector3?): number
 	return 1
 end
 Combat.guard = function(player: Player, amount: number, from: Vector3?): number return guard(player, st(player), amount, from) end
+-- monster blows a block never stops (hitPlayer labels): the Last Call's shotgun, and a grabbed victim thrown out of
+-- the monster's fist (they are in its hand: no guard). The Golden Conqueror's beam doesn't go through guard at all.
+Combat.UNBLOCKABLE = { shotgun = true, grab = true, titanThrow = true } :: { [string]: boolean }
 
 -- monster hits: the second one within Knockdown.Window seconds knocks you down. Returns true when it does
 -- (the counter starts over).
@@ -162,6 +165,7 @@ function Combat.damagePlayer(player: Player, amount: number, staminaDrain: numbe
 	local blowFromMonster = from ~= Vector3.zero and amount > 0
 	if blowFromMonster then
 		local mult = guard(player, s, amount, from)
+		if mult <= 0 then return end -- blocked completely: no damage, no stamina drain, no knockdown count
 		amount *= mult
 		if mult < 1 then blowFromMonster = false end -- blocked: doesn't count toward the knockdown
 	end
@@ -487,7 +491,8 @@ function Combat.hitPlayer(victim: Player, by: Player?, dmg: number, vel: Vector3
 		byHrp = h
 	end
 	local vs = st(victim)
-	local mult = guard(victim, vs, dmg, byHrp and byHrp.Position or nil)
+	local mult = (not by and label and Combat.UNBLOCKABLE[label]) and 1 or guard(victim, vs, dmg, byHrp and byHrp.Position or nil)
+	if mult <= 0 then return end -- blocked completely: no damage, no fling (guard already showed the block)
 	local amount = dmg * mult
 	if not by and not victim:GetAttribute("Warded") and not victim:GetAttribute("AdminGod") then
 		amount = Fury.cap(victim, amount, hum.MaxHealth) -- monster blows: burst cap
@@ -638,6 +643,7 @@ end
 function Combat.start()
 	Ghost.damagePlayer = Combat.damagePlayer
 	Ghost.hitPlayer = Combat.hitPlayer
+	Ghost.guardPlayer = Combat.guard
 	Ghost.rootPlayer = Combat.root
 	Remotes.Punch.OnServerEvent:Connect(onPunch)
 	Remotes.Ultimate.OnServerEvent:Connect(onUltimate)

@@ -52,7 +52,8 @@ local List: { Monster } = {
 		noStagger = true,
 		wallBreaker = true, -- too big for the doors: smashes through the inside walls in his way
 		-- grabs you; with another player standing he carries you over and swings you into them twice, then throws you
-		ability = { kind = "titanGrab", cd = 7.5, range = 15, swingRange = 60, swingReach = 13, carrySpeed = 26, dmg = 26, swingDmg = 20, power = 120 },
+		-- wind = the telegraphed reach before the grab (red ring on the floor = range + 3)
+		ability = { kind = "titanGrab", cd = 7.5, range = 15, wind = 1.15, swingRange = 60, swingReach = 13, carrySpeed = 26, dmg = 26, swingDmg = 20, power = 120 },
 		desc = "A skinless giant, steaming. He grabs you and throws you, or uses you as a club on your friends." }),
 	m({ id = "Goblin", name = "The Goblin", title = "THE GOBLIN", rarity = 2, template = "Goblin", color = C(110, 190, 60),
 		hp = 1.25, speed = 1.08, dmg = 1, reward = 1.6, hover = 0, walker = true, scale = 1, solid = true,
@@ -140,7 +141,7 @@ local EVO: { [string]: { [string]: any } } = {
 	-- a shot once: furniture is blown apart, an inside wall gets a hole in it. His ambush is quicker and hits harder.
 	Caller = { title = "THE LAST CALL", color = C(170, 16, 20), scale = 1.06,
 		ability = { kind = "ambush", cd = 30, first = 8, hide = 26, wake = 45, enter = 38, react = 0.3, rise = 0.55, rush = 5, dmg = 58, bonus = 2.5, lunge = 82 },
-		power = { kind = "shotgun", cd = 10, wind = 1.2, gap = 1.0, shots = 2, dmg = 46, range = 95, power = 70, min = 5 },
+		power = { kind = "shotgun", cd = 10, wind = 2.2, gap = 1.8, shots = 2, dmg = 46, range = 95, power = 70, min = 5 }, -- wind/gap: time to take cover
 		desc = "The same mask, red now, and a shotgun. Two shots, and each one blows your cover away." },
 	-- gold armour and a helmet; everything the Conqueror does, plus the gauntlet's beam: it turns after you slowly
 	-- (turn = degrees per second, sweep = studs per second, so you can always outrun it), cuts through furniture and inside walls, and burns for `dps` while you stand in it
@@ -190,33 +191,26 @@ end
 -- every 3rd ghost is evolved
 local function isEvolvedWave(wave: number): boolean return wave >= 3 and wave % 3 == 0 end
 
--- NO MONSTER TWICE: a run keeps a set of the monsters it has already met (`seen`, one for the normal ones and one
--- for the evolved ones). A monster is only picked again once every one of them has come (the set then starts over).
--- `avoid` = ids that must not come right now (the previous ghost), when anything else is left.
--- weighted = rarer monsters come later on average (normal ghosts); evolved ones are picked evenly.
-local WEIGHT = { [0] = 60, [1] = 30, [2] = 15 }
-local function pickFresh(seen: { [string]: boolean }, avoid: { string? }, rng: Random, weighted: boolean): Monster
-	local function pool(): { Monster }
-		local out = {}
-		for _, d in List do
-			if not seen[d.id] and d.id ~= avoid[1] and d.id ~= avoid[2] and not (d :: any).secret then table.insert(out, d) end
+-- WHO COMES NEXT: every monster has the same chance, except that the ones this run hasn't met yet (not in `seen`)
+-- are UNSEEN_WEIGHT times as likely, and the ones in `avoid` (the last two you fought) can't come at all. Once every
+-- monster has come they are all even again. The run keeps one `seen` set for the normal ghosts and one for the
+-- evolved ones. (`_weighted` is no longer used: rarity doesn't change the odds.)
+local UNSEEN_WEIGHT = 3
+local function pickFresh(seen: { [string]: boolean }, avoid: { string? }, rng: Random, _weighted: boolean?): Monster
+	local list, total = {}, 0
+	for _, d in List do
+		if not (d :: any).secret and d.id ~= avoid[1] and d.id ~= avoid[2] then
+			local w = seen[d.id] and 1 or UNSEEN_WEIGHT
+			table.insert(list, { d = d, w = w })
+			total += w
 		end
-		return out
 	end
-	local list = pool()
-	if #list == 0 then
-		-- everyone has come (or only the one to avoid is left): start the set over
-		table.clear(seen)
-		list = pool()
-	end
-	if #list == 0 then list = { byId.Woman } end
-	local total = 0
-	for _, d in list do total += weighted and (WEIGHT[d.rarity] or 15) or 1 end
+	if #list == 0 then return byId.Woman end
 	local x = rng:NextNumber(0, total)
-	local choice = list[#list]
-	for _, d in list do
-		x -= weighted and (WEIGHT[d.rarity] or 15) or 1
-		if x <= 0 then choice = d; break end
+	local choice = list[#list].d
+	for _, e in list do
+		x -= e.w
+		if x <= 0 then choice = e.d; break end
 	end
 	seen[choice.id] = true
 	return choice

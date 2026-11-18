@@ -17,6 +17,7 @@ local rng = Random.new()
 
 local A = CFrame.Angles
 local phaseSeen, phaseT = "", 0 -- the AbilityPhase attribute and when it last changed (swing timing)
+local frozenPh: number? = nil -- (Studio photo hook: the phase time held while DebugFreezeGhost is on)
 -- With streaming on, a monster's parts and joints can reach this client a little after the model itself: joints
 -- (and the root, for the swirl) that arrive later are picked up as they come, so the monster is never left
 -- moving without its animation.
@@ -257,9 +258,22 @@ local function abilityPose(ab: string, phase: string, t: number, since: number):
 		-- the Flayed Giant: reach, carry the victim out in front, swing them across (twice), lift and throw
 		local ph = os.clock() - phaseT
 		if phase == "wind" then
-			p.Root = A(0.35 * a, 0, 0); p.Waist = A(0.3 * a, 0, 0); p.Neck = A(-0.3 * a, 0, 0)
-			p.RightShoulder = A(1.5 * a, 0, -0.2); p.LeftShoulder = A(1.3 * a, 0, 0.3)
-			p.RightElbow = A(0.15, 0, 0); p.LeftElbow = A(0.3, 0, 0)
+			-- THE TELL (the server's wind time, AbilityPhaseDur): he rears back, head up, both arms raised high and wide
+			-- and shaking, then in the last moment lunges both hands forward to grab
+			local dur = current and current:GetAttribute("AbilityPhaseDur") or 1.15
+			local f = ph / math.max(0.2, dur)
+			local e = math.clamp(f / 0.35, 0, 1); e = e * e * (3 - 2 * e)
+			local k = math.clamp((f - 0.72) / 0.28, 0, 1); k = k * k * (3 - 2 * k)
+			local shake = s(t * 34) * 0.05 * (1 - k)
+			local function mix(x: number, y: number): number return x + (y - x) * k end
+			p.Root = A(mix(0.16 * e, -0.35), 0, 0)
+			p.Waist = A(mix(0.18 * e, -0.25), shake, 0)
+			p.Neck = A(mix(0.4 * e, -0.2), 0, 0)
+			p.RightShoulder = A(mix(2.7 * e, 1.6) + shake, 0, mix(-0.9 * e, -0.12))
+			p.LeftShoulder = A(mix(2.7 * e, 1.6) - shake, 0, mix(0.9 * e, 0.12))
+			p.RightElbow = A(mix(0.6 * e, 0.05), 0, 0); p.LeftElbow = A(mix(0.6 * e, 0.05), 0, 0)
+			p.RightHip = A(mix(-0.1 * e, 0.35), 0, 0); p.LeftHip = A(mix(0.1 * e, -0.25), 0, 0)
+			p.RightKnee = A(mix(0, -0.4), 0, 0)
 		elseif phase == "carry" then
 			p.Waist = A(0.1, 0.2, 0); p.Neck = A(-0.15, 0, 0)
 			p.RightShoulder = A(1.55, 0, -0.15); p.RightElbow = A(0.15, 0, 0)
@@ -581,6 +595,13 @@ function GA.update(dt: number)
 	elseif state == "Lunge" then state = current:GetAttribute("FuryPhase") == "dash" and "Swipe" or "WindUp" end
 	local ph = current:GetAttribute("AbilityPhase") or ""
 	if ph ~= phaseSeen then phaseSeen = ph; phaseT = t end
+	-- Studio photo hook: ReplicatedStorage DebugFreezeGhost also holds the ability poses where they are
+	if RunService:IsStudio() and game:GetService("ReplicatedStorage"):GetAttribute("DebugFreezeGhost") then
+		phaseT = t - (frozenPh or (t - phaseT))
+		frozenPh = t - phaseT
+	else
+		frozenPh = nil
+	end
 	if state ~= stateSeen then
 		stateSeen = state; stateT = t
 		if state == "WindUp" then gobVariant = gobVariant % 3 + 1 end

@@ -59,6 +59,7 @@ local function warded(p: Player?): boolean return p ~= nil and p:GetAttribute("W
 local function setPhase(g, phase: string, dur: number)
 	g.ab.phase = phase
 	g.ab.untilT = os.clock() + dur
+	g.model:SetAttribute("AbilityPhaseDur", dur) -- (before the phase: the client times its pose with it)
 	g.model:SetAttribute("AbilityPhase", phase)
 end
 
@@ -164,8 +165,14 @@ function Abilities.try(g, G, now: number, target: Player?, thrp: BasePart?, dist
 		fx("AbilityWind", g.hrp.Position, k)
 	elseif k == "grabThrow" or k == "titanGrab" then
 		if dist > a.range or warded(target) then return false end
-		start(g, G, "wind", k == "titanGrab" and 0.7 or 0.55, { victim = target })
+		start(g, G, "wind", k == "titanGrab" and (a.wind or 1.15) or 0.55, { victim = target })
 		fx("AbilityWind", g.hrp.Position, k)
+		-- the Giant's grab is telegraphed: he rears back with his hands glowing, and a red ring on the floor shows how
+		-- far he reaches (Client/MonsterFx TitanGrabWind); the one he is after is warned
+		if k == "titanGrab" then
+			fx("TitanGrabWind", g.model, a.range + 3, a.wind or 1.15)
+			Remotes.Fx:FireClient(target, "Toast", "THE GIANT IS REACHING FOR YOU - GET OUT OF THE RED RING!")
+		end
 	elseif k == "pounce" then
 		if dist < a.min or dist > a.max then return false end
 		start(g, G, "crouch", 0.55, { aim = thrp.Position })
@@ -498,7 +505,7 @@ function Abilities.step(g, G, dt: number, now: number, target: Player?, thrp: Ba
 			if victimOk then
 				local side = g.hrp.CFrame.RightVector * (rng:NextNumber() < 0.5 and -1 or 1)
 				local dir = flat(g.hrp.CFrame.LookVector * 0.6 + side * 0.8)
-				G.hitPlayer(ab.victim, nil, a.dmg * dmgScale(g), dir * a.power + Vector3.new(0, 48, 0), "titan", true, 1.4)
+				G.hitPlayer(ab.victim, nil, a.dmg * dmgScale(g), dir * a.power + Vector3.new(0, 48, 0), "titanThrow", true, 1.4) -- (in his fist: unblockable)
 			end
 			finish(g, G, 0.8)
 		end
@@ -1058,8 +1065,11 @@ function Abilities.tick(G, dt: number, now: number)
 			for _, p in matchPlayers() do
 				local hrp = hrpOf(p)
 				if hrp and Vector3.new(hrp.Position.X - c.pos.X, 0, hrp.Position.Z - c.pos.Z).Magnitude <= c.r and math.abs(hrp.Position.Y - c.pos.Y) < 10 and not warded(p) then
-					G.damagePlayer(p, c.dps * 0.5, 4, Vector3.zero) -- gas: not blockable
-					Remotes.Fx:FireClient(p, "Gassed")
+					-- gas: a block (facing the cloud) keeps it out too; it never counts toward a knockdown
+					if not (G.guardPlayer and G.guardPlayer(p, c.dps * 0.5, c.pos) <= 0) then
+						G.damagePlayer(p, c.dps * 0.5, 4, Vector3.zero)
+						Remotes.Fx:FireClient(p, "Gassed")
+					end
 				end
 			end
 		end

@@ -25,9 +25,11 @@ local Config = {
 		StaminaBonus = 1.5, -- full charge costs x2.5 stamina
 	},
 	Stamina = { Max = 400, Regen = 104, RegenDelay = 0.7, ThrowCost = 12, SprintPerSecond = 14 }, -- doubled twice (100 -> 200 -> 400), same refill time
-	-- blocking (hold right click): hits from the front do Damage x, cost Cost + hit x PerDamage stamina; out of stamina =
-	-- guard break (full hit, no blocking for BreakTime). No attacking, no sprinting, slower walk and no stamina regen.
-	Block = { Damage = 0.25, Knock = 0.35, Cost = 6, PerDamage = 0.6, FrontDot = 0.15, WalkMult = 0.55, BreakTime = 1.5 },
+	-- blocking (hold right click): a hit from the front is stopped COMPLETELY (Damage x, no knockback, no fling), for
+	-- Cost + hit x PerDamage stamina. Out of stamina = guard break (full hit, no blocking for BreakTime). Never blocked:
+	-- the Golden Conqueror's beam, the Last Call's shotgun, and being thrown out of a monster's grip (Combat.UNBLOCKABLE).
+	-- No attacking, no sprinting, slower walk and no stamina regen while blocking.
+	Block = { Damage = 0, Knock = 0, Cost = 3, PerDamage = 0.25, FrontDot = 0.15, WalkMult = 0.55, BreakTime = 1.5 },
 	Brutality = {
 		Max = 100,
 		PerHit = 4,

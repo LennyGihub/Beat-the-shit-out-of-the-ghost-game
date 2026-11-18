@@ -20,7 +20,7 @@ local KINDS = {
 	GoblinSteal = true, GoblinUse = true, GoblinDrop = true,
 	ShieldBlock = true, Slammed = true, AnimJumpscare = true,
 	RoarWind = true, Roar = true, LungeWind = true, Lunge = true, Enraged = true, CounterWind = true, FuryArmor = true, FurySmash = true, -- Fury
-	SnapWind = true, Snap = true, TitanEat = true, TitanHeal = true, -- evolved monsters
+	SnapWind = true, Snap = true, TitanEat = true, TitanHeal = true, TitanGrabWind = true, -- evolved monsters / the Giant's grab
 	DemonSummon = true, -- the Red Demon conjures furniture
 	RatDashWarn = true, RatDash = true, RatDizzy = true, RatDig = true, RatTrail = true, RatWarn = true, RatErupt = true, -- the Sewer Rat
 }
@@ -435,6 +435,64 @@ function MonsterFx.handle(kind: string, ...)
 		local own = Sfx.voice("WindUp")
 		Sfx.at(k == "wail" and "GhostWail" or (own == "GhostWail" and "GhostHurt" or own), pos, { PlaybackSpeed = k == "wail" and 0.8 or (own == "GhostWail" and 0.6 or 1), Volume = 1.2 })
 		Fx.shake(0.15 * near(pos, 60))
+	elseif kind == "TitanGrabWind" then
+		-- the Giant is about to grab: his hands glow red and a red ring on the floor shows how far he reaches
+		local model, radius, dur = a[1], a[2], a[3]
+		if typeof(model) ~= "Instance" or not model.Parent then return end
+		local root = model:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if not root then return end
+		local life = (tonumber(dur) or 1.15) + 0.15
+		local rp = RaycastParams.new()
+		rp.FilterType = Enum.RaycastFilterType.Exclude
+		rp.FilterDescendantsInstances = { model, Players.LocalPlayer.Character :: Instance }
+		local down = workspace:Raycast(root.Position, Vector3.new(0, -40, 0), rp)
+		local floorY = down and down.Position.Y or root.Position.Y - 4
+		local c = Vector3.new(root.Position.X, floorY + 0.12, root.Position.Z)
+		local ring = Instance.new("Model"); ring.Name = "GrabRing"; ring.Parent = workspace
+		local n = 28
+		local r = tonumber(radius) or 18
+		local segLen = 2 * math.pi * r / n * 0.82
+		local segs = {}
+		for i = 1, n do
+			local ang = (i / n) * math.pi * 2
+			local at = c + Vector3.new(math.cos(ang) * r, 0, math.sin(ang) * r)
+			local seg = Instance.new("Part")
+			seg.Anchored = true; seg.CanCollide = false; seg.CanQuery = false; seg.CanTouch = false; seg.CastShadow = false
+			seg.Material = Enum.Material.Neon; seg.Color = Color3.fromRGB(255, 40, 30); seg.Transparency = 0.25
+			seg.Size = Vector3.new(segLen, 0.12, 0.5)
+			seg.CFrame = CFrame.lookAt(at, c) * CFrame.Angles(0, math.pi / 2, 0)
+			seg.Parent = ring
+			table.insert(segs, seg)
+		end
+		local glow = {}
+		for _, h in { "RightHand", "LeftHand" } do
+			local hand = model:FindFirstChild(h) :: BasePart?
+			if hand then
+				local l = Instance.new("PointLight"); l.Color = Color3.fromRGB(255, 50, 30); l.Range = 10; l.Brightness = 3; l.Parent = hand
+				local pe = Instance.new("ParticleEmitter")
+				pe.Texture = "rbxasset://textures/particles/sparkles_main.dds"; pe.Color = ColorSequence.new(Color3.fromRGB(255, 70, 40))
+				pe.LightEmission = 1; pe.Size = NumberSequence.new(0.9, 0); pe.Lifetime = NumberRange.new(0.25, 0.5); pe.Rate = 40
+				pe.Speed = NumberRange.new(1, 3); pe.SpreadAngle = Vector2.new(180, 180); pe.Parent = hand
+				table.insert(glow, l); table.insert(glow, pe)
+			end
+		end
+		Sfx.at("DemonGrowl", root.Position, { PlaybackSpeed = 0.7, Volume = 1.4 })
+		-- the ring pulses faster as the grab comes, and goes the moment he grabs (or the wind-up is cut short)
+		task.spawn(function()
+			local t0 = os.clock()
+			-- (the first moment the phase attributes may not have reached this client yet)
+			local function winding() return model:GetAttribute("Ability") == "titanGrab" and model:GetAttribute("AbilityPhase") == "wind" end
+			-- (Studio photo hook: DebugFreezeGhost keeps it up as long as the monster is held)
+			local function held() return game:GetService("RunService"):IsStudio() and game:GetService("ReplicatedStorage"):GetAttribute("DebugFreezeGhost") == true end
+			while (os.clock() - t0 < life + 2 or held()) and ring.Parent and model.Parent and (os.clock() - t0 < 0.4 or winding()) do
+				local f = math.min(1, (os.clock() - t0) / life)
+				local pulse = 0.5 + 0.5 * math.sin((os.clock() - t0) * (8 + 18 * f))
+				for _, seg in segs do seg.Transparency = 0.1 + 0.45 * pulse * (1 - f) end
+				task.wait()
+			end
+			ring:Destroy()
+			for _, gl in glow do gl:Destroy() end
+		end)
 	elseif kind == "ShieldBlock" then
 		local pos = a[1]
 		emitter(pos, { Color = ColorSequence.new(Color3.fromRGB(255, 230, 150)), LightEmission = 1, Size = NumberSequence.new(0.6, 0),

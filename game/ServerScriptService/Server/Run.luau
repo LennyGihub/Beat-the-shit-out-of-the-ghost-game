@@ -34,7 +34,7 @@ local lastKind = ""
 local lastMonster = ""
 local lastEvolved = ""
 local prevMonster = "" -- the ghost before the last one
--- the monsters this run has already met (no monster twice: Monsters.pickFresh)
+-- the monsters this run has already met (the others are more likely: Monsters.pickFresh)
 local seenMonsters = {} :: { [string]: boolean }
 local seenEvolved = {} :: { [string]: boolean }
 local busy = false
@@ -143,26 +143,26 @@ function Run.startFight()
 			(p.Character :: Model):PivotTo(CFrame.new(MapLoader.spawnInside() + Vector3.new(rng:NextInteger(-6, 6), 0, 0)))
 		end
 	end
-	-- ghost 1 is always the Woman; after that never the same monster twice until every one of them has come
-	-- (Monsters.pickFresh; Studio hook: RS attribute DebugMonster = id).
-	-- Every 3rd ghost is an EVOLVED variant (tier 1 = the first one of the run, kept beatable): those have their own
-	-- no-repeat set, and are never the evolved form of one of the last two monsters you fought.
+	-- ghost 1 is always the Woman; after that every monster has the same chance, the ones this run hasn't met yet
+	-- three times as much, and never one of the last two you fought (Monsters.pickFresh; Studio hook: RS attribute
+	-- DebugMonster = id). Every 3rd ghost is an EVOLVED variant (tier 1 = the first one of the run, kept beatable):
+	-- those have their own "met" set.
 	local def
 	local evoTier: number? = nil
 	if Monsters.isEvolvedWave(level) then
 		evoTier = level // 3
-		def = Monsters.pickFresh(seenEvolved, { lastMonster, prevMonster }, rng, false) -- not the last two you fought
+		def = Monsters.pickFresh(seenEvolved, { lastMonster, prevMonster }, rng) -- not the last two you fought
 	elseif level <= 1 then
 		def = Monsters.byId.Woman
 		seenMonsters.Woman = true
 	else
-		def = Monsters.pickFresh(seenMonsters, { lastMonster }, rng, true)
+		def = Monsters.pickFresh(seenMonsters, { lastMonster, prevMonster }, rng) -- never one of the last two
 	end
 	-- the secret monster: a small chance on any ghost after the first (it takes that ghost's place, evolved or not,
 	-- and is not part of the no-repeat sets)
 	if level > 1 then
 		local secret = Monsters.secretRoll(rng)
-		if secret and secret.id ~= lastMonster then def = secret end
+		if secret and secret.id ~= lastMonster and secret.id ~= prevMonster then def = secret end
 	end
 	local forced = RS:GetAttribute("AdminMonster") or (RunService:IsStudio() and RS:GetAttribute("DebugMonster")) -- admin panel / Studio hook
 	if type(forced) == "string" and Monsters.byId[forced] then def = Monsters.byId[forced] end

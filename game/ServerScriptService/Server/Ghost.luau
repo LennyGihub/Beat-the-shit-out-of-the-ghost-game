@@ -25,6 +25,7 @@ Ghost.onDeath = nil :: ((g: any) -> ())?
 Ghost.damagePlayer = nil :: ((p: Player, n: number, staminaDrain: number?, from: Vector3?) -> ())?
 -- injected by Combat: damage + fling a player, and pin a player in place
 Ghost.hitPlayer = nil :: any
+Ghost.guardPlayer = nil :: any -- Combat.guard: (player, damage, from?) -> damage multiplier (0 = blocked)
 Ghost.rootPlayer = nil :: any
 -- difficulty of the current run (set by Run): multipliers on monster hp / damage / speed
 Ghost.diff = { hp = 1, dmg = 1, speed = 1 }
@@ -110,12 +111,12 @@ Ghost.setState = setState
 
 -- SPECIALS CAN'T BE INTERRUPTED: while a monster does its ability (or its evolved power, or the Woman's vanish and
 -- scream) hits still hurt but don't knock it back, ragdoll it, launch it or push it, and a stun or a time stop only
--- PAUSES the move (it carries on afterwards). One exception can still be cut short: the Party Bear's lights-out hunt
--- (blackout).
+-- PAUSES the move (it carries on afterwards). Two exceptions can still be cut short: the Party Bear's lights-out hunt
+-- (blackout) and the Bone Giant eating (eat: hit him while he chews).
 local function unstoppable(g): boolean
 	local s = g.state
 	if s == "Ability" then return g.ab ~= nil and g.ab.kind ~= "blackout" end
-	if s == "Evo" then return g.evo ~= nil end
+	if s == "Evo" then return g.evo ~= nil and g.evo.kind ~= "eat" end
 	return s == "Vanish" or s == "Scare"
 end
 Ghost.unstoppable = unstoppable
