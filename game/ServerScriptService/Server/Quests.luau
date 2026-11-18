@@ -82,7 +82,11 @@ local function publish(p: Player)
 end
 
 -- count something the player did (n = how many, or the value for max-type stats)
+-- (Server/Tutorial listens here: it is told about everything the game counts, in the sandbox too)
+Quests.watch = nil :: ((p: Player, stat: string, n: number) -> ())?
+
 function Quests.add(p: Player, stat: string, n: number?)
+	if Quests.watch then Quests.watch(p, stat, n or 1) end
 	local s = state(p)
 	if not s or not p:GetAttribute("InMatch") or p:GetAttribute("Sandbox") then return end -- nothing counts in the sandbox
 	local v = n or 1

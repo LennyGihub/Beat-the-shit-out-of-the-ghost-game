@@ -67,6 +67,12 @@ function Inventory.give(p: Player, id: string): boolean
 	return false
 end
 
+-- put slot n in the hand (0 = the fists)
+function Inventory.select(p: Player, n: number)
+	local i = get(p)
+	if n == 0 or (n >= 1 and n <= SLOTS and i.slots[n]) then i.sel = n; publish(p) end
+end
+
 -- the Goblin: can he steal something from p? (never the game-pass Glock)
 local function stealable(s): boolean
 	local it = s and Items.byId[s.id]

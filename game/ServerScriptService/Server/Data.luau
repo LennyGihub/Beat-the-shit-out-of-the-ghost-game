@@ -17,7 +17,8 @@ local profiles = {} -- [Player] = { loaded = bool, data = table }
 
 local function fresh()
 	return { Cash = 0, Owned = {}, GhostLevel = 1, Kills = 0, Ults = { Rage = true }, Equipped = "Rage", Receipts = {},
-		Bestiary = {} :: { [string]: number }, Badges = {} :: { [string]: boolean }, Nightmare = 0 }
+		Bestiary = {} :: { [string]: number }, Badges = {} :: { [string]: boolean }, Nightmare = 0,
+		Tutorial = false } -- Tutorial = the tutorial was offered (taken or refused): the lobby's popup is not shown again
 end
 local MAX_RECEIPTS = 100
 
@@ -71,6 +72,7 @@ local function publish(player)
 	player:SetAttribute("Badges", table.concat(badges, ","))
 	player:SetAttribute("Kills", p.data.Kills)
 	player:SetAttribute("NightmareKills", p.data.Nightmare)
+	player:SetAttribute("TutorialSeen", p.data.Tutorial == true) -- false: Client/TutorialUI offers the tutorial
 	local ls = player:FindFirstChild("leaderstats")
 	if ls then
 		(ls :: any).Cash.Value = p.data.Cash;
@@ -117,6 +119,7 @@ function Data.load(player: Player)
 						for id, v in res.Badges do if type(id) == "string" and #id <= 40 and v == true then prof.data.Badges[id] = true end end
 					end
 					prof.data.Nightmare = math.max(0, math.floor(tonumber(res.Nightmare) or 0))
+					prof.data.Tutorial = res.Tutorial == true
 					if type(res.Receipts) == "table" then
 						for _, id in res.Receipts do if type(id) == "string" then table.insert(prof.data.Receipts, id) end end
 					end
@@ -138,6 +141,7 @@ function Data.save(player: Player): boolean
 	if not prof or not prof.loaded or not okStore then return false end
 	local snap = { Cash = prof.data.Cash, GhostLevel = prof.data.GhostLevel, Kills = prof.data.Kills, Owned = table.clone(prof.data.Owned), Ults = table.clone(prof.data.Ults), Equipped = prof.data.Equipped, Equipped2 = prof.data.Equipped2, Settings = prof.data.Settings, Receipts = table.clone(prof.data.Receipts),
 		Bestiary = table.clone(prof.data.Bestiary), Badges = table.clone(prof.data.Badges), Nightmare = prof.data.Nightmare,
+		Tutorial = prof.data.Tutorial == true,
 		Quests = prof.data.Quests and HttpService:JSONDecode(HttpService:JSONEncode(prof.data.Quests)) or nil }
 	for i = 1, 3 do
 		local ok, err = pcall(function()
@@ -243,6 +247,12 @@ end
 
 function Data.equipped(player: Player): string
 	local d = Data.get(player); return d and d.Equipped or "Rage"
+end
+
+-- the tutorial was offered to this player (taken or refused)
+function Data.setTutorialSeen(player: Player)
+	local d = Data.get(player)
+	if d and not d.Tutorial then d.Tutorial = true; publish(player) end
 end
 
 function Data.winGhost(player: Player, level: number)

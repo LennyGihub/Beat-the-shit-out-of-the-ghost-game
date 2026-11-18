@@ -27,6 +27,9 @@ local DARK = Color3.fromRGB(38, 31, 27)
 local LEAVE_KEY, ULT_KEY = Enum.KeyCode.L, Enum.KeyCode.U
 
 local function inSandbox(): boolean return lp:GetAttribute("Sandbox") == true end
+-- the tutorial runs in the sandbox: it shows its own card (Client/TutorialUI, with its QUIT button), so these two
+-- buttons are hidden and the shop stays shut; the LEAVE key still leaves
+local function inTutorial(): boolean return lp:GetAttribute("Tutorial") == true end
 
 -- a key the player gave to another action in Settings is not ours any more (the button still works by tap / click)
 local function free(key: Enum.KeyCode): boolean
@@ -50,7 +53,7 @@ local function button(text: string, props: { [string]: any }, color: Color3, see
 	return b
 end
 
-local function leave()
+function UI.leave() -- (also the tutorial card's QUIT button)
 	if not inSandbox() or os.clock() - lastLeave < 0.6 then return end
 	lastLeave = os.clock()
 	Sfx.play("Click")
@@ -59,13 +62,13 @@ local function leave()
 end
 
 local function ultimates()
-	if not inSandbox() or shopOpen then return end
+	if not inSandbox() or inTutorial() or shopOpen then return end
 	Sfx.play("Click")
 	if openShop then openShop() end
 end
 
 local function refresh()
-	gui.Enabled = inSandbox() and not shopOpen
+	gui.Enabled = inSandbox() and not shopOpen and not inTutorial()
 	local mode = Platform.mode()
 	local leaveKey, ultKey = "", ""
 	if mode == "gamepad" then
@@ -95,18 +98,19 @@ function UI.init(shop: () -> ())
 	-- under the monster's health bar (top centre), in the place of a run's objective line
 	leaveBtn = button("LEAVE", { Name = "Leave", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 104), Size = UDim2.fromScale(0.13, 0.055), Rotation = -1 }, GREY, 611)
 	ultBtn = button("ULTIMATES", { Name = "Ultimates", AnchorPoint = Vector2.new(0, 0), Position = UDim2.new(0.575, 0, 0, 108), Size = UDim2.fromScale(0.12, 0.045), Rotation = 1 }, DARK, 617)
-	leaveBtn.Activated:Connect(leave)
+	leaveBtn.Activated:Connect(UI.leave)
 	ultBtn.Activated:Connect(ultimates)
 	UIS.InputBegan:Connect(function(input: InputObject, typing: boolean)
 		if typing or shopOpen or not inSandbox() or UIS:GetFocusedTextBox() then return end
 		local k = input.KeyCode
 		if (k == LEAVE_KEY and free(LEAVE_KEY)) or k == Enum.KeyCode.ButtonX then
-			leave()
+			UI.leave()
 		elseif (k == ULT_KEY and free(ULT_KEY)) or k == Enum.KeyCode.DPadUp then
 			ultimates()
 		end
 	end)
 	lp:GetAttributeChangedSignal("Sandbox"):Connect(refresh)
+	lp:GetAttributeChangedSignal("Tutorial"):Connect(refresh)
 	Platform.changed:Connect(refresh)
 	Settings.changed:Connect(function(k) if k == "binds" then refresh() end end)
 	refresh()

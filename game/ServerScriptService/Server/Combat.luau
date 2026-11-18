@@ -697,7 +697,7 @@ function Combat.start()
 				s.onePunch = false
 				setWalk(p, s)
 				sync(p, s, true)
-			elseif p:GetAttribute("Sandbox") and s.brut < BR.Max then
+			elseif p:GetAttribute("Sandbox") and not p:GetAttribute("Tutorial") and s.brut < BR.Max then
 				s.brut = math.min(BR.Max, s.brut + BR.Max * dt / 1.5) -- the sandbox: the next ultimate is ready in 1.5 s
 			end
 			if s.combo > 0 and not buff(s, "comboLock") and now - s.lastHit > P.ComboWindow * Combat.stat(p, "combo") then s.combo = 0 end

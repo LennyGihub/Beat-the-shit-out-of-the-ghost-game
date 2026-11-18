@@ -91,7 +91,8 @@ local function toast(p: Player, text: string, good: boolean?)
 	Remotes.Fx:FireClient(p, "Toast", text, good)
 end
 
-local function enter(p: Player, id: any)
+-- quiet = no "SANDBOX - TRYING" message (the tutorial, Server/Tutorial, runs in the sandbox and says its own things)
+local function enter(p: Player, id: any, quiet: boolean?)
 	if Run.mode ~= "Lobby" then return end
 	sweep()
 	local u = (type(id) == "string" and Ultimates.byId[id]) or Ultimates.byId[Data.equipped(p)] or Ultimates.byId[Ultimates.default]
@@ -134,8 +135,9 @@ local function enter(p: Player, id: any)
 	Combat.healAll({ p })
 	Combat.endUltimate(p)
 	Combat.fillBrutality(p)
-	toast(p, "SANDBOX - TRYING: " .. string.upper(u.name), true)
+	if not quiet then toast(p, "SANDBOX - TRYING: " .. string.upper(u.name), true) end
 end
+Sandbox.enter = enter
 
 local function leave(p: Player)
 	if not p:GetAttribute("Sandbox") then return end
