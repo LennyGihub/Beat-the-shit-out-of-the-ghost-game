@@ -143,7 +143,30 @@ Ghost.passive = false
 -- nextAt = when she may come at you again. nil = a normal fight.
 -- held = she is stopped where she is (a lesson is frozen on the player's screen: the model attribute Held tells the
 -- clients, Client/GhostAnim holds her pose); holdWindup = she is held just before her next swing lands.
-Ghost.tutorial = nil :: { pause: number, nextAt: number, minHp: number, held: boolean?, holdWindup: boolean? }?
+-- stunOnly = the ULTIMATE lesson: a blow that would knock her back or out (ragdoll, launch) only stuns her where she
+-- stands (state Stunned: dazed for STUN_TIME, Client/GhostAnim sways her and circles stars round her head), so the
+-- lesson flows straight into the fight instead of her body flying round the room.
+-- In the lessons (minHp > 0) every knockback is small and never a knockout (LESSON_KNOCK), and knocked farther than
+-- LESSON_GAP from the player she floats back in front of them: never stuck in a wall, always in reach of the ultimate.
+Ghost.tutorial = nil :: { pause: number, nextAt: number, minHp: number, held: boolean?, holdWindup: boolean?, stunOnly: boolean? }?
+local STUN_TIME = 3.6
+local LESSON_KNOCK = 10
+local LESSON_GAP = 9
+
+-- (Ghost.tutorial.stunOnly) dazed where she stands: a short stagger back along `dir`, then she shakes it off
+local function stun(g, dir: Vector3)
+	if g.state == "Dead" or g.state == "Stunned" then return end
+	if g.state == "Ragdoll" then Ragdoll.stop(g) end
+	local flat = Vector3.new(dir.X, 0, dir.Z)
+	g.vel = flat.Magnitude > 0.01 and flat.Unit * 9 or Vector3.zero
+	g.launch = nil
+	g.comboLeft = 0
+	g.fury = nil
+	g.model:SetAttribute("FuryPhase", "")
+	g.model:SetAttribute("Vanish", false)
+	setState(g, "Stunned", STUN_TIME)
+	g.nextAttack = math.max(g.nextAttack, os.clock() + STUN_TIME)
+end
 
 function Ghost.alive(): boolean
 	return Ghost.current ~= nil and Ghost.current.state ~= "Dead"
@@ -392,6 +415,11 @@ function Ghost.launch(h: number, d: number, by: Player?)
 	local g = Ghost.current
 	if not g or g.state == "Dead" or g.state == "Spawn" or g.state == "Ragdoll" then return end
 	if unstoppable(g) then return end
+	if Ghost.tutorial and Ghost.tutorial.stunOnly then -- (the tutorial's ultimate: stunned, not thrown up)
+		Ghost.damage(d, by)
+		stun(g, Vector3.zero)
+		return
+	end
 	g.model:SetAttribute("Vanish", false)
 	g.launch = { phase = "up", topY = g.hrp.Position.Y + h, d = d, by = by }
 	setState(g, "Launched")
@@ -413,6 +441,7 @@ function Ghost.shove(v: Vector3)
 	if not g or g.state == "Dead" or g.state == "Spawn" or g.state == "Launched" or g.state == "Ragdoll" then return end
 	if g.ts and os.clock() < g.ts.untilT then return end
 	if unstoppable(g) or (g.def :: any).noStagger then return end
+	if Ghost.tutorial and Ghost.tutorial.stunOnly then return end -- (the tutorial's ultimate: she stays put)
 	g.vel = v
 	if g.state ~= "Knocked" then setState(g, "Knocked", 0.12) end
 end
@@ -490,6 +519,11 @@ function Ghost.hit(by: Player?, dir: Vector3, knock: number, damage: number, obj
 		setState(g, "Recover", 0.6)
 	end
 	if knock <= 0 then return end
+	if Ghost.tutorial and Ghost.tutorial.stunOnly then stun(g, dir); return end -- (the tutorial's ultimate)
+	if Ghost.tutorial and Ghost.tutorial.minHp > 0 then -- (the tutorial's lessons: a small knock back only)
+		knock = math.min(knock, LESSON_KNOCK)
+		noRagdoll = true
+	end
 	if noRagdoll then knock = math.min(knock, Ragdoll.MIN_KNOCK - 1) end
 	-- enraged, in a no-knockout window (Fury.checkEnrage): a knockout blow only knocks it back
 	if knock >= Ragdoll.MIN_KNOCK and g.state ~= "Ragdoll" and Fury.unragdollable(g) then
@@ -831,6 +865,11 @@ function Ghost.step(dt: number)
 	elseif s == "Recover" then
 		g.lv.VectorVelocity = Vector3.new(0, (hoverY - pos.Y) * 4, 0)
 		if now > g.stateUntil then setState(g, "Chase") end
+	elseif s == "Stunned" then
+		-- (the tutorial's ultimate) dazed: the stagger back dies out, she sways where she stands, then goes on
+		g.vel *= math.exp(-4 * dt)
+		g.lv.VectorVelocity = Vector3.new(g.vel.X, (hoverY - pos.Y) * 4, g.vel.Z)
+		if now > g.stateUntil then setState(g, "Chase") end
 	elseif s == "Chase" then
 		if not thrp then
 			if watch then face(watch.Position) end
@@ -843,7 +882,12 @@ function Ghost.step(dt: number)
 		if T then
 			-- the tutorial: between her swings she stands still and takes the hits, then comes at you for one swing
 			if now < T.nextAt then
-				g.lv.VectorVelocity = Vector3.new(0, (hoverY - pos.Y) * 4, 0)
+				-- (the lessons: knocked too far back, she floats back in front of the player)
+				if T.minHp > 0 and dist > LESSON_GAP then
+					moveToward(thrp.Position, 6)
+				else
+					g.lv.VectorVelocity = Vector3.new(0, (hoverY - pos.Y) * 4, 0)
+				end
 				return
 			end
 			moveToward(thrp.Position, C.Speed * 0.8)

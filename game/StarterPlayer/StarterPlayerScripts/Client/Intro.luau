@@ -10,8 +10,8 @@
 --     takes her place (Server/Tutorial "spawn").
 --   2 THE LESSONS, each one frozen (the world stops, the colour drains, the music sinks; one word and the key), on
 --     the real Woman with the game's own moves: BLOCK (frozen on her lunge: the press is when the game begins, her
---     claws coming down on the guard), ATTACK (and a few more punches), LIFT (the chair beside you), THROW (into
---     her), ULTIMATE (the Rage Shockwave knocks her flying).
+--     claws coming down on the guard), ATTACK (and a few more punches), LIFT (the armchair you sat in), THROW (it
+--     can't miss: the server steers it onto her), ULTIMATE (the Rage Shockwave: this once it only stuns her).
 --   3 THE FIGHT: a short real fight (she swings, waits, swings again): charged hits knock her out and smash her
 --     through the walls (the ragdoll). It ends when she is beaten (or after a while).
 --   4 THE WAY OUT: in the front hall, the doors burst open; out onto the porch, the yard, up over the house to the
@@ -130,12 +130,16 @@ local function windup(t: number): Pose
 	}
 end
 
--- the TV room: the TV and the armchair facing it (Server/Tutorial finds them the same way)
+-- the TV room: the TV and the armchair facing it (Server/Tutorial moved it back and marked it)
 local function tvRoom(): (Model?, Model?)
 	local m = workspace:FindFirstChild("Mansion")
 	local f = m and m:FindFirstChild("Furniture")
 	local tv = f and f:FindFirstChild("TV")
 	if not f or not tv or not tv:IsA("Model") then return nil, nil end
+	-- (the one the server moved back for the intro: model attribute IntroSeat; else the nearest to the TV)
+	for _, c in f:GetChildren() do
+		if c.Name == "Armchair" and c:IsA("Model") and c:GetAttribute("IntroSeat") then return tv, c end
+	end
 	local best, bestD = nil :: Model?, math.huge
 	for _, c in f:GetChildren() do
 		if c.Name == "Armchair" and c:IsA("Model") then
@@ -456,7 +460,10 @@ function Intro.play(onDone: (() -> ())?)
 		-- (her moves follow the armchair: D = from the glass to where the player stands up in front of it)
 		local flatStand = Vector3.new(hrpP.Position.X, 0, hrpP.Position.Z)
 		local D = math.max(9, (flatStand - Vector3.new(screenAt.X, 0, screenAt.Z)):Dot(look))
-		local herStand = inRoom(D * 0.42, 6.7)
+		-- (she always stops well short of the armchair's camera, wherever the player was put)
+		local seatD = (Vector3.new(seatEye.X, 0, seatEye.Z) - Vector3.new(screenAt.X, 0, screenAt.Z)):Dot(look)
+		local standD = math.clamp(D * 0.42, 3.2, math.max(3.2, seatD - 10))
+		local herStand = inRoom(standD, 6.7)
 
 		-- the player: held still and out of sight in front of the armchair
 		hrpP.Anchored = true
@@ -665,7 +672,7 @@ function Intro.play(onDone: (() -> ())?)
 		sleep(0.55)
 		-- she scuttles to the armchair in jerks, her head cocked
 		fovGoal = 64
-		local crawlTo = inRoom(D * 0.4, 3.6)
+		local crawlTo = inRoom(math.max(2.8, standD - 0.4), 3.6)
 		local c0 = S
 		setPose(function(t) return scuttle(t, (t % 0.55) < 0.32 and 1 or 0) end, 16)
 		herGoal = function(s)
@@ -707,7 +714,7 @@ function Intro.play(onDone: (() -> ())?)
 		-- the real one is put in her place at once, held in the same swing and out of sight until the press
 		setPose(windup, 10)
 		local l0 = S
-		local close = inRoom(D - 5, 6.7)
+		local close = inRoom(math.max(standD + 1, D - 7), 6.7) -- (7 studs in front of the player: in reach of her claws)
 		herGoal = function(s)
 			local k = ss(seg(s - l0, 0, 0.45))
 			return CFrame.lookAt(herStand:Lerp(close, k), close + look)
@@ -783,28 +790,40 @@ function Intro.play(onDone: (() -> ())?)
 		onFree = function(a) if a == "Punch" then punch() end end
 		sleep(2.4)
 		onFree = nil
-		-- LIFT: the chair beside you (Server/Tutorial put it there: model attribute IntroProp; else the armchair)
-		local liftThis: Model = chairM
-		for _, c in (workspace.Mansion:FindFirstChild("Furniture") :: Instance):GetChildren() do
-			if c:IsA("Model") and c:GetAttribute("IntroProp") then liftThis = c end
+		-- LIFT: the armchair you sat in, right behind you (Server/Tutorial: model attribute IntroProp)
+		local function introProp(): Model?
+			local f = workspace.Mansion:FindFirstChild("Furniture")
+			if not f then return nil end
+			for _, c in f:GetChildren() do
+				if c:IsA("Model") and c:GetAttribute("IntroProp") and c.PrimaryPart and not c:GetAttribute("Broken") then return c end
+			end
+			return nil
 		end
 		rem:FireServer("hold")
-		camRate = 5
-		camFn = eyesOn(function() return liftThis:GetPivot().Position + UP * 0.3 end)
-		sleep(0.8)
-		freeze("Lift")
-		R.Grab:FireServer(liftThis)
-		local g0 = os.clock()
-		while not lp:GetAttribute("Carrying") and os.clock() - g0 < 1.5 do task.wait() end
-		camFn = eyesOn(herChest)
-		sleep(0.8)
-		-- THROW
-		freeze("Punch", "Throw")
-		R.Throw:FireServer(aim())
-		VM.slam()
-		task.wait(0.05)
-		rem:FireServer("release")
-		sleep(1.4)
+		local liftThis = introProp()
+		local q0 = os.clock()
+		while not liftThis and os.clock() - q0 < 2 do task.wait(0.1); liftThis = introProp() end
+		if liftThis then
+			local prop = liftThis :: Model
+			camRate = 5
+			camFn = eyesOn(function() return (prop:GetBoundingBox()).Position + UP * 1 end) -- (turned round to it)
+			sleep(0.8)
+			freeze("Lift")
+			R.Grab:FireServer(prop)
+			local g0 = os.clock()
+			while not lp:GetAttribute("Carrying") and os.clock() - g0 < 1.5 do task.wait() end
+			camFn = eyesOn(herChest)
+			sleep(0.8)
+			-- THROW
+			if lp:GetAttribute("Carrying") then
+				freeze("Punch", "Throw")
+				R.Throw:FireServer(aim())
+				VM.slam()
+				task.wait(0.05)
+				rem:FireServer("release")
+				sleep(1.4)
+			end
+		end
 		-- ULTIMATE: the bar fills, the Rage Shockwave knocks her flying
 		rem:FireServer("ult")
 		brut.Visible = true

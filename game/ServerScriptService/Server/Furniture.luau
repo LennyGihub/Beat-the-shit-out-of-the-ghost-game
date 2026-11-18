@@ -2,6 +2,7 @@
 local CS = game:GetService("CollectionService")
 local SS = game:GetService("ServerStorage")
 local Debris = game:GetService("Debris")
+local RunService = game:GetService("RunService")
 local Remotes = require(script.Parent.Remotes)
 
 local Furniture = {}
@@ -31,6 +32,9 @@ function Furniture.recapture()
 	template.Name = "FurnitureTemplate"
 	template.Parent = SS
 end
+
+-- the furniture every fight starts with is stored (MapLoader: a map loaded again keeps it)
+function Furniture.hasTemplate(): boolean return template ~= nil and template.Parent ~= nil end
 
 function Furniture.folder(): Instance?
 	local m = workspace:FindFirstChild("Mansion")
@@ -146,13 +150,15 @@ function Furniture.release(m: Model)
 	m:SetAttribute("CarriedBy", nil)
 end
 
-function Furniture.throw(player: Player?, m: Model, dir: Vector3, power: number)
+-- homing = (the tutorial's lesson, Combat.onThrow) a part it is steered at all the way: it flies through everything
+-- else and can't miss (Combat's checkThrown hits the monster when it gets close)
+function Furniture.throw(player: Player?, m: Model, dir: Vector3, power: number, homing: BasePart?)
 	if not m or not m.Parent or m:GetAttribute("Broken") then return end
 	Furniture.release(m)
 	local prim = m.PrimaryPart :: BasePart
 	for _, p in m:GetDescendants() do
 		if p:IsA("BasePart") then
-			p.CanCollide = true; p.CanTouch = true; p.Massless = false; p.CollisionGroup = "Thrown"
+			p.CanCollide = homing == nil; p.CanTouch = true; p.Massless = false; p.CollisionGroup = "Thrown"
 		end
 	end
 	prim.Anchored = false
@@ -162,8 +168,17 @@ function Furniture.throw(player: Player?, m: Model, dir: Vector3, power: number)
 	Furniture.thrown[m] = { by = player, t = os.clock(), power = power }
 	local char = player and player.Character
 	local conns = {}
+	if homing then
+		local speed = math.max(power, 70)
+		table.insert(conns, RunService.Heartbeat:Connect(function()
+			local info = Furniture.thrown[m]
+			if not info or not m.Parent or not homing.Parent then return end
+			local to = homing.Position + Vector3.new(0, 1, 0) - prim.Position
+			if to.Magnitude > 0.2 then prim.AssemblyLinearVelocity = to.Unit * speed end
+		end))
+	end
 	local function onTouch(hit: BasePart)
-		if not Furniture.thrown[m] then return end
+		if homing or not Furniture.thrown[m] then return end
 		if hit:IsDescendantOf(m) or (char and hit:IsDescendantOf(char)) then return end
 		if os.clock() - Furniture.thrown[m].t < 0.08 then return end
 		for _, c in conns do c:Disconnect() end

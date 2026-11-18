@@ -12,7 +12,8 @@
 --               before they come down (the first lesson: blocking them)
 --     "windup"  she comes at the player and is held with her claws up, just before they come down
 --     "hold"    she is held where she is              "release"  she goes on (model attribute Held)
---     "ult"     the player's brutality bar is filled
+--     "ult"     the player's brutality bar is filled; until "fight" the ultimate only STUNS her (Ghost.tutorial
+--               stunOnly: no ragdoll, no flying body, she stays dazed in front of the player)
 --     "fight"   the short fight: she swings, waits, swings again, and can be beaten
 --     "exit"    she goes; the player is put inside the front door (player attribute IntroExit = true)
 --     "done"    back to the park (the sandbox's way out)
@@ -34,7 +35,8 @@ local LESSON_HP = 0.35 -- her health never goes under this share before the figh
 local SEAT_BACK = 22 -- the armchair this far from the TV
 local propOf = {} :: { [Player]: Model }
 
--- the TV room: the TV and the armchair facing it (Client/Intro finds them the same way)
+-- the TV room: the TV and the armchair facing it (Client/Intro finds them the same way). Look it up again after
+-- Furniture.reset(): that replaces the whole Furniture folder with a fresh copy.
 local function tvRoom(): (Model?, Model?)
 	local m = workspace:FindFirstChild("Mansion")
 	local f = m and m:FindFirstChild("Furniture")
@@ -84,8 +86,6 @@ end
 local function enter(p: Player)
 	if inIntro[p] or p:GetAttribute("InMatch") then return end
 	Data.setTutorialSeen(p)
-	local tv, chair = tvRoom()
-	if not tv or not chair then p:SetAttribute("IntroHouse", false); return end
 	inIntro[p] = true
 	Sandbox.holdDummy = true
 	Sandbox.enter(p, nil, true, true) -- (waits while the house is sent to the player; no still dummy)
@@ -98,35 +98,25 @@ local function enter(p: Player)
 	-- the room as it should be, nobody else's Woman in it
 	if Ghost.current then Ghost.despawn() end
 	Furniture.reset()
+	-- (the furniture is a fresh copy now: the TV and the armchair are looked up in it)
+	local tv, chair = tvRoom()
+	if not tv or not chair then
+		stop(p)
+		Sandbox.leave(p)
+		if p.Parent then p:SetAttribute("IntroHouse", false) end
+		return
+	end
 	-- the armchair far back from the TV, facing it: the whole scene in view, room for her to crawl out (back next
 	-- reset, like all the furniture)
 	local tvCF = tv:GetPivot()
 	local look = Vector3.new(tvCF.LookVector.X, 0, tvCF.LookVector.Z).Unit
 	local at = Vector3.new(tvCF.Position.X, chair:GetPivot().Position.Y, tvCF.Position.Z) + look * SEAT_BACK
 	chair:PivotTo(CFrame.lookAt(at, at - look))
+	chair:SetAttribute("IntroSeat", true) -- (Client/Intro's camera sits in this one: now farther than other armchairs)
+	-- it is also what the LIFT and THROW lessons pick up and throw at her (model attribute IntroProp)
+	chair:SetAttribute("IntroProp", true)
+	propOf[p] = chair
 	local spot = standSpot(tv, chair)
-	-- a wooden chair right beside the player, in front and to the right: the one the lesson lifts and throws
-	-- (model attribute IntroProp, for Client/Intro)
-	local f = workspace.Mansion:FindFirstChild("Furniture")
-	local prop, best = nil :: Model?, math.huge
-	if f then
-		for _, c in f:GetChildren() do
-			if c.Name == "Chair" and c:IsA("Model") and Furniture.isValid(c) then
-				local d = (c:GetPivot().Position - spot.Position).Magnitude
-				if d < best then prop, best = c, d end
-			end
-		end
-	end
-	if prop then
-		local pcf, psize = prop:GetBoundingBox()
-		local lift = prop:GetPivot().Position.Y - (pcf.Position.Y - psize.Y / 2)
-		local floorY = spot.Position.Y - 3
-		local pp = spot.Position + spot.RightVector * 3.4 + spot.LookVector * 1.6
-		pp = Vector3.new(pp.X, floorY + lift, pp.Z)
-		prop:PivotTo(CFrame.lookAt(pp, pp - spot.RightVector))
-		prop:SetAttribute("IntroProp", true)
-		propOf[p] = prop
-	end
 	pcall(function() p:RequestStreamAroundAsync(spot.Position, 5) end)
 	local c = p.Character
 	if c then c:PivotTo(spot) end
@@ -215,12 +205,14 @@ function Tutorial.start(isLobby: boolean)
 		elseif action == "ult" then
 			Combat.endUltimate(p)
 			Combat.fillBrutality(p)
+			if T then T.stunOnly = true end -- (this one ultimate stuns her: no ragdoll)
 		elseif action == "fight" and T then
 			hold(false)
 			T.pause = 3.2
 			T.nextAt = os.clock() + 2.2
 			T.minHp = 0
 			T.holdWindup = false
+			T.stunOnly = nil
 		elseif action == "exit" then
 			if Ghost.current then Ghost.despawn() end
 			local at = frontDoor()

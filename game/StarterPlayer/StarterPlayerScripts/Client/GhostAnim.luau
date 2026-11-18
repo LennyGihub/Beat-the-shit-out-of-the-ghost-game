@@ -530,6 +530,21 @@ local function target(state: string, t: number, sinceState: number): { [string]:
 		p.RightElbow = A(0.8, 0, 0); p.LeftElbow = A(0.8, 0, 0)
 		p.RightHip = A(-0.7 * f + s(t * 12) * 0.3, 0, 0.2); p.LeftHip = A(-0.4 * f + s(t * 10) * 0.3, 0, -0.2)
 		p.RightKnee = A(-0.8, 0, 0); p.LeftKnee = A(-0.5, 0, 0)
+	elseif state == "Stunned" then
+		-- dazed (the tutorial's ultimate, Server/Ghost stun): thrown back by the blow, then swaying where she
+		-- stands, her head lolling, her arms hanging
+		local j = math.max(0, 1 - sinceState / 0.4) -- the blow
+		local w = t * 2.4
+		p.Root = A(0.5 * j + 0.06 + s(w * 0.5) * 0.05, s(w * 0.6) * 0.1, s(w) * 0.17)
+		p.Waist = A(0.3 * j - 0.18, 0, -s(w) * 0.12)
+		p.Neck = A(0.7 * j - 0.5 + s(w * 1.3) * 0.18, s(w * 0.8) * 0.3, s(w * 1.1) * 0.38)
+		p.RightShoulder = A(-0.6 * j + 0.1 + s(w + 0.5) * 0.12, 0, 0.9 * j + 0.12 + s(w) * 0.1)
+		p.LeftShoulder = A(-0.6 * j + 0.1 + s(w + 1.3) * 0.12, 0, -0.9 * j - 0.12 + s(w) * 0.1)
+		p.RightElbow = A(0.3, 0, 0); p.LeftElbow = A(0.35, 0, 0)
+		p.RightWrist = A(0.5, 0, 0); p.LeftWrist = A(0.5, 0, 0)
+		p.RightHip = A(-0.2 + s(w) * 0.1, 0, 0.12); p.LeftHip = A(-0.1 - s(w) * 0.1, 0, -0.12)
+		p.RightKnee = A(-0.5, 0, 0); p.LeftKnee = A(-0.4, 0, 0)
+		p.RightAnkle = A(-0.5, 0, 0); p.LeftAnkle = A(-0.5, 0, 0)
 	elseif state == "Scare" then
 		p.Root = A(-0.25, 0, 0)
 		p.Neck = A(-0.25 + s(t * 50) * 0.06, s(t * 43) * 0.12, s(t * 37) * 0.15)
@@ -614,6 +629,38 @@ local function target(state: string, t: number, sinceState: number): { [string]:
 end
 
 local stateSeen, stateT = "", 0
+-- dazed (state Stunned): little stars circle her head (this screen's own parts)
+local stars = {} :: { BasePart }
+local function starStep(g: Model?, on: boolean, t: number)
+	if not on or not g then
+		if #stars > 0 then
+			for _, sp in stars do sp:Destroy() end
+			table.clear(stars)
+		end
+		return
+	end
+	local head = g:FindFirstChild("Head") :: BasePart?
+	if not head or not head:IsA("BasePart") then return end
+	if #stars == 0 then
+		for i = 1, 5 do
+			local sp = Instance.new("Part")
+			sp.Name = "DazeStar"
+			sp.Anchored = true; sp.CanCollide = false; sp.CanQuery = false; sp.CanTouch = false; sp.CastShadow = false
+			sp.Material = Enum.Material.Neon
+			sp.Color = i % 2 == 0 and Color3.fromRGB(255, 240, 170) or Color3.fromRGB(255, 205, 60)
+			sp.Size = Vector3.new(0.34, 0.34, 0.34)
+			sp.Parent = workspace.CurrentCamera
+			table.insert(stars, sp)
+		end
+	end
+	local r = math.max(head.Size.X, head.Size.Z) * 0.75 + 0.7
+	local c = head.Position + Vector3.new(0, head.Size.Y * 0.5 + 0.55, 0)
+	for i, sp in stars do
+		local a = t * 3.4 + (i / #stars) * math.pi * 2
+		sp.CFrame = CFrame.new(c + Vector3.new(math.cos(a) * r, math.sin(a * 2 + i) * 0.18, math.sin(a) * r))
+			* A(t * 5 + i, t * 4, math.pi / 4)
+	end
+end
 local heldTotal = 0 -- (time spent held by the tutorial: model attribute Held, Server/Tutorial; her pose stops)
 local warned = false
 local height = 8 -- the bound monster's height (entrances move the body by it)
@@ -628,6 +675,7 @@ function GA.update(dt: number)
 			current = nil
 		end
 	end
+	starStep(current, current ~= nil and current.Parent ~= nil and current:GetAttribute("State") == "Stunned", os.clock())
 	if not current or not current.Parent then return end
 	if current:GetAttribute("Held") == true then heldTotal += dt end
 	local t = os.clock() - heldTotal

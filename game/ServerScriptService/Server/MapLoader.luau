@@ -48,7 +48,9 @@ end
 function MapLoader.load(id: string): boolean
 	if not MapLoader.exists(id) then id = "Mansion" end
 	if id == current then
-		Furniture.recapture()
+		-- (the map is already there: its stored furniture stays. The live one may be smashed by now - the sandbox,
+		-- the tutorial - and copying it would make the damage permanent for this server)
+		if not Furniture.hasTemplate() then Furniture.recapture() end
 		return true
 	end
 	local src = folder():FindFirstChild(id) :: Model

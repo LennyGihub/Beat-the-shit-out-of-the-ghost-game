@@ -468,7 +468,10 @@ local function onThrow(player: Player, look: any)
 	if s.stamina < ST.ThrowCost and not buff(s, "staminaFree") then power *= 0.6 end
 	if not buff(s, "staminaFree") then s.stamina = math.max(0, s.stamina - ST.ThrowCost) end
 	s.lastUse = os.clock()
-	Furniture.throw(player, m, dir, power)
+	-- the tutorial (Server/Tutorial): the throw is steered onto her, it can't miss
+	local homing: BasePart? = nil
+	if player:GetAttribute("Tutorial") and Ghost.tutorial and Ghost.alive() then homing = (Ghost.current :: any).hrp end
+	Furniture.throw(player, m, dir, power, homing)
 	Remotes.Fx:FireAllClients("Throw", hrp.Position, player)
 	setWalk(player, s)
 	sync(player, s, true)
