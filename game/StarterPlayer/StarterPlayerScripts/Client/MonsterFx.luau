@@ -340,12 +340,13 @@ local function bladeIgnite(g: Instance)
 		-- like air through a respirator; you hear it coming before you see him)
 		local head = g:FindFirstChild("Head")
 		if head then
-			local b = Sfx.on("KnightBreath", head, { Volume = 0.7 })
+			-- loud on purpose: full strength within 25 studs, still heard across the house (140)
+			local b = Sfx.on("KnightBreath", head, { Volume = 3.5 })
 			if b then
 				b.RollOffMode = Enum.RollOffMode.InverseTapered
-				b.RollOffMinDistance = 7; b.RollOffMaxDistance = 70
-				local eq = Instance.new("EqualizerSoundEffect"); eq.LowGain = 4; eq.MidGain = 1; eq.HighGain = -9; eq.Parent = b
-				local ds = Instance.new("DistortionSoundEffect"); ds.Level = 0.18; ds.Parent = b
+				b.RollOffMinDistance = 25; b.RollOffMaxDistance = 140
+				local eq = Instance.new("EqualizerSoundEffect"); eq.LowGain = 6; eq.MidGain = 4; eq.HighGain = -2; eq.Parent = b
+				local ds = Instance.new("DistortionSoundEffect"); ds.Level = 0.25; ds.Parent = b
 			end
 		end
 	end)

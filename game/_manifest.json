@@ -397,8 +397,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/Entrance.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.Entrance",
    "class": "ModuleScript",
-   "bytes": 59293,
-   "sha1": "363d8628af0ae34f5ec75915d95a731310ef390d"
+   "bytes": 59290,
+   "sha1": "f8cf5de44bcf9b7c9a694a0a996193fd4cbab5bf"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/EntrancePose.luau",
@@ -481,8 +481,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/MonsterFx.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.MonsterFx",
    "class": "ModuleScript",
-   "bytes": 73648,
-   "sha1": "086f2f0dc2f529a24fb1d91d0796c3f8c5a30133"
+   "bytes": 73739,
+   "sha1": "1e3e132da5ada8944f2b77890be5312640f50287"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/NameTags.luau",

@@ -774,8 +774,8 @@ end
 local function maskBreath(vol: number)
 	local b = Sfx.play("KnightBreath", { Volume = vol })
 	if not b then return end
-	local eq = Instance.new("EqualizerSoundEffect"); eq.LowGain = 4; eq.MidGain = 1; eq.HighGain = -9; eq.Parent = b
-	local ds = Instance.new("DistortionSoundEffect"); ds.Level = 0.18; ds.Parent = b
+	local eq = Instance.new("EqualizerSoundEffect"); eq.LowGain = 6; eq.MidGain = 4; eq.HighGain = -2; eq.Parent = b
+	local ds = Instance.new("DistortionSoundEffect"); ds.Level = 0.25; ds.Parent = b
 end
 SCRIPTS.Knight = function(x)
 	local T = EP.T.Knight
@@ -826,7 +826,7 @@ SCRIPTS.Knight = function(x)
 	local burn: Sound? = nil
 	at(x, T.breath, function()
 		darkness(x, 0.55, 0)
-		maskBreath(1.4)
+		maskBreath(4.5)
 	end)
 	at(x, T.cut0, function()
 		Sfx.play("SaberHum", { Volume = 0.9, PlaybackSpeed = 1.4 })
@@ -901,7 +901,7 @@ SCRIPTS.Knight = function(x)
 		burst(x, landed + UP * 0.6, with(SMOKE_FLOOR, { Color = ColorSequence.new(look.Color:Lerp(C(120, 110, 100), 0.5)) }), 26)
 		if not x.evolved then chunks(x, landed + UP, 8, look.Color, look.Material, 18) end
 	end)
-	at(x, T.step0 + 0.5, function() maskBreath(1.25) end)
+	at(x, T.step0 + 0.5, function() maskBreath(4) end)
 	-- the blade raised: its hum swells, the card
 	at(x, T.raise, function()
 		Sfx.play("SaberSwish", { Volume = 1.2, PlaybackSpeed = 0.65 })
@@ -910,7 +910,7 @@ SCRIPTS.Knight = function(x)
 		flash(x, glow, 0.18, 0.35)
 		x.card()
 	end)
-	at(x, T.calm, function() maskBreath(1.0) end)
+	at(x, T.calm, function() maskBreath(3.5) end)
 	x.camera = function(sNow)
 		local walk = seg(sNow, T.step0, T.step1)
 		local out = ss(seg(sNow, T.kick, T.step0 + 0.4))
