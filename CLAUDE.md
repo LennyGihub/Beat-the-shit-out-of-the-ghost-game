@@ -8,6 +8,7 @@
 ## Images (icons, UI art) — no emoji
 
 - The user dislikes emoji in UI: use generated image icons instead.
+- **Roblox moderates every uploaded image against its rules** (2026-11-18: a syringe icon named "Black Tar" got the user's account a Terms of Use warning: "illegal or regulated content: alcohol, drugs, tobacco, bomb or weapon making"). Never generate or upload pictures, and never name things, that read as drugs, syringes / injections, pills, alcohol, smoking or weapon-making. Fantasy potions in corked bottles are fine; anything that could look like real drug use is not. A second strike can mean a ban.
 - One command makes an image and returns its Roblox id: `python3 tools/make_image.py <name> "<what it is>"` (`--kind art --size 1024x576` for backgrounds/art; `--no-upload` to look at it first). It uses Pollinations' free model, cuts the white background for icons, stores the PNG in the public `game-art` repo and uploads it through Studio. The last printed line is `rbxassetid://...`.
 - Needs the `game-art` repo at `/home/user/game-art` with push access: if missing, attach `lennygihub/game-art` (add_repo, push) and clone it there. Needs the bridge's "Image relay" window running on the PC.
 - Look at the image (Read the PNG) before using it in the game; regenerate with another `--seed` if it's off. Never put text in generated images; add text with TextLabels.
