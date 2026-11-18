@@ -22,13 +22,18 @@ EP.T = {
 	Conqueror = { portal = 0.1, step0 = 1.4, step1 = 3.0, close = 3.1, fist = 3.4, clench = 3.9, calm = 4.9 },
 	Rat = { burst = 1.7, peak = 1.98, land = 2.4, rear = 3.4, calm = 4.2 },
 	Knight = { breath = 0.15, cut0 = 0.9, cut1 = 2.7, kick = 2.95, fall = 3.4, step0 = 3.3, step1 = 4.5, raise = 4.65, calm = 5.7 },
+	Antlered = { crawl0 = 0.3, crawl1 = 1.7, fall = 1.95, land = 2.35, rise0 = 3.0, rise1 = 3.75, roar = 3.85, calm = 4.65 },
+	LakeWitch = { hand = 0.9, rise0 = 1.1, rise1 = 2.9, swing0 = 3.0, slam = 4.0, calm = 4.8 },
+	Counselor = { strike = 0.9, raise0 = 1.5, raise1 = 2.3, look1 = 3.2, ring = 3.5, calm = 4.5 },
+	Scarecrow = { twitch = 1.5, snap = 2.45, burst = 2.6, drop = 3.1, land = 3.4, rise0 = 3.55, rise1 = 4.1, raise = 4.2, calm = 5.0 },
 }
 EP.FLASH = 0.16 -- how long each of the Caller's flashes shows him
 -- the running entrance's clock, written by Client/Entrance every frame: which monster, the seconds so far, and
 -- `back` = how much of the room behind the monster is free (0.25..1: walk-ups start that much closer in a small room)
 -- `face` = the way the monster faces during its entrance (toward the camera; the Root joint turns the body there
 -- and turns it back to where the server has it looking in the last moments)
-EP.clock = { model = nil :: Model?, s = 0, back = 1, face = nil :: Vector3? }
+EP.clock = { model = nil :: Model?, s = 0, back = 1, face = nil :: Vector3?, ceil = 16 }
+-- (`ceil` = how high the ceiling / rafters are above the floor there: the Antlered One crawls along it)
 
 -- the top of the monster's head above the floor, in studs (its Hover attribute = root height above the floor, plus
 -- the rest-pose joints up to the head): what the entrances measure their moves and camera heights with
@@ -264,6 +269,114 @@ POSES.Knight = function(p, s, t, H)
 	p.LeftElbow = A(0.25 - 0.15 * raise, 0, 0)
 	p.LeftWrist = A(-0.6 * raise, 0, 0)
 	return s < T.kick and 1 or 0
+end
+
+-- THE ANTLERED ONE: upside down on the ceiling, crawling toward you; he lets go, rolls upright as he falls, lands in
+-- a crouch, stands up tall and bellows with his arms thrown wide
+POSES.Antlered = function(p, s, t, H)
+	local T = EP.T.Antlered
+	local m = EP.clock.model
+	local hv = (m and tonumber(m:GetAttribute("Hover"))) or 7
+	local top = math.max(0, math.min(EP.clock.ceil or 16, 26) - 2 * hv) -- (his feet on the ceiling)
+	local crawl = ss(seg(s, T.crawl0, T.crawl1))
+	local fall = seg(s, T.fall, T.land)
+	local landed = s >= T.land
+	local flip = ss(seg(s, T.fall, T.land - 0.05))
+	local k = landed and (1 - ss(seg(s, T.rise0, T.rise1))) or 0
+	local squash = landed and exp(-(s - T.land) / 0.2) or 0
+	local roar = seg(s, T.roar, T.roar + 0.25) * (1 - seg(s, T.calm, T.calm + 0.4))
+	local y = (s < T.fall and top or top * (1 - fall * fall)) - H * 0.18 * k - H * 0.05 * squash
+	local z = 9 * EP.clock.back * (1 - crawl)
+	p.Root = CFrame.new(0, y, z) * A(0, 0, pi * (1 - flip)) * A(-0.5 * k + 0.35 * roar, 0, 0)
+	if not landed then
+		-- on the ceiling: a slow spider crawl, the skull hanging down and turning to look at you
+		local am = (1 - flip) * seg(s, T.crawl0, T.crawl0 + 0.2) * (1 - seg(s, T.crawl1 - 0.2, T.crawl1))
+		local ph = s * 7
+		stride(p, ph, am * 1.2)
+		p.RightShoulder = A(0.4 + sin(ph) * 0.7 * am, 0, 0.5); p.LeftShoulder = A(0.4 - sin(ph) * 0.7 * am, 0, -0.5)
+		p.RightElbow = A(0.6, 0, 0); p.LeftElbow = A(0.6, 0, 0)
+		p.Neck = A(0.7 * (1 - flip), sin(t * 1.7) * 0.5 * (1 - seg(s, T.crawl1, T.fall)), sin(t * 23) * 0.05)
+	else
+		crouch(p, k)
+		p.Waist = A(-0.3 * k + 0.25 * roar, 0, 0)
+		p.Neck = A(-0.3 * k + 0.5 * roar + sin(t * 40) * 0.05 * roar, 0, 0)
+		p.RightShoulder = A(1.1 * k + 0.2 * roar, 0, 0.1 + 1.35 * roar); p.LeftShoulder = A(1.1 * k + 0.2 * roar, 0, -0.1 - 1.35 * roar)
+		p.RightElbow = A(0.3 + 0.9 * roar, 0, 0); p.LeftElbow = A(0.3 + 0.9 * roar, 0, 0)
+		p.RightWrist = A(0.4 * roar, 0, 0); p.LeftWrist = A(0.4 * roar, 0, 0)
+	end
+	return 1 - seg(s, 0, 0.35)
+end
+
+-- THE LAKE WITCH: one hand comes up out of the black water, then she rises with her head hanging, turning slowly;
+-- her head comes up, she whirls the hook over her head and slams it into the floor in front of her
+POSES.LakeWitch = function(p, s, t, H)
+	local T = EP.T.LakeWitch
+	local rise = ss(seg(s, T.rise0, T.rise1))
+	local reach = seg(s, T.hand - 0.2, T.hand + 0.15) * (1 - ss(seg(s, T.rise1 - 0.5, T.rise1 + 0.2)))
+	local look = ss(seg(s, T.rise1 - 0.3, T.rise1 + 0.4))
+	local whirl = seg(s, T.swing0, T.swing0 + 0.25)
+	local slam = ss(seg(s, T.slam - 0.14, T.slam)) * (1 - seg(s, T.calm, T.calm + 0.5))
+	local up = H + 1.5
+	-- (raised a little while the hand is up, so the hand breaks the surface before the head does)
+	p.Root = CFrame.new(0, (-up + 1.2 * reach) * (1 - rise), 0) * A(-0.1 - 0.2 * slam, sin(t * 0.8) * 0.2 * (1 - look), 0)
+	p.Waist = A(-0.25 * slam, sin(s * 14) * 0.2 * whirl * (1 - slam), 0)
+	p.Neck = A(-0.9 + 0.75 * look + 0.35 * slam + sin(t * 45) * 0.05 * slam, 0, 0.3 * (1 - look))
+	-- her left hand reaching up out of the water first
+	p.LeftShoulder = A(0.25 + 2.75 * reach, 0, -0.15 - 0.5 * slam); p.LeftElbow = A(0.25 + 0.2 * reach, 0, 0); p.LeftWrist = A(-0.4 * reach, 0, 0)
+	-- the hook arm: hanging, whirled overhead (the hand circling), then slammed down in front of her
+	local hang = A(0.2, 0, 0.1)
+	local circle = A(2.7 + math.cos(s * 14) * 0.25, 0, 0.3 + sin(s * 14) * 0.35)
+	p.RightShoulder = hang:Lerp(circle, whirl):Lerp(A(0.85, 0, 0.1), slam)
+	p.RightElbow = A(0.3 * (1 - whirl) + 0.1, 0, 0)
+	p.RightHip = A(0.1, 0, 0.05); p.LeftHip = A(-0.1 + 0.3 * slam, 0, -0.05); p.LeftKnee = A(-0.4 * slam, 0, 0)
+	return 0.45 * (1 - rise)
+end
+
+-- THE BURNED COUNSELOR: standing in the dark; his torch catches, he brings it up by his burned face and tilts his
+-- head; then the torch goes up high, his other arm out, his head back: the scream (a ring of fire round him)
+POSES.Counselor = function(p, s, t, H)
+	local T = EP.T.Counselor
+	local lift = ss(seg(s, T.raise0, T.raise1)) * (1 - ss(seg(s, T.ring - 0.2, T.ring)))
+	local tilt = ss(seg(s, T.raise1, T.look1))
+	local ring = ss(seg(s, T.ring - 0.12, T.ring + 0.1)) * (1 - seg(s, T.calm, T.calm + 0.5))
+	p.Root = A(-0.05 + 0.3 * ring, 0, 0)
+	p.Waist = A(0.2 * ring, 0, 0)
+	p.Neck = A(-0.25 * (1 - ring) + 0.55 * ring + sin(t * 48) * 0.05 * ring, 0.25 * tilt * (1 - ring), 0.45 * tilt * (1 - ring) + sin(t * 2) * 0.03)
+	local low, face, high = A(0.35, 0, 0.1), A(1.7, 0, -0.45), A(2.9, 0, 0.15)
+	p.RightShoulder = low:Lerp(face, lift):Lerp(high, ring)
+	p.RightElbow = A(0.3 + 1.1 * lift * (1 - ring), 0, 0)
+	p.LeftShoulder = A(0.1 + 0.2 * ring, 0, -0.1 - 1.4 * ring); p.LeftElbow = A(0.2 + 0.3 * ring, 0, 0)
+	p.RightHip = A(-0.1 * ring, 0, 0.05 + 0.1 * ring); p.LeftHip = A(0.1 * ring, 0, -0.05 - 0.1 * ring)
+	return 0
+end
+
+-- THE SCARECROW: hung on his pole, arms out along the crossbar, head slumped; it twitches, then snaps up at you;
+-- he drops off the pole into a crouch, stands and raises his sickle
+POSES.Scarecrow = function(p, s, t, H)
+	local T = EP.T.Scarecrow
+	local hang = s < T.drop
+	local fall = seg(s, T.drop, T.land)
+	local landed = s >= T.land
+	local k = landed and (1 - ss(seg(s, T.rise0, T.rise1))) or 0
+	local squash = landed and exp(-(s - T.land) / 0.18) or 0
+	local raise = ss(seg(s, T.raise, T.raise + 0.25)) * (1 - seg(s, T.calm, T.calm + 0.5))
+	local snap = seg(s, T.snap, T.snap + 0.06)
+	local tw = pulse(s, T.twitch, 0.05) + pulse(s, T.twitch + 0.35, 0.04) + pulse(s, T.twitch + 0.6, 0.03)
+	local y = (hang and 2.4 or 2.4 * (1 - fall * fall)) - H * 0.16 * k - H * 0.05 * squash
+	p.Root = CFrame.new(0, y, 0) * A(-0.45 * k, 0, 0)
+	if hang then
+		p.RightShoulder = A(0, 0, 1.45 + tw * 0.08); p.LeftShoulder = A(0, 0, -1.45)
+		p.RightElbow = A(0.1, 0, 0); p.LeftElbow = A(0.1, 0, 0)
+		p.RightHip = A(0.05, 0, 0.05); p.LeftHip = A(0.1, 0, -0.05); p.RightKnee = A(-0.15, 0, 0); p.LeftKnee = A(-0.25, 0, 0)
+		p.Neck = A(-0.75 * (1 - snap) + 0.1 * snap + tw * 0.3, tw * 0.4, 0.45 * (1 - snap) + 0.3 * snap + sin(t * 37) * 0.04 * snap)
+	else
+		local off = 1 - fall -- (the arms come off the crossbar as he drops)
+		crouch(p, k)
+		p.Neck = A(-0.2 * k + 0.1, 0, 0.3 + sin(t * 30) * 0.03 * raise)
+		p.RightShoulder = A(0.6 * k + 2.7 * raise, 0, 0.2 + 1.2 * off * (landed and 0 or 1)); p.RightElbow = A(0.3 + 0.4 * raise, 0, 0)
+		p.LeftShoulder = A(0.6 * k, 0, -0.3 - 1.1 * off * (landed and 0 or 1) - 0.3 * raise); p.LeftElbow = A(0.2, 0, 0)
+	end
+	return 0
 end
 
 -- the pose and the see-through amount (0 = solid, 1 = gone) of monster `id`, s seconds into its entrance

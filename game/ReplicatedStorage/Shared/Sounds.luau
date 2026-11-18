@@ -47,10 +47,10 @@ return {
 	Music_Animatronic_E = { ids = { 9044887799 }, volume = 1.6 }, -- Psycho Clown
 	Music_Titan = { ids = { 9039352479 }, volume = 1.6 }, -- The Heroic Battle of Giants
 	-- Camp Hollowmere's monsters (licensed production music)
-	Music_Antlered = { ids = { 1836983505 }, volume = 1.6 }, -- Half Light
-	Music_LakeWitch = { ids = { 1847041997 }, volume = 1.6 }, -- Drowning 3
-	Music_Counselor = { ids = { 1843739421 }, volume = 1.6 }, -- Heavy Drone 9
-	Music_Scarecrow = { ids = { 1842084891 }, volume = 1.6 }, -- Cinematic Texture Toolkit
+	Music_Antlered = { ids = { 1835248722 }, volume = 1.6 }, -- Stalking the Prey 60 (the hunt: drums, low brass)
+	Music_LakeWitch = { ids = { 1847041997 }, volume = 1.6 }, -- Drowning 3 (under water)
+	Music_Counselor = { ids = { 9041745725 }, volume = 1.6 }, -- 80s Horror Throwback Synth Bed 2 (the summer-camp slasher)
+	Music_Scarecrow = { ids = { 1840881643 }, volume = 1.6 }, -- Dark Pursuit (A) (the cornfield chase)
 	Music_Titan_E = { ids = { 9039352746 }, volume = 1.6 }, -- The Fall of the Titans
 	Music_Goblin = { ids = { 1841594035 }, volume = 1.6 }, -- Mischievous Elves (sneaky, not epic)
 	Music_Goblin_E = { ids = { 1839900676 }, volume = 1.6 }, -- In the Hall of the Mountain King
@@ -146,4 +146,12 @@ return {
 	FormKnuckle = { ids = { 9116202331 }, volume = 1 },
 	FormZap = { ids = { 9116274975 }, volume = 0.6 },
 	Cauldron = { ids = { 9120305560 }, volume = 0.35 },
+	-- Camp Hollowmere's monsters' moves (Client/CampFx; Pro Sound Effects): the Scarecrow's crows (a raven's caw, a
+	-- sudden burst of birds), the Lake Witch's black water bubbling, the Antlered One's snort before his charge,
+	-- the Scarecrow's sickle drawn along its blade
+	CrowCaw = { ids = { 9118067220, 9118066001, 9118066003, 9118066302 }, volume = 0.8 },
+	CrowFlock = { ids = { 9125738421 }, volume = 0.9 },
+	Bubbles = { ids = { 9120310416, 9120310477 }, volume = 0.8 },
+	BullSnort = { ids = { 9113634952 }, volume = 1 },
+	BladeScrape = { ids = { 9113453649 }, volume = 0.8 },
 }

@@ -12,6 +12,14 @@
 --   FloodStart (t) / FloodEnd         black water rises over the whole floor, then drains
 --   TorchWind (model, t) / TorchThrow (model, from, to, t) / TorchLand (spot)   the Burned Counselor's torch
 --   ScareSwap (a, b)                  straw bursts where the Scarecrow and his decoy swapped
+--   ChargeLine (model, origin, dir, len, t) / ChargeGo (model, t) / ChargeSmash (pos) / AntlersStuck (model, pos, t)
+--                                     the Antlered One's charge: a red lane filling out, the snort, dust, the wall
+--   FloodCall (model, t)              the Lake Witch calls the water (before FloodStart)
+--   GraspWarn (model, spot, radius, t) / GraspHands (spot, radius, hold)   black water wells up, drowned hands grab
+--   CounselorScream (model, t) / CounselorPant (model, t)   the Counselor's run: the scream, the panting after
+--   CrowsGather (model, t) / Crows (model, dir, t, range)   the Scarecrow's crows circle him, then burst at you
+--   Blinded (t)                       (to the one pecked) black wings beating over the screen, fading
+--   SickleWind (model, t) / SickleThrow (model, from, to, flight) / SickleDrop (model)   his sickle, thrown and back
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -24,7 +32,9 @@ local Fx: any = nil
 function CF.init(fx) Fx = fx end
 
 CF.KINDS = { "AntlerClimb", "DropWarn", "DropLand", "HookWind", "HookThrow", "HookCatch", "HookPull", "HookMiss", "HookDrown",
-	"FloodStart", "FloodEnd", "TorchWind", "TorchThrow", "TorchLand", "ScareSwap" }
+	"FloodStart", "FloodEnd", "TorchWind", "TorchThrow", "TorchLand", "ScareSwap",
+	"ChargeLine", "ChargeGo", "ChargeSmash", "AntlersStuck", "FloodCall", "GraspWarn", "GraspHands", "CounselorScream",
+	"CounselorPant", "CrowsGather", "Crows", "Blinded", "SickleWind", "SickleThrow", "SickleDrop" }
 local set = {} :: { [string]: boolean }
 for _, k in CF.KINDS do set[k] = true end
 function CF.handles(kind: string): boolean return set[kind] == true end
@@ -185,6 +195,399 @@ local function straw(pos: Vector3)
 	burst(pos, Color3.fromRGB(150, 130, 90), 8, 1.6, 5)
 end
 
+-- the second moves ----------------------------------------------------------------------------------------
+local A = CFrame.Angles
+local function hrpOf(m: Model?): BasePart? return m and m:FindFirstChild("HumanoidRootPart") :: BasePart? end
+local function shakeNear(pos: Vector3, dist: number, amount: number)
+	local k = near(pos, dist)
+	if Fx and k > 0 then Fx.shake(amount * k) end
+end
+-- a few parts moved together: { part, offset } placed from one CFrame
+type Rig = { parts: { { p: BasePart, rel: CFrame } } }
+local function rigPlace(r: Rig, cf: CFrame)
+	for _, e in r.parts do e.p.CFrame = cf * e.rel end
+end
+local function rigDestroy(r: Rig)
+	for _, e in r.parts do e.p:Destroy() end
+end
+local function rigAdd(r: Rig, rel: CFrame, props: { [string]: any }): BasePart
+	local p = part(props)
+	table.insert(r.parts, { p = p, rel = rel })
+	return p
+end
+
+-- THE ANTLERED ONE's charge: a red lane on the floor filling out from his feet, the snort; the run; the wall
+local RED, RED_HOT = Color3.fromRGB(200, 26, 22), Color3.fromRGB(255, 70, 50)
+local function chargeLine(model: Model?, origin: Vector3, dir: Vector3, len: number, t: number)
+	local o = origin + Vector3.new(0, 0.1, 0)
+	local cf = CFrame.lookAt(o, o + dir)
+	local lane = part({ Size = Vector3.new(6, 0.1, len), CFrame = cf * CFrame.new(0, 0, -len / 2), Color = RED, Material = Enum.Material.Neon, Transparency = 0.78 })
+	local fill = part({ Size = Vector3.new(3.4, 0.12, 0.5), CFrame = cf * CFrame.new(0, 0.01, -0.25), Color = RED_HOT, Material = Enum.Material.Neon, Transparency = 0.35 })
+	TweenService:Create(fill, TweenInfo.new(t, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Size = Vector3.new(3.4, 0.12, len), CFrame = cf * CFrame.new(0, 0.01, -len / 2) }):Play()
+	Debris:AddItem(lane, t + 0.5); Debris:AddItem(fill, t + 0.5)
+	local h = hrpOf(model)
+	if h then
+		Sfx.at("BullSnort", h.Position, { Volume = 1.3, PlaybackSpeed = 0.7 })
+		task.delay(t * 0.55, function() Sfx.at("BullSnort", h.Position, { Volume = 1.3, PlaybackSpeed = 0.62 }) end)
+	end
+end
+local function chargeGo(model: Model?, t: number)
+	local h = hrpOf(model)
+	if not h then return end
+	Sfx.at("DemonRoar", h.Position, { Volume = 1, PlaybackSpeed = 0.7 })
+	-- dust kicked up behind him for the whole run
+	local at = Instance.new("Attachment"); at.Position = Vector3.new(0, -5, 1); at.Parent = h
+	local e = Instance.new("ParticleEmitter")
+	e.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	e.Color = ColorSequence.new(Color3.fromRGB(110, 96, 80))
+	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1.5), NumberSequenceKeypoint.new(1, 4) })
+	e.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(1, 1) })
+	e.Lifetime = NumberRange.new(0.6, 1); e.Rate = 40; e.Speed = NumberRange.new(2, 5); e.SpreadAngle = Vector2.new(40, 40)
+	e.Parent = at
+	task.delay(t, function() e.Enabled = false end)
+	Debris:AddItem(at, t + 1.2)
+	shakeNear(h.Position, 60, 0.35)
+end
+local function chargeSmash(pos: Vector3)
+	Sfx.at("WoodBreak", pos, { Volume = 1.3, PlaybackSpeed = 0.8 })
+	burst(pos, Color3.fromRGB(120, 104, 86), 14, 2, 12)
+	shakeNear(pos, 70, 0.6)
+end
+local function antlersStuck(model: Model?, pos: Vector3, t: number)
+	Sfx.at("WoodBreak", pos, { Volume = 1.4, PlaybackSpeed = 0.6 })
+	Sfx.at("PunchHeavy", pos, { Volume = 1.3, PlaybackSpeed = 0.4 })
+	burst(pos + Vector3.new(0, 3, 0), Color3.fromRGB(90, 70, 50), 20, 0.5, 14, "rbxasset://textures/particles/sparkles_main.dds")
+	burst(pos + Vector3.new(0, 3, 0), Color3.fromRGB(130, 116, 96), 12, 2, 6)
+	shakeNear(pos, 70, 0.8)
+	-- he snorts and pulls at it
+	local h = hrpOf(model)
+	if h then
+		for i = 1, 2 do
+			task.delay(t * i / 3, function() if h.Parent then Sfx.at("BullSnort", h.Position, { Volume = 1.2, PlaybackSpeed = 0.8 }) end end)
+		end
+	end
+end
+
+-- THE LAKE WITCH's grasp: black water wells up where you stand, then the drowned hands come up through it
+local SKIN_D = Color3.fromRGB(104, 122, 112)
+local graspDisc: BasePart? = nil
+local function graspWarn(model: Model?, spot: Vector3, radius: number, t: number)
+	local cf = CFrame.new(spot + Vector3.new(0, 0.08, 0)) * A(0, 0, math.pi / 2)
+	local disc = part({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.12, 1, 1), CFrame = cf, Color = Color3.fromRGB(10, 22, 24),
+		Material = Enum.Material.SmoothPlastic, Reflectance = 0.25, Transparency = 0.08 })
+	local ring = part({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.1, radius * 2 + 0.6, radius * 2 + 0.6), CFrame = cf * CFrame.new(-0.02, 0, 0),
+		Color = Color3.fromRGB(60, 150, 130), Material = Enum.Material.Neon, Transparency = 0.6 })
+	TweenService:Create(disc, TweenInfo.new(t * 0.7, Enum.EasingStyle.Quad), { Size = Vector3.new(0.12, radius * 2, radius * 2) }):Play()
+	TweenService:Create(ring, TweenInfo.new(t, Enum.EasingStyle.Linear), { Transparency = 0.2 }):Play()
+	-- bubbles coming up through it
+	local e = Instance.new("ParticleEmitter")
+	e.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	e.Color = ColorSequence.new(Color3.fromRGB(120, 180, 170))
+	e.Size = NumberSequence.new(0.25); e.Transparency = NumberSequence.new(0.3)
+	e.Lifetime = NumberRange.new(0.3, 0.6); e.Rate = 30; e.Speed = NumberRange.new(2, 4)
+	e.EmissionDirection = Enum.NormalId.Right; e.SpreadAngle = Vector2.new(60, 60)
+	e.Parent = disc
+	if graspDisc then graspDisc:Destroy() end
+	graspDisc = disc
+	Debris:AddItem(ring, t + 0.1)
+	Debris:AddItem(disc, t + 4)
+	Sfx.at("Bubbles", spot, { Volume = 1 })
+	task.delay(t * 0.5, function() Sfx.at("Bubbles", spot, { Volume = 1, PlaybackSpeed = 0.8 }) end)
+	local h = hrpOf(model)
+	if h then Sfx.at("GhostWhisper", h.Position, { Volume = 0.8, PlaybackSpeed = 0.7 }) end
+end
+local function makeHand(): Rig
+	local r: Rig = { parts = {} }
+	local base = { Anchored = true, Color = SKIN_D, Material = Enum.Material.SmoothPlastic }
+	local function P(size: Vector3, rel: CFrame, color: Color3?)
+		local props = table.clone(base); props.Size = size; if color then props.Color = color end
+		rigAdd(r, rel, props)
+	end
+	P(Vector3.new(0.75, 2.8, 0.7), CFrame.new(0, -1.4, 0)) -- forearm
+	P(Vector3.new(0.8, 0.3, 0.75), CFrame.new(0, -0.6, 0), Color3.fromRGB(60, 72, 60)) -- a rag of sleeve
+	P(Vector3.new(1.0, 0.9, 0.42), CFrame.new(0, 0.45, 0)) -- palm
+	for i = 0, 3 do
+		local x = -0.36 + i * 0.24
+		P(Vector3.new(0.18, 0.8, 0.18), CFrame.new(x, 1.2, 0) * A(0.35, 0, (x) * -0.4) * CFrame.new(0, 0, 0))
+		P(Vector3.new(0.17, 0.12, 0.17), CFrame.new(x, 1.62, 0.12) * A(0.35, 0, 0), Color3.fromRGB(40, 44, 40)) -- black nails
+	end
+	P(Vector3.new(0.2, 0.6, 0.2), CFrame.new(0.55, 0.5, 0) * A(0, 0, -0.8)) -- thumb
+	return r
+end
+local function graspHands(spot: Vector3, radius: number, hold: number)
+	local hands = {}
+	local n = 6
+	for i = 0, n do
+		local p: Vector3
+		if i == n then p = spot else
+			local ang = i / n * math.pi * 2 + math.random() * 0.4
+			p = spot + Vector3.new(math.cos(ang), 0, math.sin(ang)) * radius * (0.45 + math.random() * 0.35)
+		end
+		local yaw = math.random() * math.pi * 2
+		local tilt = (math.random() - 0.5) * 0.5
+		table.insert(hands, { r = makeHand(), pos = p, yaw = yaw, tilt = tilt, delay = math.random() * 0.15, wig = math.random() * 6 })
+	end
+	burst(spot + Vector3.new(0, 0.6, 0), Color3.fromRGB(60, 110, 110), 26, 1.0, 14)
+	Sfx.at("FormGulp", spot, { Volume = 1.2, PlaybackSpeed = 0.5 })
+	Sfx.at("Bubbles", spot, { Volume = 1.2, PlaybackSpeed = 0.6 })
+	shakeNear(spot, 40, 0.3)
+	local t0 = os.clock()
+	local total = hold + 0.5
+	local conn: RBXScriptConnection
+	conn = RunService.RenderStepped:Connect(function()
+		local t = os.clock() - t0
+		for _, hd in hands do
+			local u = math.clamp((t - hd.delay) / 0.18, 0, 1) -- up fast
+			local down = math.clamp((t - hold) / 0.5, 0, 1) -- then back under
+			local y = -3.2 + (u * u) * 3.4 - down * 3.6
+			local grab = math.sin(t * 9 + hd.wig) * 0.12
+			local cf = CFrame.new(hd.pos + Vector3.new(0, y, 0)) * A(0, hd.yaw, 0) * A(hd.tilt + grab, 0, grab)
+			rigPlace(hd.r, cf)
+		end
+		if t > total then
+			conn:Disconnect()
+			for _, hd in hands do rigDestroy(hd.r) end
+		end
+	end)
+	local d = graspDisc
+	if d then
+		task.delay(hold, function()
+			if d.Parent then TweenService:Create(d, TweenInfo.new(0.8), { Transparency = 1 }):Play() end
+		end)
+	end
+end
+
+-- THE BURNED COUNSELOR's run: the scream with the torch flaring, the panting after
+local function torchTip(model: Model?): Vector3?
+	local f = model and model:FindFirstChild("Flame") :: BasePart?
+	return f and f.Position or nil
+end
+local function counselorScream(model: Model?, t: number)
+	local h = hrpOf(model)
+	if not h then return end
+	Sfx.at("GhostScream", h.Position, { Volume = 1.1, PlaybackSpeed = 0.7 })
+	local tip = torchTip(model)
+	if tip then
+		burst(tip, Color3.fromRGB(255, 140, 40), 30, 0.45, 16, "rbxasset://textures/particles/sparkles_main.dds")
+		Sfx.at("Flamethrower", tip, { Volume = 0.8, PlaybackSpeed = 0.9 })
+	end
+	shakeNear(h.Position, 50, 0.3)
+end
+local function counselorPant(model: Model?, t: number)
+	local head = model and model:FindFirstChild("Head") :: BasePart?
+	if not head then return end
+	for i = 0, math.floor(t / 0.45) do
+		task.delay(i * 0.45, function()
+			if head.Parent then burst(head.Position + head.CFrame.LookVector * 0.8, Color3.fromRGB(70, 66, 62), 4, 0.6, 2) end
+		end)
+	end
+end
+
+-- THE SCARECROW's crows: they gather and circle on him, then burst out at you; blinded = pecked at, black wings
+local BLACK = Color3.fromRGB(22, 21, 26)
+local CROW = 1.4 -- (their size)
+type Crow = { r: Rig, wl: BasePart, wr: BasePart, cf: CFrame, phase: number }
+local function makeCrow(): Crow
+	local r: Rig = { parts = {} }
+	local function P(size: Vector3, rel: CFrame, color: Color3?): BasePart
+		return rigAdd(r, rel, { Size = size, Color = color or BLACK, Material = Enum.Material.SmoothPlastic })
+	end
+	local K = CROW
+	P(Vector3.new(0.45, 0.42, 0.95) * K, CFrame.new()) -- body
+	P(Vector3.new(0.34, 0.34, 0.36) * K, CFrame.new(0, 0.18 * K, -0.6 * K)) -- head
+	P(Vector3.new(0.1, 0.1, 0.32) * K, CFrame.new(0, 0.14 * K, -0.9 * K), Color3.fromRGB(70, 66, 60)) -- beak
+	P(Vector3.new(0.36, 0.06, 0.5) * K, CFrame.new(0, 0.05 * K, 0.65 * K)) -- tail
+	-- the wings are placed every frame (flapping), not by the rig
+	local wl = part({ Size = Vector3.new(1.0, 0.05, 0.55) * K, Color = BLACK, Material = Enum.Material.SmoothPlastic })
+	local wr = part({ Size = Vector3.new(1.0, 0.05, 0.55) * K, Color = BLACK, Material = Enum.Material.SmoothPlastic })
+	return { r = r, wl = wl, wr = wr, cf = CFrame.new(), phase = math.random() * 6 }
+end
+local function placeCrow(c: Crow, cf: CFrame, t: number)
+	c.cf = cf
+	rigPlace(c.r, cf)
+	local f = math.sin(t * 28 + c.phase) * 0.9
+	c.wl.CFrame = cf * CFrame.new(-0.22 * CROW, 0.12 * CROW, 0) * A(0, 0, f) * CFrame.new(-0.5 * CROW, 0, 0)
+	c.wr.CFrame = cf * CFrame.new(0.22 * CROW, 0.12 * CROW, 0) * A(0, 0, -f) * CFrame.new(0.5 * CROW, 0, 0)
+end
+local function crowGone(c: Crow)
+	rigDestroy(c.r); c.wl:Destroy(); c.wr:Destroy()
+end
+local flocks: { [Model]: { crows: { Crow }, conn: RBXScriptConnection? } } = {}
+local function crowsGather(model: Model?, t: number)
+	local h = hrpOf(model)
+	if not model or not h then return end
+	local old = flocks[model]
+	if old then
+		if old.conn then old.conn:Disconnect() end
+		for _, c in old.crows do crowGone(c) end
+	end
+	local fl = { crows = {} :: { Crow }, conn = nil :: RBXScriptConnection? }
+	flocks[model] = fl
+	for _ = 1, 12 do table.insert(fl.crows, makeCrow()) end
+	local t0 = os.clock()
+	fl.conn = RunService.RenderStepped:Connect(function()
+		local hh = hrpOf(model)
+		if not hh then return end
+		local tt = os.clock() - t0
+		local k = math.min(1, tt / 0.6) -- (they fly in from far)
+		for i, c in fl.crows do
+			local ang = tt * 3.2 + i / #fl.crows * math.pi * 2
+			local rad = 2.6 + (1 - k) * 14 + math.sin(i * 1.7) * 0.6
+			local p = hh.Position + Vector3.new(math.cos(ang) * rad, 1.6 + math.sin(i * 2.3) * 1.2 + (1 - k) * 6, math.sin(ang) * rad)
+			local fwd = Vector3.new(-math.sin(ang), 0, math.cos(ang))
+			placeCrow(c, CFrame.lookAt(p, p + fwd), tt)
+		end
+	end)
+	Sfx.at("CrowCaw", h.Position, { Volume = 1 })
+	task.delay(t * 0.4, function() Sfx.at("CrowCaw", h.Position, { Volume = 1, PlaybackSpeed = 0.9 }) end)
+	Sfx.at("CrowFlock", h.Position, { Volume = 0.6 })
+	task.delay(t + 3, function()
+		-- (never left behind if the burst never came)
+		if flocks[model] == fl then
+			if fl.conn then fl.conn:Disconnect() end
+			for _, c in fl.crows do crowGone(c) end
+			flocks[model] = nil
+		end
+	end)
+end
+local function crowsBurst(model: Model?, dir: Vector3, t: number, range: number)
+	local h = hrpOf(model)
+	if not model or not h then return end
+	local fl = flocks[model]
+	if not fl then crowsGather(model, 0.01); fl = flocks[model] end
+	if not fl then return end
+	if fl.conn then fl.conn:Disconnect() end
+	-- each crow flies out along the cone, at its own angle and distance, then scatters up and away
+	local paths = {}
+	local right = dir:Cross(Vector3.yAxis)
+	right = right.Magnitude > 0.01 and right.Unit or Vector3.xAxis
+	for i, c in fl.crows do
+		local spread = (math.random() - 0.5) * 1.1
+		local lift = (math.random() - 0.4) * 0.5
+		local d = (dir + right * spread + Vector3.new(0, lift, 0)).Unit
+		table.insert(paths, { c = c, from = c.cf.Position, d = d, len = range * (0.65 + math.random() * 0.4), delay = (i - 1) * 0.04 })
+	end
+	local t0 = os.clock()
+	fl.conn = RunService.RenderStepped:Connect(function()
+		local tt = os.clock() - t0
+		for _, pth in paths do
+			local u = math.clamp((tt - pth.delay) / (t * 0.7), 0, 1)
+			local p = pth.from + pth.d * pth.len * u
+			if u >= 1 then
+				-- scatter: up and off
+				local s = tt - pth.delay - t * 0.7
+				p += Vector3.new(math.sin(s * 5 + pth.len) * 3, s * 14, math.cos(s * 4) * 3)
+			end
+			placeCrow(pth.c, CFrame.lookAt(p, p + pth.d), tt)
+		end
+		if tt > t + 1.2 then
+			if fl.conn then fl.conn:Disconnect() end
+			for _, c in fl.crows do crowGone(c) end
+			if flocks[model] == fl then flocks[model] = nil end
+		end
+	end)
+	Sfx.at("CrowFlock", h.Position, { Volume = 1.2 })
+	for i = 1, 3 do
+		task.delay(i * 0.25, function() Sfx.at("CrowCaw", h.Position + dir * range * 0.4, { Volume = 1.1, PlaybackSpeed = 0.9 + i * 0.08 }) end)
+	end
+end
+local blindGui: ScreenGui? = nil
+local function blinded(t: number)
+	local pg = lp:FindFirstChildOfClass("PlayerGui")
+	if not pg then return end
+	if blindGui then blindGui:Destroy() end
+	local g = Instance.new("ScreenGui")
+	g.Name = "Blinded"; g.ResetOnSpawn = false; g.IgnoreGuiInset = true; g.DisplayOrder = 40
+	g.Parent = pg
+	blindGui = g
+	local back = Instance.new("Frame")
+	back.Size = UDim2.fromScale(1, 1); back.BackgroundColor3 = Color3.new(0, 0, 0); back.BackgroundTransparency = 0.04; back.BorderSizePixel = 0
+	back.Parent = g
+	-- black wings beating across the screen
+	local wings = {}
+	for i = 1, 9 do
+		local w = Instance.new("Frame")
+		w.AnchorPoint = Vector2.new(0.5, 0.5)
+		w.Size = UDim2.fromScale(0.35 + math.random() * 0.25, 0.08 + math.random() * 0.05)
+		w.Position = UDim2.fromScale(math.random(), math.random())
+		w.BackgroundColor3 = Color3.fromRGB(26, 24, 28); w.BorderSizePixel = 0
+		w.Rotation = math.random(-40, 40)
+		w.Parent = g
+		table.insert(wings, { f = w, ph = math.random() * 6, rot = w.Rotation })
+	end
+	local t0 = os.clock()
+	local conn: RBXScriptConnection
+	conn = RunService.RenderStepped:Connect(function()
+		local tt = os.clock() - t0
+		local fade = math.clamp((tt - 0.7) / math.max(0.2, t - 0.7), 0, 1)
+		back.BackgroundTransparency = 0.04 + fade * 0.96
+		for _, w in wings do
+			w.f.Rotation = w.rot + math.sin(tt * 26 + w.ph) * 25
+			w.f.BackgroundTransparency = math.min(1, fade * 1.3 + (math.sin(tt * 13 + w.ph) > 0.6 and 0.5 or 0))
+		end
+		if tt > t or blindGui ~= g then
+			conn:Disconnect()
+			g:Destroy()
+			if blindGui == g then blindGui = nil end
+		end
+	end)
+	Sfx.play("CrowFlock", { Volume = 0.9 })
+	Sfx.play("CrowCaw", { Volume = 1 })
+	if Fx then Fx.shake(0.5) end
+end
+
+-- THE SCARECROW's sickle: thrown spinning flat, out past you and back to his hand
+local sickles: { [Model]: { conn: RBXScriptConnection, parts: { BasePart }, flying: Rig } } = {}
+local function sickleParts(model: Model): { BasePart }
+	local out = {}
+	for _, p in model:GetChildren() do
+		if p:IsA("BasePart") and (p.Name == "SickleHandle" or p.Name == "Blade") then table.insert(out, p) end
+	end
+	return out
+end
+local function sickleDone(model: Model)
+	local s = sickles[model]
+	if not s then return end
+	s.conn:Disconnect()
+	rigDestroy(s.flying)
+	for _, p in s.parts do p:SetAttribute("LocalHide", nil) end
+	sickles[model] = nil
+end
+local function sickleThrow(model: Model?, from: Vector3, to: Vector3, flight: number)
+	if not model then return end
+	sickleDone(model)
+	local ps = sickleParts(model)
+	local handle: BasePart? = nil
+	for _, p in ps do if p.Name == "SickleHandle" then handle = p end end
+	-- a flying copy of his sickle, lying flat and spinning
+	local flying: Rig = { parts = {} }
+	if handle then
+		for _, p in ps do
+			rigAdd(flying, A(math.pi / 2, 0, 0) * handle.CFrame:ToObjectSpace(p.CFrame), { Size = p.Size, Color = p.Color, Material = p.Material })
+		end
+	end
+	for _, p in ps do p:SetAttribute("LocalHide", true) end -- (Client/GhostAnim keeps them hidden)
+	local t0 = os.clock()
+	local lastWhoosh = 0
+	local conn = RunService.RenderStepped:Connect(function()
+		local tt = os.clock() - t0
+		local u = tt / flight
+		local p: Vector3
+		if u <= 1 then p = from:Lerp(to, u) else
+			local hand = model:FindFirstChild("RightHand") :: BasePart?
+			p = to:Lerp(hand and hand.Position or from, math.min(1, u - 1))
+		end
+		rigPlace(flying, CFrame.new(p) * A(0, -tt * 24, 0))
+		if tt - lastWhoosh > 0.16 then
+			lastWhoosh = tt
+			Sfx.at("Whoosh", p, { Volume = 0.7, PlaybackSpeed = 1.4 })
+		end
+		if u >= 2 then sickleDone(model) end
+	end)
+	sickles[model] = { conn = conn, parts = ps, flying = flying }
+	task.delay(flight * 2 + 1, function() if sickles[model] and sickles[model].conn == conn then sickleDone(model) end end)
+end
+
 function CF.handle(kind: string, ...)
 	local a = table.pack(...)
 	if kind == "AntlerClimb" then
@@ -224,6 +627,28 @@ function CF.handle(kind: string, ...)
 	elseif kind == "ScareSwap" then
 		straw(a[1]); straw(a[2])
 		Sfx.at("Whoosh", a[1], { Volume = 0.8, PlaybackSpeed = 0.5 })
+	elseif kind == "ChargeLine" then chargeLine(a[1], a[2], a[3], a[4], a[5])
+	elseif kind == "ChargeGo" then chargeGo(a[1], a[2])
+	elseif kind == "ChargeSmash" then chargeSmash(a[1])
+	elseif kind == "AntlersStuck" then antlersStuck(a[1], a[2], a[3])
+	elseif kind == "FloodCall" then
+		local h = hrpOf(a[1])
+		if h then
+			Sfx.at("GhostWail", h.Position, { Volume = 1, PlaybackSpeed = 0.6 })
+			Sfx.at("Bubbles", h.Position, { Volume = 1 })
+		end
+	elseif kind == "GraspWarn" then graspWarn(a[1], a[2], a[3], a[4])
+	elseif kind == "GraspHands" then graspHands(a[1], a[2], a[3])
+	elseif kind == "CounselorScream" then counselorScream(a[1], a[2])
+	elseif kind == "CounselorPant" then counselorPant(a[1], a[2])
+	elseif kind == "CrowsGather" then crowsGather(a[1], a[2])
+	elseif kind == "Crows" then crowsBurst(a[1], a[2], a[3], a[4])
+	elseif kind == "Blinded" then blinded(a[1])
+	elseif kind == "SickleWind" then
+		local h = hrpOf(a[1])
+		if h then Sfx.at("BladeScrape", h.Position, { Volume = 1 }) end
+	elseif kind == "SickleThrow" then sickleThrow(a[1], a[2], a[3], a[4])
+	elseif kind == "SickleDrop" then if a[1] then sickleDone(a[1]) end
 	end
 end
 

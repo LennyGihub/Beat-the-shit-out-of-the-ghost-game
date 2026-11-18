@@ -14,6 +14,11 @@ local TIME: { [string]: number } = {
 	Conqueror = 5.6, -- a portal tears open and he walks out of it, fist raised
 	Rat = 4.8, -- the floor bulges and cracks, he bursts out of it and shrieks
 	Knight = 6.2, -- breathing behind a wall; his blade burns a doorway through it and he steps out
+	-- Camp Hollowmere
+	Antlered = 5.2, -- crawls upside down along the rafters, drops, flips upright on landing and bellows
+	LakeWitch = 5.4, -- rises out of a pool of black water, whirls her hook overhead and slams it down
+	Counselor = 5.2, -- the room goes dark, his torch catches, held by his burned face; a ring of fire and a scream
+	Scarecrow = 5.6, -- hangs on his pole with crows on his arms; his head snaps up, the crows burst off, he drops
 }
 return {
 	time = TIME,

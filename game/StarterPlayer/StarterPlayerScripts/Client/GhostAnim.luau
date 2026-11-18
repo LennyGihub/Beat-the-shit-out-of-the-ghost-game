@@ -360,6 +360,30 @@ local function abilityPose(ab: string, phase: string, t: number, since: number):
 		elseif phase == "fall" then
 			p.RightShoulder = A(2.5, 0, -0.9); p.LeftShoulder = A(2.5, 0, 0.9); p.RightHip = A(0.7, 0, 0); p.LeftHip = A(0.7, 0, 0)
 			p.RightKnee = A(-1.1, 0, 0); p.LeftKnee = A(-1.1, 0, 0); p.Neck = A(0.3, 0, 0)
+		elseif phase == "lower" then
+			-- head down, antlers pointed at you, pawing the floor with one foot
+			p.Root = A(-0.4 * a, 0, 0); p.Waist = A(-0.35 * a, 0, 0); p.Neck = A(-0.65 * a, 0, s(t * 3) * 0.08)
+			p.RightShoulder = A(-0.5, 0, 0.3); p.LeftShoulder = A(-0.5, 0, -0.3); p.RightElbow = A(0.5, 0, 0); p.LeftElbow = A(0.5, 0, 0)
+			p.RightHip = A(0.45 + s(t * 9) * 0.45, 0, 0); p.RightKnee = A(-0.7 - math.max(0, s(t * 9)) * 0.5, 0, 0)
+			p.LeftHip = A(-0.35, 0, 0); p.LeftKnee = A(-0.45, 0, 0)
+		elseif phase == "charge" then
+			-- flat out, head down, the antlers first
+			local r = s(t * 24)
+			p.Root = A(-0.55, 0, 0); p.Waist = A(-0.35, 0, 0); p.Neck = A(-0.7, 0, 0)
+			p.RightShoulder = A(-0.6 - r * 0.4, 0, 0.35); p.LeftShoulder = A(-0.6 + r * 0.4, 0, -0.35); p.RightElbow = A(0.6, 0, 0); p.LeftElbow = A(0.6, 0, 0)
+			p.RightHip = A(r * 1.1, 0, 0); p.LeftHip = A(-r * 1.1, 0, 0)
+			p.RightKnee = A(-0.3 - math.max(0, r) * 1.1, 0, 0); p.LeftKnee = A(-0.3 - math.max(0, -r) * 1.1, 0, 0)
+		elseif phase == "stuck" then
+			-- antlers caught in the wall: hands pushing on it, legs braced, thrashing his head to pull free
+			p.Root = A(-0.6, 0, 0); p.Waist = A(-0.35, s(t * 11) * 0.18, 0); p.Neck = A(-0.7, s(t * 15) * 0.3, s(t * 9) * 0.1)
+			p.RightShoulder = A(1.1 + s(t * 11) * 0.2, 0, 0.3); p.LeftShoulder = A(1.1 - s(t * 11) * 0.2, 0, -0.3)
+			p.RightElbow = A(0.9, 0, 0); p.LeftElbow = A(0.9, 0, 0)
+			p.RightHip = A(0.7, 0, 0); p.RightKnee = A(-0.8, 0, 0); p.LeftHip = A(-0.55, 0, 0); p.LeftKnee = A(-0.25, 0, 0)
+		elseif phase == "skid" then
+			-- braking: leaning back, one leg out in front
+			p.Root = A(0.15, 0, 0); p.Waist = A(-0.1, 0, 0); p.Neck = A(-0.4, 0, 0)
+			p.RightShoulder = A(0.5, 0, 0.6); p.LeftShoulder = A(0.5, 0, -0.6)
+			p.RightHip = A(0.8, 0, 0); p.RightKnee = A(-0.2, 0, 0); p.LeftHip = A(-0.3, 0, 0); p.LeftKnee = A(-0.9, 0, 0)
 		else
 			-- dazed: down on one knee, head lolling, the time to hit him
 			p.Root = CFrame.new(0, -2.4, 0) * A(0.3, 0, 0); p.Neck = A(0.5, s(t * 3) * 0.4, s(t * 2) * 0.3)
@@ -376,12 +400,63 @@ local function abilityPose(ab: string, phase: string, t: number, since: number):
 			p.Waist = A(-0.25, 0, 0); p.Root = A(-0.15, 0, 0)
 		elseif phase == "flood" then
 			p.RightShoulder = A(2.9 * a, 0, -0.4); p.LeftShoulder = A(2.9 * a, 0, 0.4); p.Neck = A(-0.5 * a, 0, 0); p.Waist = A(-0.2, 0, 0)
+		elseif phase == "summon" then
+			-- bent over the floor, both hands out low, palms down, slowly lifting: calling them up
+			p.Waist = A(-0.4 * a, 0, 0); p.Neck = A(-0.35 * a, 0, s(t * 4) * 0.1); p.Root = A(-0.1 * a, 0, 0)
+			p.RightShoulder = A(0.7 * a + s(t * 5) * 0.12, 0, 0.25); p.LeftShoulder = A(0.7 * a - s(t * 5) * 0.12, 0, -0.25)
+			p.RightElbow = A(0.3, 0, 0); p.LeftElbow = A(0.3, 0, 0); p.RightWrist = A(-0.7, 0, 0); p.LeftWrist = A(-0.7, 0, 0)
+		elseif phase == "hold" then
+			-- hands clawing down: pulling them under
+			local k = s(t * 8)
+			p.Waist = A(-0.2, 0, 0); p.Neck = A(-0.3, 0, 0)
+			p.RightShoulder = A(1.5 + k * 0.25, 0, 0.2); p.LeftShoulder = A(1.5 - k * 0.25, 0, -0.2)
+			p.RightElbow = A(1.0 - k * 0.3, 0, 0); p.LeftElbow = A(1.0 + k * 0.3, 0, 0)
 		end
 	elseif ab == "firebrand" then -- the Burned Counselor
-		if phase == "wind" then
+		if phase == "scream" then
+			-- head thrown back screaming, the torch held high, the other arm out
+			p.Waist = A(0.3 * a, 0, 0); p.Neck = A(0.6 * a + s(t * 50) * 0.04, s(t * 37) * 0.05, 0)
+			p.RightShoulder = A(2.9 * a, 0, 0.1); p.RightElbow = A(0.2, 0, 0)
+			p.LeftShoulder = A(0.3, 0, -1.5 * a); p.LeftElbow = A(0.3, 0, 0); p.LeftWrist = A(-0.4, 0, 0)
+		elseif phase == "run" then
+			-- running you down, the torch held out in front
+			local r = s(t * 20)
+			p.Root = A(-0.35, 0, 0); p.Waist = A(-0.1, r * 0.12, 0); p.Neck = A(0.25, 0, 0)
+			p.RightShoulder = A(1.6, 0, 0.1); p.RightElbow = A(0.3, 0, 0)
+			p.LeftShoulder = A(r * 1.0, 0, -0.15); p.LeftElbow = A(0.8, 0, 0)
+			p.RightHip = A(r * 1.2, 0, 0); p.LeftHip = A(-r * 1.2, 0, 0)
+			p.RightKnee = A(-0.3 - math.max(0, r) * 1.2, 0, 0); p.LeftKnee = A(-0.3 - math.max(0, -r) * 1.2, 0, 0)
+		elseif phase == "pant" then
+			-- out of breath: bent over, hands on his knees, heaving
+			local br = s(t * 7) * 0.08
+			p.Root = A(-0.15, 0, 0); p.Waist = A(-0.7 - br, 0, 0); p.Neck = A(0.6 + br, 0, 0)
+			p.RightShoulder = A(0.5, 0, 0.15); p.LeftShoulder = A(0.5, 0, -0.15); p.RightElbow = A(0.3, 0, 0); p.LeftElbow = A(0.3, 0, 0)
+			p.RightHip = A(0.5, 0, 0.1); p.LeftHip = A(0.5, 0, -0.1); p.RightKnee = A(-0.6, 0, 0); p.LeftKnee = A(-0.6, 0, 0)
+		elseif phase == "wind" then
 			p.RightShoulder = A(2.7 * a, 0, -0.3); p.RightElbow = A(1.0, 0, 0); p.Waist = A(-0.1, -0.6 * a, 0); p.LeftShoulder = A(1.0, 0, 0.4)
 		else
 			p.RightShoulder = A(1.2, 0, 0); p.RightElbow = A(0.1, 0, 0); p.Waist = A(0.25, 0.5, 0)
+		end
+	elseif ab == "scareSwap" then -- the Scarecrow
+		if phase == "gather" then
+			-- arms straight out like on his pole, jerking, head cocked: the crows land on him
+			p.RightShoulder = A(0.1, 0, 1.45 * a + s(t * 31) * 0.05); p.LeftShoulder = A(0.1, 0, -1.45 * a - s(t * 29) * 0.05)
+			p.Neck = A(-0.2, s(t * 2) * 0.2, 0.5 * a + s(t * 40) * 0.06); p.Waist = A(0.1, 0, s(t * 3) * 0.06)
+		elseif phase == "crows" then
+			-- both arms thrown at you, the crows bursting off them
+			p.Waist = A(-0.25, 0, 0); p.Neck = A(-0.1, 0, 0.35)
+			p.RightShoulder = A(1.6, 0, 0.35); p.LeftShoulder = A(1.6, 0, -0.35); p.RightElbow = A(0.05, 0, 0); p.LeftElbow = A(0.05, 0, 0)
+			p.RightWrist = A(-0.4, 0, 0); p.LeftWrist = A(-0.4, 0, 0)
+			p.RightHip = A(-0.3, 0, 0); p.LeftHip = A(0.4, 0, 0); p.LeftKnee = A(-0.3, 0, 0)
+		elseif phase == "windup" then
+			-- twisted round, the sickle arm drawn back
+			p.Waist = A(0, 0.9 * a, 0); p.Neck = A(0, -0.8 * a, 0.2)
+			p.RightShoulder = A(0.6 * a, 0, 1.3 * a); p.RightElbow = A(0.6 * a, 0, 0)
+			p.LeftShoulder = A(0.9 * a, 0, -0.3); p.RightHip = A(-0.3, 0, 0); p.LeftHip = A(0.3, 0, 0)
+		else -- throw: the follow-through, then waiting for it to come back
+			p.Waist = A(-0.1, -0.6, 0); p.Neck = A(0, 0.5, 0.2)
+			p.RightShoulder = A(1.5, 0, -0.3); p.RightElbow = A(0.1, 0, 0); p.LeftShoulder = A(0.4, 0, -0.5)
+			p.RightHip = A(0.3, 0, 0); p.LeftHip = A(-0.3, 0, 0)
 		end
 	elseif ab == "charge" then
 		if phase == "wind" then
@@ -491,7 +566,7 @@ local function target(state: string, t: number, sinceState: number): { [string]:
 	local g = current :: Model
 	-- the Scarecrow while someone looks at him: dead still, arms out like the others in the barn
 	if g:GetAttribute("MonsterId") == "Scarecrow" and g:GetAttribute("Watched") and (state == "Chase" or state == "Spawn" or state == "Recover") then
-		return { RightShoulder = A(0, 0, -1.4), LeftShoulder = A(0, 0, 1.4), Neck = A(0.15, 0, 0.35) }
+		return { RightShoulder = A(0, 0, 1.45), LeftShoulder = A(0, 0, -1.45), Neck = A(-0.15, 0, 0.35) }
 	end
 	if state == "Ability" then
 		return abilityPose(g:GetAttribute("Ability") or "", g:GetAttribute("AbilityPhase") or "", t, sinceState)
@@ -793,7 +868,8 @@ function GA.update(dt: number)
 	for _, d in current:GetDescendants() do
 		-- parts with the Glow attribute (the Party Bear's eyes) stay visible in the dark; DarkNeon parts light up there
 		if d:IsA("BasePart") and d.Name ~= "HumanoidRootPart" then
-			d.LocalTransparencyModifier = (d:GetAttribute("Glow") and state ~= "Dead") and 0 or fade
+			-- (LocalHide: a part an effect hides on this screen, e.g. the Scarecrow's sickle while it flies)
+			d.LocalTransparencyModifier = d:GetAttribute("LocalHide") and 1 or ((d:GetAttribute("Glow") and state ~= "Dead") and 0 or fade)
 			if d:GetAttribute("DarkNeon") then
 				local mat = neonEyes and Enum.Material.Neon or Enum.Material.SmoothPlastic
 				if d.Material ~= mat then d.Material = mat end

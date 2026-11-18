@@ -73,31 +73,42 @@ local List: { Monster } = {
 	-- CAMP HOLLOWMERE (Shared/Campaign; hand-built: tools/build/camp_monsters.luau; moves: Server/CampMonsters)
 	-- THE ANTLERED ONE (the Bunkhouse): tall, thin, a deer skull with antlers. rafterDrop: he climbs into the rafters
 	-- (climb), follows you from up there (lurk at lurkSpeed), a red ring warns where he comes down (warn), he
-	-- drops (radius / dmg / power), then he is dazed (daze) - hit him then.
+	-- drops (radius / dmg / power), then he is dazed (daze) - hit him then. charge: head down (wind, a red lane), a
+	-- straight charge (speed for `time`): gored and thrown, inside walls burst; an outside wall stops him, his
+	-- antlers stuck in it for `stuck` seconds.
 	m({ id = "Antlered", name = "The Antlered One", title = "THE ANTLERED ONE", rarity = 1, template = "Antlered", color = C(214, 204, 176),
 		hp = 1.0, speed = 0.95, dmg = 0.9, reward = 1.2, hover = 7.2, walker = true, scale = 1, solid = false, reach = 1.35,
-		ability = { kind = "rafterDrop", cd = 11, min = 10, climb = 0.9, lurk = 2.4, lurkSpeed = 26, warn = 1.0, radius = 8, dmg = 30, power = 70, daze = 2.4 },
-		desc = "Too tall for the cabins. He climbs into the rafters, follows you from up there and drops on you: watch for the red ring, then hit him while he gets up." }),
+		ability = { kind = "rafterDrop", cd = 9, min = 10, climb = 0.9, lurk = 2.4, lurkSpeed = 26, warn = 1.0, radius = 8, dmg = 30, power = 70, daze = 2.4,
+			charge = { min = 14, max = 60, wind = 0.95, speed = 72, time = 1.1, dmg = 26, power = 95, stuck = 2.6 } },
+		desc = "Too tall for the cabins. He climbs into the rafters and drops on you, or lowers his antlers and charges through the walls. Watch for the red marks; lure his charge into an outside wall and his antlers get stuck." }),
 	-- THE LAKE WITCH (the Boathouse): a drowned woman with a hook on a chain. hookPull: the hook is thrown (walls stop
 	-- it); whoever it catches is dragged into the water (pull) and held under (dmg). Every floodEvery-th move she
-	-- floods the floor for `flood` seconds: everyone in the water is slowed to floodSlow.
+	-- floods the floor for `flood` seconds: everyone in the water is slowed to floodSlow. grasp: black water wells up
+	-- under you (warn), then drowned hands grab everyone still in it (rooted for `hold`, dmg).
 	m({ id = "LakeWitch", name = "The Lake Witch", title = "THE LAKE WITCH", rarity = 1, template = "LakeWitch", color = C(120, 200, 190),
 		hp = 1.05, speed = 1.0, dmg = 0.95, reward = 1.3, hover = 5.35, walker = true, scale = 1, solid = false,
-		ability = { kind = "hookPull", cd = 8, min = 8, max = 55, wind = 0.8, hookSpeed = 95, pull = 1.3, pullSpeed = 34, dmg = 24, floodEvery = 3, flood = 7, floodSlow = 0.6 },
-		desc = "She walks out of the lake with a hook on a chain. Get behind something when she draws it back, or she drags you under. Sometimes the water rises with her." }),
+		ability = { kind = "hookPull", cd = 7, min = 8, max = 55, wind = 0.8, hookSpeed = 95, pull = 1.3, pullSpeed = 34, dmg = 24, floodEvery = 3, flood = 7, floodSlow = 0.6,
+			grasp = { max = 50, warn = 1.15, radius = 7, hold = 1.8, dmg = 14 } },
+		desc = "She walks out of the lake with a hook on a chain. Get behind something when she draws it back, or she drags you under. Step out of the black water before the hands come up, and keep moving when the lake rises." }),
 	-- THE BURNED COUNSELOR (the Mess Hall): charred, a burning torch. firebrand: he lobs the torch where you stand and
-	-- the wood catches fire (the wildfire system, Server/Fire); fire never hurts him (fireImmune).
+	-- the wood catches fire (the wildfire system, Server/Fire); fire never hurts him (fireImmune). run: a scream, then
+	-- he runs at you (speed, turning at `turn`), a trail of fire behind him; a wall or `time` stops him, panting.
 	m({ id = "Counselor", name = "The Burned Counselor", title = "THE BURNED COUNSELOR", rarity = 1, template = "Counselor", color = C(255, 120, 40),
 		hp = 1.15, speed = 1.0, dmg = 1.05, reward = 1.4, hover = 5.4, walker = true, scale = 1, solid = false, fireImmune = true,
-		ability = { kind = "firebrand", cd = 7, min = 10, max = 60, wind = 0.7, flight = 1.0, radius = 7, fires = 4, dmg = 14 },
-		desc = "Lights out was his job once. Now he throws his torch at you and the cabin goes up in flames. Fire can't hurt him: keep moving." }),
+		ability = { kind = "firebrand", cd = 7, min = 10, max = 60, wind = 0.7, flight = 1.0, radius = 7, fires = 4, dmg = 14,
+			run = { min = 10, max = 50, wind = 0.85, speed = 40, time = 2.4, turn = 2.2, fireEvery = 5, dmg = 22, power = 70, pant = 1.9 } },
+		desc = "Lights out was his job once. Now he throws his torch and the cabin goes up in flames, or screams and runs you down with a trail of fire behind him. Sidestep the run, then hit him while he gets his breath back." }),
 	-- THE SCARECROW (the Barn): scareSwap: copies of him stand all over the barn (decoys at the barn's ScarecrowSpots,
 	-- punching one bursts it); he does not move while ANY player looks at him (cone / range), and swaps places with
-	-- a decoy every `cd` seconds.
+	-- a decoy every `swapEvery` seconds. crows: they gather on him, then burst at you in a cone (pecks, blinded for
+	-- `blind`: a blinded player can't hold him still); stare at him over `stare` seconds and he sends them anyway.
+	-- sickle: thrown like a boomerang, out past you and back.
 	m({ id = "Scarecrow", name = "The Scarecrow", title = "THE SCARECROW", rarity = 1, template = "Scarecrow", color = C(214, 182, 96),
 		hp = 1.1, speed = 1.45, dmg = 1.1, reward = 1.5, hover = 5.45, walker = true, scale = 1, solid = false,
-		ability = { kind = "scareSwap", cd = 11, decoys = 8, cone = 0.55, range = 80 },
-		desc = "One of the scarecrows in the barn is him. He only moves when nobody is looking at him, and then he moves fast." }),
+		ability = { kind = "scareSwap", cd = 8, decoys = 8, cone = 0.55, range = 80, swapEvery = 11,
+			crows = { range = 34, cone = 0.75, wind = 0.9, time = 1.6, dps = 14, blind = 3.0, stare = 3.2 },
+			sickle = { min = 10, max = 50, wind = 0.7, flight = 0.7, dmg = 18, power = 45 } },
+		desc = "One of the scarecrows in the barn is him. He only moves when nobody is looking, and then he moves fast. He throws his sickle from far off, and if you stare too long his crows come for your eyes." }),
 	-- THE SEWER RAT (hand-built: tools/build/rat.luau): a rat the size of a car. ratRush = two moves (Server/Abilities):
 	-- the CHARGE (wind seconds of warning along a red line, then dashSpeed studs/s in a straight line for dashTime
 	-- seconds: furniture, inside walls and players in the way are all sent flying, and he is dizzy for a moment after)

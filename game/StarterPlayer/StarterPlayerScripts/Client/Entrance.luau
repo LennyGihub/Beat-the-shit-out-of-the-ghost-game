@@ -51,6 +51,10 @@ local COLORS: { [string]: { { Color3 } } } = {
 	Conqueror = { { C(170, 96, 255), C(70, 20, 130) }, { C(255, 204, 76), C(160, 80, 255) } },
 	Rat = { { C(150, 128, 104), C(70, 54, 40) }, { C(150, 220, 80), C(50, 76, 34) } },
 	Knight = { { C(255, 40, 30), C(120, 10, 10) }, { C(190, 90, 255), C(70, 20, 120) } },
+	Antlered = { { C(214, 204, 176), C(70, 56, 44) }, { C(255, 60, 40), C(90, 20, 14) } },
+	LakeWitch = { { C(120, 200, 190), C(14, 34, 38) }, { C(90, 255, 200), C(10, 50, 40) } },
+	Counselor = { { C(255, 140, 40), C(150, 40, 14) }, { C(255, 60, 20), C(80, 10, 6) } },
+	Scarecrow = { { C(214, 182, 96), C(70, 54, 30) }, { C(255, 90, 40), C(60, 20, 10) } },
 }
 
 type Ctx = {
@@ -992,6 +996,318 @@ SCRIPTS.Knight = function(x)
 end
 
 -- the stage ---------------------------------------------------------------------------------------------------
+-- CAMP HOLLOWMERE ---------------------------------------------------------------------------------------------
+-- THE ANTLERED ONE: the rafters creak, dust trickles down from wherever he is; he crawls toward you upside down,
+-- drops, lands in a crouch (splinters, a shockwave), stands up and bellows (his breath steaming)
+SCRIPTS.Antlered = function(x)
+	local T = EP.T.Antlered
+	local f = x.floor
+	local cl = math.min(x.ceil, 26)
+	local hv = tonumber(x.model:GetAttribute("Hover")) or 7
+	local yRoot = math.max(0, cl - 2 * hv)
+	local chestUp = math.max(2, hv + yRoot - (x.H - hv) * 0.45) -- (his chest while upside down)
+	local function zAt(s: number): number return 9 * (1 - ss(seg(s, T.crawl0, T.crawl1))) end
+	local dust = { Color = ColorSequence.new(C(150, 132, 110), C(80, 66, 52)), Size = NumberSequence.new(0.6, 2), Transparency = NumberSequence.new(0.4, 1),
+		Lifetime = NumberRange.new(1, 1.8), Acceleration = Vector3.new(0, -22, 0), Speed = NumberRange.new(1, 4), SpreadAngle = Vector2.new(40, 40), EmissionDirection = Enum.NormalId.Bottom }
+	at(x, 0, function()
+		darkness(x, 0.35, 0.4)
+		Sfx.play("DoorCreak", { Volume = 1, PlaybackSpeed = 0.5 })
+	end)
+	for i, t in { 0.35, 0.85, 1.35 } do
+		at(x, t, function()
+			Sfx.play("DoorCreak", { Volume = 0.8 + i * 0.1, PlaybackSpeed = 0.42 + i * 0.05 })
+			shake(0.1 + i * 0.05)
+			burst(x, body(x, zAt(t), cl - 0.6), dust, 8 + i * 4)
+		end)
+	end
+	at(x, T.fall - 0.3, function() Sfx.play("BullSnort", { Volume = 1.4, PlaybackSpeed = 0.7 }) end)
+	at(x, T.fall, function() Sfx.play("Whoosh", { Volume = 1.2, PlaybackSpeed = 0.55 }) end)
+	at(x, T.land, function()
+		Sfx.play("Crash", { Volume = 0.9 })
+		Sfx.play("WoodBreak", { Volume = 1.2, PlaybackSpeed = 0.7 })
+		shake(1.1); kick(13)
+		ring(x, f, x.c1, 3, 26, 0.7)
+		chunks(x, f + UP, 14, C(96, 74, 52), Enum.Material.WoodPlanks, 28)
+		burst(x, f + UP * 1.2, with(dust, { Speed = NumberRange.new(12, 30), Acceleration = Vector3.zero, SpreadAngle = Vector2.new(85, 85),
+			EmissionDirection = Enum.NormalId.Top, Size = NumberSequence.new(2, 6) }), 70)
+		darkness(x, 0, 0.6)
+	end)
+	at(x, T.roar, function()
+		Sfx.play("DemonRoar", { Volume = 1.4, PlaybackSpeed = 0.6 })
+		Sfx.play("BullSnort", { Volume = 1.4, PlaybackSpeed = 0.55 })
+		shake(0.9); kick(10)
+		ring(x, f, x.c1, 3, 30, 0.8)
+		-- his breath, steaming out of the skull
+		burst(x, limb(x, "Head") + x.cdir * 1.2, { Color = ColorSequence.new(C(220, 220, 220)), Size = NumberSequence.new(1, 4), Transparency = NumberSequence.new(0.5, 1),
+			Lifetime = NumberRange.new(0.6, 1.2), Speed = NumberRange.new(4, 10), SpreadAngle = Vector2.new(25, 25) }, 20)
+		x.card()
+	end)
+	at(x, 0, function()
+		local l = light(x, spot(x, 5, 2, x.H * 0.6), C(255, 230, 200), 36, 0)
+		each(x, function(s) l.Brightness = 0.6 * seg(s, T.land - 0.2, T.land + 0.3) * (1 - seg(s, x.D - 0.6, x.D - 0.1)) end)
+	end)
+	x.camera = function(s)
+		local fall = seg(s, T.fall, T.land)
+		local rise = ss(seg(s, T.rise0, T.rise1))
+		local hy: number
+		if s < T.fall then hy = chestUp elseif s < T.land then hy = lerp(chestUp, x.H * 0.4, fall * fall) else hy = x.H * lerp(0.4, 0.7, rise) end
+		local pull = s >= T.land and 2.5 * (1 - seg(s, T.land, T.land + 1)) or 0
+		return spot(x, lerp(13, 11, ss(seg(s, 0, x.D))) + pull, 3.5, lerp(1.6, 2.4, rise)), body(x, s < T.fall and zAt(s) or 0, hy)
+	end
+end
+
+-- THE LAKE WITCH: black water spreads over the floor and bubbles; a hand breaks the surface, then she rises out of
+-- it with the lake pouring off her; she whirls her hook over her head and slams it into the floor
+SCRIPTS.LakeWitch = function(x)
+	local T = EP.T.LakeWitch
+	local f = x.floor
+	at(x, 0, function()
+		Sfx.play("Bubbles", { Volume = 1.2, PlaybackSpeed = 0.7 })
+		Sfx.play("GhostWhisper", { Volume = 1, PlaybackSpeed = 0.6 })
+		local pool = disc(x, f + UP * 0.07, 0.5, C(10, 24, 28), 0.04)
+		pool.Material = Enum.Material.SmoothPlastic
+		pool.Reflectance = 0.3
+		local rim = disc(x, f + UP * 0.04, 0.6, x.c1, 0.55)
+		each(x, function(s)
+			local r = 7 * ss(seg(s, 0, 1.0)) * (1 - ss(seg(s, x.D - 0.9, x.D - 0.3)))
+			pool.Size = Vector3.new(0.12, r * 2, r * 2)
+			rim.Size = Vector3.new(0.1, r * 2.12, r * 2.12)
+		end)
+		local l = light(x, f + UP * 2, x.c1, 26, 0)
+		each(x, function(s) l.Brightness = 0.8 * seg(s, 0, 1) * (1 - seg(s, x.D - 0.8, x.D - 0.2)) end)
+	end)
+	at(x, 0.6, function() Sfx.play("Bubbles", { Volume = 1.1, PlaybackSpeed = 0.55 }) end)
+	-- bubbles through the black water, then the water pouring off her as she rises
+	stream(x, 0.2, T.rise1, f + UP * 0.3, { Texture = SPARK, Color = ColorSequence.new(x.c1), Size = NumberSequence.new(0.35, 0.1), Transparency = NumberSequence.new(0.2, 1),
+		Lifetime = NumberRange.new(0.4, 0.8), Speed = NumberRange.new(2, 5), SpreadAngle = Vector2.new(50, 50), EmissionDirection = Enum.NormalId.Top }, 40)
+	stream(x, T.rise0 + 0.3, T.swing0 + 0.5, f + UP * x.H * 0.75, { Texture = SPARK, Color = ColorSequence.new(C(150, 200, 210)), Size = NumberSequence.new(0.25, 0.1),
+		Transparency = NumberSequence.new(0.3, 1), Lifetime = NumberRange.new(0.5, 0.9), Speed = NumberRange.new(0.5, 2), Acceleration = Vector3.new(0, -40, 0),
+		SpreadAngle = Vector2.new(70, 70) }, 60)
+	at(x, T.hand, function()
+		Sfx.play("FormGulp", { Volume = 1, PlaybackSpeed = 0.5 })
+		burst(x, f + UP * 0.5, { Color = ColorSequence.new(C(120, 170, 180)), Size = NumberSequence.new(0.6, 2), Transparency = NumberSequence.new(0.4, 1),
+			Lifetime = NumberRange.new(0.5, 1), Speed = NumberRange.new(4, 10), SpreadAngle = Vector2.new(40, 40), EmissionDirection = Enum.NormalId.Top }, 18)
+	end)
+	at(x, T.rise0 + 0.4, function() Sfx.play("GhostWail", { Volume = 0.6, PlaybackSpeed = 0.55 }) end)
+	-- the hook whirled over her head: the chain rattling and whirring
+	at(x, T.swing0, function() Sfx.play("ShieldBlock", { Volume = 0.6, PlaybackSpeed = 1.5 }) end)
+	for i = 0, 3 do
+		at(x, T.swing0 + i * 0.24, function() Sfx.play("Whoosh", { Volume = 0.9, PlaybackSpeed = 0.75 + i * 0.05 }) end)
+	end
+	at(x, T.slam, function()
+		Sfx.play("Crash", { Volume = 0.8 })
+		Sfx.play("WoodBreak", { Volume = 1, PlaybackSpeed = 0.9 })
+		Sfx.play("GhostScream", { Volume = 1, PlaybackSpeed = 0.7 })
+		shake(1.0); kick(12)
+		flash(x, x.c1, 0.35, 0.4)
+		local hp = f + x.cdir * 3.5 -- (the hook comes down in front of her)
+		ring(x, f, x.c1, 2, 24, 0.7)
+		burst(x, hp + UP, { Color = ColorSequence.new(C(130, 180, 190), C(40, 70, 80)), Size = NumberSequence.new(1, 3.5), Transparency = NumberSequence.new(0.3, 1),
+			Lifetime = NumberRange.new(0.6, 1.2), Speed = NumberRange.new(10, 26), SpreadAngle = Vector2.new(70, 70), EmissionDirection = Enum.NormalId.Top,
+			Acceleration = Vector3.new(0, -40, 0) }, 60)
+		chunks(x, hp, 8, C(90, 70, 50), Enum.Material.WoodPlanks, 18)
+		x.card()
+	end)
+	x.camera = function(s)
+		local rise = ss(seg(s, T.rise0, T.rise1))
+		local k = ss(seg(s, 0, T.slam))
+		local back = s > T.slam and seg(s, T.slam, T.slam + 0.25) * 2 or 0
+		return spot(x, lerp(14, 9.5, k) + back, lerp(-3.5, -1.2, k), lerp(1.0, x.H * 0.6, k)),
+			f + UP * math.max(0.8, x.H * 0.8 - (x.H + 1.5) * (1 - rise))
+	end
+end
+
+-- THE BURNED COUNSELOR: the room goes dark and his torch is out; it catches; he brings it up beside his burned face
+-- and tilts his head at you; then the scream: the torch thrown up high and a ring of fire bursting up round him
+SCRIPTS.Counselor = function(x)
+	local T = EP.T.Counselor
+	local f = x.floor
+	-- the dark (this screen only): it lifts with the fire
+	local cc = Instance.new("ColorCorrectionEffect")
+	cc.Name = "EntranceDark"
+	cc.Parent = game:GetService("Lighting")
+	table.insert(x.cleanup, function() cc:Destroy() end)
+	each(x, function(s)
+		local d = seg(s, 0, 0.4) * (1 - ss(seg(s, T.ring - 0.05, T.ring + 0.6)))
+		cc.Brightness = -0.3 * d; cc.Contrast = 0.15 * d; cc.Saturation = -0.12 * d
+		cc.TintColor = Color3.new(1, 1, 1):Lerp(C(196, 196, 214), d)
+	end)
+	-- his torch, out until it catches
+	local flame = x.model:FindFirstChild("Flame") :: BasePart?
+	local lit = {} :: { Instance }
+	if flame then
+		flame:SetAttribute("LocalHide", true) -- (Client/GhostAnim keeps it hidden)
+		for _, d in flame:GetDescendants() do
+			if d:IsA("Fire") or d:IsA("Light") or d:IsA("ParticleEmitter") then
+				table.insert(lit, d)
+				local dd: any = d
+				dd.Enabled = false
+			end
+		end
+	end
+	local function relight()
+		if flame then flame:SetAttribute("LocalHide", nil) end
+		for _, d in lit do (d :: any).Enabled = true end
+	end
+	table.insert(x.cleanup, relight)
+	at(x, 0.2, function() Sfx.play("GhostWhisper", { Volume = 0.9, PlaybackSpeed = 0.55 }) end)
+	at(x, T.strike, function()
+		relight()
+		Sfx.play("Flamethrower", { Volume = 0.8, PlaybackSpeed = 1.5 })
+		burst(x, limb(x, "Flame"), { Texture = SPARK, Color = ColorSequence.new(x.c1), LightEmission = 1, Size = NumberSequence.new(0.4, 0),
+			Lifetime = NumberRange.new(0.3, 0.7), Speed = NumberRange.new(4, 10) }, 24)
+		local l = light(x, limb(x, "Flame"), C(255, 150, 60), 22, 0)
+		local holder = l.Parent :: BasePart
+		each(x, function(s)
+			holder.Position = limb(x, "Flame")
+			l.Brightness = (3 + math.sin(s * 23) * 0.5 + math.sin(s * 37) * 0.3) * seg(s, T.strike, T.strike + 0.2) * (1 - seg(s, x.D - 0.6, x.D - 0.1))
+		end)
+	end)
+	at(x, T.raise1, function() Sfx.play("GhostWhisper", { Volume = 1, PlaybackSpeed = 0.8 }) end)
+	at(x, T.ring, function()
+		Sfx.play("GhostScream", { Volume = 1.2, PlaybackSpeed = 0.75 })
+		Sfx.play("Flamethrower", { Volume = 1.2, PlaybackSpeed = 0.8 })
+		shake(0.9); kick(11)
+		flash(x, C(255, 150, 60), 0.45, 0.5)
+		ring(x, f, x.c1, 2, 10, 0.5)
+		-- the ring of fire round him
+		local n = 14
+		for i = 1, n do
+			local a = i / n * math.pi * 2
+			stream(x, T.ring, x.D - 0.4, f + Vector3.new(math.cos(a) * 6, 0.3, math.sin(a) * 6), { Texture = FIRE, Color = ColorSequence.new(C(255, 200, 80), C(200, 50, 20)),
+				LightEmission = 1, Size = NumberSequence.new(2.2, 0.4), Transparency = NumberSequence.new(0.2, 1), Lifetime = NumberRange.new(0.5, 0.9),
+				Speed = NumberRange.new(4, 8), SpreadAngle = Vector2.new(12, 12), EmissionDirection = Enum.NormalId.Top }, 16)
+		end
+		local l = light(x, f + UP * 3, C(255, 140, 50), 34, 0)
+		each(x, function(s) l.Brightness = 1.6 * seg(s, T.ring, T.ring + 0.2) * (1 - seg(s, x.D - 0.6, x.D - 0.1)) end)
+		x.card()
+	end)
+	x.camera = function(s)
+		local push = ss(seg(s, 0, T.ring))
+		local back = s > T.ring and ss(seg(s, T.ring, T.ring + 0.6)) * 5 or 0
+		local tgt = s < T.ring and lerp(x.H * 0.68, x.H * 0.84, ss(seg(s, T.raise0, T.raise1))) or x.H * 0.65
+		return spot(x, lerp(10, 6.5, push) + back, lerp(2.2, 1.0, push), lerp(x.H * 0.7, x.H * 0.8, push) - back * 0.4), f + UP * tgt
+	end
+end
+
+-- THE SCARECROW: hung on a pole in the dark with crows sitting on his arms; his head twitches, then snaps up at
+-- you; the crows burst off him straight at the camera; he drops off the pole, stands and raises his sickle
+local function entranceCrow(x: Ctx): { parts: { { p: BasePart, rel: CFrame } }, wl: BasePart, wr: BasePart, ph: number }
+	local K = 1.4 -- (their size)
+	local function P(size: Vector3, color: Color3?): Part
+		return part(x, { Size = size * K, Color = color or C(24, 22, 28), Material = Enum.Material.SmoothPlastic })
+	end
+	local c = { parts = {} :: { { p: BasePart, rel: CFrame } }, wl = P(Vector3.new(1.0, 0.05, 0.55)), wr = P(Vector3.new(1.0, 0.05, 0.55)), ph = rng:NextNumber(0, 6) }
+	table.insert(c.parts, { p = P(Vector3.new(0.45, 0.42, 0.95)), rel = CFrame.new() })
+	table.insert(c.parts, { p = P(Vector3.new(0.34, 0.34, 0.36)), rel = CFrame.new(0, 0.18 * K, -0.6 * K) })
+	table.insert(c.parts, { p = P(Vector3.new(0.1, 0.1, 0.32), C(70, 66, 60)), rel = CFrame.new(0, 0.14 * K, -0.9 * K) })
+	table.insert(c.parts, { p = P(Vector3.new(0.36, 0.06, 0.5)), rel = CFrame.new(0, 0.05 * K, 0.65 * K) })
+	return c
+end
+local function placeEntranceCrow(c, cf: CFrame, flap: number)
+	for _, e in c.parts do e.p.CFrame = cf * e.rel end
+	c.wl.CFrame = cf * CFrame.new(-0.31, 0.17, 0) * CFrame.Angles(0, 0, flap) * CFrame.new(-0.7, 0, 0)
+	c.wr.CFrame = cf * CFrame.new(0.31, 0.17, 0) * CFrame.Angles(0, 0, -flap) * CFrame.new(0.7, 0, 0)
+end
+SCRIPTS.Scarecrow = function(x)
+	local T = EP.T.Scarecrow
+	local f = x.floor
+	local WOOD = C(104, 82, 58)
+	-- a cold light from above and in front: the pole, the crossbar and the crows show against the dark
+	at(x, 0, function()
+		local l = light(x, f + UP * (x.H + 4) + x.cdir * 5, C(170, 186, 220), 30, 0)
+		each(x, function(s) l.Brightness = 1.4 * seg(s, 0, 0.6) * (1 - seg(s, x.D - 0.6, x.D - 0.1)) end)
+	end)
+	-- his pole: a post behind him and a crossbar under his arms (placed at his hands until he drops)
+	local bar = part(x, { Material = Enum.Material.Wood, Color = WOOD, Size = Vector3.new(0.6, 0.6, 1) })
+	local pole = part(x, { Material = Enum.Material.Wood, Color = WOOD, Size = Vector3.new(0.8, 1, 0.8) })
+	local barA, barB = f + UP * 5 - x.cright * 3, f + UP * 5 + x.cright * 3
+	-- the crows: on the crossbar out past his hands, and one on his hat
+	local crows = {}
+	for i = 1, 5 do crows[i] = entranceCrow(x) end
+	local seats = { -1.05, -0.8, 0.8, 1.05 }
+	local flyFrom = {} :: { Vector3 }
+	local flyDir = {} :: { Vector3 }
+	each(x, function(s, _dt)
+		if s < T.drop then
+			local a = limb(x, "LeftHand") - x.cdir * 0.55
+			local b = limb(x, "RightHand") - x.cdir * 0.55
+			local d = b - a
+			if d.Magnitude > 0.5 then barA, barB = a - d.Unit * 1.4, b + d.Unit * 1.4 end
+		end
+		local mid = (barA + barB) / 2
+		local len = (barB - barA).Magnitude
+		bar.Size = Vector3.new(0.6, 0.6, math.max(1, len))
+		bar.CFrame = CFrame.lookAt(mid, barB)
+		local topY = mid.Y + 1.2
+		pole.Size = Vector3.new(0.8, math.max(1, topY - f.Y), 0.8)
+		pole.CFrame = CFrame.new(Vector3.new(mid.X, (topY + f.Y) / 2, mid.Z))
+		local fade = seg(s, x.D - 0.8, x.D - 0.3)
+		bar.Transparency = fade; pole.Transparency = fade
+		-- the crows: sitting (hopping, pecking), then flying at you and scattering
+		for i, c in crows do
+			if s < T.burst then
+				local seat: Vector3
+				if i <= #seats then
+					local u = seats[i]
+					seat = mid + (barB - mid) * u + UP * 0.5
+				else
+					seat = limb(x, "Head") + UP * 1.6
+				end
+				local hop = math.max(0, math.sin(s * 5 + c.ph * 3)) ^ 6 * 0.4
+				local yaw = math.sin(s * 1.3 + c.ph) * 0.9
+				placeEntranceCrow(c, CFrame.lookAt(seat, seat + x.cdir) * CFrame.Angles(0, yaw, 0) + UP * hop, hop > 0.1 and 0.6 or 0.05)
+				flyFrom[i] = seat
+				flyDir[i] = (x.cdir + x.cright * rng:NextNumber(-0.5, 0.5) + UP * rng:NextNumber(0.05, 0.35)).Unit
+			else
+				local k = s - T.burst
+				local p = flyFrom[i] + flyDir[i] * (k * 16) + UP * math.max(0, k - 0.5) ^ 2 * 10
+				placeEntranceCrow(c, CFrame.lookAt(p, p + flyDir[i]), math.sin(s * 30 + c.ph) * 0.9)
+				local gone = seg(k, 0.9, 1.3)
+				for _, e in c.parts do e.p.Transparency = gone end
+				c.wl.Transparency = gone; c.wr.Transparency = gone
+			end
+		end
+	end)
+	at(x, 0, function()
+		darkness(x, 0.3, 0.4)
+		Sfx.play("CrowCaw", { Volume = 0.8, PlaybackSpeed = 0.95 })
+	end)
+	at(x, 0.9, function() Sfx.play("CrowCaw", { Volume = 0.9, PlaybackSpeed = 0.85 }) end)
+	at(x, T.twitch, function() Sfx.play("DoorCreak", { Volume = 0.8, PlaybackSpeed = 1.3 }) end)
+	at(x, T.snap, function()
+		Sfx.play("PunchLight", { Volume = 1, PlaybackSpeed = 0.6 })
+		shake(0.4); kick(8)
+	end)
+	at(x, T.burst, function()
+		Sfx.play("CrowFlock", { Volume = 1.4 })
+		for i = 0, 2 do task.delay(i * 0.18, function() if x.alive() then Sfx.play("CrowCaw", { Volume = 1.1, PlaybackSpeed = 0.9 + i * 0.1 }) end end) end
+		burst(x, limb(x, "UpperTorso"), { Texture = SPARK, Color = ColorSequence.new(C(214, 182, 96)), Size = NumberSequence.new(0.3, 0.1), Lifetime = NumberRange.new(0.6, 1.2),
+			Speed = NumberRange.new(6, 14), Acceleration = Vector3.new(0, -20, 0) }, 30)
+		flash(x, Color3.new(0, 0, 0), 0.4, 0.3)
+	end)
+	at(x, T.drop, function() Sfx.play("Whoosh", { Volume = 1, PlaybackSpeed = 0.6 }) end)
+	at(x, T.land, function()
+		Sfx.play("Crash", { Volume = 0.6, PlaybackSpeed = 0.8 })
+		shake(0.6); kick(8)
+		ring(x, f, x.c1, 2, 18, 0.6)
+		burst(x, f + UP, { Texture = SPARK, Color = ColorSequence.new(C(214, 182, 96)), Size = NumberSequence.new(0.35, 0.1), Lifetime = NumberRange.new(0.6, 1.2),
+			Speed = NumberRange.new(8, 18), SpreadAngle = Vector2.new(80, 80), EmissionDirection = Enum.NormalId.Top, Acceleration = Vector3.new(0, -20, 0) }, 40)
+		darkness(x, 0, 0.5)
+	end)
+	at(x, T.raise, function()
+		Sfx.play("BladeScrape", { Volume = 1.2 })
+		Sfx.play("GhostWhisper", { Volume = 1, PlaybackSpeed = 0.8 })
+		x.card()
+	end)
+	x.camera = function(s)
+		local push = ss(seg(s, 0, T.snap))
+		local after = ss(seg(s, T.land, x.D))
+		local tgt = s < T.drop and lerp(x.H * 0.75, x.H * 0.9, push) or lerp(x.H * 0.55, x.H * 0.7, after)
+		return spot(x, lerp(13, 7.5, push) + 3 * after, lerp(2.5, 0.6, push), lerp(x.H * 0.55, x.H * 0.8, push) - after), f + UP * tgt
+	end
+end
+
 local function structure(): RaycastParams
 	local rp = RaycastParams.new()
 	rp.FilterType = Enum.RaycastFilterType.Include
@@ -1129,6 +1445,7 @@ function Entrance.play(model: Model?, id: string, evolved: boolean, title: strin
 		EP.clock.s = 0
 		EP.clock.back = x.back
 		EP.clock.face = best
+		EP.clock.ceil = ceil
 		if Fx then Fx.cine = true end
 		local nextEvent = 1
 		local name = "EntranceCam" .. my
