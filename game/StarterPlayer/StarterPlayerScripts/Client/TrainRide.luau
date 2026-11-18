@@ -87,6 +87,13 @@ local function newTrain(parent: Instance): any
 	pe.Acceleration = Vector3.new(0, 2, 0); pe.LightInfluence = 0.6
 	pe.Parent = smokeAt or m.PrimaryPart
 	function T.smoke(rate: number) pe.Rate = rate end
+	-- a warm lamp in the carriage (the rides happen at night: the seat, the windows and the door must show)
+	local lampAt = fl or m.PrimaryPart
+	if lampAt then
+		local lamp = Instance.new("PointLight")
+		lamp.Name = "RideLamp"; lamp.Color = Color3.fromRGB(255, 196, 140); lamp.Range = 22; lamp.Brightness = 1.8; lamp.Shadows = false
+		lamp.Parent = lampAt
+	end
 	function T.at(l: Vector3): Vector3 return T.cf * l end
 	-- roll along its own X by dx (positive = backward, toward its back end)
 	function T.roll(x: number)
@@ -174,9 +181,26 @@ local function black(on: boolean, t: number)
 	TweenService:Create(f, TweenInfo.new(t), { BackgroundTransparency = on and 0 or 1 }):Play()
 end
 
+-- every other screen is put away during a ride (the PLAY panel, the shop, the HUD...) and comes back after
+local hiddenGuis = {} :: { ScreenGui }
+local function hideScreens(on: boolean)
+	if on then
+		for _, g in lp:WaitForChild("PlayerGui"):GetChildren() do
+			if g:IsA("ScreenGui") and g.Enabled and g.Name ~= "TrainBlack" and g.Name ~= "TrainCard" and g.Name ~= "PromptHolder" then
+				g.Enabled = false
+				table.insert(hiddenGuis, g)
+			end
+		end
+	else
+		for _, g in hiddenGuis do if g.Parent then g.Enabled = true end end
+		table.clear(hiddenGuis)
+	end
+end
+
 -- the ride's frame: player held still, body hidden, HUD off, camera = camFn() every frame
 local function ride(camFn: () -> CFrame, fov: number): () -> ()
 	riding = true
+	hideScreens(true)
 	local ch = lp.Character
 	local hrp = ch and ch:FindFirstChild("HumanoidRootPart") :: BasePart?
 	if hrp then hrp.Anchored = true end
@@ -208,6 +232,7 @@ local function ride(camFn: () -> CFrame, fov: number): () -> ()
 		cam.CameraType = Enum.CameraType.Custom
 		if Fx then Fx.cineFov = nil; Fx.cine = false end
 		if HUD then HUD.setVisible(true) end
+		hideScreens(false)
 		riding = false
 	end
 end
@@ -333,6 +358,7 @@ function TR.arrive(stageId: string, diffId: string)
 	local rollIn = Sfx.on("TrainRoll", T.root, { Volume = 0.9 })
 	task.wait(1.4)
 	cardFade(0.9)
+	black(false, 0.9) -- (the ride shows: out of the woods, along the yard)
 	Sfx.play("TrainWhistle", { Volume = 0.8 })
 	local a0 = os.clock()
 	while os.clock() - a0 < T_IN do
@@ -360,6 +386,10 @@ function TR.arrive(stageId: string, diffId: string)
 	black(true, 0.25)
 	task.wait(0.35)
 	stop()
+	-- standing in the yard, looking at the building's front door
+	local ch = lp.Character
+	local head = ch and ch:FindFirstChild("Head") :: BasePart?
+	if head then cam.CFrame = CFrame.lookAt(head.Position, Vector3.new(0, 8, 60)) end
 	black(false, 0.45)
 end
 

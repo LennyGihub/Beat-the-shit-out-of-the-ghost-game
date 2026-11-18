@@ -684,8 +684,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/TrainRide.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.TrainRide",
    "class": "ModuleScript",
-   "bytes": 15909,
-   "sha1": "ef1c1ca42b76b7d8a93d19c4a720e411fd6d8705"
+   "bytes": 17176,
+   "sha1": "d1cacd4dcf298a9607b9f2c7d970ee15c72bf5ca"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/TutorialUI.luau",
@@ -747,8 +747,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/ClientMain.client.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.ClientMain",
    "class": "LocalScript",
-   "bytes": 11109,
-   "sha1": "71fc1498863f5cab57919a3e8d5dcb44b7fb54e5"
+   "bytes": 11165,
+   "sha1": "006cb0b809e83d71c6b12ac13e0f1add1ca9bebd"
   }
  ]
 }

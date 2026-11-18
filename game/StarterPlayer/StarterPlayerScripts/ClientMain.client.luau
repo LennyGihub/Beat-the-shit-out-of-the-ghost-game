@@ -118,7 +118,6 @@ SellerUI.init()
 FormCine.init(Fx, HUD)
 FormLook.init()
 CampFx.init(Fx)
-for _, k in CampFx.KINDS do FIGHT[k] = true end
 -- lobby screen: PLAY (create / join lobbies) and SHOP buttons, friend booster
 QuestUI.init(function(open)
 	Input.setShopOpen(open)
@@ -149,6 +148,8 @@ for _, k in { "ForceWind", "ForceGrab", "ForceHold", "ForcePush", "ForceMiss", "
 	"FurySmash", "FuryArmor", "Enraged", "CounterWind", "ChargedHit", "AmbushStrike", "AbilityWind", "Entrance", "DemonSummon", "RatDashWarn", "RatDash", "RatDizzy", "RatDig", "RatTrail", "RatWarn", "RatErupt" } do
 	FIGHT[k] = true
 end
+
+for _, k in CampFx.KINDS do FIGHT[k] = true end -- (Camp Hollowmere's monsters' moves: fight-only too)
 
 Remotes.Fx.OnClientEvent:Connect(function(kind: string, ...)
 	if FIGHT[kind] and not lp:GetAttribute("InMatch") then return end
