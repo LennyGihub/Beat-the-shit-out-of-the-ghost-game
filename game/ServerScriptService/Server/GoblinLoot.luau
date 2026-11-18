@@ -10,6 +10,7 @@ local ItemModels = require(RS.Shared.ItemModels)
 local Remotes = require(script.Parent.Remotes)
 local Furniture = require(script.Parent.Furniture)
 local Ragdoll = require(script.Parent.Ragdoll)
+local Fury = require(script.Parent.Fury)
 
 local Loot = {}
 local rng = Random.new()
@@ -60,8 +61,9 @@ local function strike(g, G, p: Player, dir: Vector3, it, dmgMul: number?, knockM
 	if not hrp or H.warded(p) then return end
 	local dmg = (it.dmg or 0) * DMG * (g.dmgMult or 1) * (dmgMul or 1)
 	local knock = (it.knock or 0) * (knockMul or 1) * KNOCK_BOOST
-	if knock < 10 then
-		-- almost no knockback (nail gun, taser...): it hurts, no tumble
+	if knock < 10 or not Fury.canFling(g) then
+		-- almost no knockback (nail gun, taser...), or the Goblin King has used up his flings on a lone player
+		-- (Fury.canFling): it hurts, no tumble
 		G.damagePlayer(p, dmg)
 		Remotes.Fx:FireAllClients("PlayerHit", hrp.Position, dmg, nil, "goblin")
 	else
@@ -72,6 +74,7 @@ local function strike(g, G, p: Player, dir: Vector3, it, dmgMul: number?, knockM
 		-- break the wall behind them right away (the flight is simulated on their client, a bit later)
 		smashAhead(g, hrp.Position, vel, math.clamp(h.Magnitude * 0.7, 8, 70))
 		flying[p] = os.clock() + t + 0.6
+		Fury.flung(g)
 		G.hitPlayer(p, nil, dmg, vel, "goblin", true, t)
 	end
 	local fx = it.fx

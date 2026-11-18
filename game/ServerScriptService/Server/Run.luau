@@ -20,6 +20,7 @@ local MapLoader = require(script.Parent.MapLoader)
 local Quests = require(script.Parent.Quests)
 local Friends = require(script.Parent.Friends)
 local Bestiary = require(script.Parent.Bestiary)
+local Supplies = require(script.Parent.Supplies)
 
 local Run = {}
 Run.mode = "Lobby" -- "Lobby" (public / Studio) or "Match" (reserved server)
@@ -193,6 +194,10 @@ function Run.startFight()
 		if hrp then table.insert(players, hrp.Position) end
 	end
 	Ghost.spawn(level, MapLoader.randomGhostSpawn(players, 28), def.id, evoTier, true)
+	-- every monster: a medical item is put down somewhere in the house (Server/Supplies)
+	if Supplies.spawn(players) then
+		for _, p in Run.matchPlayers() do Remotes.Fx:FireClient(p, "Toast", "A MEDICAL ITEM IS LYING SOMEWHERE IN THE HOUSE", true) end
+	end
 	setState("Fight", "")
 	busy = false
 end
@@ -498,6 +503,7 @@ function Run.endMatch()
 	clearTemp()
 	if event then Events.despawn(event); event = nil end
 	Inventory.clearWorld()
+	Supplies.clear()
 	setWaypoint(nil)
 	setState("Idle", "")
 end

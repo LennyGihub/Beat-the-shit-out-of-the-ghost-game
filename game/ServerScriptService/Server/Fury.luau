@@ -293,7 +293,20 @@ function Fury.launch(g, G, p: Player, vel: Vector3, dmg: number, ragT: number, l
 	Fury.downed(p, ragT)
 	G.hitPlayer(p, nil, dmg, vel, label, true, ragT)
 end
+-- SOLO FLING LIMIT (def.soloFlings: the Goblin King): against a single player the monster only launches them
+-- through the walls that many times in the fight; after that its punches and weapon swings are plain hits. A lone
+-- player has nobody to take the monster off them, so it could keep them in the air for the whole fight.
+function Fury.canFling(g): boolean
+	local cap = (g.def :: any).soloFlings
+	return not (type(cap) == "number" and g.model:GetAttribute("TeamSize") == 1 and (g.flings or 0) >= cap)
+end
+function Fury.flung(g)
+	g.flings = (g.flings or 0) + 1
+	g.model:SetAttribute("Flings", g.flings) -- (readable in a test)
+end
+
 function Fury.smashPunch(g, G, p: Player, thrp: BasePart)
+	Fury.flung(g)
 	local dir = flat(thrp.Position - g.hrp.Position)
 	-- evolved monsters punch harder (def.smash), and harder still once enraged
 	local k = ((g.def :: any).smash or 1) * ((g.evolved and g.enraged) and 1.15 or 1)

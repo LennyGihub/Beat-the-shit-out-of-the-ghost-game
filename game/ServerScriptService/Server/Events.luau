@@ -38,7 +38,8 @@ function Events.prompt(parent: Instance, action: string, object: string, hold: n
 	return pp
 end
 
--- 6 items, rarer ones less likely, no duplicates (avoid = ids of the last stock: left out while there is enough else)
+-- 6 items, rarer ones less likely, no duplicates (avoid = ids of the last stock: left out while there is enough else).
+-- ALWAYS ONE MEDICAL ITEM (an item that heals): when the roll has none, the most common item gives its place to one.
 function Events.rollStock(n: number, avoid: { [string]: boolean }?): { any }
 	local total = 0
 	for _, r in Items.rarity do total += r.weight end
@@ -61,6 +62,21 @@ function Events.rollStock(n: number, avoid: { [string]: boolean }?): { any }
 		end
 	end
 	table.sort(out, function(a, b) return a.rarity > b.rarity end)
+	local medical = false
+	for _, it in out do if it.heal then medical = true; break end end
+	if not medical and #out > 0 then
+		local pool = {}
+		for _, it in Items.list do
+			if it.heal and not it.exclusive and not (avoid and avoid[it.id]) then table.insert(pool, it) end
+		end
+		if #pool == 0 then
+			for _, it in Items.list do if it.heal and not it.exclusive then table.insert(pool, it) end end
+		end
+		if #pool > 0 then
+			out[#out] = pool[rng:NextInteger(1, #pool)] -- (the last one is the most common of the roll)
+			table.sort(out, function(a, b) return a.rarity > b.rarity end)
+		end
+	end
 	return out
 end
 

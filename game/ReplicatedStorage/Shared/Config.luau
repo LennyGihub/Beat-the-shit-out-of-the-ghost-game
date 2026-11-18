@@ -136,6 +136,9 @@ local Config = {
 	-- (read them with Config.eventTime(name): in Studio the ReplicatedStorage attribute DebugEventSlow = n plays them n times slower)
 	BreakTime = 40, -- seconds between ghosts (or start early at the front door)
 	EventLife = 3, -- an event's shop stays for the next 3 ghosts
+	-- medical items lying in the house (Server/Supplies): one more with every monster, at most Max at once, put down
+	-- at least MinDist studs from the players
+	Supplies = { Max = 3, MinDist = 24 },
 	Yard = { Min = Vector3.new(-95, -5, 60), Max = Vector3.new(95, 80, 165) },
 	SpawnInside = Vector3.new(0, 5, 46),
 	OutsideZ = 64, -- crossing this (out the front porch) counts as outside

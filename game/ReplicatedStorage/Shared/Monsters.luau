@@ -124,7 +124,9 @@ local EVO: { [string]: { [string]: any } } = {
 	Demon = { title = "THE DEMON LORD", color = C(150, 20, 16), scale = 1.3, reach = 1.3,
 		ability = { kind = "levitateThrow", cd = 6, range = 75, lift = 1.4, aim = 0.5, speed = 100, dmg = 18, count = 3 },
 		desc = "Bigger, with a sceptre. He lifts several pieces of furniture at once and throws them all." },
-	Goblin = { title = "THE GOBLIN KING", color = C(34, 92, 44), scale = 1.15, solid = false, wallBreaker = true,
+	-- soloFlings: alone against him, he only sends you flying through the walls this many times in the whole fight
+	-- (his punch and his weapon swings; after that they hurt but you keep your feet). In a team: no limit.
+	Goblin = { title = "THE GOBLIN KING", color = C(34, 92, 44), scale = 1.15, solid = false, wallBreaker = true, soloFlings = 2,
 		power = { kind = "armed", weapons = { "BaseballBat", "FryingPan", "Crowbar", "LeadPipe", "Shovel", "SpikedBat", "Machete", "FireAxe" } },
 		desc = "Fat, forest green, and already armed. He punches through the walls to get to you." },
 	Pirate = { title = "THE BURNING CAPTAIN", color = C(255, 90, 30), scale = 1.1, pay = 2, -- pays double (x4 the Pirate's reward)

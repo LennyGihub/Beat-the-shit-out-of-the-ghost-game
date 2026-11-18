@@ -565,7 +565,7 @@ local function claw(g, target: Player?, thrp: BasePart?)
 	local to = thrp.Position - g.hrp.Position
 	if to.Magnitude <= C.SwipeReach * ((g.def :: any).reach or 1) then
 		-- enraged: a smash punch that launches you through the inside walls
-		if Fury.smashes(g) and g.comboLeft == 0 and Ghost.hitPlayer then
+		if Fury.smashes(g) and g.comboLeft == 0 and Ghost.hitPlayer and Fury.canFling(g) then
 			Fury.smashPunch(g, Ghost, target, thrp)
 			return
 		end
