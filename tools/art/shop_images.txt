@@ -61,6 +61,8 @@ btg_map_Hotel|512x384|an eerie grand hotel lobby with red carpet and a chandelie
 btg_map_Prison|512x384|a prison cellblock with two tiers of barred cells around a concrete yard
 btg_map_Factory|512x384|a doll factory workshop with shelves full of creepy doll heads
 btg_map_Funeral|512x384|a funeral home viewing room with a dark wooden coffin and wilted flowers
+btg_map_Sewer|512x384|an old brick sewer tunnel with an arched ceiling, a canal of murky green water, rusty pipes, a dim lamp
+btg_map_Station|512x384|the dark interior of a wrecked spaceship hangar, a broken fighter craft, a glowing blue reactor core, sparking metal walls
 btg_cash1|512x512|a small pile of three plain blocky green banknotes and a few gold coins, very low-poly, flat shading, black background
 btg_cash2|512x512|a canvas money bag stuffed full of green dollar bills, black background
 btg_cash3|512x512|an open leather briefcase packed with stacks of green dollar bills, black background

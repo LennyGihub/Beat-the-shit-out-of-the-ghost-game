@@ -1,6 +1,6 @@
 -- Builds ServerStorage.Monsters.Knight ("The Void Knight"): an original dark lord in the game's blocky PS2 style:
--- tall and broad in black plate armour, big pauldrons, a red reactor core glowing in the breastplate, a flat-topped
--- great helm with a T-shaped red visor, a crest and two swept fins, a long tattered cape, and a red energy blade in
+-- tall and broad in black plate armour, big pauldrons, a red reactor core glowing in the breastplate, a dark lord's
+-- war mask (rounded dome, flared neck guard, slanted dark eye lenses, a slotted mouth grill), a long tattered cape, and a red energy blade in
 -- his right fist (the blade points forward when the arm hangs: a low guard). His left hand is empty and open: it
 -- is the one he reaches out with (Server/Knight, Client/GhostAnim "forcePush").
 -- Part names the game relies on: the R15 body parts, LeftHand (the force effects start there), Blade.
@@ -121,19 +121,51 @@ for i = 1, 6 do
 end
 for _, s in { -1, 1 } do deco(upper, "CapeClasp", Vector3.new(0.4, 0.4, 0.3), at(s * 1.25, 1.1, 0.7), STEEL) end
 
--- the helm: a flat-topped great helm, a T-shaped visor glowing red, a crest down the middle, two fins swept back
-deco(head, "HelmTop", Vector3.new(1.75, 0.35, 1.8), at(0, 0.95, 0), ARMOR)
-deco(head, "HelmBrow", Vector3.new(1.85, 0.3, 0.4), at(0, 0.55, -0.82), ARMOR_L)
-for _, s in { -1, 1 } do
-	deco(head, "HelmCheek", Vector3.new(0.3, 1.7, 1.7), at(s * 0.82, 0.05, 0), ARMOR)
-	deco(head, "HelmFace", Vector3.new(0.62, 1.3, 0.25), at(s * 0.5, -0.2, -0.82), ARMOR)
-	deco(head, "HelmFin", Vector3.new(0.14, 0.7, 1.5), at(s * 1.0, 0.75, 0.55, 0.35, 0, s * 0.2), STEEL)
+-- the helm: a dark lord's war mask. A stepped, rounded dome with a ridge down the middle and a heavy brow; the
+-- neck guard flares out wide at the back and the sides; the face is an angled, skull-like mask with two slanted
+-- dark eye lenses (a faint red glint deep inside), a nose ridge, cheek tubes and a triangular, slotted mouth grill.
+local GLASS = Color3.fromRGB(12, 12, 16)
+local function wedge(body: BasePart, name: string, size: Vector3, rel: CFrame, color: Color3, mat: Enum.Material?): BasePart
+	local p = Instance.new("WedgePart")
+	p.Name = name; p.Size = size; p.CFrame = body.CFrame * rel; p.Color = color; p.Material = mat or PLATE
+	p.Anchored = false; p.CanCollide = false; p.CanTouch = false; p.CastShadow = true
+	p.Parent = m
+	local w = Instance.new("WeldConstraint"); w.Part0 = body; w.Part1 = p; w.Parent = p
+	return p
 end
-deco(head, "HelmBack", Vector3.new(1.7, 1.9, 0.3), at(0, 0, 0.85), ARMOR)
-deco(head, "HelmChin", Vector3.new(1.1, 0.4, 0.5), at(0, -0.95, -0.7), ARMOR_L)
-deco(head, "HelmCrest", Vector3.new(0.2, 0.5, 2.0), at(0, 1.25, 0.05), STEEL)
-neon(head, "Visor", Vector3.new(1.0, 0.16, 0.1), at(0, 0.28, -0.93))
-neon(head, "Visor", Vector3.new(0.16, 0.95, 0.1), at(0, -0.22, -0.93))
+-- dome: three stepped slabs, the ridge over the top, the brow over the eyes
+deco(head, "HelmDome", Vector3.new(1.78, 0.62, 1.86), at(0, 0.7, 0.06), ARMOR)
+deco(head, "HelmDome", Vector3.new(1.56, 0.5, 1.66), at(0, 1.02, 0.08), ARMOR)
+deco(head, "HelmDome", Vector3.new(1.12, 0.28, 1.24), at(0, 1.27, 0.1), ARMOR)
+deco(head, "HelmRidge", Vector3.new(0.16, 0.24, 1.7), at(0, 1.32, 0.02), ARMOR_L)
+deco(head, "HelmBrow", Vector3.new(1.82, 0.3, 0.42), at(0, 0.44, -0.84, -0.18, 0, 0), ARMOR_L)
+-- the neck guard: flared plates round the back and sides, wider at the bottom
+deco(head, "HelmGuardBack", Vector3.new(2.0, 1.0, 0.24), at(0, -0.45, 1.0, 0.42, 0, 0), ARMOR)
+deco(head, "HelmGuardRim", Vector3.new(2.5, 0.2, 0.5), at(0, -0.95, 1.22, 0.42, 0, 0), ARMOR_L)
+for _, s in { -1, 1 } do
+	deco(head, "HelmGuardSide", Vector3.new(0.24, 1.05, 1.7), at(s * 0.98, -0.4, 0.28, 0, 0, s * 0.4), ARMOR)
+	deco(head, "HelmGuardSideRim", Vector3.new(0.45, 0.2, 1.85), at(s * 1.22, -0.92, 0.3, 0, 0, s * 0.4), ARMOR_L)
+	-- the mask's cheeks, angled in toward the mouth (the face comes to a V)
+	deco(head, "MaskCheek", Vector3.new(0.6, 1.0, 0.26), at(s * 0.44, -0.3, -0.84, 0, s * 0.32, 0), ARMOR)
+	wedge(head, "MaskCheekbone", Vector3.new(0.5, 0.3, 0.3), at(s * 0.5, 0.0, -0.95, 0, s * 0.32, 0) * A(0, 0, 0), ARMOR_L)
+	-- eye lenses: slanted dark glass, a faint red glint deep inside
+	local lens = deco(head, "EyeLens", Vector3.new(0.5, 0.26, 0.08), at(s * 0.31, 0.18, -0.99, 0, 0, -s * 0.2), GLASS, Enum.Material.Glass)
+	lens.Reflectance = 0.25
+	local glint = neon(head, "EyeGlint", Vector3.new(0.26, 0.06, 0.03), at(s * 0.31, 0.17, -0.95, 0, 0, -s * 0.2))
+	glint.Transparency = 0.35
+	-- the tubes by the mouth
+	local tube = deco(head, "MaskTube", Vector3.new(0.5, 0.17, 0.17), at(s * 0.4, -0.66, -0.96, 0, 0, s * 1.05), STEEL)
+	;(tube :: Part).Shape = Enum.PartType.Cylinder
+end
+deco(head, "MaskNose", Vector3.new(0.14, 0.46, 0.2), at(0, -0.06, -1.02), ARMOR_L)
+-- the mouth grill: a triangle pointing down (plates narrowing to the chin), three dark slots through it
+for i = 0, 3 do
+	deco(head, "MouthGrill", Vector3.new(0.72 - i * 0.15, 0.15, 0.22), at(0, -0.42 - i * 0.14, -1.0), STEEL)
+end
+for _, x in { -0.12, 0, 0.12 } do
+	deco(head, "GrillSlot", Vector3.new(0.035, 0.42 - math.abs(x) * 1.2, 0.05), at(x, -0.58 + math.abs(x) * 0.5, -1.12), ARMOR_D)
+end
+deco(head, "MaskChin", Vector3.new(0.95, 0.3, 0.46), at(0, -0.98, -0.7), ARMOR_L)
 
 -- the blade: the hilt in his right fist, the blade running forward out of it (a low guard when the arm hangs)
 local rhand = m:FindFirstChild("RightHand") :: BasePart
