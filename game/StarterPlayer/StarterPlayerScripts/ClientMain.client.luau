@@ -51,6 +51,7 @@ local LobbyUI = require(Client.LobbyUI)
 local ReviveUI = require(Client.ReviveUI)
 local Spectate = require(Client.Spectate)
 local KeyHints = require(Client.KeyHints)
+local Cursor = require(Client.Cursor) -- the FREE MOUSE key (Left Alt): frees the mouse in first person
 local CrewAnim = require(Client.CrewAnim)
 local Vip = require(Client.Vip)
 local NameTags = require(Client.NameTags)
@@ -107,6 +108,7 @@ SandboxUI.init(function() UltShop.open() end) -- the sandbox's LEAVE and ULTIMAT
 ReviveUI.init()
 Spectate.init()
 KeyHints.init() -- the small controls reminder (H hides it)
+Cursor.init()
 CrewAnim.init() -- the Burning Captain's little skeletons run
 Vip.init() -- chat tags: DEV (staff) and VIP
 NameTags.init() -- the lobby's name tags (name plate + DEV / VIP titles, level and its title)

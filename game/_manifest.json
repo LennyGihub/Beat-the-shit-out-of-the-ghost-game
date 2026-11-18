@@ -436,6 +436,13 @@
    "sha1": "87f03a02741ae79013206a830759e71fc1078ee9"
   },
   {
+   "file": "StarterPlayer/StarterPlayerScripts/Client/Cursor.luau",
+   "instance": "game.StarterPlayer.StarterPlayerScripts.Client.Cursor",
+   "class": "ModuleScript",
+   "bytes": 2715,
+   "sha1": "9a6285f894a42f1db258f95c45ec42596c048297"
+  },
+  {
    "file": "StarterPlayer/StarterPlayerScripts/Client/Entrance.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.Entrance",
    "class": "ModuleScript",
@@ -523,8 +530,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/KeyHints.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.KeyHints",
    "class": "ModuleScript",
-   "bytes": 5574,
-   "sha1": "aff7219582dc836e62e5008d1ef9b1fb0079a8b9"
+   "bytes": 6026,
+   "sha1": "1813b132e7c2601f9e604ff27459d92e1e7c6b5b"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/LevelUI.luau",
@@ -635,15 +642,15 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/Settings.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.Settings",
    "class": "ModuleScript",
-   "bytes": 9016,
-   "sha1": "529276ab12f2c68aba6578150a704e18a62f6ae2"
+   "bytes": 9136,
+   "sha1": "d02faafe60d581ee626999ec63d188273340367f"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/SettingsUI.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.SettingsUI",
    "class": "ModuleScript",
-   "bytes": 12347,
-   "sha1": "f13ed1caff15570702997c0256ee865eb53bc2cc"
+   "bytes": 12342,
+   "sha1": "e8befd45015eedf9ffaf7437d663bf70d79800c1"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/Sfx.luau",
@@ -663,8 +670,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/StageUI.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.StageUI",
    "class": "ModuleScript",
-   "bytes": 10601,
-   "sha1": "264778f81d60ae3352ca1c259a07db9cd98856c9"
+   "bytes": 10692,
+   "sha1": "20238d0d96161c5b944f3533401bc4ad296bd5a2"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/ThirdPersonItems.luau",
@@ -747,8 +754,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/ClientMain.client.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.ClientMain",
    "class": "LocalScript",
-   "bytes": 11165,
-   "sha1": "006cb0b809e83d71c6b12ac13e0f1add1ca9bebd"
+   "bytes": 11283,
+   "sha1": "6b1f60d6360c9930e528f4d24ad0beae1fde0e3e"
   }
  ]
 }

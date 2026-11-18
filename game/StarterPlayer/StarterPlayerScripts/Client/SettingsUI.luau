@@ -148,10 +148,10 @@ function UI.init(toggled: (boolean) -> ())
 	for i, a in Settings.ACTIONS do
 		local col = (i - 1) % 2
 		local row = math.floor((i - 1) / 2)
-		local x, y = col * 0.51, 0.11 + row * 0.172 -- five rows
-		local lab = Grunge.text(keysPage, { Text = a.name, Font = Grunge.TYPE, Position = UDim2.fromScale(x, y + 0.01), Size = UDim2.fromScale(0.25, 0.115), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 11 })
+		local x, y = col * 0.51, 0.1 + row * 0.148 -- six rows
+		local lab = Grunge.text(keysPage, { Text = a.name, Font = Grunge.TYPE, Position = UDim2.fromScale(x, y + 0.01), Size = UDim2.fromScale(0.25, 0.1), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 11 })
 		local cap = Instance.new("UITextSizeConstraint"); cap.MaxTextSize = 17; cap.Parent = lab -- same size for every label
-		local b = button(keysPage, "", { Position = UDim2.fromScale(x + 0.26, y), Size = UDim2.fromScale(0.22, 0.135), ZIndex = 12, Font = Grunge.TYPE })
+		local b = button(keysPage, "", { Position = UDim2.fromScale(x + 0.26, y), Size = UDim2.fromScale(0.22, 0.12), ZIndex = 12, Font = Grunge.TYPE })
 		bindRows[a.id] = b
 		b.Activated:Connect(function()
 			Sfx.play("Click")

@@ -23,19 +23,24 @@ local ROWS = {
 	{ name = "CHARGE ATTACK", action = "Punch", pad = "R2", hold = true },
 	{ name = "BLOCK", action = "Block", pad = "B", hold = true },
 	{ name = "ULTIMATE", action = "Ultimate", pad = "Y", hold = false },
+	{ name = "FREE MOUSE", action = "Cursor", pad = nil, hold = false }, -- (Client/Cursor; not shown on a controller)
 }
 
 local panel: Frame
 local tag: TextLabel
 local hideLabel: TextLabel
 local keys = {} :: { TextLabel }
+local names = {} :: { TextLabel }
 
 local function refresh()
 	local mode = Platform.mode()
 	local pad = mode == "gamepad"
 	for i, r in ROWS do
-		local k = pad and r.pad or Settings.keyName(r.action)
-		keys[i].Text = (r.hold and "HOLD " or "") .. k
+		local k: string? = if pad then r.pad else Settings.keyName(r.action)
+		keys[i].Text = k and ((r.hold and "HOLD " or "") .. k) or ""
+		names[i].Visible = k ~= nil
+		-- (FREE MOUSE says whether it is free now)
+		if r.action == "Cursor" and k then names[i].Text = lp:GetAttribute("MouseFree") and "LOCK MOUSE" or "FREE MOUSE" end
 	end
 	local hideKey = pad and "D-PAD RIGHT" or Settings.keyName("Hints")
 	hideLabel.Text = "[" .. hideKey .. "] HIDE"
@@ -60,10 +65,10 @@ function KeyHints.init()
 	gui.Parent = lp:WaitForChild("PlayerGui")
 
 	panel = Grunge.frame(gui, {
-		AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 18, 0.6, 0), Size = UDim2.fromScale(0.2, 0.17),
+		AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 18, 0.6, 0), Size = UDim2.fromScale(0.2, 0.2),
 		BackgroundTransparency = 0.35, BackgroundColor3 = Grunge.INK, Rotation = -1, Visible = false,
 	})
-	local lim = Instance.new("UISizeConstraint"); lim.MinSize = Vector2.new(250, 118); lim.MaxSize = Vector2.new(340, 160); lim.Parent = panel
+	local lim = Instance.new("UISizeConstraint"); lim.MinSize = Vector2.new(250, 140); lim.MaxSize = Vector2.new(340, 190); lim.Parent = panel
 	-- a rough red edge on the left, like the HUD's brush strokes
 	Grunge.frame(panel, { BackgroundTransparency = 0, BackgroundColor3 = Color3.fromRGB(150, 18, 20), Size = UDim2.new(0, 4, 1, 0) })
 	local head = Grunge.text(panel, { Text = "CONTROLS", Font = Grunge.HORROR, Position = UDim2.new(0, 14, 0.04, 0), Size = UDim2.new(0.5, -14, 0.22, 0),
@@ -73,11 +78,12 @@ function KeyHints.init()
 		TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = DIM })
 	local hl = Instance.new("UITextSizeConstraint"); hl.MaxTextSize = 13; hl.Parent = hideLabel
 	for i, r in ROWS do
-		local y = 0.29 + (i - 1) * 0.17
-		local name = Grunge.text(panel, { Text = r.name, Font = Grunge.TYPE, Position = UDim2.new(0, 14, y, 0), Size = UDim2.new(0.46, -14, 0.15, 0),
+		local y = 0.25 + (i - 1) * 0.145
+		local name = Grunge.text(panel, { Text = r.name, Font = Grunge.TYPE, Position = UDim2.new(0, 14, y, 0), Size = UDim2.new(0.46, -14, 0.13, 0),
 			TextXAlignment = Enum.TextXAlignment.Left })
 		local nc = Instance.new("UITextSizeConstraint"); nc.MaxTextSize = 15; nc.Parent = name
-		local key = Grunge.text(panel, { Text = "", Font = Grunge.TYPE, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, y, 0), Size = UDim2.fromScale(0.5, 0.15),
+		names[i] = name
+		local key = Grunge.text(panel, { Text = "", Font = Grunge.TYPE, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, y, 0), Size = UDim2.fromScale(0.5, 0.13),
 			TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = KEY_COLOR })
 		local kc = Instance.new("UITextSizeConstraint"); kc.MaxTextSize = 15; kc.Parent = key
 		keys[i] = key
@@ -90,6 +96,7 @@ function KeyHints.init()
 	Platform.changed:Connect(refresh)
 	lp:GetAttributeChangedSignal("InMatch"):Connect(refresh)
 	lp:GetAttributeChangedSignal("Spectating"):Connect(refresh)
+	lp:GetAttributeChangedSignal("MouseFree"):Connect(refresh)
 	UIS.InputBegan:Connect(function(input, typing)
 		if typing or UIS:GetFocusedTextBox() then return end
 		local key = Settings.input("Hints")

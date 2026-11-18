@@ -31,8 +31,9 @@ Settings.ACTIONS = {
 	{ id = "Settings", name = "SETTINGS" },
 	{ id = "SwapUlt", name = "SWAP ULTIMATE" }, -- Double Ultimate pass
 	{ id = "Hints", name = "CONTROLS PANEL" }, -- show / hide the small controls reminder (KeyHints)
+	{ id = "Cursor", name = "FREE MOUSE" }, -- frees / locks the mouse in first person (Client/Cursor)
 }
-Settings.DEFAULT_BINDS = { Punch = "MouseButton1", Block = "MouseButton2", Lift = "E", Ultimate = "Q", Sprint = "LeftShift", Drop = "X", Use = "F", Settings = "P", SwapUlt = "R", Hints = "H" }
+Settings.DEFAULT_BINDS = { Punch = "MouseButton1", Block = "MouseButton2", Lift = "E", Ultimate = "Q", Sprint = "LeftShift", Drop = "X", Use = "F", Settings = "P", SwapUlt = "R", Hints = "H", Cursor = "LeftAlt" }
 local MUSIC = { FightMusic = true }
 
 -- hideKeys = the small controls reminder (KeyHints) was hidden with H

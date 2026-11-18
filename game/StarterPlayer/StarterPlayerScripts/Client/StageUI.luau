@@ -153,7 +153,8 @@ function UI.show(info: { [string]: any })
 	local again = button(panel, "FIGHT AGAIN", { Position = UDim2.fromScale(x, 0.775), Size = UDim2.fromScale(0.27, 0.1), ZIndex = 8, Rotation = 1 }, nxt and DARK or GREEN, 132)
 	again.Activated:Connect(function() pick("again") end)
 	x += 0.29
-	local park = button(panel, "THE PARK", { Position = UDim2.fromScale(x, 0.78), Size = UDim2.fromScale(0.95 - x, 0.095), ZIndex = 8 }, DARK, 133)
+	-- (Modal: the mouse is free while this screen is up, even in first person)
+	local park = button(panel, "THE PARK", { Position = UDim2.fromScale(x, 0.78), Size = UDim2.fromScale(0.95 - x, 0.095), ZIndex = 8, Modal = true }, DARK, 133)
 	park.Activated:Connect(function() pick("lobby") end)
 	local timer = Grunge.text(panel, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0.05, 0.9), Size = UDim2.fromScale(0.9, 0.04),
 		TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(170, 160, 145), ZIndex = 5 })
