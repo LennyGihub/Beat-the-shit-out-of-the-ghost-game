@@ -2,14 +2,22 @@
 -- the room on its chain). A tall timber loft: NETS hanging from every beam with orange floats, drying racks, a
 -- rowing boat up on trestles (cover from the net), stacks of lobster pots, barrels and coils of rope round the
 -- walls, and an open floor in the middle where the anchor swings. A back room behind a wall: the mending room.
--- Build: cat tools/build/lib2.luau tools/build/furn_lib.luau tools/build/maplib.luau tools/build/maps/harbor_lib.luau tools/build/maps/harb_netloft.luau
+-- Build: cat tools/build/lib2.luau tools/build/furn_lib.luau tools/build/maplib.luau tools/build/maps/shape_lib.luau tools/build/maps/harbor_lib.luau tools/build/maps/harb_netloft.luau
 local C3 = Color3.fromRGB
 local function D() return { deco = true } end
 local H = 26
 local rng = Random.new(44)
-beginMap("Harb_NetLoft", harbTheme({ ext = st(M.WoodPlanks, "PS2_Siding1", C3(90, 70, 56)), inner = st(M.WoodPlanks, "PS2_Siding1", C3(110, 88, 66)) }))
-shell({ two = false, H = H, roof = "gable", pitch = 0.5, front1 = { -60, -36, 36, 60 }, back1 = { -60, 60 }, left1 = { 44, 20, -30 }, right1 = { 44, 20, -30 },
-	winW = 6, winB = 6, winT = 14 })
+local TAR = st(M.WoodPlanks, "PS2_Siding1", C3(40, 36, 34))
+beginMap("Harb_NetLoft", harbTheme({ ext = TAR, inner = st(M.WoodPlanks, "PS2_Siding1", C3(110, 88, 66)), trim = st(M.Wood, nil, C3(200, 196, 184)),
+	found = st(M.WoodPlanks, nil, C3(38, 32, 28)) }))
+-- (2026-11-19) its own shape: a tall tarred loft with TWO steep gables side by side facing the yard, on pilings
+local TOP = shell2({ H = H, roof = "none", front1 = { -60, -36, 36, 60 }, back1 = { -60, 60 }, left1 = { 44, 20, -30 }, right1 = { 44, 20, -30 },
+	win = { w = 6, b = 6, t = 14 } })
+for _, half in { { -80, 0 }, { 0, 80 } } do
+	local cx = (half[1] + half[2]) / 2
+	extrude(STR.Roof, -60, 60, { { cx - 43, TOP - 2.4 }, { cx, TOP + 30 }, { cx + 43, TOP - 2.4 } }, st(M.Slate, nil, C3(40, 40, 44)),
+		{ axis = "z", ends = TAR, endParent = STR, endProf = { { cx - 40, TOP }, { cx, TOP + 30 }, { cx + 40, TOP } }, over = 2 })
+end
 local inn = model(STR, "Interior")
 local I = INT()
 wall(inn, "MendWall", "x", -34, -78, 78, F1, H, { dr(-40, 10, 13), dr(40, 10, 13) }, I)
@@ -67,6 +75,65 @@ for _, p in { { -10, 36 }, { 30, 0 } } do blood(p[1], F1, p[2], 2) end
 for _, p in { { -20, 44 }, { 30, 36 }, { -50, 10 }, { 40, -10 }, { 0, -40 }, { -50, -46 } } do gspawn(p[1], F1, p[2]) end
 keepClear(-6, 40, 6, 58, F1)
 keepClear(-20, -10, 20, 14, F1) -- (the open floor in the middle)
-harbSign("THE NET LOFT")
+-- OUTSIDE (2026-11-19): THE NETMAN'S LOFT. Tarred black boards and white trim, two steep gables, each with a loft door
+-- and a hoist beam (a bundle of net and floats on its rope), NETS draped down the front, pilings in the black water
+-- behind, and his ANCHOR - a huge one - leaning by the door on its chain.
+local OUT = model(DEC, "Outside")
+local WT = T.trim
+for _, cx in { -40, 40 } do
+	for _, sx in { -1, 1 } do
+		local a, z = Vector3.new(cx + sx * 42, TOP - 2, 61), Vector3.new(cx, TOP + 30.4, 61)
+		part(OUT, "BargeBoard", Vector3.new(0.6, 1.8, (z - a).Magnitude), CFrame.lookAt((a + z) / 2, z), WT, D())
+	end
+	box(OUT, "LoftDoor", cx - 4, TOP + 6, 60.2, cx + 4, TOP + 16, 60.6, HARB.black, DECO)
+	for _, e in { { -4.6, -4 }, { 4, 4.6 } } do box(OUT, "LoftFrame", cx + e[1], TOP + 6, 60.4, cx + e[2], TOP + 16.6, 61, WT, DECO) end
+	box(OUT, "LoftFrame", cx - 4.6, TOP + 16, 60.4, cx + 4.6, TOP + 16.6, 61, WT, DECO)
+	box(OUT, "Hoist", cx - 0.7, TOP + 22, 52, cx + 0.7, TOP + 23.4, 69, HARB.beam, DECO)
+	box(OUT, "HoistRope", cx - 0.1, TOP + 4, 67.9, cx + 0.1, TOP + 22, 68.1, HARB.rope, DECO)
+	ball(OUT, CFrame.new(cx, TOP + 3, 68), "NetBundle", 4.4, 0, 0, 0, st(M.Fabric, nil, C3(110, 120, 90)), D())
+	for k = 0, 3 do ball(OUT, CFrame.new(cx + math.cos(k * 1.6) * 2.4, TOP + 2 + k * 0.6, 68 + math.sin(k * 1.6) * 2.4), "Float", 1.2, 0, 0, 0, st(M.SmoothPlastic, nil, C3(240, 120, 30)), D()) end
+end
+box(OUT, "Gutter", -1, TOP - 1, -60, 1, TOP + 0.4, 62, HARB.iron, DECO)
+-- nets draped down the front: a sagging mesh between the windows
+local function net(x0: number, x1: number, y1: number, drop: number)
+	local n = math.floor((x1 - x0) / 1.6)
+	for i = 0, n do
+		local x = x0 + (x1 - x0) * i / n
+		local d = drop * (1 - ((i / n - 0.5) * 2) ^ 2)
+		box(OUT, "NetV", x - 0.06, y1 - d, 60.6, x + 0.06, y1, 60.75, HARB.rope, DECO)
+	end
+	for k = 0, math.floor(drop / 1.6) do
+		local y = y1 - k * 1.6
+		local sag = 0
+		box(OUT, "NetH", x0, y - 0.06 - sag, 60.6, x1, y + 0.06 - sag, 60.75, HARB.rope, DECO)
+	end
+	for k = 0, 4 do ball(OUT, CFrame.new(x0 + (x1 - x0) * k / 4, y1 - 0.4, 60.9), "NetFloat", 1, 0, 0, 0, st(M.SmoothPlastic, nil, C3(240, 120, 30)), D()) end
+end
+net(-30, -10, TOP - 1, 12); net(10, 30, TOP - 1, 10); net(-76, -66, TOP - 1, 8); net(66, 76, TOP - 1, 9)
+-- the anchor by the door, its chain into the dark
+do
+	local ac = CFrame.new(16, 0, 66) * CFrame.Angles(0, 0.3, 0.18)
+	local AI = st(M.CorrodedMetal, nil, C3(70, 60, 56))
+	b(OUT, ac, "Shank", 1.6, 18, 1.6, 0, 10, 0, AI, D())
+	b(OUT, ac, "Stock", 10, 1.2, 1.2, 0, 18, 0, AI, D())
+	cyl(OUT, ac * CFrame.new(0, 19.6, 0) * CFrame.Angles(math.pi / 2, 0, 0), "Ring", 3, 0.6, 0, 0, 0, AI, D())
+	for _, sx in { -1, 1 } do
+		part(OUT, "Arm", Vector3.new(1.4, 1.4, 7), ac * CFrame.new(sx * 3.2, 2.6, 0) * CFrame.Angles(0, math.pi / 2, sx * 0.6), AI, D())
+		part(OUT, "Fluke", Vector3.new(2.6, 2.6, 0.6), ac * CFrame.new(sx * 5.8, 4.6, 0) * CFrame.Angles(0, 0, sx * 0.6), AI, D())
+	end
+	for k = 0, 8 do part(OUT, "Chain", Vector3.new(0.5, 0.5, 2), CFrame.new(18 - k * 1.6, 0.3, 70 + k * 0.6) * CFrame.Angles(0, 0.5 + (k % 2) * 0.3, k % 2 == 0 and 0 or math.pi / 2), st(M.Metal, nil, C3(60, 56, 54)), D()) end
+end
+-- pilings and the black water behind and beside it (it stands out over the harbor)
+local lk = box(OUT, "Water", -420, 0.8, -700, 420, 1.15, 50, st(M.SmoothPlastic, nil, C3(12, 22, 26)), DECO)
+lk.CastShadow = false
+for z = -56, 46, 8 do for _, sx in { -1, 1 } do cyl(OUT, CFrame.new(sx * 82.2, 0.6, z), "Piling", 1.6, 4.4, 0, 0, 0, HARB.beam, D()) end end
+-- lobster pots stacked by the door, oars
+for k = 0, 5 do
+	local x, y = -22 + (k % 3) * 3.6, math.floor(k / 3) * 2.8
+	box(OUT, "LobsterPot", x, y, 64, x + 3.2, y + 2.6, 68, st(M.WoodPlanks, nil, C3(110, 90, 66)), DECO)
+end
+harbSign("THE NET LOFT", CFrame.new(0, 21.6, 61))
+washLight(-34, 86, Vector3.new(-40, TOP + 10, 60), C3(200, 210, 230), 90, 2)
+washLight(34, 86, Vector3.new(40, TOP + 10, 60), C3(200, 210, 230), 90, 2)
 harbGrounds()
 return endMap()

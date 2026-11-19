@@ -80,14 +80,15 @@ local function harbRope(parent: Instance, a: Vector3, z: Vector3, sag: number)
 end
 
 -- the building's name on a weathered board over the porch roof, a lantern each side
-local function harbSign(text: string)
+local function harbSign(text: string, at: CFrame?)
 	local m = model(DEC, "Marquee")
-	local cf = CFrame.new(0, 21, 61) * CFrame.Angles(0, math.pi, 0)
+	local cf = (at or CFrame.new(0, 21, 61)) * CFrame.Angles(0, math.pi, 0)
 	b(m, cf, "Board", 26, 5, 0.5, 0, 0, 0.3, HARB.plankD, DECO)
 	b(m, cf, "Frame", 27, 5.8, 0.3, 0, 0, 0.55, HARB.beam, DECO)
 	sign(m, text, cf * CFrame.new(0, 0, -0.05), 23, 3.4, HARB.plankD, C3h(235, 220, 180), Enum.Font.Creepster)
-	for _, x in { -14.5, 14.5 } do harbLantern(m, Vector3.new(x, 19.2, 61.8), 26) end
-	for _, x in { -12, 12 } do box(m, "Peg", x - 0.25, 17.4, 60.6, x + 0.25, 24.5, 61.2, HARB.beam, DECO) end
+	for _, x in { -14.5, 14.5 } do harbLantern(m, (cf * CFrame.new(x, -1.8, -0.8)).Position, 26) end
+	if not at then for _, x in { -12, 12 } do box(m, "Peg", x - 0.25, 17.4, 60.6, x + 0.25, 24.5, 61.2, HARB.beam, DECO) end end
+	return m
 end
 
 -- the harbor in the yard (everything decoration: no collision, never hit by a ray)
@@ -95,7 +96,7 @@ local function harbGrounds()
 	local yd = model(DEC, "Harbor")
 	local rng = Random.new(77)
 	-- THE PIER from the porch to the railway: boards on posts, a rail of rope along each side
-	box(yd, "Pier", -7, 0.1, 64, 7, 0.6, 146, HARB.plank, DECO)
+	box(yd, "Pier", -7, 0.1, 64, 7, 0.6, 146, HARB.plank, DECO) -- (deco: the yard ground carries the players)
 	for z = 66, 144, 6 do
 		for _, x in { -7.4, 7.4 } do
 			cyl(yd, CFrame.new(x, 1.4, z), "PierPost", 0.9, 3.2, 0, 0, 0, HARB.beam, Dh())
@@ -105,7 +106,7 @@ local function harbGrounds()
 	-- the black water on both sides (a dark glassy sheet a little under the pier)
 	box(yd, "Water", -160, 0.02, 62, -7.5, 0.12, 200, HARB.water, { deco = true, t = 0.05 })
 	box(yd, "Water", 7.5, 0.02, 62, 160, 0.12, 200, HARB.water, { deco = true, t = 0.05 })
-	for _, w in yd:GetChildren() do if w.Name == "Water" then (w :: BasePart).Reflectance = 0.35 end end
+	-- (no reflection: it mirrored the bright skybox as a pale glare at night)
 	-- boats moored along the pier: a hull, a cabin, a mast
 	for _, p in { { -22, 84, 0.1 }, { 24, 104, -0.15 }, { -26, 124, 0.25 }, { 30, 136, 0.05 } } do
 		local bm = model(yd, "Boat")
@@ -140,24 +141,7 @@ local function harbGrounds()
 			harbLantern(yd, Vector3.new(x, 8.6, z), 26)
 		end
 	end
-	-- THE ARCH: two pilings and a weathered board with the name
-	for _, x in { -8, 8 } do box(yd, "ArchPost", x - 1, 0, 130.5, x + 1, 15, 132.5, HARB.beam, DECO) end
-	box(yd, "ArchBoard", -9.5, 12.6, 131, 9.5, 15.4, 132, HARB.plankD, DECO)
-	sign(yd, "BLACKWATER HARBOR", CFrame.new(0, 14, 130.9) * CFrame.Angles(0, math.pi, 0), 17, 2, HARB.plankD, C3h(230, 215, 170), Enum.Font.Creepster).Name = "HarbSign"
-	sign(yd, "BLACKWATER HARBOR", CFrame.new(0, 14, 132.1), 17, 2, HARB.plankD, C3h(230, 215, 170), Enum.Font.Creepster).Name = "HarbSignBack"
-	for _, x in { -8, 8 } do harbLantern(yd, Vector3.new(x, 16, 131.5), 30) end
-	-- THE LIGHTHOUSE far off to the west, on its rocks: red and white rings, a lamp room, its light
-	local lh = model(yd, "Lighthouse")
-	for k = 0, 5 do
-		ball(lh, CFrame.new(-120 + rng:NextNumber(-8, 8), 1, 150 + rng:NextNumber(-8, 8)), "Rock", 9 + rng:NextNumber(0, 6), 0, 0, 0, HARB.stone, Dh())
-		local _ = k
-	end
-	for k = 0, 7 do cyl(lh, CFrame.new(-120, 4 + k * 6, 150), "Ring", 10 - k * 0.5, 6, 0, 0, 0, k % 2 == 0 and HARB.white or HARB.red, Dh()) end
-	cyl(lh, CFrame.new(-120, 52, 150), "Gallery", 9, 1, 0, 0, 0, HARB.iron, Dh())
-	cyl(lh, CFrame.new(-120, 56, 150), "LampRoom", 5.5, 6, 0, 0, 0, st(M.Glass, nil, C3h(255, 230, 170)), { deco = true, t = 0.3 })
-	local lamp = ball(lh, CFrame.new(-120, 56, 150), "Lamp", 3.2, 0, 0, 0, HARB.lamp, Dh())
-	light(lamp, 60, 2.2, C3h(255, 220, 150))
-	cyl(lh, CFrame.new(-120, 60.2, 150), "Cap", 6.5, 2.4, 0, 0, 0, HARB.red, Dh())
+	-- (2026-11-19: the arch and the lighthouse on its rocks are in the Harbor WORLD now: tools/build/worlds/harbor.luau)
 	-- rocks and seaweed along the water's edge by the building
 	for _, x in { -60, -40, 40, 60 } do
 		ball(yd, CFrame.new(x + rng:NextNumber(-4, 4), 0.4, 66 + rng:NextNumber(0, 4)), "ShoreRock", 4 + rng:NextNumber(0, 3), 0, 0, 0, HARB.stone, Dh())
