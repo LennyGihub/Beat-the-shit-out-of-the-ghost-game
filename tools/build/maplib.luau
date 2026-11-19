@@ -11,7 +11,7 @@ local F1, F2 = 2, 23
 local function beginMap(id: string, theme)
 	local maps = SSm:FindFirstChild("Maps") or Instance.new("Folder")
 	maps.Name = "Maps"; maps.Parent = SSm
-	local old = maps:FindFirstChild(id); if old then old:Destroy() end
+	-- (the old map stays until endMap: a build that fails half way leaves the stored one as it was)
 	MAP = Instance.new("Model"); MAP.Name = id
 	STR = model(MAP, "Structure"); DEC = model(MAP, "Decor"); LIT = model(MAP, "Lights")
 	FURN = model(MAP, "Furniture")
@@ -23,6 +23,7 @@ local function beginMap(id: string, theme)
 end
 
 local function endMap()
+	local old = SSm.Maps:FindFirstChild(MAP.Name); if old and old ~= MAP then old:Destroy() end
 	MAP.Parent = SSm.Maps
 	local n = 0
 	for _, d in MAP:GetDescendants() do if d:IsA("BasePart") then n += 1 end end

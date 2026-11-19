@@ -5,7 +5,7 @@
 -- floor (cover), cracks of violet light across the floor (flush), scattered research gear. At the back, behind the
 -- gate wall with two doorways: the OBSERVATION ROOM (a long window on the ring, desks, the last log). Its east end: a
 -- BLAST DOOR that slides (Secrets).
--- Build: cat tools/build/lib2.luau tools/build/furn_lib.luau tools/build/maplib.luau tools/build/maps/moon_lib.luau tools/build/maps/moon_gate.luau
+-- Build: cat tools/build/lib2.luau tools/build/furn_lib.luau tools/build/maplib.luau tools/build/maps/shape_lib.luau tools/build/maps/moon_lib.luau tools/build/maps/moon_gate.luau
 local C3 = Color3.fromRGB
 local function D() return { deco = true } end
 local H = 34
@@ -14,8 +14,9 @@ local OBSIDIAN = st(M.Basalt, nil, C3(26, 22, 32))
 local RUNE = st(M.Neon, nil, C3(190, 120, 255))
 local VOIDC = st(M.Neon, nil, C3(110, 50, 200))
 beginMap("Moon_Gate", moonTheme({ floor = st(M.Slate, nil, C3(56, 54, 64)), inner = st(M.Slate, nil, C3(80, 78, 92)) }))
-shell({ two = false, H = H, roof = "flat", front1 = { -60, -36, 36, 60 }, back1 = { -60, 60 }, left1 = { 44, -30 }, right1 = { 44, -30 },
-	winW = 5, winB = 8, winT = 14 })
+-- (2026-11-19) its own shape: a sloped ARMOURED BUNKER, black crystals bursting out of it, a violet beam into the sky
+local TOP = shell2({ H = H, roof = "flat", roofStyle = st(M.Metal, nil, C3(40, 40, 48)), front1 = { -60, -36, 36, 60 }, back1 = { -60, 60 }, left1 = { 44, -30 }, right1 = { 44, -30 },
+	win = { w = 5, b = 8, t = 14 }, door = { w = 14, t = 20 } })
 local inn = model(STR, "Interior")
 local I = INT()
 wall(inn, "GateWall", "x", -32, -78, 78, F1, H, { dr(-60, 10, 12), dr(60, 10, 12) }, I)
@@ -117,6 +118,59 @@ for _, p in { { -30, 30 }, { 20, 10 }, { -40, -48 } } do blood(p[1], F1, p[2], 2
 for _, p in { { -40, 52 }, { 40, 52 }, { 0, 30 }, { -46, 0 }, { 46, 0 }, { 0, -46 } } do gspawn(p[1], F1, p[2]) end
 keepClear(-6, 40, 6, 58, F1)
 keepClear(56, -42, 70, -34, F1)
-moonSign("THE BLACK GATE")
+-- OUTSIDE (2026-11-19): THE CONQUEROR'S BLACK GATE. The hall was armoured to keep it shut: sloped steel plates lean on
+-- every wall, the great blast door's halves are torn open, BLACK CRYSTALS burst out through the roof and the walls
+-- with violet light in their cracks, and the PORTAL's light goes straight up into the sky as a violet beam.
+local OUT = model(DEC, "Outside")
+local ARMOR = st(M.DiamondPlate, nil, C3(56, 56, 66))
+local CRYS = st(M.Glass, nil, C3(26, 18, 38))
+local VIO = C3(170, 110, 255)
+-- sloped armour: plates leaning on the front (round the door and the windows) and the sides
+for _, seg in { { -80, -64 }, { -56, -42 }, { -30, -10 }, { 10, 30 }, { 42, 56 }, { 64, 80 } } do
+	local x0, x1 = seg[1], seg[2]
+	part(OUT, "Armor", Vector3.new(x1 - x0, TOP + 2, 1.6), CFrame.new((x0 + x1) / 2, TOP / 2, 63.4) * CFrame.Angles(-0.22, 0, 0), ARMOR, D())
+end
+for _, sx in { -1, 1 } do
+	for z = -54, 46, 20 do part(OUT, "Armor", Vector3.new(1.6, TOP + 2, 18.4), CFrame.new(sx * 84.4, TOP / 2, z) * CFrame.Angles(0, 0, sx * 0.22), ARMOR, D()) end
+end
+-- the blast door's halves torn open, claw-scored
+for _, sx in { -1, 1 } do
+	part(OUT, "BlastDoor", Vector3.new(10, 22, 2), CFrame.new(sx * 14, 12, 66) * CFrame.Angles(0, sx * 0.9, sx * 0.06), MOON.steelD, D())
+	for k = 0, 3 do part(OUT, "Stripe", Vector3.new(10.2, 1.4, 0.2), CFrame.new(sx * 14, 4 + k * 5, 66) * CFrame.Angles(0, sx * 0.9, sx * 0.06) * CFrame.new(0, 0, 1.1), k % 2 == 0 and MOON.yellow or MOON.black, D()) end
+end
+sign(OUT, "SECTOR 0  -  DO NOT OPEN", CFrame.new(0, 24.4, 61) * CFrame.Angles(0, math.pi, 0), 26, 2.6, MOON.steelD, C3(255, 80, 70), Enum.Font.SciFi)
+-- black crystals bursting out: through the roof and from the walls, violet light in them
+local crng = Random.new(13)
+local function crystal(base: Vector3, dir: Vector3, len: number, w: number)
+	local cf = CFrame.lookAt(base, base + dir) * CFrame.new(0, 0, -len / 2)
+	part(OUT, "Crystal", Vector3.new(w, w, len), cf * CFrame.Angles(0, 0, math.pi / 4), CRYS, { deco = true, t = 0.08 })
+	part(OUT, "CrystalCore", Vector3.new(w * 0.35, w * 0.35, len * 0.9), cf * CFrame.Angles(0, 0, math.pi / 4), st(M.Neon, nil, VIO), D())
+	part(OUT, "CrystalTip", Vector3.new(w * 0.7, w * 0.7, w * 1.2), cf * CFrame.new(0, 0, -len / 2 - w * 0.4) * CFrame.Angles(0, 0, math.pi / 4), CRYS, D())
+end
+for k = 1, 9 do
+	local base = Vector3.new(crng:NextNumber(-60, 60), TOP, crng:NextNumber(-50, 30))
+	crystal(base, Vector3.new(crng:NextNumber(-0.6, 0.6), 1, crng:NextNumber(-0.6, 0.6)).Unit, crng:NextNumber(14, 34), crng:NextNumber(4, 9))
+end
+for _, c in { { -80, 10, -1 }, { 80, -20, 1 }, { -46, 59, 0 }, { 50, 59, 0 } } do
+	local dir = c[3] ~= 0 and Vector3.new(c[3], 0.5, crng:NextNumber(-0.3, 0.3)) or Vector3.new(crng:NextNumber(-0.3, 0.3), 0.5, 1)
+	crystal(Vector3.new(c[1], crng:NextNumber(6, 16), c[2]), dir.Unit, crng:NextNumber(10, 18), crng:NextNumber(3, 6))
+end
+light(box(OUT, "CrystalGlow", -0.2, TOP + 12, -10.2, 0.2, TOP + 12.4, -9.8, st(M.Neon, nil, VIO), { deco = true, t = 1 }), 80, 2.2, VIO)
+-- the portal's beam straight up into the sky, from the back of the roof (over the ring inside)
+do
+	local bx, bz = 0, -40
+	local beam = part(OUT, "PortalBeam", Vector3.new(14, 900, 14), CFrame.new(bx, TOP + 450, bz), st(M.Neon, nil, VIO), { deco = true, t = 0.55, noShadow = true })
+	beam.Shape = Enum.PartType.Cylinder
+	beam.Size = Vector3.new(900, 14, 14)
+	beam.CFrame = CFrame.new(bx, TOP + 450, bz) * CFrame.Angles(0, 0, math.pi / 2)
+	local core = part(OUT, "PortalBeamCore", Vector3.new(900, 6, 6), CFrame.new(bx, TOP + 450, bz) * CFrame.Angles(0, 0, math.pi / 2), st(M.Neon, nil, C3(240, 220, 255)), { deco = true, t = 0.3, noShadow = true })
+	core.Shape = Enum.PartType.Cylinder
+	cyl(OUT, CFrame.new(bx, TOP + 1, bz), "BeamRing", 26, 2, 0, 0, 0, st(M.Neon, nil, VIO), D())
+	light(box(OUT, "BeamGlow", bx - 0.2, TOP + 6, bz - 0.2, bx + 0.2, TOP + 6.4, bz + 0.2, st(M.Neon, nil, VIO), { deco = true, t = 1 }), 90, 2.6, VIO)
+end
+for _, x in { -60, -36, 36, 60 } do box(OUT, "WindowGlow", x - 2.5, 10, 59.3, x + 2.5, 16, 59.5, st(M.Neon, nil, VIO), { deco = true, t = 0.5 }) end
+moonSign("THE BLACK GATE", CFrame.new(0, 29.6, 61))
+washLight(-30, 88, Vector3.new(-20, TOP, 60), C3(200, 170, 255), 100, 2.2)
+washLight(30, 88, Vector3.new(20, TOP, 60), C3(200, 170, 255), 100, 2.2)
 moonGrounds()
 return endMap()

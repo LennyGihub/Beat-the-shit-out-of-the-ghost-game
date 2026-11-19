@@ -4,7 +4,7 @@
 -- light, slime and claw marks on the floor. At the back, behind a wall with two doorways: the QUARANTINE ROOM (a
 -- decon shower, an operating table, freezer drawers). Its west end: a SERVER RACK that slides (Secrets).
 -- (No pills, syringes or bottles of anything: Roblox moderation, CLAUDE.md.)
--- Build: cat tools/build/lib2.luau tools/build/furn_lib.luau tools/build/maplib.luau tools/build/maps/moon_lib.luau tools/build/maps/moon_lab.luau
+-- Build: cat tools/build/lib2.luau tools/build/furn_lib.luau tools/build/maplib.luau tools/build/maps/shape_lib.luau tools/build/maps/moon_lib.luau tools/build/maps/moon_lab.luau
 local C3 = Color3.fromRGB
 local function D() return { deco = true } end
 local H = 22
@@ -12,8 +12,9 @@ local rng = Random.new(52)
 local FLUID = st(M.Neon, nil, C3(90, 200, 90))
 local SLIME = st(M.Neon, nil, C3(120, 230, 90))
 beginMap("Moon_Lab", moonTheme({ inner = st(M.SmoothPlastic, nil, C3(82, 92, 88)) }))
-shell({ two = false, H = H, roof = "flat", front1 = { -60, -36, 36, 60 }, back1 = { -60, 60 }, left1 = { 44, 20, -30 }, right1 = { 44, 20, -30 },
-	winW = 6, winB = 5, winT = 12 })
+-- (2026-11-19) its own shape: the lab under a great GLASS DOME, smaller domes and tubes round it, green light leaking
+local TOP = shell2({ H = H, roof = "flat", roofStyle = MOON.panelD, front1 = { -60, -36, 36, 60 }, back1 = { -60, 60 }, left1 = { 44, 20, -30 }, right1 = { 44, 20, -30 },
+	win = { w = 6, b = 5, t = 12 } })
 local inn = model(STR, "Interior")
 local I = INT()
 wall(inn, "QuarantineWall", "x", -30, -78, 78, F1, H, { dr(-30, 10, 12), dr(30, 10, 12) }, I)
@@ -112,6 +113,47 @@ for _, p in { { -30, 30 }, { 20, -14 }, { -40, -48 } } do blood(p[1], F1, p[2], 
 for _, p in { { -40, 50 }, { 40, 50 }, { 0, 20 }, { -30, -10 }, { 30, -10 }, { 0, -46 } } do gspawn(p[1], F1, p[2]) end
 keepClear(-6, 40, 6, 58, F1)
 keepClear(-62, -42, -54, -34, F1)
-moonSign("THE LAB")
+-- OUTSIDE (2026-11-19): THE SPECIMEN'S LAB. A great dome of green-lit glass on the roof (something moves in there),
+-- two smaller domes and the tubes that join them, BIOHAZARD signs, a broken window with green ooze running down the
+-- wall and pooling in the dust, the windows glowing green.
+local OUT = model(DEC, "Outside")
+local GREENG = st(M.Glass, nil, C3(120, 200, 140))
+domeRoof(OUT, 0, -6, TOP, 44, 40, 30, 16, 5, GREENG, 0.6, st(M.Metal, nil, C3(70, 76, 84)))
+for _, p0 in OUT:GetChildren() do if p0.Name == "Dome" and p0:IsA("BasePart") then p0.CanCollide = false; p0.CanQuery = false; p0.CanTouch = false end end
+for _, p0 in OUT:GetChildren() do if p0.Name == "Dome" and p0:IsA("BasePart") and p0.Material == Enum.Material.Glass then p0.Transparency = 0.4 end end
+prism(OUT, "DomeRing", 0, -6, 44.6, TOP, TOP + 1.6, 16, MOON.steelD, D())
+light(box(OUT, "DomeGlow", -0.2, TOP + 10, -6.2, 0.2, TOP + 10.4, -5.8, MOON.green, { deco = true, t = 1 }), 70, 2, C3(120, 255, 140))
+-- a shadow in the dome: something big curled up in a tank under the glass
+cyl(OUT, CFrame.new(10, TOP + 7, -14), "BigTank", 14, 14, 0, 0, 0, st(M.Glass, nil, C3(90, 220, 120)), { deco = true, t = 0.35 })
+ball(OUT, CFrame.new(10, TOP + 7, -14), "Shape", 8, 0, 0, 0, st(M.SmoothPlastic, nil, C3(30, 50, 34)), D())
+-- the side domes (west and east, behind the yard) and their tubes into the lab
+for _, sx in { -1, 1 } do
+	local cx, cz, r = sx * 112, -20, 20
+	domeRoof(OUT, cx, cz, 2, r, r, r * 0.85, 12, 4, GREENG, 0.6)
+	prism(OUT, "SideDomeRing", cx, cz, r + 0.6, 0, 3, 12, MOON.steelD, D())
+	light(box(OUT, "SideGlow", cx - 0.2, 10, cz - 0.2, cx + 0.2, 10.4, cz + 0.2, MOON.green, { deco = true, t = 1 }), r * 1.6, 1.4, C3(120, 255, 140))
+	local a, z = Vector3.new(sx * 80, 6, -20), Vector3.new(sx * (112 - r + 1), 6, -20)
+	part(OUT, "Tube", Vector3.new(8, 8, (z - a).Magnitude), CFrame.lookAt((a + z) / 2, z), MOON.panel, D())
+	part(OUT, "TubeWindow", Vector3.new(8.2, 1.4, (z - a).Magnitude * 0.8), CFrame.lookAt((a + z) / 2 + Vector3.new(0, 1.6, 0), z + Vector3.new(0, 1.6, 0)), MOON.green, D())
+end
+for _, p0 in OUT:GetChildren() do if p0.Name == "Dome" and p0:IsA("BasePart") then p0.CanCollide = false; p0.CanQuery = false; p0.CanTouch = false end end
+-- green-glowing windows: a pane behind each glass
+for _, x in { -60, -36, 36, 60 } do box(OUT, "WindowGlow", x - 3, 7, 59.3, x + 3, 14, 59.5, MOON.green, { deco = true, t = 0.5 }) end
+-- the broken window and the ooze running down from it into a pool
+box(OUT, "BrokenPane", 33, 7, 60.4, 39, 14, 60.6, st(M.SmoothPlastic, nil, C3(10, 14, 10)), DECO)
+for k = 0, 4 do box(OUT, "Ooze", 33.4 + k * 1.2, 1 + k % 3, 60.6, 34.2 + k * 1.2, 8, 60.9, st(M.Neon, nil, C3(120, 220, 60)), DECO) end
+cyl(OUT, CFrame.new(36, 0.1, 64), "OozePool", 8, 0.2, 0, 0, 0, st(M.Neon, nil, C3(110, 200, 50)), D())
+light(box(OUT, "OozeGlow", 35.9, 1, 63.9, 36.1, 1.2, 64.1, MOON.green, { deco = true, t = 1 }), 16, 1, C3(140, 255, 80))
+-- biohazard signs (yellow plates, black rings) either side of the door, warning stripes over it
+for _, x in { -14, 14 } do
+	local cf = CFrame.new(x, 12, 60.6) * CFrame.Angles(0, math.pi, 0)
+	part(OUT, "BioPlate", Vector3.new(5, 5, 0.3), cf * CFrame.Angles(0, 0, math.pi / 4), MOON.yellow, D())
+	cyl(OUT, cf * CFrame.new(0, 0, -0.2) * CFrame.Angles(math.pi / 2, 0, 0), "BioRing", 2.6, 0.2, 0, 0, 0, MOON.black, D())
+	cyl(OUT, cf * CFrame.new(0, 0, -0.3) * CFrame.Angles(math.pi / 2, 0, 0), "BioCore", 1, 0.2, 0, 0, 0, MOON.yellow, D())
+end
+hazard(OUT, -10, 10, 17.4, 19, 60.5)
+moonSign("THE LAB", CFrame.new(0, 21.4, 61))
+washLight(-30, 88, Vector3.new(-20, TOP + 8, 50), C3(170, 255, 190), 100, 2)
+washLight(30, 88, Vector3.new(20, TOP + 8, 50), C3(170, 255, 190), 100, 2)
 moonGrounds()
 return endMap()

@@ -159,6 +159,8 @@ do
 		ball(sw, CFrame.new(cx + 22 * math.cos(a), 39.6, cz + 22 * math.sin(a)), "EdgeBulb", 1, 0, 0, 0, st(M.Neon, nil, BULBS[k % 4 + 1]), WD())
 	end
 	light(box(sw, "Glow", cx - 0.1, 30, cz - 0.1, cx + 0.1, 30.2, cz + 0.1, YEL, { deco = true, t = 1 }), 50, 1.2, WARM)
+	sw.WorldPivot = CFrame.new(cx, 0, cz)
+	sw:SetAttribute("Spin", 40) -- (it turns: Client/WorldSpin)
 end
 
 ---------------------------------------------------------------- THE ROLLER COASTER (east)
