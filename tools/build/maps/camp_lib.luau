@@ -31,50 +31,30 @@ local function campTheme(over: { [string]: any }?)
 	return t
 end
 
--- the building's name, painted on a plank over the porch roof
-local function campNameBoard(text: string)
+-- the building's name on a plank (cf = its centre, facing +Z = the yard; default: over the old porch roof)
+local function campNameBoard(text: string, cf: CFrame?, w: number?, h: number?)
 	local m = model(DEC, "NameBoard")
-	sign(m, text, CFrame.new(0, 19.6, 60.9) * CFrame.Angles(0, math.pi, 0), 22, 3.4, CAMP.logD, C3c(226, 214, 186), Enum.Font.SpecialElite)
-	for _, x in { -10.4, 10.4 } do box(m, "Peg", x - 0.25, 17.4, 60.6, x + 0.25, 21.6, 61.2, CAMP.logD, DECO) end
+	cf = cf or CFrame.new(0, 19.6, 60.9)
+	w = w or 22
+	h = h or 3.4
+	sign(m, text, (cf :: CFrame) * CFrame.Angles(0, math.pi, 0), w :: number, h :: number, CAMP.logD, C3c(226, 214, 186), Enum.Font.SpecialElite)
+	for _, x in { -(w :: number) / 2 + 0.6, (w :: number) / 2 - 0.6 } do
+		b(m, cf :: CFrame, "Peg", 0.5, (h :: number) + 1.6, 0.6, x, 0, -0.3, CAMP.logD, DECO)
+	end
+	return m
 end
 
--- the camp in the yard (everything decoration: no collision, never hit by a ray)
-local function campYard(name: string)
+-- (2026-11-19) the camp's shared yard (the arch, the campfire, the flagpole, the picnic table, the fence) is in the
+-- Camp WORLD now (tools/build/worlds/camp.luau). A building keeps: the path from its door to the world's path (z 112),
+-- two lamp posts and the signpost with its own name in red. o.noPath = true: the building draws its own way in.
+local function campYard(name: string, o: { [string]: any }?)
+	o = o or {}
 	local yd = model(DEC, "CampYard")
-	-- the path, porch to railway
-	box(yd, "Path", -5, 0.02, 76, 5, 0.14, 146, CAMP.dirt, DECO)
-	for z = 80, 140, 9 do box(yd, "PathStone", -1.4 + (z % 3), 0.1, z, 0.6 + (z % 3), 0.2, z + 1.6, CAMP.stone, DECO) end
-	-- the arch over the path: two log posts, a crossbeam, the camp's name
-	for _, x in { -7.5, 7.5 } do
-		cyl(yd, CFrame.new(x, 7, 132), "ArchPost", 1.6, 14, 0, 0, 0, CAMP.logD, Dc())
+	if not o.noPath then
+		box(yd, "Path", -5, 0.08, 64, 5, 0.16, 113, CAMP.dirt, DECO)
+		for z = 70, 106, 9 do box(yd, "PathStone", -1.4 + (z % 3), 0.12, z, 0.6 + (z % 3), 0.22, z + 1.6, CAMP.stone, DECO) end
 	end
-	box(yd, "ArchBeam", -9.5, 13.4, 131.3, 9.5, 14.6, 132.7, CAMP.logD, DECO)
-	local s = sign(yd, "CAMP HOLLOWMERE", CFrame.new(0, 12, 131.2) * CFrame.Angles(0, math.pi, 0), 14, 2.4, CAMP.log, C3c(232, 214, 170), Enum.Font.SpecialElite)
-	s.Name = "CampSign"
-	sign(yd, "CAMP HOLLOWMERE", CFrame.new(0, 12, 132.8), 14, 2.4, CAMP.log, C3c(232, 214, 170), Enum.Font.SpecialElite).Name = "CampSignBack"
-	-- the campfire ring with log benches round it (west of the path)
-	local fire = model(yd, "Campfire")
-	local fc = CFrame.new(-36, 0, 106)
-	for k = 0, 9 do
-		local a = k / 10 * math.pi * 2
-		b(fire, fc * CFrame.Angles(0, a, 0), "RingStone", 1.6, 0.9, 1.2, 0, 0.45, -3.2, CAMP.stone, DECO)
-	end
-	for k = 0, 3 do b(fire, fc * CFrame.Angles(0, k * 0.8, 0.2), "FireLog", 0.7, 0.7, 3.4, 0, 0.5, 0, CAMP.logD, DECO) end
-	local ember = b(fire, fc, "Embers", 2.2, 0.4, 2.2, 0, 0.5, 0, CAMP.ember, DECO)
-	light(ember, 26, 1.4, C3c(255, 140, 60))
-	for k = 0, 2 do
-		local a = k / 3 * math.pi * 2 + 0.4
-		local bc = fc * CFrame.Angles(0, a, 0) * CFrame.new(0, 0, -8)
-		cyl(fire, bc * CFrame.Angles(0, 0, -math.pi / 2), "LogBench", 1.6, 6, -0.8, 0, 0, CAMP.log, Dc()) -- (lying along the ring)
-	end
-	-- the flagpole and its torn flag (east of the path)
-	local fl = model(yd, "Flagpole")
-	cyl(fl, CFrame.new(34, 13, 98), "Pole", 0.6, 26, 0, 0, 0, st(M.Metal, nil, C3c(150, 150, 146)), Dc())
-	box(fl, "Flag", 34.3, 21.5, 97.9, 40.5, 25.2, 98.1, st(M.Fabric, nil, C3c(60, 90, 56)), DECO)
-	box(fl, "FlagTear", 38.5, 21.5, 97.85, 40.6, 22.8, 98.15, st(M.Fabric, nil, C3c(20, 18, 16)), DECO)
-	box(fl, "FlagStripe", 34.3, 23.1, 97.85, 40.5, 23.6, 98.15, st(M.Fabric, nil, C3c(220, 210, 180)), DECO)
-	box(fl, "Base", 32.8, 0, 96.8, 35.2, 0.8, 99.2, CAMP.stone, DECO)
-	-- the signpost: an arrow board for each building, this one first
+	-- the signpost: an arrow board for each building, this one in red
 	local sp = model(yd, "Signpost")
 	cyl(sp, CFrame.new(12, 5, 124), "Post", 0.8, 10, 0, 0, 0, CAMP.logD, Dc())
 	local names = { "BUNKHOUSE", "BOATHOUSE", "MESS HALL", "BARN", "MAIN LODGE" }
@@ -84,16 +64,79 @@ local function campYard(name: string)
 		local board = sign(sp, n, bcf, 4.6, 0.9, n == name and st(M.SmoothPlastic, nil, C3c(150, 40, 30)) or CAMP.log, C3c(232, 220, 190), Enum.Font.SpecialElite)
 		board.Name = "Arrow"
 	end
-	-- a picnic table
-	local pt = model(yd, "PicnicTable")
-	box(pt, "Top", 26, 3, 116, 32, 3.4, 120, CAMP.plank, DECO)
-	for _, z in { 115, 121 } do box(pt, "Seat", 26, 1.7, z - 0.6, 32, 2, z + 0.6, CAMP.plank, DECO) end
-	for _, x in { 26.5, 31.5 } do box(pt, "Leg", x - 0.25, 0, 116.5, x + 0.25, 3, 119.5, CAMP.logD, DECO) end
-	-- two lamp posts along the path (dim, warm)
-	for _, z in { 96, 118 } do
-		local lp = model(yd, "LampPost")
-		cyl(lp, CFrame.new(-7, 5, z), "Pole", 0.5, 10, 0, 0, 0, CAMP.iron, Dc())
-		local g = box(lp, "Lamp", -7.6, 9.6, z - 0.6, -6.4, 10.8, z + 0.6, st(M.Neon, nil, C3c(255, 200, 140)), DECO)
-		light(g, 24, 1.1, C3c(255, 190, 130))
+	if not o.noLamps then
+		for _, z in { 84, 104 } do
+			local lp = model(yd, "LampPost")
+			cyl(lp, CFrame.new(-7, 5, z), "Pole", 0.5, 10, 0, 0, 0, CAMP.iron, Dc())
+			local g = box(lp, "Lamp", -7.6, 9.6, z - 0.6, -6.4, 10.8, z + 0.6, st(M.Neon, nil, C3c(255, 200, 140)), DECO)
+			light(g, 24, 1.1, C3c(255, 190, 130))
+		end
+	end
+	return yd
+end
+
+---------------------------------------------------------------- log-built outsides (2026-11-19)
+-- horizontal logs laid along a wall face: along "x" at z = fixed (the front / back), or "z" at x = fixed; from a1 to
+-- a2, every `step` up from y0 to y1, `out` = which side of the face (+1 / -1). holes = { { c, w, y1, y2 } }: the
+-- openings (window / door centre along the wall, width, bottom, top) the logs stop at.
+local function logBands(along: string, fixed: number, a1: number, a2: number, y0: number, y1: number, step: number, out: number, sty, holes)
+	local m = model(DEC, "LogBands")
+	local function run(s1: number, s2: number, y: number)
+		if s2 - s1 < 0.6 then return end
+		local cf
+		-- (cyl stands a cylinder along cf's up vector: tip it over along x or along z)
+		if along == "x" then cf = CFrame.new((s1 + s2) / 2, y, fixed + out * 0.55) * CFrame.Angles(0, 0, -math.pi / 2)
+		else cf = CFrame.new(fixed + out * 0.55, y, (s1 + s2) / 2) * CFrame.Angles(math.pi / 2, 0, 0) end
+		cyl(m, cf, "Log", 1.1, s2 - s1, 0, 0, 0, sty or CAMP.logD, Dc())
+	end
+	local y = y0
+	while y <= y1 do
+		local cuts = {}
+		for _, h in holes or {} do
+			if y > h[3] - 1.4 and y < h[4] + 1.4 then table.insert(cuts, { h[1] - h[2] / 2 - 1.2, h[1] + h[2] / 2 + 1.2 }) end
+		end
+		table.sort(cuts, function(p, q) return p[1] < q[1] end)
+		local cur = math.min(a1, a2)
+		for _, c in cuts do run(cur, c[1], y); cur = math.max(cur, c[2]) end
+		run(cur, math.max(a1, a2), y)
+		y += step
+	end
+	return m
+end
+-- the openings of a wall for logBands: window centres (w wide, from y b to t above y0), plus a door at the centre
+local function holesOf(list, w: number, bb: number, tt: number, y0: number, door)
+	local h = {}
+	for _, c in list do table.insert(h, { c, w, y0 + bb, y0 + tt }) end
+	if door then table.insert(h, { 0, door[1], y0, y0 + door[2] }) end
+	return h
+end
+
+-- crossed log ends sticking out at a corner (x, z), from y0 to y1
+local function cornerLogs(x: number, z: number, y0: number, y1: number, sx: number, sz: number)
+	local m = model(DEC, "CornerLogs")
+	local k = 0
+	for y = y0, y1, 1.6 do
+		if k % 2 == 0 then
+			cyl(m, CFrame.new(x + sx * 1.2, y, z) * CFrame.Angles(0, 0, -math.pi / 2), "LogEnd", 1.5, 6, 0, 0, 0, CAMP.log, Dc())
+		else
+			cyl(m, CFrame.new(x, y, z + sz * 1.2) * CFrame.Angles(math.pi / 2, 0, 0), "LogEnd", 1.5, 6, 0, 0, 0, CAMP.log, Dc())
+		end
+		k += 1
+	end
+	return m
+end
+-- a wall lantern (an iron cage round a warm glow) on a face, facing +Z by default
+local function campLantern(parent, x: number, y: number, z: number, color: Color3?, range: number?)
+	local lm = model(parent, "Lantern")
+	box(lm, "Bracket", x - 0.15, y + 1.2, z - 0.8, x + 0.15, y + 1.5, z + 0.2, CAMP.iron, DECO)
+	box(lm, "Cage", x - 0.6, y - 0.8, z + 0.1, x + 0.6, y + 0.8, z + 1.3, CAMP.iron, { t = 0.3, deco = true })
+	local g = box(lm, "Glow", x - 0.35, y - 0.6, z + 0.35, x + 0.35, y + 0.6, z + 1.05, st(M.Neon, nil, color or C3c(255, 190, 120)), DECO)
+	light(g, range or 22, 1.3, color or C3c(255, 180, 110))
+	return lm
+end
+-- three claw gouges on a face (at x, y on the plane z = fixed, facing +Z), each a dark slash
+local function clawMarks(parent, x: number, y: number, z: number, len: number, tilt: number)
+	for k = -1, 1 do
+		part(parent, "Claw", Vector3.new(0.5, len, 0.2), CFrame.new(x + k * 1.3, y, z) * CFrame.Angles(0, 0, tilt), st(M.SmoothPlastic, nil, C3c(24, 16, 12)), { deco = true })
 	end
 end

@@ -215,14 +215,15 @@ local function spotsFor(m: Model, live: boolean): (number, string)
 end
 
 local out = {}
+-- (a line `ONLYP = "Camp_"` before the script: only the maps whose id starts with it)
 for _, m in SS:WaitForChild("Maps"):GetChildren() do
-	if m:IsA("Model") then
+	if m:IsA("Model") and (not ONLYP or string.sub(m.Name, 1, #ONLYP) == ONLYP) then
 		local ok, n, info = pcall(spotsFor, m, false)
 		table.insert(out, m.Name .. ": " .. (ok and (n .. " spots " .. info) or ("ERROR " .. tostring(n))))
 	end
 end
 local mansion = workspace:FindFirstChild("Mansion")
-if mansion and (mansion:GetAttribute("MapId") == nil or mansion:GetAttribute("MapId") == "Mansion") then
+if mansion and not ONLYP and (mansion:GetAttribute("MapId") == nil or mansion:GetAttribute("MapId") == "Mansion") then
 	local ok, n, info = pcall(spotsFor, mansion, true)
 	table.insert(out, "Mansion (workspace): " .. (ok and (n .. " spots " .. info) or ("ERROR " .. tostring(n))))
 end
