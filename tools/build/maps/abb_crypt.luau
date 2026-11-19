@@ -4,14 +4,16 @@
 -- candles everywhere, a shrine of skulls at the far end. At the back, behind a wall of iron grilles and two doorways:
 -- the OSSUARY STORE (bone boxes, a cart of dirt, his tools). Its east end: a TOMB DOOR that slides aside (Secrets:
 -- the stash behind it).
--- Build: cat tools/build/lib2.luau tools/build/furn_lib.luau tools/build/maplib.luau tools/build/maps/abbey_lib.luau tools/build/maps/abb_crypt.luau
+-- Build: cat tools/build/lib2.luau tools/build/furn_lib.luau tools/build/maplib.luau tools/build/maps/shape_lib.luau tools/build/maps/abbey_lib.luau tools/build/maps/abb_crypt.luau
 local C3 = Color3.fromRGB
 local function D() return { deco = true } end
 local H = 20
 local rng = Random.new(42)
 beginMap("Abb_Crypt", abbTheme({ inner = st(M.Cobblestone, "PS2_Stone1", C3(92, 92, 84)), floor = st(M.Slate, nil, C3(66, 64, 60)) }))
-shell({ two = false, H = H, roof = "gable", pitch = 0.3, front1 = { -60, -36, 36, 60 }, back1 = { -60, 60 }, left1 = { 44, 20, -30 }, right1 = { 44, 20, -30 },
-	winW = 3, winB = 12, winT = 16 })
+-- (2026-11-19) its own shape: a mausoleum sunk into a GRAVE MOUND - only its temple front shows, the rest is under earth
+local EARTHM = st(M.Ground, nil, C3(56, 42, 34))
+local TOP = shell2({ H = H, roof = "hip", rise = 16, over = 4, roofStyle = EARTHM, front1 = { -60, -36, 36, 60 }, back1 = { -60, 60 }, left1 = { 44, 20, -30 }, right1 = { 44, 20, -30 },
+	win = { w = 3, b = 12, t = 16 }, steps = false })
 local inn = model(STR, "Interior")
 local I = INT()
 wall(inn, "StoreWall", "x", -32, -78, 78, F1, H, { dr(-30, 10, 12), dr(30, 10, 12) }, I)
@@ -110,6 +112,56 @@ for _, p in { { -30, 30 }, { 20, -10 }, { -40, -48 } } do blood(p[1], F1, p[2], 
 for _, p in { { -40, 50 }, { 40, 50 }, { 0, 14 }, { -30, -10 }, { 30, -10 }, { 0, -46 } } do gspawn(p[1], F1, p[2]) end
 keepClear(-6, 40, 6, 58, F1)
 keepClear(56, -42, 70, -34, F1)
-abbSign("THE CRYPT")
+-- OUTSIDE (2026-11-19): THE GRAVEDIGGER'S CRYPT. Earth heaped over the sides and the back up to the roof (the mound),
+-- graves and a dead tree on top of it; at the front a temple portico - squat columns, an entablature with the
+-- name, a pediment with a skull - steps down from it, urns, the iron gates thrown open, his shovel in a fresh heap.
+local OUT = model(DEC, "Outside")
+-- the mound: earth sloping up from the ground to the eaves on three sides
+for _, sx in { -1, 1 } do panel(OUT, "Berm", Vector3.new(sx * 98, -1, 0), Vector3.new(sx * 81, TOP, 0), Vector3.new(0, 0, 1), 124, EARTHM, 2, D()) end
+panel(OUT, "Berm", Vector3.new(0, -1, -78), Vector3.new(0, TOP, -61), Vector3.new(1, 0, 0), 196, EARTHM, 2, D())
+for _, sx in { -1, 1 } do tri(OUT, "BermEnd", Vector3.new(sx * 81, TOP, 61), Vector3.new(sx * 98, -1, 61), Vector3.new(sx * 81, -1, 61), EARTHM, 1, D()) end
+-- graves on the mound (on the slopes of the earth roof), a dead tree on top, tufts
+local mrng = Random.new(18)
+for k = 1, 16 do
+	local x, z = mrng:NextNumber(-60, 60), mrng:NextNumber(-48, 40)
+	local y = TOP + 16 * (1 - math.max(math.abs(x) / 80, math.abs(z) / 60)) - 0.5
+	local cf = CFrame.new(x, y, z) * CFrame.Angles(mrng:NextNumber(-0.15, 0.15), mrng:NextNumber(0, 6), mrng:NextNumber(-0.15, 0.15))
+	if k % 3 == 0 then
+		b(OUT, cf, "MoundCross", 0.7, 5, 0.7, 0, 2.5, 0, ABB.stone, D()); b(OUT, cf, "MoundCrossArm", 3, 0.7, 0.7, 0, 3.6, 0, ABB.stone, D())
+	else
+		b(OUT, cf, "MoundStone", 2.6, 3.6, 0.7, 0, 1.8, 0, k % 2 == 0 and ABB.stone or ABB.stoneD, D())
+	end
+end
+abbDeadTree(OUT, Vector3.new(14, TOP + 12, -10), mrng)
+-- THE PORTICO: columns, entablature, pediment with a skull
+local PZ = 66
+box(STR, "PorticoFloor", -32, 0, 59, 32, 2.05, PZ + 3, ABB.stoneD)
+box(STR, "PorticoStep", -14, 0, PZ + 3, 14, 1.35, PZ + 5.5, ABB.stoneD)
+box(STR, "PorticoStep", -14, 0, PZ + 5.5, 14, 0.7, PZ + 8, ABB.stoneD)
+for _, x in { -27, -17, -8, 8, 17, 27 } do
+	cyl(OUT, CFrame.new(x, 2 + 7.5, PZ), "Column", 2.6, 15, 0, 0, 0, ABB.stoneL, D())
+	box(OUT, "ColumnBase", x - 1.8, 2, PZ - 1.8, x + 1.8, 3, PZ + 1.8, ABB.stone, DECO)
+	box(OUT, "ColumnCap", x - 2, 16.4, PZ - 2, x + 2, 17.4, PZ + 2, ABB.stone, DECO)
+end
+box(OUT, "Entablature", -31, 17.4, 59, 31, 21, PZ + 2.2, ABB.stone, DECO)
+sign(OUT, "REQUIESCANT", CFrame.new(0, 19.2, PZ + 2.3) * CFrame.Angles(0, math.pi, 0), 24, 2.4, ABB.stone, C3(40, 30, 26), Enum.Font.Fantasy)
+tri(OUT, "Pediment", Vector3.new(-32, 21, PZ + 1.4), Vector3.new(32, 21, PZ + 1.4), Vector3.new(0, 33, PZ + 1.4), ABB.stoneL, 2, D())
+abbSkull(OUT, CFrame.new(0, 25.4, PZ + 2.6) * CFrame.Angles(0, math.pi, 0), 3.4)
+for _, sx in { -1, 1 } do
+	local a, z = Vector3.new(sx * 33, 20.6, PZ + 2), Vector3.new(0, 33.6, PZ + 2)
+	part(OUT, "PedimentTrim", Vector3.new(1, 1, (z - a).Magnitude), CFrame.lookAt((a + z) / 2, z), ABB.stone, D())
+	-- urns at the corners, the iron gates opened outward
+	box(OUT, "UrnPlinth", sx * 30 - 1.6, 0, PZ + 6, sx * 30 + 1.6, 3.4, PZ + 9.2, ABB.stone, DECO)
+	cyl(OUT, CFrame.new(sx * 30, 4.9, PZ + 7.6), "Urn", 2.6, 3, 0, 0, 0, ABB.stoneD, D())
+	for k = 0, 6 do box(OUT, "GateBar", sx * 7 + sx * (k * 0.8), 2, PZ - 1 + k * 0.9, sx * 7 + sx * (k * 0.8) + 0.25, 15, PZ - 0.75 + k * 0.9, ABB.iron, DECO) end
+end
+-- his shovel in a fresh heap of earth by the steps, a lantern on the column
+part(OUT, "Heap", Vector3.new(6, 2, 5), CFrame.new(22, 0.6, 82) * CFrame.Angles(0, 0.3, 0), EARTHM, D())
+part(OUT, "ShovelHandle", Vector3.new(0.4, 6, 0.4), CFrame.new(22, 3.4, 82) * CFrame.Angles(0.3, 0, 0.2), ABB.beam, D())
+part(OUT, "ShovelBlade", Vector3.new(1.8, 2, 0.3), CFrame.new(21.6, 0.9, 81) * CFrame.Angles(0.3, 0, 0.2), ABB.iron, D())
+for _, x in { -12, 12 } do abbLantern(OUT, Vector3.new(x, 13, PZ - 2), 24) end
+abbSign("THE CRYPT", CFrame.new(0, 28.6, PZ + 3.8))
+washLight(-30, 88, Vector3.new(-10, 20, 64), C3(255, 170, 130), 90, 2)
+washLight(30, 88, Vector3.new(10, 20, 64), C3(255, 170, 130), 90, 2)
 abbGrounds()
 return endMap()

@@ -140,13 +140,13 @@ local function abbCrack(parent: Instance, a: Vector3, z: Vector3, y: number, rng
 end
 
 -- the building's name on a stone board over the porch roof, an iron lantern each side
-local function abbSign(text: string)
+local function abbSign(text: string, at: CFrame?)
 	local m = model(DEC, "Marquee")
-	local cf = CFrame.new(0, 21, 61) * CFrame.Angles(0, math.pi, 0)
+	local cf = (at or CFrame.new(0, 21, 61)) * CFrame.Angles(0, math.pi, 0)
 	b(m, cf, "Board", 26, 5, 0.6, 0, 0, 0.3, ABB.stoneD, DECO)
 	b(m, cf, "Frame", 27.4, 6, 0.4, 0, 0, 0.6, ABB.stone, DECO)
 	sign(m, text, cf * CFrame.new(0, 0, -0.05), 23, 3.4, ABB.stoneD, C3a(255, 200, 150), Enum.Font.Creepster)
-	for _, x in { -14.8, 14.8 } do abbLantern(m, Vector3.new(x, 19.2, 61.8), 26) end
+	for _, x in { -14.8, 14.8 } do abbLantern(m, (cf * CFrame.new(x, -1.8, -0.8)).Position, 26) end
 	-- a cross over it
 	b(m, cf, "Cross", 0.8, 5, 0.6, 0, 5, 0.4, ABB.stone, DECO)
 	b(m, cf, "CrossBar", 3, 0.8, 0.6, 0, 5.8, 0.4, ABB.stone, DECO)
@@ -187,25 +187,33 @@ local function abbGrounds()
 	for _, z in { 84, 108, 132 } do
 		for _, x in { -9, 9 } do abbBrazier(yd, Vector3.new(x, 0, z)) end
 	end
-	-- THE ARCH over the path: two stone piers and a pointed lintel with the name
-	for _, x in { -8, 8 } do box(yd, "ArchPier", x - 1.4, 0, 129.5, x + 1.4, 16, 133.5, ABB.stone, DECO) end
-	box(yd, "ArchLintel", -9.5, 13, 130, 9.5, 16, 133, ABB.stoneD, DECO)
-	part(yd, "ArchPeak", Vector3.new(14, 14, 3), CFrame.new(0, 16, 131.5) * CFrame.Angles(0, 0, math.pi / 4), ABB.stone, DECO)
-	sign(yd, "THE ASHEN ABBEY", CFrame.new(0, 14.5, 129.9) * CFrame.Angles(0, math.pi, 0), 17, 2, ABB.stoneD, C3a(255, 190, 140), Enum.Font.Creepster).Name = "AbbSign"
-	sign(yd, "THE ASHEN ABBEY", CFrame.new(0, 14.5, 133.1), 17, 2, ABB.stoneD, C3a(255, 190, 140), Enum.Font.Creepster).Name = "AbbSignBack"
-	for _, x in { -8, 8 } do abbLantern(yd, Vector3.new(x, 17, 131.5), 30) end
-	-- THE CATHEDRAL far behind the building: a dark nave, two towers, the great spire, a red glow under it
-	local cat = model(yd, "Cathedral")
-	box(cat, "Nave", -40, 0, -190, 40, 60, -130, ABB.stoneD, DECO)
-	for _, x in { -50, 50 } do
-		box(cat, "Tower", x - 10, 0, -140, x + 10, 100, -120, ABB.stoneD, DECO)
-		part(cat, "TowerSpire", Vector3.new(14, 30, 14), CFrame.new(x, 112, -130) * CFrame.Angles(0, math.pi / 4, 0), ABB.ash, DECO)
+	-- (2026-11-19: the arch and the far skyline are in the Abbey WORLD now: tools/build/worlds/abbey.luau)
+end
+
+---------------------------------------------------------------- outsides (2026-11-19)
+-- a pointed arch frame standing on the plane z (facing +Z): two jambs from y0 up h, two stones up to the point
+local function abbArch(parent: Instance, cx: number, y0: number, z: number, w: number, h: number, sty, th: number?, depth: number?)
+	th = th or 1.2
+	depth = depth or 1.2
+	for _, sx in { -1, 1 } do
+		box(parent, "Jamb", cx + sx * w / 2 - th / 2, y0, z - depth / 2, cx + sx * w / 2 + th / 2, y0 + h, z + depth / 2, sty, DECO)
+		local a, p = Vector3.new(cx + sx * w / 2, y0 + h, z), Vector3.new(cx, y0 + h + w * 0.62, z)
+		part(parent, "ArchStone", Vector3.new(th, th, (p - a).Magnitude + th * 0.8), CFrame.lookAt((a + p) / 2, p), sty, DECO)
 	end
-	part(cat, "Spire", Vector3.new(16, 70, 16), CFrame.new(0, 95, -160) * CFrame.Angles(0, math.pi / 4, 0), ABB.ash, DECO)
-	local rose = cyl(cat, CFrame.new(0, 40, -129.5) * CFrame.Angles(math.pi / 2, 0, 0), "RoseWindow", 22, 0.6, 0, 0, 0, ABB.lava, { deco = true })
-	rose.Color = C3a(200, 60, 30)
-	light(rose, 80, 2, C3a(255, 90, 40))
-	local glowF = box(cat, "HellGlow", -60, 0.2, -200, 60, 1, -110, ABB.lava, DECO)
-	glowF.Transparency = 0.5
-	light(glowF, 60, 2.5, C3a(255, 70, 20))
+end
+-- a skull (cube, sockets, nose, teeth) at cf facing cf.LookVector, size s
+local function abbSkull(parent: Instance, cf: CFrame, s: number)
+	local DARK = st(M.SmoothPlastic, nil, C3a(20, 12, 10))
+	b(parent, cf, "Skull", s, s * 0.9, s * 0.9, 0, 0, 0, ABB.bone, DECO)
+	for _, sx in { -1, 1 } do b(parent, cf, "Socket", s * 0.3, s * 0.28, 0.1, sx * s * 0.22, s * 0.08, -s * 0.46, DARK, DECO) end
+	b(parent, cf, "Nose", s * 0.14, s * 0.2, 0.1, 0, -s * 0.14, -s * 0.46, DARK, DECO)
+	b(parent, cf, "Teeth", s * 0.56, s * 0.12, 0.1, 0, -s * 0.36, -s * 0.46, DARK, DECO)
+end
+-- a stepped buttress against a wall: base at (x, z), sticking out along `out` (unit, flat), h high
+local function abbButtress(parent: Instance, x: number, z: number, out: Vector3, h: number, w: number?)
+	w = w or 3
+	local cf = CFrame.lookAt(Vector3.new(x, 0, z), Vector3.new(x, 0, z) + out)
+	b(parent, cf, "Buttress", w, h, 5, 0, h / 2, -2.5, ABB.stone, DECO)
+	b(parent, cf, "Buttress", w, h * 0.55, 3, 0, h * 0.275, -6.5, ABB.stone, DECO)
+	part(parent, "ButtressCap", Vector3.new(w, 2.4, 4), cf * CFrame.new(0, h + 0.4, -2.2) * CFrame.Angles(-0.6, 0, 0), ABB.stoneD, DECO)
 end

@@ -4,14 +4,15 @@
 -- landing (decoration), sacks and crates, pigeons' mess, the clock's works on the back wall. Low walls of stacked
 -- crates and a fallen beam are the only cover. At the back, behind a wall with two doorways: the RINGER'S ROOM (his
 -- straw bed, a table, bell ropes coiled). Its west end: a WOODEN PANEL that slides (Secrets: the stash behind it).
--- Build: cat tools/build/lib2.luau tools/build/furn_lib.luau tools/build/maplib.luau tools/build/maps/abbey_lib.luau tools/build/maps/abb_belfry.luau
+-- Build: cat tools/build/lib2.luau tools/build/furn_lib.luau tools/build/maplib.luau tools/build/maps/shape_lib.luau tools/build/maps/abbey_lib.luau tools/build/maps/abb_belfry.luau
 local C3 = Color3.fromRGB
 local function D() return { deco = true } end
 local H = 34
 local rng = Random.new(43)
 beginMap("Abb_Belfry", abbTheme({ floor = ABB.plank, floor2 = ABB.plank }))
-shell({ two = false, H = H, roof = "gable", pitch = 0.7, front1 = { -60, -36, 36, 60 }, back1 = { -60, 60 }, left1 = { 44, 20, -30 }, right1 = { 44, 20, -30 },
-	winW = 4, winB = 16, winT = 28 })
+-- (2026-11-19) its own shape: the bell hall under a hip roof and a GREAT SQUARE TOWER rising out of it
+local TOP = shell2({ H = H, roof = "hip", rise = 18, front1 = { -60, -36, 36, 60 }, back1 = { -60, 60 }, left1 = { 44, 20, -30 }, right1 = { 44, 20, -30 },
+	win = { w = 4, b = 16, t = 28 }, door = { w = 12, t = 18 } })
 local inn = model(STR, "Interior")
 local I = INT()
 wall(inn, "RoomWall", "x", -32, -78, 78, F1, 16, { dr(-30, 10, 12), dr(30, 10, 12) }, I)
@@ -108,6 +109,62 @@ for _, p in { { -20, 20 }, { 40, 0 }, { -40, -50 } } do blood(p[1], F1, p[2], 2)
 for _, p in { { -40, 52 }, { 40, 52 }, { 0, 30 }, { -30, 0 }, { 30, 0 }, { 0, -46 } } do gspawn(p[1], F1, p[2]) end
 keepClear(-6, 40, 6, 58, F1)
 keepClear(-62, -42, -54, -34, F1)
-abbSign("THE BELL TOWER")
+-- OUTSIDE (2026-11-19): THE BELL RINGER'S TOWER. A square stone tower rises out of the hall's roof: buttressed corners,
+-- lancet slits, clock faces, the open BELFRY with the great bells hanging in it, a parapet of pinnacles and a tall
+-- pyramid spire. A deep pointed portal at the front, a round window over it, crows.
+local OUT = model(DEC, "Outside")
+local TX0, TX1, TZ0, TZ1 = -20, 20, -40, 0
+local TS = ABB.stone
+local yb = TOP + 54 -- the belfry's floor
+-- the shaft up to the belfry
+box(OUT, "TowerShaft", TX0, TOP, TZ0, TX1, yb, TZ1, TS, DECO)
+for _, c in { { TX0, TZ0 }, { TX1, TZ0 }, { TX0, TZ1 }, { TX1, TZ1 } } do box(OUT, "TowerCorner", c[1] - 2, TOP, c[2] - 2, c[1] + 2, yb + 22, c[2] + 2, ABB.stoneD, DECO) end
+for _, y in { TOP + 10, TOP + 28 } do
+	box(OUT, "Slit", -1, y, TZ1 + 0.1, 1, y + 7, TZ1 + 0.3, st(M.SmoothPlastic, nil, C3(14, 8, 8)), DECO)
+	box(OUT, "Band", TX0 - 0.6, y + 9, TZ0 - 0.6, TX1 + 0.6, y + 10, TZ1 + 0.6, ABB.stoneD, DECO)
+end
+-- clock faces on the front and the sides
+for _, f in { { 0, TZ1 + 0.3, 0 }, { TX1 + 0.3, -20, -math.pi / 2 }, { TX0 - 0.3, -20, math.pi / 2 } } do
+	local cf = CFrame.new(f[1], TOP + 44, f[2]) * CFrame.Angles(0, f[3], 0)
+	cyl(OUT, cf * CFrame.Angles(math.pi / 2, 0, 0), "ClockFace", 12, 0.3, 0, 0, 0, st(M.Neon, nil, C3(240, 220, 170)), D())
+	cyl(OUT, cf * CFrame.new(0, 0, -0.1) * CFrame.Angles(math.pi / 2, 0, 0), "ClockRim", 13.4, 0.3, 0, 0, 0, ABB.iron, D())
+	b(OUT, cf, "HourHand", 0.6, 4, 0.2, 0, 1.6, 0.3, ABB.iron, D())
+	part(OUT, "MinuteHand", Vector3.new(0.4, 5.4, 0.2), cf * CFrame.new(1.4, -1.6, 0.3) * CFrame.Angles(0, 0, 0.9), ABB.iron, D())
+end
+light(box(OUT, "ClockGlow", -0.1, TOP + 44, TZ1 + 4, 0.1, TOP + 44.2, TZ1 + 4.2, ABB.holy, { deco = true, t = 1 }), 26, 1, C3(255, 220, 160))
+-- the belfry: open arches on four sides (corner piers + lintels), the bells in their frame
+box(OUT, "BelfryFloor", TX0, yb, TZ0, TX1, yb + 1, TZ1, ABB.beam, DECO)
+for _, e in { { TX0, TZ0, TX1, TZ0 + 1.6 }, { TX0, TZ1 - 1.6, TX1, TZ1 }, { TX0, TZ0, TX0 + 1.6, TZ1 }, { TX1 - 1.6, TZ0, TX1, TZ1 } } do
+	box(OUT, "BelfryLintel", e[1], yb + 17, e[2], e[3], yb + 22, e[4], TS, DECO)
+end
+box(OUT, "BellBeam", TX0, yb + 15, -21, TX1, yb + 16.4, -19, ABB.beam, DECO)
+for _, bp in { { -8, 9 }, { 8, 7 } } do
+	local bx, bd = bp[1], bp[2]
+	revolve(OUT, "GreatBell", bx, -20, { { bd / 2, yb + 4 }, { bd * 0.46, yb + 6 }, { bd * 0.32, yb + 11 }, { bd * 0.24, yb + 14 }, { 0, yb + 15 } }, 12, ABB.bronze)
+	cyl(OUT, CFrame.new(bx, yb + 4.5, -20), "BellLip", bd + 0.6, 1, 0, 0, 0, ABB.bronze, D())
+end
+light(box(OUT, "BelfryGlow", -0.1, yb + 8, -20.1, 0.1, yb + 8.2, -19.9, ABB.ember, { deco = true, t = 1 }), 60, 2.4, C3(255, 150, 80))
+light(box(OUT, "SpireBeacon", -0.6, yb + 79, -20.6, 0.6, yb + 80.2, -19.4, ABB.lava, DECO), 50, 1.6, C3(255, 70, 40))
+washLight(0, 100, Vector3.new(0, yb + 14, -2), C3(255, 140, 100), 200, 2.6)
+-- the parapet, its pinnacles and the spire
+box(OUT, "Parapet", TX0 - 1.4, yb + 22, TZ0 - 1.4, TX1 + 1.4, yb + 25, TZ1 + 1.4, ABB.stoneD, DECO)
+for _, c in { { TX0, TZ0 }, { TX1, TZ0 }, { TX0, TZ1 }, { TX1, TZ1 } } do spire(OUT, c[1], c[2], 2.6, yb + 25, 12, 4, ABB.stone, D()) end
+spire(OUT, 0, -20, 19, yb + 25, 56, 4, st(M.Slate, nil, C3(34, 32, 36)), D())
+box(OUT, "SpireCross", -0.4, yb + 81, -20.4, 0.4, yb + 89, -19.6, ABB.iron, DECO)
+box(OUT, "SpireCross", -2.4, yb + 85.6, -20.4, 2.4, yb + 86.4, -19.6, ABB.iron, DECO)
+-- the portal: stepped pointed arches round the door, a round window over it, buttresses at the corners
+for k = 0, 2 do abbArch(OUT, 0, 2, 60.6 + k * 0.9, 14 + k * 3, 18, k % 2 == 0 and ABB.stoneD or ABB.stone, 1.2, 1) end
+cyl(OUT, CFrame.new(0, 31, 60.4) * CFrame.Angles(math.pi / 2, 0, 0), "RoundWindow", 7, 0.4, 0, 0, 0, st(M.Neon, nil, C3(200, 80, 40)), D())
+cyl(OUT, CFrame.new(0, 31, 60.2) * CFrame.Angles(math.pi / 2, 0, 0), "RoundRim", 8.4, 0.4, 0, 0, 0, ABB.stoneD, D())
+for _, c in { { -80, 1 }, { 80, 1 } } do abbButtress(OUT, c[1], 60, Vector3.new(0, 0, 1), 30) end
+for _, x in { -48, 48 } do abbButtress(OUT, x, 60, Vector3.new(0, 0, 1), 26) end
+for k = 1, 5 do
+	local cf = CFrame.new(-16 + k * 6, yb + 25.4, TZ1 + 0.6) * CFrame.Angles(0, k, 0)
+	b(OUT, cf, "Crow", 0.9, 0.9, 1.8, 0, 0, 0, st(M.SmoothPlastic, nil, C3(16, 14, 18)), D())
+	b(OUT, cf, "CrowHead", 0.6, 0.6, 0.6, 0, 0.6, -0.9, st(M.SmoothPlastic, nil, C3(16, 14, 18)), D())
+end
+abbSign("THE BELL TOWER", CFrame.new(0, 24.6, 61.4))
+washLight(-30, 88, Vector3.new(-6, TOP + 40, -2), C3(255, 170, 130), 140, 2.4)
+washLight(30, 88, Vector3.new(6, TOP + 40, -2), C3(255, 170, 130), 140, 2.4)
 abbGrounds()
 return endMap()

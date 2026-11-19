@@ -4,14 +4,16 @@
 -- back, candle stands, banners; and the floor of the nave SPLIT OPEN down the middle by glowing cracks of hellfire
 -- (decoration, flush with the floor), with smoke and embers coming up. At the back, behind the altar wall with two
 -- doorways: the SACRISTY (vestment chests, chalices, a font). Its west end: a TAPESTRY that slides (Secrets).
--- Build: cat tools/build/lib2.luau tools/build/furn_lib.luau tools/build/maplib.luau tools/build/maps/abbey_lib.luau tools/build/maps/abb_nave.luau
+-- Build: cat tools/build/lib2.luau tools/build/furn_lib.luau tools/build/maplib.luau tools/build/maps/shape_lib.luau tools/build/maps/abbey_lib.luau tools/build/maps/abb_nave.luau
 local C3 = Color3.fromRGB
 local function D() return { deco = true } end
 local H = 36
 local rng = Random.new(45)
 beginMap("Abb_Nave", abbTheme({ floor = st(M.Marble, nil, C3(96, 88, 84)) }))
-shell({ two = false, H = H, roof = "gable", pitch = 0.75, front1 = { -60, -36, 36, 60 }, back1 = { -60, 60 }, left1 = { 44, 20, -30 }, right1 = { 44, 20, -30 },
-	winW = 5, winB = 10, winT = 28 })
+-- (2026-11-19) its own shape: a GOTHIC CATHEDRAL - a steep gable to the yard with a rose window, twin spired towers,
+-- flying buttresses down the sides
+local TOP = shell2({ H = H, ridge = "z", roof = "gable", rise = 46, over = 2, front1 = { -60, -36, 36, 60 }, back1 = { -60, 60 }, left1 = { 44, 20, -30 }, right1 = { 44, 20, -30 },
+	win = { w = 5, b = 10, t = 28 }, door = { w = 12, t = 22 } })
 local inn = model(STR, "Interior")
 local I = INT()
 wall(inn, "AltarWall", "x", -32, -78, 78, F1, H, { dr(-50, 10, 13), dr(50, 10, 13) }, I)
@@ -130,6 +132,79 @@ for _, p in { { -40, 50 }, { 40, 50 }, { 0, 30 }, { -46, 0 }, { 46, 0 }, { 0, -4
 keepClear(-6, 40, 6, 58, F1)
 keepClear(-62, -42, -54, -34, F1)
 keepClear(-20, -32, 20, -16, F1) -- (the altar's dais)
-abbSign("THE CATHEDRAL")
+-- OUTSIDE (2026-11-19): THE DEMON'S CATHEDRAL. The front gable carries a great ROSE WINDOW glowing red; two square
+-- TOWERS with lancets, pinnacles and spires stand at its corners; FLYING BUTTRESSES arch over to piers down both
+-- sides; the portal is three pointed arches deep; and the hellfire crack runs out of the door across the yard.
+local OUT = model(DEC, "Outside")
+-- the rose window: petals of glass round a hub, stone tracery, a rim
+local RC, RR = Vector3.new(0, TOP + 14, 60.4), 13
+local pet = {}
+for k = 0, 16 do local a = 2 * math.pi * k / 16; table.insert(pet, RC + Vector3.new(RR * math.cos(a), RR * math.sin(a), 0)) end
+local GL = { st(M.Neon, nil, C3(190, 40, 30)), st(M.Neon, nil, C3(60, 70, 170)), st(M.Neon, nil, C3(220, 170, 50)) }
+for k = 1, 16 do
+	tri(OUT, "RosePetal", RC, pet[k], pet[k + 1], GL[k % 3 + 1], 0.3, D())
+	part(OUT, "Tracery", Vector3.new(0.7, 0.7, RR), CFrame.lookAt((RC + pet[k]) / 2 + Vector3.new(0, 0, 0.3), pet[k] + Vector3.new(0, 0, 0.3)), ABB.stoneD, D())
+	part(OUT, "RoseRim", Vector3.new(1.2, 1.2, (pet[k + 1] - pet[k]).Magnitude + 0.5), CFrame.lookAt((pet[k] + pet[k + 1]) / 2 + Vector3.new(0, 0, 0.3), pet[k + 1] + Vector3.new(0, 0, 0.3)), ABB.stone, D())
+end
+cyl(OUT, CFrame.new(RC + Vector3.new(0, 0, 0.5)) * CFrame.Angles(math.pi / 2, 0, 0), "RoseHub", 3, 0.6, 0, 0, 0, ABB.stoneD, D())
+light(box(OUT, "RoseGlow", -0.1, TOP + 14, 64, 0.1, TOP + 14.2, 64.2, ABB.lava, { deco = true, t = 1 }), 50, 1.6, C3(255, 90, 50))
+-- the twin towers at the front corners (solid at the foot), lancets, pinnacles, spires
+for _, sx in { -1, 1 } do
+	local tx, tz, half = sx * 86, 50, 11
+	box(OUT, "Tower", tx - half, 0, tz - half, tx + half, TOP + 34, tz + half, ABB.stone) -- (solid)
+	for _, y in { 14, 40, 62 } do
+		box(OUT, "TowerLancet", tx - 1.6, y, tz + half + 0.1, tx + 1.6, y + 10, tz + half + 0.4, (y == 62) and st(M.Neon, nil, C3(255, 110, 50)) or st(M.SmoothPlastic, nil, C3(14, 8, 8)), DECO)
+		box(OUT, "TowerBand", tx - half - 0.5, y + 12, tz - half - 0.5, tx + half + 0.5, y + 13, tz + half + 0.5, ABB.stoneD, DECO)
+	end
+	for _, c in { { -1, -1 }, { 1, -1 }, { -1, 1 }, { 1, 1 } } do spire(OUT, tx + c[1] * half, tz + c[2] * half, 2.2, TOP + 34, 12, 4, ABB.stone, D()) end
+	spire(OUT, tx, tz, half - 1, TOP + 34, 50, 8, st(M.Slate, nil, C3(34, 32, 36)), D())
+	box(OUT, "TowerCross", tx - 0.4, TOP + 84, tz - 0.4, tx + 0.4, TOP + 90, tz + 0.4, ABB.iron, DECO)
+	light(box(OUT, "TowerGlow", tx - 0.1, 66, tz + half + 2, tx + 0.1, 66.2, tz + half + 2.2, ABB.lava, { deco = true, t = 1 }), 26, 1.2, C3(255, 110, 50))
+end
+-- flying buttresses down both sides: a pier out in the ash, an arch over to the wall's top, a pinnacle
+for _, sx in { -1, 1 } do
+	for _, z in { -42, -16, 10, 34 } do
+		local px = sx * 100
+		box(OUT, "Pier", px - 2.5, 0, z - 2.5, px + 2.5, TOP + 6, z + 2.5, ABB.stone, DECO)
+		spire(OUT, px, z, 2.6, TOP + 6, 12, 4, ABB.stone, D())
+		local a, c = Vector3.new(px - sx * 2.5, TOP, z), Vector3.new(sx * 80, TOP - 4, z)
+		part(OUT, "FlyingArch", Vector3.new(2.2, 2.6, (c - a).Magnitude + 1), CFrame.lookAt((a + c) / 2, c), ABB.stoneD, D())
+		local a2, c2 = Vector3.new(px - sx * 2.5, TOP - 12, z), Vector3.new(sx * 80, TOP - 16, z)
+		part(OUT, "FlyingArch", Vector3.new(2, 2.2, (c2 - a2).Magnitude + 1), CFrame.lookAt((a2 + c2) / 2, c2), ABB.stoneD, D())
+	end
+end
+-- the portal: three pointed arches deep, statues in niches either side
+for k = 0, 2 do abbArch(OUT, 0, 2, 60.6 + k * 1, 16 + k * 3.6, 22, k % 2 == 0 and ABB.stoneD or ABB.stone, 1.4, 1) end
+for _, sx in { -1, 1 } do
+	box(OUT, "StatueNiche", sx * 15 - 2.4, 4, 60.1, sx * 15 + 2.4, 16, 60.5, st(M.SmoothPlastic, nil, C3(20, 14, 12)), DECO)
+	local cf = CFrame.new(sx * 15, 4, 61) * CFrame.Angles(0, math.pi, 0)
+	b(OUT, cf, "SaintRobe", 2.6, 8, 1.6, 0, 4, 0, ABB.marble, D())
+	b(OUT, cf, "SaintHead", 1.4, 1.6, 1.4, 0, 8.8, 0, ABB.marble, D())
+end
+-- the gable's crockets and the cross at its top
+for _, sx in { -1, 1 } do
+	for k = 1, 6 do
+		local u = k / 7
+		local p0 = Vector3.new(sx * 80 * (1 - u), TOP + 46 * u + 1, 60.6)
+		part(OUT, "Crocket", Vector3.new(1.4, 2, 1.4), CFrame.new(p0) * CFrame.Angles(0, 0, -sx * 0.5), ABB.stone, D())
+	end
+end
+box(OUT, "GableCross", -0.6, TOP + 46, 59.4, 0.6, TOP + 56, 60.6, ABB.iron, DECO)
+box(OUT, "GableCross", -3, TOP + 51.4, 59.4, 3, TOP + 52.6, 60.6, ABB.iron, DECO)
+-- the crack of hellfire out of the door across the yard
+do
+	local crng = Random.new(666)
+	local prev = Vector3.new(0, 0, 62)
+	for k = 1, 9 do
+		local p0 = Vector3.new(crng:NextNumber(-4, 4), 0, 62 + k * 6)
+		local mid = (prev + p0) / 2
+		part(OUT, "HellCrack", Vector3.new(crng:NextNumber(1, 2.2), 0.2, (p0 - prev).Magnitude + 1), CFrame.lookAt(Vector3.new(mid.X, 0.36, mid.Z), Vector3.new(p0.X, 0.36, p0.Z)), ABB.lava, D())
+		if k % 3 == 0 then light(box(OUT, "CrackGlow", mid.X - 0.1, 1.4, mid.Z - 0.1, mid.X + 0.1, 1.6, mid.Z + 0.1, ABB.lava, { deco = true, t = 1 }), 24, 1.4, C3(255, 90, 40)) end
+		prev = p0
+	end
+end
+abbSign("THE CATHEDRAL", CFrame.new(0, 30, 62.6))
+washLight(-34, 90, Vector3.new(-14, TOP + 18, 60), C3(255, 150, 120), 110, 2.2)
+washLight(34, 90, Vector3.new(14, TOP + 18, 60), C3(255, 150, 120), 110, 2.2)
 abbGrounds()
 return endMap()

@@ -4,14 +4,36 @@
 -- benches, saints' statues in niches; the columns are cover from her light. At the back, behind a wall with two
 -- doorways: the CHAPTER HOUSE (a long table, the abbot's chair, lecterns). Its west end: a CONFESSIONAL that slides
 -- aside (Secrets: the stash behind it).
--- Build: cat tools/build/lib2.luau tools/build/furn_lib.luau tools/build/maplib.luau tools/build/maps/abbey_lib.luau tools/build/maps/abb_cloister.luau
+-- Build: cat tools/build/lib2.luau tools/build/furn_lib.luau tools/build/maplib.luau tools/build/maps/shape_lib.luau tools/build/maps/abbey_lib.luau tools/build/maps/abb_cloister.luau
 local C3 = Color3.fromRGB
 local function D() return { deco = true } end
 local H = 24
 local rng = Random.new(41)
 beginMap("Abb_Cloister", abbTheme())
-shell({ two = false, H = H, roof = "gable", pitch = 0.5, front1 = { -60, -36, 36, 60 }, back1 = { -60, 60 }, left1 = { 44, 20, -30 }, right1 = { 44, 20, -30 },
-	winW = 5, winB = 6, winT = 18 })
+-- (2026-11-19) its own shape: a real cloister - the GARDEN in the middle is open to the sky under a ring roof
+local TOP = shell2({ H = H, roof = "none", ceiling = false, front1 = { -60, -36, 36, 60 }, back1 = { -60, 60 }, left1 = { 44, 20, -30 }, right1 = { 44, 20, -30 },
+	win = { w = 5, b = 6, t = 18 } })
+do
+	local GX0, GX1, GZ0, GZ1 = -52, 52, -16, 48 -- (the open garden, inside the columns)
+	box(STR, "Ceiling", -78, TOP - 1, GZ1, 78, TOP, 58, T.ceiling)
+	box(STR, "Ceiling", -78, TOP - 1, -58, 78, TOP, GZ0, T.ceiling)
+	box(STR, "Ceiling", -78, TOP - 1, GZ0, GX0, TOP, GZ1, T.ceiling)
+	box(STR, "Ceiling", GX1, TOP - 1, GZ0, 78, TOP, GZ1, T.ceiling)
+	local RF = STR.Roof
+	local RS = st(M.Slate, nil, C3(40, 38, 40))
+	local y0, y1 = TOP - 0.6, TOP + 12
+	local A, Bq, Cq, Dq = Vector3.new(-82.5, y0, 62.5), Vector3.new(82.5, y0, 62.5), Vector3.new(82.5, y0, -62.5), Vector3.new(-82.5, y0, -62.5)
+	local Rfl, Rfr, Rbr, Rbl = Vector3.new(-66, y1, 54), Vector3.new(66, y1, 54), Vector3.new(66, y1, -38), Vector3.new(-66, y1, -38)
+	local Ifl, Ifr, Ibr, Ibl = Vector3.new(GX0, TOP, GZ1), Vector3.new(GX1, TOP, GZ1), Vector3.new(GX1, TOP, GZ0), Vector3.new(GX0, TOP, GZ0)
+	quad(RF, "RoofPanel", A, Bq, Rfr, Rfl, RS, 1.2); quad(RF, "RoofPanel", Bq, Cq, Rbr, Rfr, RS, 1.2)
+	quad(RF, "RoofPanel", Cq, Dq, Rbl, Rbr, RS, 1.2); quad(RF, "RoofPanel", Dq, A, Rfl, Rbl, RS, 1.2)
+	quad(RF, "RoofPanel", Ifl, Ifr, Rfr, Rfl, RS, 1.2); quad(RF, "RoofPanel", Ifr, Ibr, Rbr, Rfr, RS, 1.2)
+	quad(RF, "RoofPanel", Ibr, Ibl, Rbl, Rbr, RS, 1.2); quad(RF, "RoofPanel", Ibl, Ifl, Rfl, Rbl, RS, 1.2)
+	-- the gutter round the garden's edge
+	for _, e in { { GX0, GZ1, GX1, GZ1 }, { GX0, GZ0, GX1, GZ0 }, { GX0, GZ0, GX0, GZ1 }, { GX1, GZ0, GX1, GZ1 } } do
+		box(DEC, "Gutter", math.min(e[1], e[3]) - 0.5, TOP - 1.4, math.min(e[2], e[4]) - 0.5, math.max(e[1], e[3]) + 0.5, TOP - 0.6, math.max(e[2], e[4]) + 0.5, ABB.iron, DECO)
+	end
+end
 local inn = model(STR, "Interior")
 local I = INT()
 wall(inn, "ChapterWall", "x", -30, -78, 78, F1, H, { dr(-40, 10, 13), dr(40, 10, 13) }, I)
@@ -109,6 +131,43 @@ for _, p in { { -40, 54 }, { 40, 54 }, { -66, 10 }, { 66, 10 }, { -20, -44 }, { 
 keepClear(-6, 40, 6, 58, F1)
 keepClear(-62, -42, -54, -34, F1) -- (in front of the confessional)
 keepClear(-60, -16, 60, -8, F1) -- (the walk along the arcade)
-abbSign("THE CLOISTER")
+-- OUTSIDE (2026-11-19): THE WEEPING NUN'S CLOISTER. Stone buttresses between tall lancet windows lit in coloured glass,
+-- a gabled porch with a pointed arch, her STATUE weeping black tears in the niche over the door, a bell-cote on the
+-- front of the ring roof.
+local OUT = model(DEC, "Outside")
+for _, x in { -72, -48, -24, 24, 48, 72 } do abbButtress(OUT, x, 60, Vector3.new(0, 0, 1), 22) end
+for _, x in { -60, -36, 36, 60 } do
+	abbStained(OUT, CFrame.new(x, 14, 60.5) * CFrame.Angles(0, math.pi, 0), 5, 12)
+	for _, sx in { -1, 1 } do part(OUT, "LancetTop", Vector3.new(0.9, 0.9, 4.2), CFrame.new(x + sx * 1.3, 21.4, 60.6) * CFrame.Angles(0, 0, 0) * CFrame.lookAt(Vector3.zero, Vector3.new(-sx * 2.6, 2.8, 0)).Rotation, ABB.stoneD, D()) end
+end
+-- the porch: two side walls, a pointed arch, a little gable roof, the statue niche over it
+for _, sx in { -1, 1 } do box(OUT, "PorchWall", sx * 7, 0, 60, sx * 10, 20, 69, ABB.stone, DECO) end
+abbArch(OUT, 0, 2, 68.6, 12, 14, ABB.stoneD, 1.4, 1.6)
+tri(OUT, "PorchGable", Vector3.new(-10, 20, 68.8), Vector3.new(10, 20, 68.8), Vector3.new(0, 30, 68.8), ABB.stone, 1.2, D())
+extrude(OUT, 60, 69.4, { { -11, 19.4 }, { 0, 30.6 }, { 11, 19.4 } }, st(M.Slate, nil, C3(40, 38, 40)), { axis = "z", ends = false, th = 0.8, over = 0, panelO = D() })
+box(OUT, "Niche", -2.6, 21, 69.2, 2.6, 28.6, 69.6, st(M.SmoothPlastic, nil, C3(20, 14, 12)), DECO)
+do -- the weeping nun: a grey robe, a black veil, a pale face, black tears
+	local nf = CFrame.new(0, 21.2, 70.4) * CFrame.Angles(0, math.pi, 0)
+	b(OUT, nf, "NunRobe", 2.6, 5, 1.6, 0, 2.5, 0, ABB.marble, D())
+	b(OUT, nf, "NunVeil", 2.2, 2.4, 1.8, 0, 5.8, 0.1, st(M.SmoothPlastic, nil, C3(26, 22, 24)), D())
+	b(OUT, nf, "NunFace", 1.2, 1.4, 0.2, 0, 5.6, -0.85, ABB.marble, D())
+	for _, sx in { -1, 1 } do b(OUT, nf, "Tear", 0.12, 3.4, 0.1, sx * 0.32, 4.4, -0.97, st(M.SmoothPlastic, nil, C3(8, 6, 6)), D()) end
+	b(OUT, nf, "NunHands", 1, 1.2, 0.6, 0, 3.6, -0.9, ABB.marble, D())
+	light(b(OUT, nf, "NicheGlow", 0.2, 0.2, 0.2, 0, 4, -2.5, ABB.holy, { deco = true, t = 1 }), 12, 1, C3(220, 230, 255))
+end
+-- the bell-cote on the roof's front
+do
+	local bz = 54
+	box(OUT, "BellCote", -5, TOP + 4, bz - 1, 5, TOP + 18, bz + 1, ABB.stone, DECO)
+	box(OUT, "BellOpening", -2.6, TOP + 8, bz - 1.1, 2.6, TOP + 15, bz + 1.1, st(M.SmoothPlastic, nil, C3(20, 14, 12)), DECO)
+	cyl(OUT, CFrame.new(0, TOP + 10.6, bz), "Bell", 3, 3, 0, 0, 0, ABB.bronze, D())
+	tri(OUT, "BellCoteTop", Vector3.new(-5.4, TOP + 18, bz), Vector3.new(5.4, TOP + 18, bz), Vector3.new(0, TOP + 23, bz), ABB.stone, 2, D())
+	box(OUT, "BellCross", -0.4, TOP + 23, bz - 0.4, 0.4, TOP + 27, bz + 0.4, ABB.iron, DECO)
+	box(OUT, "BellCross", -1.6, TOP + 25, bz - 0.4, 1.6, TOP + 25.8, bz + 0.4, ABB.iron, DECO)
+end
+abbSign("THE CLOISTER", CFrame.new(0, 16, 61.4))
+for _, x in { -14, 14 } do abbLantern(OUT, Vector3.new(x, 12, 61.2), 24) end
+washLight(-34, 86, Vector3.new(-30, TOP, 60), C3(255, 170, 130), 90, 2)
+washLight(34, 86, Vector3.new(30, TOP, 60), C3(255, 170, 130), 90, 2)
 abbGrounds()
 return endMap()
