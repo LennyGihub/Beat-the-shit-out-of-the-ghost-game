@@ -51,6 +51,10 @@ return {
 	Music_LakeWitch = { ids = { 1847041997 }, volume = 1.6 }, -- Drowning 3 (under water)
 	Music_Counselor = { ids = { 9041745725 }, volume = 1.6 }, -- 80s Horror Throwback Synth Bed 2 (the summer-camp slasher)
 	Music_Scarecrow = { ids = { 1840881643 }, volume = 1.6 }, -- Dark Pursuit (A) (the cornfield chase)
+	Music_Clown = { ids = { 1846596742 }, volume = 1.6 }, -- Evil Clown
+	Music_Strongman = { ids = { 1837850904 }, volume = 1.5 }, -- Hell's Canyon (Perc)
+	Music_Fortune = { ids = { 1837177862 }, volume = 1.6 }, -- Wild Eyed
+	Music_Ringmaster = { ids = { 1848096077 }, volume = 1.5 }, -- Path To Hell D
 	Music_Titan_E = { ids = { 9039352746 }, volume = 1.6 }, -- The Fall of the Titans
 	Music_Goblin = { ids = { 1841594035 }, volume = 1.6 }, -- Mischievous Elves (sneaky, not epic)
 	Music_Goblin_E = { ids = { 1839900676 }, volume = 1.6 }, -- In the Hall of the Mountain King
@@ -154,4 +158,13 @@ return {
 	Bubbles = { ids = { 9120310416, 9120310477 }, volume = 0.8 },
 	BullSnort = { ids = { 9113634952 }, volume = 1 },
 	BladeScrape = { ids = { 9113453649 }, volume = 0.8 },
+	-- the Moonlight Carnival's monsters (Client/CarnivalFx; Pro Sound Effects): balloons popping, the Ringmaster's whip,
+	-- Madame Fortune's crystal ball breaking, the ghost crowd in the stands, a laugh, a heavy landing, a magic burst
+	BalloonPop = { ids = { 9113263649, 9113263647, 9113263454 }, volume = 0.9 },
+	WhipCrack = { ids = { 9113612888, 9120663217 }, volume = 1 },
+	GlassBreak = { ids = { 9114591515 }, volume = 1 },
+	Crowd = { ids = { 9120974911 }, volume = 0.7 },
+	EvilLaugh = { ids = { 9116239118, 9116239130 }, volume = 0.9 },
+	HeavyImpact = { ids = { 9118617342 }, volume = 1 },
+	MagicBurst = { ids = { 9116384485 }, volume = 0.8 },
 }

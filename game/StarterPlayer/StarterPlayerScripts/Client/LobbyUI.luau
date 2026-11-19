@@ -364,7 +364,7 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 		table.clear(stageRows)
 		local cm = Campaign.mapById[pickCamp]
 		for i, stg in cm.stages do
-			local b = button(stageList, i .. "   " .. stg.name, { LayoutOrder = i, Size = UDim2.fromScale(1, 0.185), ZIndex = 12, Font = Grunge.FONT })
+			local b = button(stageList, i .. "   " .. stg.name, { LayoutOrder = i, Size = UDim2.fromScale(1, math.min(0.185, 0.93 / #cm.stages)), ZIndex = 12, Font = Grunge.FONT })
 			local lbl = b:FindFirstChild("Label") :: TextLabel
 			lbl.TextXAlignment = Enum.TextXAlignment.Left; lbl.Size = UDim2.fromScale(0.56, 0.58); lbl.AnchorPoint = Vector2.new(0, 0.5); lbl.Position = UDim2.fromScale(0.04, 0.5)
 			local info = Grunge.text(b, { Text = "", Font = Grunge.TYPE, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.fromScale(0.97, 0.5), Size = UDim2.fromScale(0.38, 0.42),

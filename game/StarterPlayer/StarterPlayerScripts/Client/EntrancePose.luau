@@ -26,6 +26,10 @@ EP.T = {
 	LakeWitch = { hand = 0.9, rise0 = 1.1, rise1 = 2.9, swing0 = 3.0, slam = 4.0, calm = 4.8 },
 	Counselor = { strike = 0.9, raise0 = 1.5, raise1 = 2.3, look1 = 3.2, ring = 3.5, calm = 4.5 },
 	Scarecrow = { twitch = 1.5, snap = 2.45, burst = 2.6, drop = 3.1, land = 3.4, rise0 = 3.55, rise1 = 4.1, raise = 4.2, calm = 5.0 },
+	Clown = { music = 0.1, shake = 1.6, pop = 2.8, land = 3.35, tada = 3.6, calm = 4.5 },
+	Strongman = { grip = 0.3, lift0 = 1.0, lift1 = 2.0, press = 2.5, roar = 2.85, drop = 3.7, calm = 4.3 },
+	Fortune = { glow = 0.4, face = 1.2, appear0 = 2.0, appear1 = 3.0, cards = 3.5, calm = 4.6 },
+	Ringmaster = { spot = 0.3, raise = 1.7, arms = 2.3, crack = 3.1, lights = 3.4, calm = 4.9 },
 }
 EP.FLASH = 0.16 -- how long each of the Caller's flashes shows him
 -- the running entrance's clock, written by Client/Entrance every frame: which monster, the seconds so far, and
@@ -376,6 +380,87 @@ POSES.Scarecrow = function(p, s, t, H)
 		p.RightShoulder = A(0.6 * k + 2.7 * raise, 0, 0.2 + 1.2 * off * (landed and 0 or 1)); p.RightElbow = A(0.3 + 0.4 * raise, 0, 0)
 		p.LeftShoulder = A(0.6 * k, 0, -0.3 - 1.1 * off * (landed and 0 or 1) - 0.3 * raise); p.LeftElbow = A(0.2, 0, 0)
 	end
+	return 0
+end
+
+-- POP THE CLOWN: down inside his box; POP: up on the spring, high, down with a bounce; arms flung wide (ta-da)
+POSES.Clown = function(p, s, t, H)
+	local T = EP.T.Clown
+	local up = seg(s, T.pop, T.pop + 0.16)
+	local down = seg(s, T.pop + 0.16, T.land)
+	local bounce = s > T.land and exp(-(s - T.land) / 0.15) * sin((s - T.land) * 25) * 0.5 or 0
+	local y = -H * 0.9 * (1 - up) + 4.5 * up * (1 - down * down) + bounce
+	local tada = ss(seg(s, T.tada, T.tada + 0.25)) * (1 - seg(s, T.calm, T.calm + 0.5))
+	local fly = up * (1 - down)
+	p.Root = CFrame.new(0, y, 0) * A(0.15 * tada, 0, sin(t * 4) * 0.05 * tada)
+	p.Neck = A(0.25 * tada + 0.2 * fly, 0, 0.35 * tada + sin(t * 9) * 0.06 * tada)
+	p.RightShoulder = A(1.2 * fly + 0.4 * tada, 0, 0.4 + 1.6 * fly + 0.9 * tada); p.LeftShoulder = A(1.2 * fly + 0.4 * tada, 0, -0.4 - 1.6 * fly - 0.9 * tada)
+	p.RightElbow = A(0.3, 0, 0); p.LeftElbow = A(0.3, 0, 0)
+	p.RightHip = A(0.6 * fly - 0.3 * tada, 0, 0.1); p.LeftHip = A(0.6 * fly + 0.5 * tada, 0, -0.1)
+	p.RightKnee = A(-0.9 * fly, 0, 0); p.LeftKnee = A(-0.9 * fly - 0.6 * tada, 0, 0)
+	return s < T.pop and 1 or 0
+end
+
+-- THE STRONGMAN: crouched gripping the bar; he pulls it to his shoulders, presses it overhead, roars, drops it
+POSES.Strongman = function(p, s, t, H)
+	local T = EP.T.Strongman
+	local crouchK = 1 - ss(seg(s, T.lift0, T.lift1))
+	local press = ss(seg(s, T.lift1 + 0.15, T.press))
+	local roar = seg(s, T.roar, T.roar + 0.2) * (1 - seg(s, T.drop - 0.1, T.drop))
+	local dropK = ss(seg(s, T.drop - 0.1, T.drop + 0.15)) * (1 - seg(s, T.calm, T.calm + 0.5))
+	crouch(p, crouchK * 0.9)
+	p.Root = CFrame.new(0, -H * 0.15 * crouchK, 0) * A(-0.35 * crouchK + 0.15 * roar, 0, 0)
+	p.Waist = A(-0.3 * crouchK + 0.12 * press, 0, 0)
+	p.Neck = A(0.2 * crouchK + 0.55 * roar + sin(t * 45) * 0.04 * roar, 0, 0)
+	-- arms: down to the bar -> the bar at his shoulders (elbows bent, forward) -> straight up -> swung down
+	local grip = A(0.7, 0, 0.15)
+	local rack = A(1.4, 0, 0.35)
+	local top = A(3.05, 0, 0.3)
+	local dropped = A(0.4, 0, 0.5)
+	local arm = grip:Lerp(rack, 1 - crouchK):Lerp(top, press):Lerp(dropped, dropK)
+	p.RightShoulder = arm
+	local rx, ry, rz = arm:ToEulerAnglesXYZ()
+	p.LeftShoulder = A(rx, -ry, -rz)
+	local el = 0.2 + 1.6 * (1 - crouchK) * (1 - press) + 0.2 * press
+	p.RightElbow = A(el, 0, 0); p.LeftElbow = A(el, 0, 0)
+	return 0
+end
+
+-- MADAME FORTUNE: not there yet, then fading in behind her table, head bowed over the ball, then looking up
+POSES.Fortune = function(p, s, t, H)
+	local T = EP.T.Fortune
+	local appear = ss(seg(s, T.appear0, T.appear1))
+	local look = ss(seg(s, T.appear1, T.appear1 + 0.4))
+	local fling = ss(seg(s, T.cards - 0.15, T.cards + 0.15)) * (1 - seg(s, T.calm, T.calm + 0.5))
+	p.Root = CFrame.new(0, sin(t * 1.6) * 0.25, 0)
+	p.Neck = A(-0.55 * (1 - look) + 0.1 * fling, 0, sin(t * 1.1) * 0.08)
+	p.Waist = A(-0.2 * (1 - look), 0, 0)
+	local over = A(1.25, 0, 0.25) -- hands hovering over the ball
+	local wide = A(1.8, 0, 1.2)
+	p.RightShoulder = over:Lerp(wide, fling)
+	p.LeftShoulder = A(1.25 + 0.55 * fling, 0, -0.25 - 0.95 * fling)
+	p.RightElbow = A(0.8 * (1 - fling) + 0.1, 0, 0); p.LeftElbow = A(0.8 * (1 - fling) + 0.1, 0, 0)
+	p.RightWrist = A(-0.6 + sin(t * 6) * 0.15, 0, 0); p.LeftWrist = A(-0.6 - sin(t * 6) * 0.15, 0, 0)
+	return 1 - appear
+end
+
+-- THE RINGMASTER: in the spotlight, head bowed, hands folded; head up, arms wide; the whip arm up for the crack
+POSES.Ringmaster = function(p, s, t, H)
+	local T = EP.T.Ringmaster
+	local up = ss(seg(s, T.raise, T.raise + 0.4))
+	local wide = ss(seg(s, T.arms, T.arms + 0.35))
+	local crack = pulse(s, T.crack, 0.12)
+	local calm = 1 - seg(s, T.calm, T.calm + 0.5)
+	p.Root = A(0.05 * wide * calm, 0, 0)
+	p.Waist = A(-0.2 * (1 - up) + 0.1 * wide * calm, 0, 0)
+	p.Neck = A(-0.65 * (1 - up) + 0.2 * wide * calm, 0, 0)
+	local folded = A(0.6, 0, -0.35)
+	local out = A(0.35, 0, 1.4)
+	local overhead = A(3.0, 0, 0.2)
+	p.RightShoulder = folded:Lerp(out, wide * calm):Lerp(overhead, crack)
+	p.LeftShoulder = A(0.6 * (1 - wide) + 0.35 * wide, 0, 0.35 * (1 - wide) - 1.4 * wide * calm)
+	p.RightElbow = A(1.3 * (1 - wide) + 0.15, 0, 0); p.LeftElbow = A(1.3 * (1 - wide) + 0.15, 0, 0)
+	p.RightHip = A(-0.1 * wide, 0, 0.1 * wide); p.LeftHip = A(0.1 * wide, 0, -0.1 * wide)
 	return 0
 end
 

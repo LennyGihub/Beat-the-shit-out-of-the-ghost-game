@@ -1063,6 +1063,38 @@ function MonsterFx.handle(kind: string, ...)
 		emitter(pos, { Color = ColorSequence.new(Color3.fromRGB(210, 200, 180)), Size = NumberSequence.new(1.2, 2.4), Transparency = NumberSequence.new(0.5, 1),
 			Speed = NumberRange.new(2, 6), Lifetime = NumberRange.new(0.3, 0.6) }, 8, 1.2)
 		Sfx.at("WoodBreak", pos, { PlaybackSpeed = 1.7 + rng:NextNumber(0, 0.3), Volume = 0.5 })
+	elseif kind == "CloneSpawn" and a[2] == "balloon" then
+		-- Pop the Clown's balloon copies: a squeak of air, a puff of confetti
+		local pos = a[1]
+		emitter(pos, { Color = ColorSequence.new(Color3.fromRGB(255, 120, 140), Color3.fromRGB(120, 180, 255)), LightEmission = 0.4, Size = NumberSequence.new(0.35, 0.1),
+			Speed = NumberRange.new(4, 9), Lifetime = NumberRange.new(0.4, 0.8), Texture = "rbxasset://textures/particles/sparkles_main.dds" }, 18, 1.2)
+		Sfx.at("Whoosh", pos, { PlaybackSpeed = 2.2, Volume = 0.5 })
+	elseif kind == "CloneShatter" and a[2] == "balloon" then
+		-- ...it pops: confetti in every colour
+		local pos = a[1]
+		for _, col in { Color3.fromRGB(255, 80, 90), Color3.fromRGB(80, 160, 255), Color3.fromRGB(255, 220, 80), Color3.fromRGB(120, 230, 120) } do
+			emitter(pos, { Color = ColorSequence.new(col), LightEmission = 0.3, Size = NumberSequence.new(0.3, 0.2), Speed = NumberRange.new(8, 20),
+				Lifetime = NumberRange.new(0.6, 1.2), Acceleration = Vector3.new(0, -30, 0), Texture = "rbxasset://textures/particles/sparkles_main.dds" }, 10, 1.6)
+		end
+		Sfx.at("BalloonPop", pos, { Volume = 1.2, PlaybackSpeed = 0.9 + rng:NextNumber(0, 0.3) })
+	elseif kind == "CloneSpawn" and a[2] == "mannequin" then
+		-- the Ringmaster's mannequins get up: a creak, dust off them
+		local pos = a[1]
+		emitter(pos, { Color = ColorSequence.new(Color3.fromRGB(200, 190, 170)), Size = NumberSequence.new(1, 2.5), Transparency = NumberSequence.new(0.5, 1),
+			Speed = NumberRange.new(2, 5), Lifetime = NumberRange.new(0.5, 1) }, 10, 1.5)
+		Sfx.at("DoorCreak", pos, { PlaybackSpeed = 1.5 + rng:NextNumber(0, 0.4), Volume = 0.7 })
+	elseif kind == "CloneShatter" and a[2] == "mannequin" then
+		-- ...and fall to plastic bits
+		local pos = a[1]
+		for _ = 1, 7 do
+			local sh = part({ Size = Vector3.new(rng:NextNumber(0.3, 0.8), rng:NextNumber(0.6, 1.6), rng:NextNumber(0.3, 0.6)), Color = Color3.fromRGB(222, 214, 200),
+				Material = Enum.Material.SmoothPlastic, CFrame = CFrame.new(pos + Vector3.new(rng:NextNumber(-0.8, 0.8), rng:NextNumber(-1.5, 1.5), rng:NextNumber(-0.8, 0.8))) * CFrame.Angles(rng:NextNumber(0, 6), rng:NextNumber(0, 6), 0) })
+			sh.Anchored = false
+			sh.AssemblyLinearVelocity = Vector3.new(rng:NextNumber(-14, 14), rng:NextNumber(6, 18), rng:NextNumber(-14, 14))
+			sh.AssemblyAngularVelocity = Vector3.new(rng:NextNumber(-15, 15), rng:NextNumber(-15, 15), rng:NextNumber(-15, 15))
+			Debris:AddItem(sh, 1.6)
+		end
+		Sfx.at("WoodBreak", pos, { PlaybackSpeed = 1.4, Volume = 0.6 })
 	elseif kind == "CloneSpawn" then
 		local pos = a[1]
 		emitter(pos, { Color = ColorSequence.new(Color3.fromRGB(230, 230, 255)), LightEmission = 1, Size = NumberSequence.new(1.5, 0),

@@ -109,6 +109,35 @@ local List: { Monster } = {
 			crows = { range = 34, cone = 0.75, wind = 0.9, time = 1.6, dps = 14, blind = 3.0, stare = 3.2 },
 			sickle = { min = 10, max = 50, wind = 0.7, flight = 0.7, dmg = 18, power = 45 } },
 		desc = "One of the scarecrows in the barn is him. He only moves when nobody is looking, and then he moves fast. He throws his sickle from far off, and if you stare too long his crows come for your eyes." }),
+	-- THE MOONLIGHT CARNIVAL (Shared/Campaign; hand-built: tools/build/carnival_monsters.luau; moves: Server/CarnivalMonsters)
+	-- POP THE CLOWN (the Funhouse): crate - hides, the crates round you rattle, he bursts out of the one nearest you
+	-- (radius / dmg / power), then laughs (laugh); balloons - balloon copies of himself float at you and pop.
+	m({ id = "Clown", name = "Pop the Clown", title = "POP THE CLOWN", rarity = 1, template = "Clown", color = C(240, 90, 90),
+		hp = 1.0, speed = 1.15, dmg = 0.95, reward = 1.4, hover = 5.2, walker = true, scale = 1, solid = false,
+		ability = { kind = "popClown", cd = 8, crate = { min = 8, lurk = 1.5, radius = 9, dmg = 26, power = 70, laugh = 1.4 },
+			balloons = { max = 70, wind = 1.2, count = 5, scale = 0.8, life = 14, dmg = 12, speed = 12 } },
+		desc = "He hides, and the crates round you start to rattle: he bursts out of the one nearest you. Punch his balloon copies before they reach you." }),
+	-- THE STRONGMAN (the Carousel): rip - grabs the nearest bench / ride part, lifts it, hurls it; slam - leaps, lands,
+	-- a shockwave rolls out along the floor (radius at `wave` studs/s): jump over it.
+	m({ id = "Strongman", name = "The Strongman", title = "THE STRONGMAN", rarity = 1, template = "Strongman", color = C(210, 120, 80),
+		hp = 1.35, speed = 0.9, dmg = 1.2, reward = 1.5, hover = 6.15, walker = true, scale = 1, solid = false, reach = 1.3,
+		ability = { kind = "strongman", cd = 8, rip = { max = 75, reach = 35, run = 28, lift = 0.7, aim = 0.4, speed = 100, dmg = 26 },
+			slam = { max = 45, leap = 0.75, height = 14, radius = 42, wave = 34, dmg = 28, power = 70 } },
+		desc = "He tears the benches and the ride horses out of the floor and throws them. When he jumps, you jump too: the shockwave rolls along the floor." }),
+	-- MADAME FORTUNE (the Hall of Mirrors): curse - a homing orb; caught = cursed (blur, reversed controls) until her
+	-- crystal ball is smashed (then she shrieks, stunned); cards - a fan of tarot cards.
+	m({ id = "Fortune", name = "Madame Fortune", title = "MADAME FORTUNE", rarity = 1, template = "Fortune", color = C(190, 100, 255),
+		hp = 1.05, speed = 1.0, dmg = 1.0, reward = 1.5, hover = 6.05, walker = false, scale = 1, solid = false,
+		ability = { kind = "fortune", cd = 8, curse = { max = 70, wind = 0.9, speed = 30, turn = 1.6, life = 4, dmg = 8 },
+			cards = { min = 8, max = 60, wind = 0.6, count = 5, spread = 0.18, speed = 70, life = 1.2, dmg = 11, power = 30 } },
+		desc = "Her violet orb curses you: the world blurs and your controls turn back to front. Smash her crystal ball to break every curse - she screams." }),
+	-- THE RINGMASTER (the Big Top): whip - a red line, the lash pulls whoever it catches in to him; crowd - the whip
+	-- cracks overhead and the mannequins in the stands come alive (count, for `life` seconds).
+	m({ id = "Ringmaster", name = "The Ringmaster", title = "THE RINGMASTER", rarity = 1, template = "Ringmaster", color = C(200, 30, 40),
+		hp = 1.3, speed = 1.05, dmg = 1.1, reward = 1.6, hover = 6.25, walker = true, scale = 1, solid = false,
+		ability = { kind = "ringmaster", cd = 9, whip = { min = 8, max = 34, wind = 0.65, width = 3.2, dmg = 18 },
+			crowd = { max = 90, wind = 1.0, count = 4, life = 16, speed = 13, dmg = 12 } },
+		desc = "The show must go on. His whip pulls you in, and when it cracks overhead the mannequins in the stands come down for you." }),
 	-- THE SEWER RAT (hand-built: tools/build/rat.luau): a rat the size of a car. ratRush = two moves (Server/Abilities):
 	-- the CHARGE (wind seconds of warning along a red line, then dashSpeed studs/s in a straight line for dashTime
 	-- seconds: furniture, inside walls and players in the way are all sent flying, and he is dizzy for a moment after)

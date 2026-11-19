@@ -38,6 +38,7 @@ function Secrets.arm()
 		local act, obj = door:GetAttribute("Action"), door:GetAttribute("Object")
 		local pp = Events.prompt(trig, type(act) == "string" and act or "Push", type(obj) == "string" and obj or "", 0.8)
 		pp.MaxActivationDistance = 6
+		pp.Exclusivity = Enum.ProximityPromptExclusivity.AlwaysShow -- (an item's prompt nearby must not hide it)
 		local d: Door = { parts = {}, pp = pp, opened = false }
 		for _, x in door:GetDescendants() do
 			if x:IsA("BasePart") and x.Name == "Panel" then table.insert(d.parts, { p = x, cf = x.CFrame, collide = x.CanCollide }) end

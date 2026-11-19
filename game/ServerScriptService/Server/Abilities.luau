@@ -14,6 +14,7 @@ local Ragdoll = require(script.Parent.Ragdoll)
 local Caller = require(script.Parent.Caller) -- the Caller's "ambush" (and his flanking)
 local Knight = require(script.Parent.Knight) -- the Void Knight's "forcePush"
 local CampMonsters = require(script.Parent.CampMonsters) -- Camp Hollowmere: rafterDrop, hookPull, firebrand, scareSwap
+local CarnivalMonsters = require(script.Parent.CarnivalMonsters) -- the Moonlight Carnival: popClown, strongman, fortune, ringmaster
 
 local Abilities = {}
 local rng = Random.new()
@@ -22,7 +23,7 @@ local marks = {} :: { { at: number, pts: { Vector3 }, r: number, dmg: number } }
 -- crew = one of the Burning Captain's little skeletons: it walks round the walls (nav), and a hit doesn't shatter
 -- it, it knocks it out (limp, flying, then it falls to bits)
 -- from = when it starts to move (the Widow's doubles stand still for a moment first, so you see them all)
-local clones = {} :: { { model: Model, untilT: number, from: number, speed: number, dmg: number, hover: number, crew: boolean?, nav: any } }
+local clones = {} :: { { model: Model, untilT: number, from: number, speed: number, dmg: number, hover: number, crew: boolean?, nav: any, kind: string? } }
 local limp = {} :: { { model: Model, untilT: number } }
 -- players the Pirate's shield bash sent flying: hitting a wall hurts (once)
 local flyers = {} :: { [Player]: { untilT: number, dmg: number } }
@@ -97,6 +98,7 @@ function Abilities.interrupt(g)
 	if g.ab.kind == "ambush" then Caller.interrupt(g) end
 	if g.ab.kind == "forcePush" then Knight.interrupt(g) end
 	if CampMonsters.KINDS[g.ab.kind] then CampMonsters.interrupt(g) end
+	if CarnivalMonsters.KINDS[g.ab.kind] then CarnivalMonsters.interrupt(g) end
 	if g.ab.kind == "steal" then Remotes.Fx:FireAllClients("GoblinUse", g.model, "", "stop", 0) end
 	if g.ab.kind == "levitateThrow" and g.ab.obj then Abilities.dropLevitated(g.ab) end
 	g.ab = nil
@@ -167,6 +169,8 @@ function Abilities.try(g, G, now: number, target: Player?, thrp: BasePart?, dist
 		return Knight.try(g, G, now, a, target, thrp, dist)
 	elseif CampMonsters.KINDS[k] then
 		return CampMonsters.try(g, G, now, a, target, thrp, dist)
+	elseif CarnivalMonsters.KINDS[k] then
+		return CarnivalMonsters.try(g, G, now, a, target, thrp, dist)
 	elseif k == "shieldBash" then
 		if dist < a.min or dist > a.max or warded(target) then return false end
 		start(g, G, "brace", a.brace, {})
@@ -319,8 +323,11 @@ end
 -- Violet Widow's doubles, the Burning Captain's little skeletons). scale = a smaller copy (its small parts are dropped).
 -- opts: scale = a smaller copy, crew = the Captain's little skeletons (see `clones` above), delay = seconds they
 -- stand still before they come.
-function Abilities.spawnClones(g, pts: { Vector3 }, t: number, dmg: number, speed: number, opts: { scale: number?, crew: boolean?, delay: number? }?)
+function Abilities.spawnClones(g, pts: { Vector3 }, t: number, dmg: number, speed: number, opts: { scale: number?, crew: boolean?, delay: number?, kind: string? }?)
 	local scale, crew, delay = opts and opts.scale, opts and opts.crew, opts and opts.delay or 0
+	local kind = opts and opts.kind or (crew and "bone" or nil)
+	-- (kind "balloon": Pop the Clown's balloon copies - shiny, puffed up, one pastel colour each)
+	local BALLOON = { Color3.fromRGB(255, 120, 130), Color3.fromRGB(130, 170, 255), Color3.fromRGB(255, 220, 110), Color3.fromRGB(140, 230, 150), Color3.fromRGB(220, 150, 255) }
 	local full = g.model:GetScale()
 	for _, at in pts do
 		local c = g.model:Clone()
@@ -336,6 +343,15 @@ function Abilities.spawnClones(g, pts: { Vector3 }, t: number, dmg: number, spee
 			end
 		end
 		local loot = c:FindFirstChild("Loot") if loot then loot:Destroy() end
+		if kind == "balloon" then
+			local tint = BALLOON[rng:NextInteger(1, #BALLOON)]
+			for _, d in c:GetDescendants() do
+				if d:IsA("BasePart") then
+					d.Color = d.Color:Lerp(tint, 0.6); d.Material = Enum.Material.SmoothPlastic; d.Reflectance = 0.3; d.Transparency = math.max(d.Transparency, 0.12)
+				elseif d:IsA("Light") or d:IsA("ParticleEmitter") then d:Destroy() end
+			end
+			c:SetAttribute("Balloon", true)
+		end
 		c:SetAttribute("Clone", true)
 		if crew then c:SetAttribute("Crew", true) end
 		c:SetAttribute("HP", nil); c:SetAttribute("MaxHP", nil)
@@ -352,8 +368,8 @@ function Abilities.spawnClones(g, pts: { Vector3 }, t: number, dmg: number, spee
 			end
 		end
 		table.insert(clones, { model = c, untilT = os.clock() + t + delay, from = os.clock() + delay, speed = speed, dmg = dmg, hover = hover, crew = crew,
-			nav = (crew and root) and { hrp = root, hover = hover } or nil })
-		fx("CloneSpawn", at, crew and "bone" or nil)
+			nav = (crew and root) and { hrp = root, hover = hover } or nil, kind = kind })
+		fx("CloneSpawn", at, kind)
 	end
 end
 function Abilities.cloneCount(): number return #clones end
@@ -469,6 +485,7 @@ function Abilities.step(g, G, dt: number, now: number, target: Player?, thrp: Ba
 	if k == "ambush" then return Caller.step(g, G, dt, now, target, thrp, hoverY) end
 	if k == "forcePush" then return Knight.step(g, G, dt, now, target, thrp, hoverY) end
 	if CampMonsters.KINDS[k] then return CampMonsters.step(g, G, dt, now, target, thrp, hoverY) end
+	if CarnivalMonsters.KINDS[k] then return CarnivalMonsters.step(g, G, dt, now, target, thrp, hoverY) end
 	local function face(p: Vector3)
 		local f = Vector3.new(p.X, pos.Y, p.Z)
 		if (f - pos).Magnitude > 0.1 then g.ao.CFrame = CFrame.lookAt(pos, f).Rotation end
@@ -1013,7 +1030,7 @@ function Abilities.step(g, G, dt: number, now: number, target: Player?, thrp: Ba
 end
 
 local function shatter(c)
-	fx("CloneShatter", c.model:GetPivot().Position, c.crew and "bone" or nil)
+	fx("CloneShatter", c.model:GetPivot().Position, c.kind or (c.crew and "bone" or nil))
 	c.model:Destroy()
 end
 
@@ -1028,6 +1045,7 @@ end
 function Abilities.tick(G, dt: number, now: number)
 	Loot.tick(G, dt, now)
 	CampMonsters.tick(G, now) -- (the Lake Witch's flood)
+	CarnivalMonsters.tick(G, now) -- (Madame Fortune's curses and crystal ball)
 	-- TIME STOP (Ghost.timeStop) holds everything the monster sent out too: the Captain's crew, the Widow's doubles,
 	-- gas clouds and hellfire marks wait where they are until time moves again
 	local cur = G.current
@@ -1175,6 +1193,8 @@ end
 -- a punch/swing that reaches a mirror clone shatters it (returns where). The Captain's little skeletons are so
 -- weak that one swing sends every one of them in front of you flying, limp (charge 0..1 = a charged hit: further).
 function Abilities.hitClone(from: Vector3, dir: Vector3, range: number, charge: number?): Vector3?
+	-- (Madame Fortune's crystal ball: punched or hit, it breaks)
+	if CarnivalMonsters.hitBall(from, dir, range) then return from + dir.Unit * math.min(range, 4) end
 	local first: Vector3? = nil
 	local fdir = flat(dir)
 	for i = #clones, 1, -1 do
@@ -1204,6 +1224,7 @@ function Abilities.clear()
 	Loot.clear()
 	Caller.clear()
 	CampMonsters.clear()
+	CarnivalMonsters.clear()
 	flyers = {}
 	for _, h in hurled do if h.obj.Parent then smashHurled(h.obj, Vector3.zero, 20) end end
 	hurled = {}
@@ -1240,6 +1261,11 @@ CampMonsters.init({
 	setPhase = setPhase, start = start, finish = finish, hover = hover, flat = flat, warded = warded,
 	hrpOf = hrpOf, matchPlayers = matchPlayers, fx = fx, dmgScale = dmgScale, spawnClones = Abilities.spawnClones,
 	clones = function() return clones end,
+})
+CarnivalMonsters.init({
+	setPhase = setPhase, start = start, finish = finish, hover = hover, flat = flat, warded = warded,
+	hrpOf = hrpOf, matchPlayers = matchPlayers, fx = fx, dmgScale = dmgScale, spawnClones = Abilities.spawnClones,
+	clones = function() return clones end, hurl = Abilities.hurl, ungrip = ungrip,
 })
 -- the Scarecrow holds still while he is watched (Ghost's Chase state asks this first)
 Abilities.chaseHold = CampMonsters.chaseHold

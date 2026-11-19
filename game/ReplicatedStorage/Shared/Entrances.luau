@@ -19,6 +19,11 @@ local TIME: { [string]: number } = {
 	LakeWitch = 5.4, -- rises out of a pool of black water, whirls her hook overhead and slams it down
 	Counselor = 5.2, -- the room goes dark, his torch catches, held by his burned face; a ring of fire and a scream
 	Scarecrow = 5.6, -- hangs on his pole with crows on his arms; his head snaps up, the crows burst off, he drops
+	-- the Moonlight Carnival
+	Clown = 5.2, -- a jack-in-the-box plays its tune and shakes; POP: he springs out of it on a coil, confetti, ta-da
+	Strongman = 5.0, -- crouched over a giant barbell: he lifts it over his head, roars, and drops it (a shockwave)
+	Fortune = 5.4, -- a crystal ball glows on a little table in the dark, her eyes in it; she fades in behind it, cards fly
+	Ringmaster = 5.6, -- one spotlight in the dark: head bowed, then arms wide, the whip cracks, the crowd roars, lights
 }
 return {
 	time = TIME,

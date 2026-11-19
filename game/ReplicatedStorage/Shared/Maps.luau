@@ -59,6 +59,19 @@ local List: { Map } = {
 		light = light(C(255, 224, 176), C(26, 22, 16), -0.38, 0.28, 1.1, -0.2) },
 	{ id = "Camp_Lodge", name = "The Main Lodge", price = 0, campaign = true, desc = "The camp office and the great room.", color = C(180, 50, 40),
 		light = light(C(255, 220, 196), C(28, 22, 20), -0.35, 0.28, 1.2, -0.15) },
+	-- THE MOONLIGHT CARNIVAL (Shared/Campaign): its six buildings (tools/build/maps/carn_*.luau)
+	{ id = "Carn_BigTop", name = "The Big Top", price = 0, campaign = true, desc = "The ring, the stands and their mannequins.", color = C(170, 30, 36),
+		light = light(C(255, 214, 190), C(30, 20, 20), -0.3, 0.28, 1.25, -0.1) },
+	{ id = "Carn_Mirrors", name = "The Hall of Mirrors", price = 0, campaign = true, desc = "A mirror maze and a fortune teller's parlour.", color = C(150, 80, 200),
+		light = light(C(226, 206, 255), C(24, 18, 32), -0.3, 0.3, 1.15, -0.15) },
+	{ id = "Carn_Carousel", name = "The Carousel", price = 0, campaign = true, desc = "The ride, the benches and the high striker.", color = C(60, 110, 140),
+		light = light(C(255, 220, 190), C(24, 22, 26), -0.3, 0.26, 1.25, -0.1) },
+	{ id = "Carn_Funhouse", name = "The Funhouse", price = 0, campaign = true, desc = "Crates, a ball pit and a giant clown head.", color = C(200, 80, 150),
+		light = light(C(255, 210, 230), C(28, 20, 26), -0.25, 0.28, 1.2, -0.12) },
+	{ id = "Carn_Prizes", name = "The Prize Arcade", price = 0, campaign = true, desc = "Game booths and a wall of prizes.", color = C(220, 170, 50),
+		light = light(C(255, 226, 180), C(28, 22, 18), -0.3, 0.26, 1.25, -0.1) },
+	{ id = "Carn_GhostTrain", name = "The Ghost Train", price = 0, campaign = true, desc = "A dark ride to the Party Bear's stage.", color = C(90, 200, 120),
+		light = light(C(200, 230, 220), C(16, 20, 22), -0.35, 0.3, 1.05, -0.25) },
 }
 
 local Difficulties: { Difficulty } = {

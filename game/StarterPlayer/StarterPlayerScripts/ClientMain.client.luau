@@ -69,6 +69,7 @@ local SellerUI = require(Client.SellerUI) -- Doc Mercy's ectoplasm, Mother Moth'
 local FormCine = require(Client.FormCine) -- the first-person ectoplasm jar / potion
 local FormLook = require(Client.FormLook) -- worn forms on every character
 local CampFx = require(Client.CampFx) -- Camp Hollowmere's monsters' moves (rafter drop, hook, flood, torch, straw)
+local CarnivalFx = require(Client.CarnivalFx) -- the Moonlight Carnival's monsters' moves (crates, shockwave, curse, whip)
 
 Platform.init()
 -- the server is told which controls this player uses: touch players reach further, lift from far and face a weaker
@@ -120,6 +121,7 @@ SellerUI.init()
 FormCine.init(Fx, HUD)
 FormLook.init()
 CampFx.init(Fx)
+CarnivalFx.init(Fx)
 -- lobby screen: PLAY (create / join lobbies) and SHOP buttons, friend booster
 QuestUI.init(function(open)
 	Input.setShopOpen(open)
@@ -152,6 +154,7 @@ for _, k in { "ForceWind", "ForceGrab", "ForceHold", "ForcePush", "ForceMiss", "
 end
 
 for _, k in CampFx.KINDS do FIGHT[k] = true end -- (Camp Hollowmere's monsters' moves: fight-only too)
+for _, k in CarnivalFx.KINDS do FIGHT[k] = true end
 
 Remotes.Fx.OnClientEvent:Connect(function(kind: string, ...)
 	if FIGHT[kind] and not lp:GetAttribute("InMatch") then return end
@@ -228,6 +231,8 @@ Remotes.Fx.OnClientEvent:Connect(function(kind: string, ...)
 		if fm then Fx.handle("Toast", "NOW WEARING " .. fm.name, true) end
 	elseif CampFx.handles(kind) then
 		CampFx.handle(kind, ...)
+	elseif CarnivalFx.handles(kind) then
+		CarnivalFx.handle(kind, ...)
 	elseif MonsterFx.handles(kind) then
 		MonsterFx.handle(kind, ...)
 	else

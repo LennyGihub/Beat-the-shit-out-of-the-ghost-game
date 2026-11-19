@@ -55,6 +55,10 @@ local COLORS: { [string]: { { Color3 } } } = {
 	LakeWitch = { { C(120, 200, 190), C(14, 34, 38) }, { C(90, 255, 200), C(10, 50, 40) } },
 	Counselor = { { C(255, 140, 40), C(150, 40, 14) }, { C(255, 60, 20), C(80, 10, 6) } },
 	Scarecrow = { { C(214, 182, 96), C(70, 54, 30) }, { C(255, 90, 40), C(60, 20, 10) } },
+	Clown = { { C(255, 120, 120), C(120, 40, 40) }, { C(255, 210, 80), C(150, 60, 20) } },
+	Strongman = { { C(200, 170, 130), C(90, 70, 50) }, { C(255, 120, 60), C(110, 30, 10) } },
+	Fortune = { { C(200, 120, 255), C(60, 20, 90) }, { C(255, 120, 220), C(90, 10, 70) } },
+	Ringmaster = { { C(255, 90, 90), C(120, 10, 20) }, { C(255, 210, 90), C(150, 80, 10) } },
 }
 
 type Ctx = {
@@ -1305,6 +1309,284 @@ SCRIPTS.Scarecrow = function(x)
 		local after = ss(seg(s, T.land, x.D))
 		local tgt = s < T.drop and lerp(x.H * 0.75, x.H * 0.9, push) or lerp(x.H * 0.55, x.H * 0.7, after)
 		return spot(x, lerp(13, 7.5, push) + 3 * after, lerp(2.5, 0.6, push), lerp(x.H * 0.55, x.H * 0.8, push) - after), f + UP * tgt
+	end
+end
+
+-- THE MOONLIGHT CARNIVAL ----------------------------------------------------------------------------------------
+-- POP THE CLOWN: a striped jack-in-the-box on the floor plays its tune, shakes harder and harder; POP: the lid flies,
+-- he springs out on a coil in a burst of confetti, lands with a bounce and throws his arms out (ta-da)
+SCRIPTS.Clown = function(x)
+	local T = EP.T.Clown
+	local f = x.floor
+	local box = part(x, { Material = Enum.Material.WoodPlanks, Color = C(200, 40, 40), Size = Vector3.new(4, 4.2, 4), CFrame = CFrame.new(f + UP * 2.1) })
+	local stripes = {}
+	for i = -1, 1 do
+		table.insert(stripes, part(x, { Material = Enum.Material.SmoothPlastic, Color = C(240, 200, 60), Size = Vector3.new(4.06, 0.5, 4.06), CFrame = CFrame.new(f + UP * (2.1 + i * 1.3)) }))
+	end
+	local lid = part(x, { Material = Enum.Material.WoodPlanks, Color = C(60, 90, 200), Size = Vector3.new(4.3, 0.4, 4.3), CFrame = CFrame.new(f + UP * 4.4) })
+	local crank = part(x, { Material = Enum.Material.Metal, Color = C(200, 180, 90), Size = Vector3.new(0.3, 0.3, 1.6), CFrame = CFrame.new(f + UP * 2.4 + x.cright * 2.2) })
+	local coil = {} :: { Part }
+	for i = 1, 6 do
+		table.insert(coil, part(x, { Shape = Enum.PartType.Cylinder, Material = Enum.Material.Metal, Color = C(190, 190, 196), Size = Vector3.new(0.25, 2.2, 2.2), Transparency = 1,
+			CFrame = CFrame.new(f + UP * (4 + i * 0.6)) * CFrame.Angles(0, 0, math.pi / 2) }))
+	end
+	local home = box.CFrame
+	local lidOff = false
+	local music: Sound? = nil
+	each(x, function(s)
+		-- the box shakes harder as the tune winds up; the crank turns
+		local k = seg(s, T.music, T.pop) ^ 2
+		local wob = CFrame.new(math.sin(s * 37) * 0.12 * k, math.abs(math.sin(s * 23)) * 0.2 * k, 0) * CFrame.Angles(0, 0, math.sin(s * 29) * 0.07 * k)
+		if s < T.pop then
+			box.CFrame = home * wob
+			for i, st in stripes do st.CFrame = home * wob * CFrame.new(0, (i - 2) * 1.3, 0) end
+			if not lidOff then lid.CFrame = home * wob * CFrame.new(0, 2.3, 0) end
+			crank.CFrame = CFrame.new(f + UP * 2.4 + x.cright * 2.2) * CFrame.fromAxisAngle(x.cright, s * 8)
+		end
+		-- the spring: out of the box under him for a moment
+		local show = s > T.pop and s < T.land + 0.25
+		local top = limb(x, "LeftFoot").Y
+		for i, c in ipairs(coil) do
+			c.Transparency = show and 0 or 1
+			if show then c.CFrame = CFrame.new(Vector3.new(f.X, f.Y + 4.2 + (top - f.Y - 4.2) * i / #coil, f.Z)) * CFrame.Angles(0, 0, math.pi / 2) end
+		end
+		local fade = seg(s, x.D - 0.9, x.D - 0.3)
+		for _, pp in { box, lid, crank, table.unpack(stripes) } do pp.Transparency = fade end
+	end)
+	at(x, T.music, function() music = Sfx.play("MusicBox", { Volume = 1, PlaybackSpeed = 1.25 }) end)
+	for i, tt in { 0.5, 0.9, 1.3, 1.7, 2.0, 2.3, 2.55 } do
+		at(x, tt, function() Sfx.play("Click", { Volume = 0.5 + i * 0.05, PlaybackSpeed = 0.8 + i * 0.05 }) end)
+	end
+	at(x, T.pop, function()
+		if music then music:Stop() end
+		lidOff = true
+		lid.Anchored = false
+		lid.AssemblyLinearVelocity = x.cdir * 18 + UP * 40
+		lid.AssemblyAngularVelocity = Vector3.new(8, 3, 6)
+		Sfx.play("MagicBurst", { Volume = 1.2 })
+		Sfx.play("BalloonPop", { Volume = 1.3 })
+		Sfx.play("EvilLaugh", { Volume = 1.2, PlaybackSpeed = 1.3 })
+		shake(0.7); kick(10)
+		flash(x, Color3.new(1, 1, 1), 0.4, 0.3)
+		for _, col in { C(255, 80, 90), C(80, 160, 255), C(255, 220, 80), C(120, 230, 120) } do
+			burst(x, f + UP * 5, { Texture = SPARK, Color = ColorSequence.new(col), LightEmission = 0.4, Size = NumberSequence.new(0.4, 0.25),
+				Lifetime = NumberRange.new(1, 2), Speed = NumberRange.new(10, 26), Acceleration = Vector3.new(0, -25, 0), SpreadAngle = Vector2.new(60, 60), EmissionDirection = Enum.NormalId.Top }, 26)
+		end
+	end)
+	at(x, T.land, function() Sfx.play("Bonk", { Volume = 1, PlaybackSpeed = 0.8 }); shake(0.3) end)
+	at(x, T.tada, function() x.card() end)
+	table.insert(x.cleanup, function() if music then music:Stop() end end)
+	x.camera = function(s)
+		local push = ss(seg(s, 0, T.pop))
+		local back = s > T.pop and ss(seg(s, T.pop, T.pop + 0.4)) * 4 or 0
+		local tgt = s < T.pop and 3 or lerp(6, x.H * 0.65, seg(s, T.pop, T.land + 0.3))
+		return spot(x, lerp(13, 9, push) + back, lerp(2.5, 1.2, push), lerp(3, x.H * 0.55, seg(s, T.pop, T.land))), f + UP * tgt
+	end
+end
+
+-- THE STRONGMAN: crouched over a giant barbell; he pulls it up to his shoulders, presses it over his head, roars,
+-- and drops it: the floor cracks, dust and a ring roll out
+SCRIPTS.Strongman = function(x)
+	local T = EP.T.Strongman
+	local f = x.floor
+	local IRON = C(30, 30, 32)
+	local bar = part(x, { Shape = Enum.PartType.Cylinder, Material = Enum.Material.Metal, Color = C(170, 170, 176), Size = Vector3.new(10, 0.45, 0.45) })
+	local plates = {} :: { { p: Part, off: number } }
+	for _, sgn in { -1, 1 } do
+		for k, w in { 0.6, 0.45 } do
+			table.insert(plates, { p = part(x, { Shape = Enum.PartType.Cylinder, Material = Enum.Material.Metal, Color = IRON, Size = Vector3.new(w, 3.4 - k * 0.7, 3.4 - k * 0.7) }), off = sgn * (3.6 + k * 0.55) })
+		end
+	end
+	local dropped = false
+	local restCF: CFrame? = nil
+	local function place(cf: CFrame)
+		bar.CFrame = cf
+		for _, pl in plates do pl.p.CFrame = cf * CFrame.new(pl.off, 0, 0) end
+	end
+	each(x, function(s)
+		local fade = seg(s, x.D - 0.7, x.D - 0.2)
+		bar.Transparency = fade
+		for _, pl in plates do pl.p.Transparency = fade end
+		if dropped then
+			if restCF then place(restCF) end
+			return
+		end
+		-- the bar sits in his hands (between them), across him
+		local l, r = limb(x, "LeftHand"), limb(x, "RightHand")
+		local mid = (l + r) / 2
+		local across = r - l
+		across = across.Magnitude > 0.1 and across.Unit or x.cright
+		place(CFrame.fromMatrix(mid, across, UP:Cross(across).Magnitude > 0.1 and across:Cross(UP:Cross(across)).Unit or UP))
+	end)
+	at(x, 0, function()
+		Sfx.play("DemonGrowl", { Volume = 1, PlaybackSpeed = 0.6 })
+		darkness(x, 0.25, 0.4)
+	end)
+	at(x, T.lift0, function() Sfx.play("ShieldBlock", { Volume = 0.6, PlaybackSpeed = 0.6 }) end)
+	at(x, T.press, function() Sfx.play("Whoosh", { Volume = 0.8, PlaybackSpeed = 0.6 }); shake(0.2) end)
+	at(x, T.roar, function()
+		Sfx.play("DemonRoar", { Volume = 1.4, PlaybackSpeed = 0.62 })
+		shake(0.6); kick(10)
+		x.card()
+	end)
+	at(x, T.drop + 0.12, function()
+		dropped = true
+		local land = f + UP * 1.7 + x.cdir * 3
+		restCF = CFrame.fromMatrix(land, x.cright, UP)
+		place(restCF)
+		Sfx.play("HeavyImpact", { Volume = 1.6, PlaybackSpeed = 0.7 })
+		Sfx.play("Explosion", { Volume = 0.7, PlaybackSpeed = 0.55 })
+		shake(1.2); kick(14)
+		ring(x, f, x.c1, 3, 32, 0.8)
+		burst(x, f + UP, { Color = ColorSequence.new(x.c1, x.c2), Size = NumberSequence.new(2, 6), Transparency = NumberSequence.new(0.4, 1), Lifetime = NumberRange.new(0.8, 1.6),
+			Speed = NumberRange.new(14, 34), SpreadAngle = Vector2.new(85, 85), EmissionDirection = Enum.NormalId.Top, Drag = 2 }, 80)
+		chunks(x, land, 14, C(110, 90, 70), Enum.Material.WoodPlanks, 26)
+		darkness(x, 0, 0.5)
+	end)
+	x.camera = function(s)
+		local rise = ss(seg(s, T.lift0, T.press))
+		local pull = s > T.drop and 3 * (1 - seg(s, T.drop, T.drop + 1)) or 0
+		return spot(x, lerp(11, 13, rise) + pull, 3, lerp(1.6, 1.2, rise)), f + UP * lerp(x.H * 0.4, x.H * 0.75, rise)
+	end
+end
+
+-- MADAME FORTUNE: a little round table in the dark, her crystal ball glowing on it; two eyes open inside the ball;
+-- she fades in behind it, hands over the ball; tarot cards circle her and fly at you
+SCRIPTS.Fortune = function(x)
+	local T = EP.T.Fortune
+	local f = x.floor
+	local tc = f + x.cdir * 2.6
+	local top = part(x, { Shape = Enum.PartType.Cylinder, Material = Enum.Material.Fabric, Color = C(70, 20, 60), Size = Vector3.new(0.3, 4.4, 4.4),
+		CFrame = CFrame.new(tc + UP * 3.2) * CFrame.Angles(0, 0, math.pi / 2) })
+	local cloth = part(x, { Shape = Enum.PartType.Cylinder, Material = Enum.Material.Fabric, Color = C(110, 36, 120), Size = Vector3.new(2.8, 4.6, 4.6),
+		CFrame = CFrame.new(tc + UP * 1.8) * CFrame.Angles(0, 0, math.pi / 2), Transparency = 0.05 })
+	local orb = part(x, { Shape = Enum.PartType.Ball, Material = Enum.Material.Glass, Color = C(200, 160, 255), Size = Vector3.one * 1.8, Transparency = 0.35,
+		CFrame = CFrame.new(tc + UP * 4.25) })
+	local core = part(x, { Shape = Enum.PartType.Ball, Color = C(190, 100, 255), Size = Vector3.one * 0.6, CFrame = orb.CFrame })
+	local eyes = {} :: { Part }
+	for _, sgn in { -1, 1 } do
+		table.insert(eyes, part(x, { Color = C(255, 200, 255), Size = Vector3.new(0.18, 0.08, 0.05), Transparency = 1,
+			CFrame = CFrame.lookAt(orb.Position + x.cdir * 0.7 + x.cright * sgn * 0.22 + UP * 0.1, orb.Position + x.cdir * 3) }))
+	end
+	local l = light(x, orb.Position, C(190, 110, 255), 26, 0)
+	local cards = {} :: { Part }
+	for i = 1, 5 do
+		table.insert(cards, part(x, { Material = Enum.Material.SmoothPlastic, Color = C(236, 226, 196), Size = Vector3.new(1.3, 1.9, 0.08), Transparency = 1 }))
+	end
+	local flying = false
+	each(x, function(s)
+		local glow = seg(s, T.glow, T.glow + 0.8)
+		l.Brightness = 2.5 * glow * (1 - seg(s, x.D - 0.6, x.D - 0.1)) + math.sin(s * 9) * 0.3 * glow
+		core.Size = Vector3.one * (0.5 + 0.5 * glow + math.sin(s * 6) * 0.08)
+		local eyeK = seg(s, T.face, T.face + 0.3) * (1 - seg(s, T.appear1, T.appear1 + 0.3))
+		for _, e in eyes do e.Transparency = 1 - eyeK end
+		-- the cards circle her, then fly at the camera
+		local cardsOn = seg(s, T.appear0 + 0.4, T.appear1)
+		local c = limb(x, "UpperTorso")
+		for i, cd in cards do
+			if not flying then
+				local a = s * 2.2 + i / #cards * math.pi * 2
+				local p = c + Vector3.new(math.cos(a) * 3.4, math.sin(a * 2) * 0.6 + 1.2, math.sin(a) * 3.4)
+				cd.CFrame = CFrame.lookAt(p, c) * CFrame.Angles(0, math.pi / 2, 0)
+				cd.Transparency = 1 - cardsOn
+			end
+		end
+		local fade = seg(s, x.D - 0.8, x.D - 0.3)
+		top.Transparency = fade; cloth.Transparency = math.max(0.05, fade); orb.Transparency = math.max(0.35, fade); core.Transparency = fade
+	end)
+	at(x, 0, function()
+		darkness(x, 0.55, 0.4)
+		Sfx.play("GhostWhisper", { Volume = 1.1, PlaybackSpeed = 0.75 })
+	end)
+	at(x, T.glow, function() Sfx.play("MagicBurst", { Volume = 0.6, PlaybackSpeed = 0.6 }) end)
+	at(x, T.face, function() Sfx.play("GhostWhisper", { Volume = 1.2, PlaybackSpeed = 1.1 }) end)
+	at(x, T.appear0, function() Sfx.play("Telekinesis", { Volume = 0.9, PlaybackSpeed = 0.8 }) end)
+	at(x, T.cards, function()
+		flying = true
+		local eye = spot(x, 6, 0.6, x.H * 0.62)
+		for i, cd in cards do
+			local from = cd.CFrame
+			TweenService:Create(cd, TweenInfo.new(0.35 + i * 0.04, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+				{ CFrame = CFrame.lookAt(eye + x.cright * (i - 3) * 0.8, eye + x.cdir) * CFrame.Angles(0, 0, i) }):Play()
+			local _ = from
+			task.delay(0.5, function() if cd.Parent then cd.Transparency = 1 end end)
+		end
+		Sfx.play("Whoosh", { Volume = 1.2, PlaybackSpeed = 1.2 })
+		Sfx.play("GhostScream", { Volume = 0.9, PlaybackSpeed = 1.2 })
+		task.delay(0.35, function()
+			if not x.alive() then return end
+			flash(x, C(200, 120, 255), 0.5, 0.4)
+			shake(0.5); kick(8)
+		end)
+		darkness(x, 0.15, 0.6)
+		x.card()
+	end)
+	x.camera = function(s)
+		local reveal = ss(seg(s, T.face + 0.3, T.appear1))
+		local eyeTgt = orb.Position:Lerp(f + UP * x.H * 0.7, reveal)
+		return spot(x, lerp(7.5, 11, reveal), lerp(0.4, 1.4, reveal), lerp(4.6, x.H * 0.62, reveal)), eyeTgt
+	end
+end
+
+-- THE RINGMASTER: one spotlight in the dark on him, head bowed; he looks up, arms wide, the whip cracks, the ghost
+-- crowd roars and coloured spotlights sweep the room
+SCRIPTS.Ringmaster = function(x)
+	local T = EP.T.Ringmaster
+	local f = x.floor
+	local top = f + UP * math.min(x.ceil - 0.5, 26)
+	local function shaft(color: Color3): (Part, SpotLight)
+		local p = part(x, { Shape = Enum.PartType.Cylinder, Color = color, Size = Vector3.new(1, 5, 5), Transparency = 1 })
+		local holder = part(x, { Size = Vector3.one * 0.3, Transparency = 1, CFrame = CFrame.new(top) })
+		local sl = Instance.new("SpotLight")
+		sl.Face = Enum.NormalId.Bottom; sl.Color = color; sl.Range = 60; sl.Angle = 22; sl.Brightness = 0; sl.Shadows = true; sl.Parent = holder
+		return p, sl
+	end
+	local main, mainL = shaft(C(255, 240, 210))
+	local function aimShaft(p: Part, sl: SpotLight, at: Vector3, alpha: number)
+		local from = top
+		local d = (at - from)
+		p.Size = Vector3.new(d.Magnitude, 6, 6)
+		p.CFrame = CFrame.lookAt((from + at) / 2, at) * CFrame.Angles(0, math.pi / 2, 0)
+		p.Transparency = 1 - 0.13 * alpha
+		local holder = sl.Parent :: BasePart
+		holder.CFrame = CFrame.lookAt(from, at) * CFrame.Angles(math.pi / 2, 0, 0) -- (its bottom face toward the floor spot)
+		sl.Brightness = 6 * alpha
+	end
+	local sweep = {} :: { { p: Part, l: SpotLight, ph: number } }
+	for i, col in { C(255, 60, 60), C(255, 210, 70), C(120, 160, 255) } do
+		local p, l = shaft(col)
+		table.insert(sweep, { p = p, l = l, ph = i * 2.1 })
+	end
+	each(x, function(s)
+		local on = seg(s, T.spot, T.spot + 0.15) * (1 - seg(s, x.D - 0.6, x.D - 0.1))
+		aimShaft(main, mainL, f, on)
+		local lights = seg(s, T.lights, T.lights + 0.3) * (1 - seg(s, x.D - 0.6, x.D - 0.1))
+		for _, sw in sweep do
+			local a = s * 1.6 + sw.ph
+			aimShaft(sw.p, sw.l, f + Vector3.new(math.cos(a) * 12, 0, math.sin(a) * 12), lights)
+		end
+	end)
+	at(x, 0, function()
+		darkness(x, 0.82, 0.25)
+		Sfx.play("Crowd", { Volume = 0.35, PlaybackSpeed = 0.7 })
+	end)
+	at(x, T.spot, function() Sfx.play("Breaker", { Volume = 1, PlaybackSpeed = 0.7 }); darkness(x, 0.55, 0.2) end)
+	at(x, T.arms, function() Sfx.play("EvilLaugh", { Volume = 1.2, PlaybackSpeed = 0.75 }) end)
+	at(x, T.crack, function()
+		Sfx.play("WhipCrack", { Volume = 1.6 })
+		shake(0.6); kick(10)
+		flash(x, Color3.new(1, 1, 1), 0.35, 0.25)
+		burst(x, limb(x, "RightHand") + UP * 3, { Texture = SPARK, Color = ColorSequence.new(C(255, 230, 200)), LightEmission = 1, Size = NumberSequence.new(0.5, 0),
+			Lifetime = NumberRange.new(0.3, 0.7), Speed = NumberRange.new(8, 20) }, 30)
+	end)
+	at(x, T.lights, function()
+		Sfx.play("Crowd", { Volume = 1.2, PlaybackSpeed = 0.85 })
+		darkness(x, 0.25, 0.5)
+		x.card()
+	end)
+	x.camera = function(s)
+		local push = ss(seg(s, 0, T.crack))
+		return spot(x, lerp(16, 10.5, push), lerp(4, 1.5, push), lerp(2.2, x.H * 0.5, push)), f + UP * x.H * lerp(0.55, 0.72, push)
 	end
 end
 

@@ -458,6 +458,94 @@ local function abilityPose(ab: string, phase: string, t: number, since: number):
 			p.RightShoulder = A(1.5, 0, -0.3); p.RightElbow = A(0.1, 0, 0); p.LeftShoulder = A(0.4, 0, -0.5)
 			p.RightHip = A(0.3, 0, 0); p.LeftHip = A(-0.3, 0, 0)
 		end
+	elseif ab == "popClown" then -- Pop the Clown
+		if phase == "hide" then
+			-- ducking down out of sight
+			p.Root = CFrame.new(0, -2.5 * a, 0) * A(-0.4 * a, 0, 0); p.Neck = A(-0.4, 0, 0)
+			p.RightShoulder = A(2.2 * a, 0, 0.5); p.LeftShoulder = A(2.2 * a, 0, -0.5)
+			p.RightHip = A(1.4 * a, 0, 0); p.LeftHip = A(1.4 * a, 0, 0); p.RightKnee = A(-2.0 * a, 0, 0); p.LeftKnee = A(-2.0 * a, 0, 0)
+		elseif phase == "laugh" or phase == "lurk" then
+			-- bent over laughing, holding his belly, shaking
+			local k = s(t * 22) * 0.08
+			p.Waist = A(-0.45 + k, 0, 0); p.Neck = A(0.5 + k, s(t * 3) * 0.2, 0)
+			p.RightShoulder = A(0.9, 0, -0.5); p.LeftShoulder = A(0.9, 0, 0.5); p.RightElbow = A(1.3, 0, 0); p.LeftElbow = A(1.3, 0, 0)
+			p.RightHip = A(0.2, 0, 0); p.LeftHip = A(-0.2, 0, 0); p.LeftKnee = A(-0.4, 0, 0)
+		elseif phase == "blow" then
+			-- blowing up balloons: hands at his mouth, cheeks out, rocking
+			p.Waist = A(0.15 + s(t * 6) * 0.06, 0, 0); p.Neck = A(0.2, 0, 0)
+			p.RightShoulder = A(1.7, 0, -0.55); p.LeftShoulder = A(1.7, 0, 0.55); p.RightElbow = A(1.6, 0, 0); p.LeftElbow = A(1.6, 0, 0)
+		else -- release: arms flung up
+			p.RightShoulder = A(2.8, 0, 0.5); p.LeftShoulder = A(2.8, 0, -0.5); p.Neck = A(0.3, 0, 0.2); p.Waist = A(0.15, 0, 0)
+		end
+	elseif ab == "strongman" then -- the Strongman
+		if phase == "fetch" then
+			local r = s(t * 16)
+			p.Root = A(-0.25, 0, 0); p.Waist = A(-0.1, r * 0.1, 0)
+			p.RightShoulder = A(-r * 0.9, 0, 0.3); p.LeftShoulder = A(r * 0.9, 0, -0.3); p.RightElbow = A(1.2, 0, 0); p.LeftElbow = A(1.2, 0, 0)
+			p.RightHip = A(r * 1.0, 0, 0); p.LeftHip = A(-r * 1.0, 0, 0)
+			p.RightKnee = A(-0.3 - math.max(0, r) * 1.0, 0, 0); p.LeftKnee = A(-0.3 - math.max(0, -r) * 1.0, 0, 0)
+		elseif phase == "lift" or phase == "aim" then
+			-- the thing held up over his head with both arms, leaning back under the weight
+			local w = phase == "aim" and s(t * 30) * 0.04 or 0
+			p.Waist = A(0.2 + w, 0, 0); p.Neck = A(-0.15, 0, 0)
+			p.RightShoulder = A(2.9, 0, 0.35); p.LeftShoulder = A(2.9, 0, -0.35); p.RightElbow = A(0.5, 0, 0); p.LeftElbow = A(0.5, 0, 0)
+			p.RightHip = A(-0.25, 0, 0.15); p.LeftHip = A(0.35, 0, -0.15); p.LeftKnee = A(-0.4, 0, 0); p.RightKnee = A(-0.3, 0, 0)
+		elseif phase == "throw" then
+			p.Waist = A(-0.45, 0, 0); p.Neck = A(0.3, 0, 0)
+			p.RightShoulder = A(1.3, 0, 0.2); p.LeftShoulder = A(1.3, 0, -0.2)
+			p.RightHip = A(0.5, 0, 0.1); p.LeftHip = A(-0.4, 0, -0.1); p.RightKnee = A(-0.6, 0, 0)
+		elseif phase == "leap" or phase == "fall" then
+			-- up in the air: knees up, both fists over his head
+			p.Waist = A(-0.2, 0, 0); p.Neck = A(-0.2, 0, 0)
+			p.RightShoulder = A(2.9, 0, 0.1); p.LeftShoulder = A(2.9, 0, -0.1); p.RightElbow = A(0.6, 0, 0); p.LeftElbow = A(0.6, 0, 0)
+			p.RightHip = A(1.1, 0, 0.15); p.LeftHip = A(1.1, 0, -0.15); p.RightKnee = A(-1.6, 0, 0); p.LeftKnee = A(-1.6, 0, 0)
+		else -- slam: crouched with both fists in the floor
+			p.Root = CFrame.new(0, -1.6, 0) * A(-0.45, 0, 0); p.Waist = A(-0.35, 0, 0); p.Neck = A(0.6, 0, 0)
+			p.RightShoulder = A(1.0, 0, 0.25); p.LeftShoulder = A(1.0, 0, -0.25); p.RightElbow = A(0.2, 0, 0); p.LeftElbow = A(0.2, 0, 0)
+			p.RightHip = A(1.3, 0, 0.2); p.LeftHip = A(1.3, 0, -0.2); p.RightKnee = A(-1.9, 0, 0); p.LeftKnee = A(-1.9, 0, 0)
+		end
+	elseif ab == "fortune" then -- Madame Fortune
+		if phase == "conjure" then
+			p.RightShoulder = A(2.5 * a, 0, 0.7); p.LeftShoulder = A(2.5 * a, 0, -0.7); p.RightElbow = A(0.4, 0, 0); p.LeftElbow = A(0.4, 0, 0)
+			p.RightWrist = A(-0.6 + s(t * 9) * 0.2, 0, 0); p.LeftWrist = A(-0.6 - s(t * 9) * 0.2, 0, 0)
+			p.Neck = A(0.4 * a, 0, s(t * 5) * 0.1); p.Waist = A(0.15 * a, 0, 0)
+		elseif phase == "orb" then
+			-- one hand pointing it at you, the other at her temple
+			p.RightShoulder = A(1.55, 0, 0.05); p.RightElbow = A(0.05, 0, 0)
+			p.LeftShoulder = A(2.2, 0, 0.6); p.LeftElbow = A(2.0, 0, 0)
+			p.Neck = A(-0.15, 0, 0.15)
+		elseif phase == "deal" then
+			p.Waist = A(0, 0.6 * a, 0); p.RightShoulder = A(0.9, 0, 1.2 * a); p.RightElbow = A(0.3, 0, 0)
+			p.LeftShoulder = A(1.3, 0, 0.3); p.LeftElbow = A(1.2, 0, 0)
+		elseif phase == "throw" then
+			p.Waist = A(0, -0.5, 0); p.RightShoulder = A(1.5, 0, -0.5); p.RightElbow = A(0.1, 0, 0)
+			p.LeftShoulder = A(1.0, 0, 0.3); p.LeftElbow = A(1.0, 0, 0)
+		else -- shriek: her ball is broken; hands at her head, head thrown back, shaking
+			local k = s(t * 40) * 0.06
+			p.Waist = A(0.3 + k, 0, 0); p.Neck = A(0.6 + k, s(t * 31) * 0.1, 0)
+			p.RightShoulder = A(2.4, 0, 0.9); p.LeftShoulder = A(2.4, 0, -0.9); p.RightElbow = A(1.9, 0, 0); p.LeftElbow = A(1.9, 0, 0)
+		end
+	elseif ab == "ringmaster" then -- the Ringmaster
+		if phase == "wind" then
+			-- the whip arm drawn back over his shoulder
+			p.Waist = A(0.15, 0.5 * a, 0); p.Neck = A(0, -0.4 * a, 0)
+			p.RightShoulder = A(2.5 * a, 0, 0.6); p.RightElbow = A(1.3 * a, 0, 0)
+			p.LeftShoulder = A(0.9, 0, -0.4); p.RightHip = A(-0.3, 0, 0); p.LeftHip = A(0.35, 0, 0)
+		elseif phase == "lash" then
+			p.Waist = A(-0.25, -0.5, 0); p.Neck = A(0.15, 0.4, 0)
+			p.RightShoulder = A(1.2, 0, -0.45); p.RightElbow = A(0.05, 0, 0); p.LeftShoulder = A(0.3, 0, -0.6)
+			p.RightHip = A(0.4, 0, 0); p.LeftHip = A(-0.3, 0, 0); p.RightKnee = A(-0.4, 0, 0)
+		elseif phase == "crack" then
+			-- the whip straight up over his head, the other hand thrown out to the crowd
+			p.Waist = A(0.2 * a, 0, 0); p.Neck = A(0.35 * a, 0, 0)
+			p.RightShoulder = A(3.0 * a, 0, 0.15); p.RightElbow = A(0.2, 0, 0)
+			p.LeftShoulder = A(0.4, 0, -1.4 * a); p.LeftElbow = A(0.2, 0, 0)
+		else -- bow: a showman's bow, the hat hand across his chest
+			p.Waist = A(-0.65, 0, 0); p.Neck = A(0.2, 0, 0)
+			p.LeftShoulder = A(1.0, 0, 0.6); p.LeftElbow = A(1.7, 0, 0)
+			p.RightShoulder = A(0.4, 0, 1.2); p.RightElbow = A(0.2, 0, 0)
+			p.RightHip = A(0.2, 0, 0); p.LeftHip = A(-0.4, 0, 0); p.LeftKnee = A(-0.3, 0, 0)
+		end
 	elseif ab == "charge" then
 		if phase == "wind" then
 			p.Root = A(0.15, 0, 0); p.Waist = A(0, -0.6 * a, 0)
@@ -715,14 +803,14 @@ local function target(state: string, t: number, sinceState: number): { [string]:
 			p.RightWrist = A(0.4, 0, 0); p.LeftWrist = A(0.4, 0, 0)
 		elseif g:GetAttribute("MonsterId") == "Antlered" then
 			-- stooped under the ceiling, the long arms swinging low, the skull bobbing
-			p.Waist = (p.Waist or CFrame.new()) * A(0.35, 0, 0)
-			p.Neck = A(-0.35, s(t * 1.1) * 0.2, s(t * 0.7) * 0.15)
+			p.Waist = (p.Waist or CFrame.new()) * A(-0.35, 0, 0)
+			p.Neck = A(0.1, s(t * 1.1) * 0.2, s(t * 0.7) * 0.15)
 			p.RightShoulder = A(0.3 + s(t * 4) * 0.35, 0, 0.12); p.LeftShoulder = A(0.3 - s(t * 4) * 0.35, 0, -0.12)
 			p.RightElbow = A(0.2, 0, 0); p.LeftElbow = A(0.2, 0, 0)
 		elseif g:GetAttribute("MonsterId") == "LakeWitch" then
 			-- head hanging to one side, arms limp, the hook dragging
-			p.Neck = A(0.25, 0, 0.45 + s(t * 0.8) * 0.08)
-			p.Waist = (p.Waist or CFrame.new()) * A(0.12, 0, s(t * 1.6) * 0.06)
+			p.Neck = A(-0.3, 0, 0.45 + s(t * 0.8) * 0.08)
+			p.Waist = (p.Waist or CFrame.new()) * A(-0.12, 0, s(t * 1.6) * 0.06)
 			p.RightShoulder = A(0.15, 0, 0.1); p.LeftShoulder = A(0.1 + s(t * 3) * 0.1, 0, -0.1)
 		elseif g:GetAttribute("MonsterId") == "Counselor" then
 			-- a limp (the left leg drags), the torch held up high
@@ -736,8 +824,26 @@ local function target(state: string, t: number, sinceState: number): { [string]:
 				local q = 0.25
 				p[k] = CFrame.new(v.Position) * A(math.floor(rx / q + 0.5) * q, math.floor(ry / q + 0.5) * q, math.floor(rz / q + 0.5) * q)
 			end
-			p.RightShoulder = (p.RightShoulder or CFrame.new()) * A(0, 0, -0.7); p.LeftShoulder = (p.LeftShoulder or CFrame.new()) * A(0, 0, 0.7)
+			p.RightShoulder = (p.RightShoulder or CFrame.new()) * A(0, 0, 0.7); p.LeftShoulder = (p.LeftShoulder or CFrame.new()) * A(0, 0, -0.7)
 			p.Neck = A(0.1, 0, 0.4)
+		elseif g:GetAttribute("MonsterId") == "Clown" then
+			-- a bouncing skip, the arms flapping wide, the head lolling side to side
+			p.Root = CFrame.new(0, math.abs(s(t * 7)) * 0.6, 0) * (p.Root or CFrame.new())
+			p.RightShoulder = A(0.3 + s(t * 7) * 0.4, 0, 0.6 + math.abs(s(t * 7)) * 0.4); p.LeftShoulder = A(0.3 - s(t * 7) * 0.4, 0, -0.6 - math.abs(s(t * 7)) * 0.4)
+			p.RightElbow = A(0.5, 0, 0); p.LeftElbow = A(0.5, 0, 0)
+			p.Neck = A(0, 0, s(t * 3.5) * 0.35)
+		elseif g:GetAttribute("MonsterId") == "Strongman" then
+			-- heavy, rolling steps: arms held out from the body, chest forward
+			p.Waist = (p.Waist or CFrame.new()) * A(-0.1, s(t * 4) * 0.1, 0)
+			p.Neck = A(-0.15, 0, 0)
+			p.RightShoulder = A(0.2 + s(t * 4) * 0.25, 0, 0.4); p.LeftShoulder = A(0.2 - s(t * 4) * 0.25, 0, -0.4)
+			p.RightElbow = A(0.6, 0, 0); p.LeftElbow = A(0.6, 0, 0)
+		elseif g:GetAttribute("MonsterId") == "Ringmaster" then
+			-- an upright strut: chest out, the whip hand low at his side, the other hand behind his back
+			p.Waist = (p.Waist or CFrame.new()) * A(0.08, 0, 0)
+			p.Neck = A(0.1, s(t * 1.2) * 0.15, 0)
+			p.RightShoulder = A(0.25 + s(t * 5) * 0.15, 0, 0.2); p.RightElbow = A(0.4, 0, 0)
+			p.LeftShoulder = A(-0.5, 0, -0.2); p.LeftElbow = A(1.4, 0, 0)
 		elseif g:GetAttribute("MonsterId") == "Goblin" then
 			p.Waist = (p.Waist or CFrame.new()) * A(0.3, 0, 0) -- hunched, sneaky
 			p.Neck = A(-0.35, s(t * 1.7) * 0.25, s(t * 2.3) * 0.08) -- looking around for something to steal
