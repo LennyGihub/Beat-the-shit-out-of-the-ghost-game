@@ -108,6 +108,7 @@ local function smashBall(G)
 	if pp then pp.Enabled = false end
 	local l = b:FindFirstChildOfClass("PointLight")
 	if l then l.Enabled = false end
+	b:SetAttribute("Mark", "") -- (no marker while it is in pieces: Client/CallerMarks)
 	H.fx("BallSmash", b.Position)
 	clearCurses()
 	local g = G.current
@@ -144,6 +145,10 @@ local function armBall(g, G)
 	pp.MaxActivationDistance = 9
 	-- (always shown: an item's "Take" prompt nearby, on the same key, would hide it otherwise)
 	pp.Exclusivity = Enum.ProximityPromptExclusivity.AlwaysShow
+	-- the players are shown where it is (Client/CallerMarks: an outline through the walls and an arrow)
+	game:GetService("CollectionService"):AddTag(part, "MarkTarget")
+	part:SetAttribute("Mark", "CRYSTAL BALL")
+	part:SetAttribute("MarkColor", Color3.fromRGB(200, 130, 255))
 	if not part:GetAttribute("Armed") then
 		part:SetAttribute("Armed", true)
 		pp.Triggered:Connect(function(p: Player)
@@ -638,6 +643,8 @@ function CM.tick(G, now: number)
 	local g = G.current
 	if next(cursed) and not (g and g.def.ability.kind == "fortune" and g.state ~= "Dead") then clearCurses() end
 	local b = ballState.part
+	-- (the marker only while she fights)
+	if b and b:GetAttribute("Mark") ~= "" and not (g and g.def.ability.kind == "fortune" and g.state ~= "Dead") then b:SetAttribute("Mark", "") end
 	if b and ballState.broken and now >= ballState.back then
 		ballState.broken = false
 		b.Transparency = ballState.own and 0.25 or 0.15
@@ -646,12 +653,14 @@ function CM.tick(G, now: number)
 		if pp then pp.Enabled = true end
 		local l = b:FindFirstChildOfClass("PointLight")
 		if l then l.Enabled = true end
+		if g and g.def.ability.kind == "fortune" and g.state ~= "Dead" then b:SetAttribute("Mark", "CRYSTAL BALL") end
 		H.fx("BallReform", b.Position)
 	end
 end
 
 function CM.clear()
 	clearCurses()
+	if ballState.part then ballState.part:SetAttribute("Mark", "") end
 	if ballState.own and ballState.part then ballState.part:Destroy() end
 	ballState.part, ballState.own, ballState.broken, ballState.model = nil, false, false, nil
 	local f = workspace:FindFirstChild("CarnivalFx")

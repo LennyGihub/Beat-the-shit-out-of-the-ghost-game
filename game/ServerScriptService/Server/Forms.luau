@@ -5,6 +5,8 @@
 --   ("buy", vialId)  -> level + cash checked, the form is rolled HERE (never by the client), added to the collection
 --                       and saved; worn at once if no form of that kind was worn yet. The client then plays the
 --                       first-person jar / drink (Fx "FormRolled": kind, vialId, formId, isNew, worn, prevId).
+--   ("buy", vialId, 10 | 100) -> X10 / X100: that many rolled at once (no cinematic), all added to the collection,
+--                       the best one worn if that kind had none (Fx "FormMulti": kind, vialId, results, bestId, worn, prevId).
 --   ("equip", formId) -> wear a form you own (Fx "FormEquipped").
 --   ("offline", vialId) -> OPEN OFFLINE: paid like a buy, the jar / potion joins its kind's queue (Shared/Forms
 --                       OFFLINE: a few minutes each, one after the other) and opens by itself, by the clock: in the
@@ -41,11 +43,14 @@ local function toast(p: Player, text: string, good: boolean?)
 	Remotes.Fx:FireClient(p, "FormResult", good == true, text)
 end
 
-local function buy(p: Player, vialId: any)
+local MULTI = { [1] = true, [10] = true, [100] = true } :: { [number]: boolean }
+
+local function buy(p: Player, vialId: any, count: any)
 	local v = type(vialId) == "string" and Forms.vialById[vialId] or nil
 	if not v then return end
+	local n = (type(count) == "number" and MULTI[count]) and count or 1
 	if p:GetAttribute("InMatch") then return end
-	if os.clock() - (lastBuy[p] or 0) < BUY_GAP then return end
+	if os.clock() - (lastBuy[p] or 0) < (n > 1 and 2 or BUY_GAP) then return end
 	-- a set is for sale once its map is open (Camp Hollowmere: always)
 	if not Campaign.mapOpen(Data.campaign(p), v.set) then
 		local m = Campaign.mapById[v.set]
@@ -58,8 +63,30 @@ local function buy(p: Player, vialId: any)
 	local at = sellerPart(v.kind)
 	local hrp = p.Character and p.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	if at and hrp and (hrp.Position - at.Position).Magnitude > REACH then return end
-	if not Data.spend(p, v.price) then toast(p, "NOT ENOUGH CASH FOR " .. v.name); return end
+	if not Data.spend(p, v.price * n) then toast(p, "NOT ENOUGH CASH FOR " .. (n > 1 and (n .. " x ") or "") .. v.name); return end
 	lastBuy[p] = os.clock()
+	if n > 1 then
+		-- X10 / X100: all at once
+		local results, ids = {}, {}
+		local best: Forms.Form? = nil
+		for _ = 1, n do
+			local f = Forms.roll(v, rng)
+			table.insert(ids, f.id)
+			if not best or f.rarity > best.rarity or (f.rarity == best.rarity and Forms.power(f) > Forms.power(best)) then best = f end
+		end
+		local newOnes = Data.addForms(p, ids)
+		for _, id in ids do
+			table.insert(results, { form = id, new = newOnes[id] == true })
+			newOnes[id] = nil -- (a form rolled twice is new only the first time)
+		end
+		local prev = Data.formOf(p, v.kind)
+		local worn = false
+		if prev == nil and best then worn = Data.equipForm(p, best.id) end
+		task.spawn(Data.save, p)
+		Combat.refreshHealth(p)
+		Remotes.Fx:FireClient(p, "FormMulti", v.kind, v.id, results, best and best.id or "", worn, prev or "")
+		return
+	end
 	local fm = Forms.roll(v, rng)
 	local prev = Data.formOf(p, v.kind)
 	local isNew = Data.addForm(p, fm.id)
@@ -123,9 +150,10 @@ local function settleAndTell(p: Player, away: boolean)
 	Remotes.Fx:FireClient(p, "OfflineDone", res, away)
 end
 
-local function offline(p: Player, vialId: any)
+local function offline(p: Player, vialId: any, count: any)
 	local v = type(vialId) == "string" and Forms.vialById[vialId] or nil
 	if not v then return end
+	local want = (type(count) == "number" and MULTI[count]) and count or 1
 	if p:GetAttribute("InMatch") then return end
 	if os.clock() - (lastOffline[p] or 0) < 0.3 then return end
 	lastOffline[p] = os.clock()
@@ -142,11 +170,12 @@ local function offline(p: Player, vialId: any)
 	local o = Data.offline(p)
 	if not o then return end
 	local k = o[v.kind]
-	if #k.q >= Forms.OFFLINE.maxQueue then toast(p, "THE QUEUE IS FULL (" .. Forms.OFFLINE.maxQueue .. ")"); return end
-	if not Data.spend(p, v.price) then toast(p, "NOT ENOUGH CASH FOR " .. v.name); return end
 	settle(p, os.time()) -- (a finished one is out of the way first)
-	table.insert(k.q, v.id)
-	if #k.q == 1 then k.t = os.time() end
+	local n = math.min(want, Forms.OFFLINE.maxQueue - #k.q)
+	if n <= 0 then toast(p, "THE QUEUE IS FULL (" .. Forms.OFFLINE.maxQueue .. ")"); return end
+	if not Data.spend(p, v.price * n) then toast(p, "NOT ENOUGH CASH FOR " .. (n > 1 and (n .. " x ") or "") .. v.name); return end
+	for _ = 1, n do table.insert(k.q, v.id) end
+	if #k.q == n then k.t = os.time() end
 	publishOffline(p)
 	toast(p, v.name .. " IS OPENING  (" .. #k.q .. " IN THE QUEUE)", true)
 end
@@ -169,10 +198,15 @@ local function equip(p: Player, id: any)
 end
 
 function M.start()
-	Remotes.Forms.OnServerEvent:Connect(function(p, action, a)
-		if action == "buy" then buy(p, a)
-		elseif action == "offline" then offline(p, a)
-		elseif action == "equip" then equip(p, a) end
+	Remotes.Forms.OnServerEvent:Connect(function(p, action, a, b)
+		if action == "buy" then buy(p, a, b)
+		elseif action == "offline" then offline(p, a, b)
+		elseif action == "equip" then equip(p, a)
+		elseif action == "tutorial" and (a == "start" or a == "done") then
+			-- the jars / potions tutorial (Client/FormTutorial): starter cash once, then done
+			if Data.formTutorial(p, a) then Remotes.Fx:FireClient(p, "Toast", "+$20 STARTER CASH - GO SEE THE SELLERS", true) end
+			if a == "done" then task.spawn(Data.save, p) end
+		end
 	end)
 	Players.PlayerRemoving:Connect(function(p) lastBuy[p] = nil; lastOffline[p] = nil end)
 	-- the offline queues open by the clock (here, in a run's server too)

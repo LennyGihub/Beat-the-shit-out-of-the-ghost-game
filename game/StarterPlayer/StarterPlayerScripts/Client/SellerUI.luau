@@ -104,6 +104,10 @@ local function before(set: string): string
 	return ""
 end
 local setShown = "Camp" -- the set tab showing
+local mult = 1 -- x1 / x10 / x100 (the switch in the header)
+local multBtns = {} :: { [number]: TextButton }
+local multiPop: Frame? = nil
+local openBtns = {} :: { [string]: TextButton } -- vial id -> its OPEN button (Client/FormTutorial rings it)
 local tabs = {} :: { [string]: TextButton }
 
 local function clear(f: Instance) for _, c in f:GetChildren() do if c:IsA("GuiObject") then c:Destroy() end end end
@@ -133,6 +137,10 @@ local function refresh()
 			if br then Grunge.paint(br, on and ACCENT[kind]:Lerp(Color3.new(0, 0, 0), 0.45) or Color3.fromRGB(40, 33, 29)) end
 		end
 	end
+	for m, mb in multBtns do
+		local br = mb:FindFirstChild("Brush")
+		if br then Grunge.paint(br, m == mult and ACCENT[kind]:Lerp(Color3.new(0, 0, 0), 0.35) or Color3.fromRGB(40, 33, 29)) end
+	end
 	local mapLocked = not setOpen(setShown)
 	-- VIALS
 	clear(vialFrame)
@@ -161,33 +169,40 @@ local function refresh()
 			Grunge.text(card, { Text = mapLocked and ("CLEAR " .. before(setShown)) or ("LEVEL " .. v.level), Font = Grunge.FONT, AnchorPoint = Vector2.new(0.5, 0.5),
 				Position = UDim2.fromScale(0.66, 0.8), Size = UDim2.fromScale(0.58, 0.2), TextColor3 = Color3.fromRGB(255, 150, 80), Rotation = -3, ZIndex = 14 })
 		else
-			local can = cash >= v.price
-			local b = button(card, Forms.SELLER[kind].verb .. "  $" .. v.price, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.53, 0.81),
+			local cost = v.price * mult
+			local can = cash >= cost
+			local b = button(card, Forms.SELLER[kind].verb .. (mult > 1 and (" x" .. mult) or "") .. "  $" .. cost, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.53, 0.81),
 				Size = UDim2.fromScale(0.31, 0.26), ZIndex = 14, Rotation = -1 }, can and GREEN or DARK)
 			-- OPEN OFFLINE!: into the queue that opens by itself
-			Grunge.text(card, { Text = "OFFLINE: " .. mins(Forms.openTime(v)), Font = Grunge.TYPE, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.fromScale(0.84, 0.68),
+			Grunge.text(card, { Text = "OFFLINE: " .. mins(Forms.openTime(v)) .. (mult > 1 and " EACH" or ""), Font = Grunge.TYPE, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.fromScale(0.84, 0.68),
 				Size = UDim2.fromScale(0.28, 0.07), TextColor3 = Color3.fromRGB(150, 200, 255), ZIndex = 14 })
-			local ob = button(card, "OPEN OFFLINE!", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.84, 0.81),
+			local ob = button(card, mult > 1 and ("OFFLINE x" .. mult) or "OPEN OFFLINE!", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.84, 0.81),
 				Size = UDim2.fromScale(0.29, 0.26), ZIndex = 14, Rotation = 1 }, can and Color3.fromRGB(46, 84, 140) or DARK)
+			local n = mult
+			openBtns[v.id] = b
 			ob.Activated:Connect(function()
-				if (lp:GetAttribute("Cash") or 0) < v.price then
+				if (lp:GetAttribute("Cash") or 0) < v.price * n then
 					Sfx.play("Click"); statusT.Text = "NOT ENOUGH CASH - BEAT THE BUILDINGS TO EARN MORE"
 					return
 				end
 				Sfx.play("Click")
-				;(Remotes :: any).Forms:FireServer("offline", v.id)
+				;(Remotes :: any).Forms:FireServer("offline", v.id, n)
 			end)
 			b.Activated:Connect(function()
 				if waiting then return end
-				if (lp:GetAttribute("Cash") or 0) < v.price then
+				if (lp:GetAttribute("Cash") or 0) < v.price * n then
 					Sfx.play("Click"); statusT.Text = "NOT ENOUGH CASH - BEAT THE BUILDINGS TO EARN MORE"
 					return
 				end
 				Sfx.play("Click")
 				waiting = true
-				statusT.Text = kind == "stim" and "THE DOC HANDS YOU A JAR..." or "SHE POURS IT OUT OF THE POT..."
-				;(Remotes :: any).Forms:FireServer("buy", v.id)
-				task.delay(4, function() waiting = false end)
+				if n > 1 then
+					statusT.Text = (kind == "stim" and "THE DOC OPENS " or "SHE POURS ") .. n .. (kind == "stim" and " JARS..." or " POTIONS...")
+				else
+					statusT.Text = kind == "stim" and "THE DOC HANDS YOU A JAR..." or "SHE POURS IT OUT OF THE POT..."
+				end
+				;(Remotes :: any).Forms:FireServer("buy", v.id, n)
+				task.delay(n > 1 and 2.5 or 4, function() waiting = false end)
 			end)
 		end
 	end
@@ -237,10 +252,17 @@ function UI.close()
 	kindOpen = nil
 end
 function UI.isOpen(): boolean return panel ~= nil and panel.Visible end
+function UI.kind(): string? return panel ~= nil and panel.Visible and kindOpen or nil end
+-- the OPEN button of a vial while the panel shows it (nil otherwise)
+function UI.openButton(vialId: string): TextButton?
+	local b = openBtns[vialId]
+	return (b and b.Parent and panel.Visible) and b or nil
+end
 
 function UI.open(kind: string)
 	if lp:GetAttribute("InMatch") or not Forms.SELLER[kind] then return end
 	kindOpen = kind
+	if multiPop then multiPop:Destroy(); multiPop = nil end
 	-- the furthest map that is open (its goods are the newest)
 	setShown = Forms.sets[1]
 	for _, set in Forms.sets do if setOpen(set) then setShown = set end end
@@ -251,6 +273,83 @@ function UI.open(kind: string)
 	local s = panel:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
 	s.Parent = panel; s.Scale = 0.7
 	TweenService:Create(s, TweenInfo.new(0.25, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+end
+
+-- X10 / X100 opened (Fx "FormMulti": kind, vialId, results { form, new }, bestId, worn, prevId): a results screen
+-- over the panel: how many of each rarity, the new forms, the best one (WEAR IT if it isn't worn)
+function UI.multi(kind: string, vialId: string, results: any, bestId: string, worn: boolean, prevId: string)
+	waiting = false
+	if not panel or type(results) ~= "table" then return end
+	if multiPop then multiPop:Destroy() end
+	local v = Forms.vialById[vialId]
+	local best = Forms.byId[bestId]
+	local pop = Grunge.slab(panel, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.52), Size = UDim2.fromScale(0.78, 0.7), ZIndex = 40, Rotation = -0.6 },
+		Color3.fromRGB(16, 13, 12), 91, 6, false)
+	multiPop = pop
+	local sc = Instance.new("UIScale"); sc.Scale = 0.6; sc.Parent = pop
+	TweenService:Create(sc, TweenInfo.new(0.35, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+	Grunge.text(pop, { Text = #results .. " x " .. (v and v.name or "?"), Font = Grunge.HORROR, Position = UDim2.fromScale(0.05, 0.04), Size = UDim2.fromScale(0.9, 0.12),
+		TextColor3 = v and v.color or Grunge.PAPER, ZIndex = 43 })
+	-- the count of each rarity, ticking up
+	local counts = {} :: { [number]: number }
+	local newList = {} :: { string }
+	for _, r in results do
+		local fm = Forms.byId[r.form]
+		if fm then
+			counts[fm.rarity] = (counts[fm.rarity] or 0) + 1
+			if r.new then table.insert(newList, fm.name) end
+		end
+	end
+	local row = Grunge.frame(pop, { Position = UDim2.fromScale(0.05, 0.19), Size = UDim2.fromScale(0.9, 0.17), ZIndex = 42 })
+	local rl = Instance.new("UIListLayout"); rl.FillDirection = Enum.FillDirection.Horizontal; rl.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	rl.Padding = UDim.new(0.015, 0); rl.SortOrder = Enum.SortOrder.LayoutOrder; rl.Parent = row
+	local labels = {} :: { { t: TextLabel, n: number, name: string } }
+	for r = 1, #Forms.rarity do
+		local n = counts[r] or 0
+		if n > 0 then
+			local rr = Forms.rarity[r]
+			local chip = Grunge.brush(row, { Size = UDim2.fromScale(0.155, 1), LayoutOrder = r, ZIndex = 43 }, Color3.fromRGB(32, 26, 22), 300 + r, 10, false)
+			local t = Grunge.text(chip, { Text = "0", Font = Grunge.FONT, Position = UDim2.fromScale(0.05, 0.02), Size = UDim2.fromScale(0.9, 0.6), TextColor3 = rr.color, ZIndex = 45 })
+			Grunge.text(chip, { Text = rr.name, Font = Grunge.TYPE, Position = UDim2.fromScale(0.05, 0.62), Size = UDim2.fromScale(0.9, 0.32), TextColor3 = rr.color, ZIndex = 45 })
+			table.insert(labels, { t = t, n = n, name = rr.name })
+		end
+	end
+	task.spawn(function()
+		local t0 = os.clock()
+		while pop.Parent and os.clock() - t0 < 0.9 do
+			local k = math.clamp((os.clock() - t0) / 0.8, 0, 1)
+			for _, l in labels do l.t.Text = tostring(math.floor(l.n * k + 0.5)) end
+			task.wait()
+		end
+		for _, l in labels do l.t.Text = tostring(l.n) end
+	end)
+	-- the best one
+	if best then
+		local rr = Forms.rarity[best.rarity]
+		Grunge.text(pop, { Text = "BEST: " .. rr.name, Font = Grunge.TYPE, Position = UDim2.fromScale(0.05, 0.4), Size = UDim2.fromScale(0.9, 0.06), TextColor3 = rr.color, ZIndex = 43 })
+		local bn = Grunge.text(pop, { Text = best.name, Font = Grunge.HORROR, Position = UDim2.fromScale(0.05, 0.46), Size = UDim2.fromScale(0.9, 0.13), TextColor3 = best.color, ZIndex = 43, Rotation = -1.5 })
+		local bs = Instance.new("UIScale"); bs.Scale = 2; bs.Parent = bn
+		task.delay(0.9, function()
+			TweenService:Create(bs, TweenInfo.new(0.35, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+			Sfx.play(best.rarity >= 3 and "MagicBurst" or "FormMagic", { Volume = 0.8 })
+		end)
+		Grunge.text(pop, { Text = table.concat(Forms.lines(best), "   "), Font = Grunge.TYPE, Position = UDim2.fromScale(0.05, 0.6), Size = UDim2.fromScale(0.9, 0.055),
+			TextColor3 = Color3.fromRGB(150, 220, 110), ZIndex = 43 })
+	end
+	Grunge.text(pop, { Text = #newList > 0 and ("NEW: " .. table.concat(newList, ", ")) or "NOTHING NEW THIS TIME", Font = Grunge.TYPE, Position = UDim2.fromScale(0.05, 0.67),
+		Size = UDim2.fromScale(0.9, 0.07), TextWrapped = true, TextColor3 = #newList > 0 and Color3.fromRGB(255, 215, 90) or Color3.fromRGB(160, 150, 135), ZIndex = 43 })
+	-- WEAR IT (the best, when it isn't the worn one) / OK
+	local wornNow = lp:GetAttribute(kind == "stim" and "FormStim" or "FormPotion")
+	local function close() if multiPop == pop then multiPop = nil end pop:Destroy() end
+	if best and wornNow ~= best.id then
+		local w = button(pop, "WEAR " .. best.name, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.32, 0.86), Size = UDim2.fromScale(0.4, 0.13), ZIndex = 44, Rotation = -1 }, GREEN)
+		w.Activated:Connect(function() Sfx.play("Click"); (Remotes :: any).Forms:FireServer("equip", best.id); close() end)
+	end
+	local ok = button(pop, worn and "WORN - OK" or "OK", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale((best and wornNow ~= best.id) and 0.72 or 0.5, 0.86),
+		Size = UDim2.fromScale(0.28, 0.13), ZIndex = 44, Rotation = 1 }, DARK)
+	ok.Activated:Connect(function() Sfx.play("Click"); close() end)
+	statusT.Text = ""
+	local _ = prevId
 end
 
 -- a buy went wrong (Fx "FormResult")
@@ -284,6 +383,16 @@ function UI.init()
 	local close = button(panel, "CLOSE", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(0.96, 0.03), Size = UDim2.fromScale(0.15, 0.065), ZIndex = 12, Rotation = 1.5, Modal = true }, DARK)
 	close.Activated:Connect(function() Sfx.play("Click"); UI.close() end)
 	Platform.menu(panel, function() UI.close() end)
+	-- X1 / X10 / X100: how many the buttons open at once
+	for i, m in { 1, 10, 100 } do
+		local mb = button(panel, "x" .. m, { Position = UDim2.fromScale(0.66 + (i - 1) * 0.1, 0.112), Size = UDim2.fromScale(0.09, 0.05), ZIndex = 12, Rotation = i == 2 and 1 or -1 }, DARK)
+		mb.Activated:Connect(function()
+			Sfx.play("Click")
+			mult = m
+			refresh()
+		end)
+		multBtns[m] = mb
+	end
 	-- one tab per map with a set (each map brings 4 new jars and 4 new potions)
 	for i, set in Forms.sets do
 		local t = button(panel, set, { Position = UDim2.fromScale(0.04 + (i - 1) * 0.285, 0.172), Size = UDim2.fromScale(0.27, 0.058), ZIndex = 12, Rotation = (i % 2 == 0) and 1 or -1 }, DARK)
@@ -333,6 +442,11 @@ function UI.init()
 	end)
 	-- Studio test hook: player attribute DebugSeller = "stim" | "potion" opens that panel ("" closes it)
 	if RunService:IsStudio() then
+		-- DebugSellerMult = 1 | 10 | 100 sets the switch
+		lp:GetAttributeChangedSignal("DebugSellerMult"):Connect(function()
+			local m = lp:GetAttribute("DebugSellerMult")
+			if m == 1 or m == 10 or m == 100 then mult = m; refresh() end
+		end)
 		lp:GetAttributeChangedSignal("DebugSeller"):Connect(function()
 			local k = lp:GetAttribute("DebugSeller")
 			if k == "stim" or k == "potion" then UI.open(k) else UI.close() end

@@ -18,7 +18,7 @@
 --   4 THE WAY OUT: in the front hall the shut doors burst open; a train waits across the yard, its door open (this
 --     screen's own copy of ReplicatedStorage.Intro.Train on its own stretch of track). Out across the porch, down the
 --     yard, up into the carriage, to a window seat; the door shuts and it pulls away, the house sliding off past the
---     window. "BEAT EVERY GHOST!". Still at the window: out of the tunnel at the park's station (Lobby.Station),
+--     window. Black, and the player's own thought in small white text: "I must kill every ghost.". Still at the window: out of the tunnel at the park's station (Lobby.Station),
 --     along the platform, stop; the door opens, the player steps out and walks off toward the park, where the lobby's
 --     camera takes over (no black screen); the train backs out into the tunnel.
 -- SKIP (the button, or a controller's Select) ends it at any time but in the fight.
@@ -1271,29 +1271,23 @@ function Intro.play(onDone: (() -> ())?)
 		camRate = 12
 		sleep(3.0)
 
-		-- the title: black, and it slams in
-		shake(0.3)
+		-- black, and the player's own thought, small and white like a line of dialogue: "I must kill every ghost."
 		local card = Grunge.frame(gui, { BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 27 })
-		TweenService:Create(card, TweenInfo.new(0.3), { BackgroundTransparency = 0 }):Play()
-		sleep(0.35)
-		local title = Grunge.text(gui, { Text = "BEAT EVERY GHOST!", Font = Grunge.HORROR, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.46),
-			Size = UDim2.fromScale(0.8, 0.2), TextColor3 = Color3.fromRGB(235, 50, 35), TextStrokeTransparency = 0, TextTransparency = 1, ZIndex = 28 })
-		local tsc = Instance.new("UIScale")
-		tsc.Parent = title
-		-- (big: about three quarters of the screen's width - TextScaled alone stops at 100 px)
-		task.wait()
-		local want = math.clamp(cam.ViewportSize.X * 0.72 / math.max(1, title.TextBounds.X), 1, 2.4)
-		tsc.Scale = want * 2.2
-		title.TextTransparency = 0
-		TweenService:Create(tsc, TweenInfo.new(0.35, Enum.EasingStyle.Back), { Scale = want }):Play()
-		task.delay(0.3, function()
-			if ended then return end
-			Sfx.play("PunchHeavy", { Volume = 1.2, PlaybackSpeed = 0.4 })
-			Sfx.play("Thunder", { Volume = 0.8, PlaybackSpeed = 1.1 })
-			shake(0.6); kick(5)
+		TweenService:Create(card, TweenInfo.new(0.5), { BackgroundTransparency = 0 }):Play()
+		sleep(0.55)
+		local title = Grunge.text(gui, { Text = "I must Kill every Ghost.", Font = Grunge.TYPE, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+			Size = UDim2.fromScale(0.5, 0.045), TextColor3 = Color3.new(1, 1, 1), TextStrokeTransparency = 0.6, ZIndex = 28 })
+		local tmax = Instance.new("UITextSizeConstraint"); tmax.MaxTextSize = 30; tmax.Parent = title
+		title.MaxVisibleGraphemes = 0
+		task.spawn(function()
+			-- (typed out like someone thinking it)
+			for i = 1, #title.Text do
+				if ended then return end
+				title.MaxVisibleGraphemes = i
+				if i % 3 == 0 then Sfx.play("Click", { Volume = 0.12, PlaybackSpeed = 1.6 }) end
+				task.wait(0.045)
+			end
 		end)
-		local tPulse = RunService.Heartbeat:Connect(function() title.Rotation = math.sin(os.clock() * 5) * 1.2 end)
-		table.insert(conns, tPulse)
 		-- behind the title: back to the park (the server takes the player out of the house)
 		hrpP.Anchored = false
 		rem:FireServer("done")
@@ -1303,7 +1297,7 @@ function Intro.play(onDone: (() -> ())?)
 			return not lp:GetAttribute("InMatch") and spawnPart ~= nil and (hrpP.Position - spawnPart.Position).Magnitude < 80
 		end
 		while not inPark() and os.clock() - w0 < 6 do task.wait(0.1) end
-		task.wait(math.max(0, 1.4 - (os.clock() - w0))) -- (the title stays up a moment)
+		task.wait(math.max(0, 2.2 - (os.clock() - w0))) -- (the line stays up a moment)
 		if not inPark() or not spawnPart then
 			finish() -- (not back in the park: the plain way out)
 			return

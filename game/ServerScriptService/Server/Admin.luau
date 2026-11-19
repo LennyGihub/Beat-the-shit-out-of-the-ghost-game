@@ -59,7 +59,7 @@ local function find(list: { any }, word: string?): any
 	return nil
 end
 
-local HELP = "cash <n> | xp <n> | camp all|reset|<n> | trips reset|empty|<n> | form <id>|all|off | offline finish | offline pity <h> | runcash <n> | give <item> | clearitems | ult <id> | allults | allmaps | heal | brut | god | start [map] [diff] | "
+local HELP = "cash <n> | xp <n> | camp all|reset|<n> | trips reset|empty|<n> | form <id>|all|off|tutorial | offline finish | offline pity <h> | runcash <n> | give <item> | clearitems | ult <id> | allults | allmaps | heal | brut | god | start [map] [diff] | "
 	.. "revive | money2 | glock | vip | doubleult | secondchance | next | killghost | bring | ragdoll [power] | monster <id|off> | boss <id> [tier 1-3] | evolved on|off|<tier> | event plane|van|train | leave | endrun"
 
 local CMD: { [string]: (p: Player, a: string?, b: string?) -> (boolean, string) } = {}
@@ -98,6 +98,15 @@ CMD.form = function(p, a)
 	if a == "all" then
 		for _, fm in Forms.list do Data.addForm(p, fm.id) end
 		return true, #Forms.list .. " forms given"
+	end
+	if a == "tutorial" then
+		-- (the jars / potions tutorial again: not done, starter cash again, no form owned)
+		local d = Data.get(p)
+		if not d then return false, "No save" end
+		d.FormTut = false; d.FormTutCash = false; d.Forms = {}; d.FormStim = nil; d.FormPotion = nil
+		Data.refresh(p)
+		Combat.refreshHealth(p)
+		return true, "Forms wiped, the jars / potions tutorial will start"
 	end
 	if a == "off" then
 		local d = Data.get(p)

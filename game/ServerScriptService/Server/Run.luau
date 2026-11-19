@@ -636,7 +636,9 @@ function Run.configure(mapId: string?, diffId: string?, friendlyFire: boolean?)
 	stage = Campaign.stage(mapId)
 	if stage and not MapLoader.exists(stage.id) then warn("[Run] the building " .. stage.id .. " is not built yet: the Mansion stands in for it") end
 	RS:SetAttribute("Stage", stage and stage.id or "")
-	Ghost.diff = { hp = diff.hp, dmg = diff.dmg, speed = diff.speed, enrage = diff.enrage }
+	-- the later maps' monsters are tougher (Campaign map hp / dmg): they need the later maps' forms
+	local cm = stage and Campaign.mapById[stage.map]
+	Ghost.diff = { hp = diff.hp * (cm and cm.hp or 1), dmg = diff.dmg * (cm and cm.dmg or 1), speed = diff.speed, enrage = diff.enrage }
 	RS:SetAttribute("Difficulty", diff.id)
 end
 

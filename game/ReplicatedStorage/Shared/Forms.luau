@@ -135,6 +135,56 @@ for _, x in {
 	f({ id = "Encore", kind = "potion", name = "ENCORE", rarity = 6, color = C(255, 215, 90), hp = 1.15, sta = 0.98,
 		desc = "Whatever happens, you come back for one more." }),
 } do table.insert(List, x) end
+-- BLACKWATER HARBOR (map 3): stronger again at every rarity
+SET = "Harbor"
+for _, x in {
+	-- fist forms
+	f({ id = "SaltKnuckles", kind = "stim", name = "SALT KNUCKLES", rarity = 1, color = C(220, 230, 235), dmg = 0.16, knock = 0.14,
+		desc = "Sea salt crusts over your knuckles. It stings them, not you." }),
+	f({ id = "Barnacle", kind = "stim", name = "BARNACLE FISTS", rarity = 1, color = C(150, 140, 120), dmg = 0.12, knock = 0.24,
+		desc = "Shells grow over your hands. Hard as rock." }),
+	f({ id = "Harpoon", kind = "stim", name = "HARPOON", rarity = 2, color = C(170, 190, 200), dmg = 0.3, knock = 0.18,
+		desc = "Every punch goes straight through, like a barbed spear." }),
+	f({ id = "RiptideFists", kind = "stim", name = "RIPTIDE", rarity = 2, color = C(60, 160, 200), dmg = 0.18, knock = 0.46,
+		desc = "Your hits pull them under and throw them out." }),
+	f({ id = "Anchorhand", kind = "stim", name = "ANCHORHAND", rarity = 3, color = C(90, 96, 110), dmg = 0.42, knock = 0.34,
+		desc = "Your fists weigh a ton. They drop like anchors." }),
+	f({ id = "Stormfist", kind = "stim", name = "STORMFIST", rarity = 3, color = C(120, 170, 255), dmg = 0.3, knock = 0.75,
+		desc = "Thunder rolls every time you swing." }),
+	f({ id = "KrakenGrip", kind = "stim", name = "KRAKEN GRIP", rarity = 4, color = C(130, 60, 160), dmg = 0.66, knock = 0.5,
+		desc = "Your arms feel like they have more than one elbow." }),
+	f({ id = "Tidebreaker", kind = "stim", name = "TIDEBREAKER", rarity = 4, color = C(40, 120, 220), dmg = 0.45, knock = 1.1,
+		desc = "You punch the sea back where it came from." }),
+	f({ id = "LighthouseFist", kind = "stim", name = "LIGHTHOUSE FISTS", rarity = 5, color = C(255, 236, 150), dmg = 0.9, knock = 0.85,
+		desc = "Your fists burn like the lamp at the top of the tower." }),
+	f({ id = "DeepFists", kind = "stim", name = "FISTS OF THE DEEP", rarity = 5, color = C(30, 200, 180), dmg = 1.15, knock = 0.6,
+		desc = "Cold, dark and heavy. Things down there don't feel pain." }),
+	f({ id = "DrownedKing", kind = "stim", name = "THE DROWNED KING", rarity = 6, color = C(40, 255, 200), dmg = 1.5, knock = 1.4,
+		desc = "The sea gave you its crown. It wants something back." }),
+	-- body forms
+	f({ id = "SeaLegs", kind = "potion", name = "SEA LEGS", rarity = 1, color = C(110, 180, 220), hp = 0.18, sta = 0.12,
+		desc = "Nothing knocks you over. Not even a wave." }),
+	f({ id = "Brine", kind = "potion", name = "BRINE BLOOD", rarity = 1, color = C(160, 200, 170), hp = 0.1, sta = 0.26,
+		desc = "Salt water in your veins. You never get tired." }),
+	f({ id = "Oilskin", kind = "potion", name = "OILSKIN", rarity = 2, color = C(220, 190, 60), hp = 0.34, sta = 0.14,
+		desc = "The rain runs off you. So do the claws." }),
+	f({ id = "Gills", kind = "potion", name = "GILLS", rarity = 2, color = C(80, 200, 170), hp = 0.16, sta = 0.48,
+		desc = "You breathe easier than ever. Don't look at your neck." }),
+	f({ id = "Ironclad", kind = "potion", name = "IRONCLAD", rarity = 3, color = C(130, 140, 150), hp = 0.54, sta = 0.28,
+		desc = "Plated like an old warship." }),
+	f({ id = "Galeforce", kind = "potion", name = "GALEFORCE", rarity = 3, color = C(180, 220, 255), hp = 0.26, sta = 0.74,
+		desc = "You move like the wind off the sea." }),
+	f({ id = "Leviathan", kind = "potion", name = "LEVIATHAN", rarity = 4, color = C(40, 110, 140), hp = 0.82, sta = 0.42,
+		desc = "Huge, slow to anger, impossible to sink." }),
+	f({ id = "StormRider", kind = "potion", name = "STORM RIDER", rarity = 4, color = C(150, 120, 255), hp = 0.46, sta = 1.1,
+		desc = "The storm carries you. It never sets you down." }),
+	f({ id = "Lighthouse", kind = "potion", name = "THE LIGHTHOUSE", rarity = 5, color = C(255, 230, 140), hp = 1.1, sta = 0.8,
+		desc = "A light inside you that the dark can't put out." }),
+	f({ id = "Undertow", kind = "potion", name = "UNDERTOW", rarity = 5, color = C(20, 160, 170), hp = 0.8, sta = 1.15,
+		desc = "Whatever pulls at you, you pull back harder." }),
+	f({ id = "BlackTide", kind = "potion", name = "THE BLACK TIDE", rarity = 6, color = C(60, 255, 220), hp = 1.6, sta = 1.4,
+		desc = "The harbor's whole black sea, in one body." }),
+} do table.insert(List, x) end
 
 -- odds = weights for rarity 1..6, in % (the rare ones are very rare: the jars are cheap, open lots of them)
 local ODDS = {
@@ -158,17 +208,26 @@ local Vials: { Vial } = {
 	V("Camp", 3, { id = "HexPotion", kind = "potion", name = "HEX POTION", level = 6, price = 25, color = C(200, 70, 200), desc = "It moves in the bottle when you don't look." }),
 	V("Camp", 4, { id = "CauldronPotion", kind = "potion", name = "BLACK CAULDRON", level = 10, price = 50, color = C(255, 60, 60), desc = "From the bottom of her oldest pot." }),
 	-- MOONLIGHT CARNIVAL (open once Camp Hollowmere is cleared)
-	V("Carnival", 1, { id = "CandyEcto", kind = "stim", name = "CANDY GOO", level = 1, price = 15, color = C(255, 140, 200), desc = "Off the candy floss machine. It still spins." }),
-	V("Carnival", 2, { id = "PaintEcto", kind = "stim", name = "GREASEPAINT GOO", level = 5, price = 35, color = C(240, 236, 228), desc = "Off a clown's face. Don't ask which clown." }),
-	V("Carnival", 3, { id = "MirrorEcto", kind = "stim", name = "MIRROR GOO", level = 9, price = 75, color = C(190, 220, 240), desc = "Your reflection moves before you do." }),
-	V("Carnival", 4, { id = "BigTopEcto", kind = "stim", name = "BIG TOP GOO", level = 13, price = 150, color = C(230, 40, 60), desc = "From under the ring. The crowd still cheers in it." }),
-	V("Carnival", 1, { id = "CaramelPotion", kind = "potion", name = "CARAMEL POTION", level = 1, price = 15, color = C(220, 150, 60), desc = "Toffee apples, boiled down to a spell." }),
-	V("Carnival", 2, { id = "FortunePotion", kind = "potion", name = "FORTUNE POTION", level = 5, price = 35, color = C(170, 90, 240), desc = "Madame Fortune's recipe. She wasn't using it." }),
-	V("Carnival", 3, { id = "CarouselPotion", kind = "potion", name = "CAROUSEL POTION", level = 9, price = 75, color = C(90, 210, 200), desc = "Everything spins, then you feel great." }),
-	V("Carnival", 4, { id = "MidnightPotion", kind = "potion", name = "MIDNIGHT SHOW", level = 13, price = 150, color = C(255, 200, 80), desc = "Brewed in the Big Top after closing time." }),
+	V("Carnival", 1, { id = "CandyEcto", kind = "stim", name = "CANDY GOO", level = 11, price = 15, color = C(255, 140, 200), desc = "Off the candy floss machine. It still spins." }),
+	V("Carnival", 2, { id = "PaintEcto", kind = "stim", name = "GREASEPAINT GOO", level = 12, price = 35, color = C(240, 236, 228), desc = "Off a clown's face. Don't ask which clown." }),
+	V("Carnival", 3, { id = "MirrorEcto", kind = "stim", name = "MIRROR GOO", level = 14, price = 75, color = C(190, 220, 240), desc = "Your reflection moves before you do." }),
+	V("Carnival", 4, { id = "BigTopEcto", kind = "stim", name = "BIG TOP GOO", level = 16, price = 150, color = C(230, 40, 60), desc = "From under the ring. The crowd still cheers in it." }),
+	V("Carnival", 1, { id = "CaramelPotion", kind = "potion", name = "CARAMEL POTION", level = 11, price = 15, color = C(220, 150, 60), desc = "Toffee apples, boiled down to a spell." }),
+	V("Carnival", 2, { id = "FortunePotion", kind = "potion", name = "FORTUNE POTION", level = 12, price = 35, color = C(170, 90, 240), desc = "Madame Fortune's recipe. She wasn't using it." }),
+	V("Carnival", 3, { id = "CarouselPotion", kind = "potion", name = "CAROUSEL POTION", level = 14, price = 75, color = C(90, 210, 200), desc = "Everything spins, then you feel great." }),
+	V("Carnival", 4, { id = "MidnightPotion", kind = "potion", name = "MIDNIGHT SHOW", level = 16, price = 150, color = C(255, 200, 80), desc = "Brewed in the Big Top after closing time." }),
+	-- BLACKWATER HARBOR (open once the Moonlight Carnival is cleared)
+	V("Harbor", 1, { id = "SaltEcto", kind = "stim", name = "SEA FOAM GOO", level = 17, price = 40, color = C(220, 236, 240), desc = "Scooped off the harbor wall at high tide." }),
+	V("Harbor", 2, { id = "NetEcto", kind = "stim", name = "NET GOO", level = 18, price = 90, color = C(150, 190, 120), desc = "Wrung out of a fishing net that pulled up something wrong." }),
+	V("Harbor", 3, { id = "LampEcto", kind = "stim", name = "LAMP OIL GOO", level = 20, price = 180, color = C(255, 220, 110), desc = "From the lighthouse lamp. It still glows." }),
+	V("Harbor", 4, { id = "AbyssEcto", kind = "stim", name = "ABYSS GOO", level = 22, price = 360, color = C(40, 255, 200), desc = "From the bottom of the harbor. Nobody has been down there twice." }),
+	V("Harbor", 1, { id = "SeawaterPotion", kind = "potion", name = "SEAWATER POTION", level = 17, price = 40, color = C(80, 160, 210), desc = "Salt, kelp and a whisper of a spell." }),
+	V("Harbor", 2, { id = "StormPotion", kind = "potion", name = "STORM POTION", level = 18, price = 90, color = C(150, 120, 255), desc = "Bottled in a storm. It still thunders." }),
+	V("Harbor", 3, { id = "PearlPotion", kind = "potion", name = "PEARL POTION", level = 20, price = 180, color = C(236, 230, 250), desc = "A black pearl dissolved in moonlight." }),
+	V("Harbor", 4, { id = "TidePotion", kind = "potion", name = "BLACK TIDE BREW", level = 22, price = 360, color = C(30, 220, 190), desc = "The whole harbor boiled down to one bottle." }),
 }
 -- the sets in order (the campaign maps that have one)
-local SETS = { "Camp", "Carnival" }
+local SETS = { "Camp", "Carnival", "Harbor" }
 
 local byId: { [string]: Form } = {}
 for _, x in List do byId[x.id] = x end
@@ -195,7 +254,7 @@ local function setIndex(set: string): number return table.find(SETS, set) or 99 
 
 -- OPEN OFFLINE (Server/Forms): seconds one jar / potion takes by its tier (1..4), how many can wait in a kind's queue,
 -- and the total opening time after which the next offline result is RARE or better (rarity 3+)
-Forms.OFFLINE = { times = { 180, 360, 600, 900 }, maxQueue = 50, pity = 24 * 3600, pityRarity = 3 }
+Forms.OFFLINE = { times = { 180, 360, 600, 900 }, maxQueue = 200, pity = 24 * 3600, pityRarity = 3 }
 function Forms.openTime(v: Vial): number return Forms.OFFLINE.times[v.tier] or 600 end
 
 -- the level the set's best jar / potion needs (clearing that map brings a player to it: Server/Data.mapLevel)

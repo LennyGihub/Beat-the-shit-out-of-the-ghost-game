@@ -261,6 +261,9 @@ local function setOpen(open: boolean)
 		local s = panel:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
 		s.Parent = panel; s.Scale = 0.7
 		TweenService:Create(s, TweenInfo.new(0.25, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+		-- (no train ticket left: said right away)
+		local left = Campaign.ticketsLeft(lp:GetAttribute("TripsLeft"), lp:GetAttribute("TripsReset"), workspace:GetServerTimeNow())
+		if left <= 0 and (LobbyUI :: any).noTickets then task.delay(0.3, (LobbyUI :: any).noTickets) end
 	end
 	if onToggle then onToggle(open) end
 end
@@ -352,6 +355,30 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 	close.Activated:Connect(function() Sfx.play("Click"); setOpen(false) end)
 	Platform.menu(panel, function() setOpen(false) end)
 	-- the train tickets (Campaign.TRIPS: every trip to a building uses one)
+	local function ticketsNow(): (number, number)
+		local now = workspace:GetServerTimeNow()
+		return Campaign.ticketsLeft(lp:GetAttribute("TripsLeft"), lp:GetAttribute("TripsReset"), now), (tonumber(lp:GetAttribute("TripsReset")) or 0) - now
+	end
+	-- no ticket left: a big red message over the panel (pressing CREATE / START, or opening it)
+	local noTicket = Grunge.slab(panel, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.62, 0.24), Visible = false, ZIndex = 30, Rotation = -1.5 },
+		Color3.fromRGB(24, 12, 10), 61, 4, false)
+	local ntTitle = Grunge.text(noTicket, { Text = "YOU HAVE NO TRAIN TICKETS", Font = Grunge.HORROR, Position = UDim2.fromScale(0.05, 0.08), Size = UDim2.fromScale(0.9, 0.45),
+		TextColor3 = Color3.fromRGB(235, 50, 35), ZIndex = 33 })
+	local ntSub = Grunge.text(noTicket, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0.05, 0.58), Size = UDim2.fromScale(0.9, 0.28), ZIndex = 33 })
+	local ntScale = Instance.new("UIScale"); ntScale.Parent = noTicket
+	local ntUntil = 0
+	local function showNoTicket()
+		local _, wait = ticketsNow()
+		ntSub.Text = Campaign.TRIPS.max .. " NEW TICKETS IN " .. Campaign.clock(wait) .. "  -  OPEN JARS AND POTIONS MEANWHILE"
+		noTicket.Visible = true
+		ntScale.Scale = 0.6
+		TweenService:Create(ntScale, TweenInfo.new(0.35, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+		ntUntil = os.clock() + 3.5
+		Sfx.play("Click", { PlaybackSpeed = 0.6 })
+		task.delay(3.6, function() if os.clock() >= ntUntil then noTicket.Visible = false end end)
+	end
+	(LobbyUI :: any).noTickets = showNoTicket
+	local _ = ntTitle
 	local ticketT = Grunge.text(panel, { Text = "", Font = Grunge.FONT, AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(0.79, 0.03), Size = UDim2.fromScale(0.26, 0.05),
 		TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 11, Rotation = 1 })
 	local ticketSub = Grunge.text(panel, { Text = "", Font = Grunge.TYPE, AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(0.79, 0.083), Size = UDim2.fromScale(0.26, 0.032),
@@ -392,7 +419,9 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 				Sfx.play("Click")
 				if Campaign.stageOpen(progress(), stg.id) then
 					pickMap = stg.id
-					status.Text = stg.desc
+					local cmx = Campaign.mapById[stg.map]
+					local tough = cmx and (cmx.hp or 1) > 1 and ("  -  MONSTERS x" .. cmx.hp .. " HEALTH, x" .. (cmx.dmg or 1) .. " DAMAGE: WEAR YOUR BEST FORMS") or ""
+					status.Text = stg.desc .. tough
 				else
 					status.Text = "CLEAR THE BUILDING BEFORE " .. stg.name .. " FIRST"
 				end
@@ -439,7 +468,10 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 	ffBtn = button(createPage, "FRIENDLY FIRE: ON", { Position = UDim2.fromScale(0, 0.922), Size = UDim2.fromScale(0.55, 0.07), BackgroundColor3 = DARK, ZIndex = 12, Font = Grunge.TYPE })
 	ffBtn.Activated:Connect(function() Sfx.play("Click"); pickFF = not pickFF; refreshPicks() end)
 	local create = button(createPage, "CREATE", { Position = UDim2.fromScale(0.58, 0.84), Size = UDim2.fromScale(0.42, 0.13), BackgroundColor3 = GREEN, ZIndex = 12, Rotation = -1.5 })
-	create.Activated:Connect(function() Sfx.play("Click"); Remotes.Party:FireServer("create", pickMap, pickDiff, pickSize, pickPrivate, pickFF) end)
+	create.Activated:Connect(function()
+		if (ticketsNow()) <= 0 then showNoTicket(); return end
+		Sfx.play("Click"); Remotes.Party:FireServer("create", pickMap, pickDiff, pickSize, pickPrivate, pickFF)
+	end)
 
 	-- left half when you are in a lobby: your lobby
 	mine = Grunge.frame(panel, { Position = UDim2.fromScale(0.04, 0.14), Size = UDim2.fromScale(0.46, 0.82), ZIndex = 10, Visible = false })
@@ -463,7 +495,10 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 	local il = Instance.new("UIListLayout"); il.Padding = UDim.new(0, 4); il.SortOrder = Enum.SortOrder.LayoutOrder; il.Parent = inviteList
 	mineNames = Grunge.text(mine, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0, 0.2), Size = UDim2.fromScale(1, 0.08), TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, ZIndex = 11 })
 	startBtn = button(mine, "START", { Position = UDim2.fromScale(0, 0.7), Size = UDim2.fromScale(0.55, 0.16), BackgroundColor3 = GREEN, ZIndex = 12, Rotation = -1.5 })
-	startBtn.Activated:Connect(function() Sfx.play("Click"); Remotes.Party:FireServer("start") end)
+	startBtn.Activated:Connect(function()
+		if (ticketsNow()) <= 0 then showNoTicket(); return end
+		Sfx.play("Click"); Remotes.Party:FireServer("start")
+	end)
 	local leave = button(mine, "LEAVE", { Position = UDim2.fromScale(0.6, 0.72), Size = UDim2.fromScale(0.4, 0.12), BackgroundColor3 = DARK, ZIndex = 12 })
 	leave.Activated:Connect(function() Sfx.play("Click"); Remotes.Party:FireServer("leave") end)
 

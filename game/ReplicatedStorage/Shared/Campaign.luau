@@ -8,12 +8,14 @@
 -- (1 Easy .. 4 Nightmare).
 export type Stage = { id: string, map: string, index: number, name: string, monster: string, phases: number,
 	level: number, desc: string }
-export type CMap = { id: string, name: string, desc: string, color: Color3, stages: { Stage }, soon: boolean? }
+export type CMap = { id: string, name: string, desc: string, color: Color3, stages: { Stage }, soon: boolean?, hp: number?, dmg: number? }
 
 local function C(r, g, b) return Color3.fromRGB(r, g, b) end
 
 local List: { CMap } = {
-	{ id = "Camp", name = "CAMP HOLLOWMERE", color = C(196, 120, 60),
+	-- hp / dmg: the map's monsters are this much tougher than their level makes them (Run.configure), map after map,
+	-- so the later maps need the later maps' forms
+	{ id = "Camp", name = "CAMP HOLLOWMERE", color = C(196, 120, 60), hp = 1, dmg = 1,
 		desc = "A summer camp in the woods at night. Cabins, a lake, a mess hall and a campfire nobody put out.",
 		stages = {
 			{ id = "Camp_Bunkhouse", map = "Camp", index = 1, name = "THE BUNKHOUSE", monster = "Antlered", phases = 1, level = 1,
@@ -27,7 +29,7 @@ local List: { CMap } = {
 			{ id = "Camp_Lodge", map = "Camp", index = 5, name = "THE MAIN LODGE", monster = "Caller", phases = 2, level = 5,
 				desc = "The office phone is ringing. He wants you to pick up." },
 		} },
-	{ id = "Carnival", name = "MOONLIGHT CARNIVAL", color = C(200, 70, 130),
+	{ id = "Carnival", name = "MOONLIGHT CARNIVAL", color = C(200, 70, 130), hp = 1.4, dmg = 1.25,
 		desc = "An abandoned funfair. The big top, the mirrors, the rides and the ghost train: every act still plays.",
 		stages = {
 			{ id = "Carn_BigTop", map = "Carnival", index = 1, name = "THE BIG TOP", monster = "Ringmaster", phases = 1, level = 6,

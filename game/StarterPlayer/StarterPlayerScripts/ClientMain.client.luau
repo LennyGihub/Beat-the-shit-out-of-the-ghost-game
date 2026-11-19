@@ -69,6 +69,7 @@ local SellerUI = require(Client.SellerUI) -- Doc Mercy's ectoplasm, Mother Moth'
 local FormCine = require(Client.FormCine) -- the first-person ectoplasm jar / potion
 local FormLook = require(Client.FormLook) -- worn forms on every character
 local OfflineOpen = require(Client.OfflineOpen) -- jars / potions opening by themselves (bottom middle)
+local FormTutorial = require(Client.FormTutorial) -- after the intro: how to get jars and potions
 local CampFx = require(Client.CampFx) -- Camp Hollowmere's monsters' moves (rafter drop, hook, flood, torch, straw)
 local CarnivalFx = require(Client.CarnivalFx) -- the Moonlight Carnival's monsters' moves (crates, shockwave, curse, whip)
 
@@ -122,6 +123,7 @@ SellerUI.init()
 FormCine.init(Fx, HUD)
 FormLook.init(function() return FormCine.busy() end) -- (your own look hides during the jar / potion cinematic)
 OfflineOpen.init(function() return FormCine.busy() end)
+FormTutorial.init(SellerUI, FormCine, Intro)
 CampFx.init(Fx)
 CarnivalFx.init(Fx)
 -- lobby screen: PLAY (create / join lobbies) and SHOP buttons, friend booster
@@ -227,6 +229,8 @@ Remotes.Fx.OnClientEvent:Connect(function(kind: string, ...)
 		local k = SellerUI.rolled()
 		FormCine.onDone = function() if k and not lp:GetAttribute("InMatch") then SellerUI.open(k) end end
 		task.spawn(FormCine.play, args[1], args[2], args[3], args[4], args[5], args[6])
+	elseif kind == "FormMulti" then
+		SellerUI.multi(...)
 	elseif kind == "OfflineDone" then
 		OfflineOpen.done(...)
 	elseif kind == "StageRepick" then

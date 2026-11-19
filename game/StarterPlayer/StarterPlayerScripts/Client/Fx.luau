@@ -525,6 +525,15 @@ function Fx.applyZone(zone: string, dt: number)
 			p = table.clone(p)
 			for k, v in m.light do p[k] = v end
 		end
+		-- (2026-11-19, the user: every map was too dark, black corners) every house is lit brighter than its own look:
+		-- a floor under the ambient (it fills the corners the lamps don't reach), more exposure, a softer contrast
+		p = table.clone(p)
+		local a0 = p.Ambient :: Color3
+		-- (the PS2 woods and stones are very dark: a dark colour under a weak ambient stays black, so the floor is high)
+		p.Ambient = Color3.new(math.max(a0.R * 4, 0.47), math.max(a0.G * 4, 0.45), math.max(a0.B * 4, 0.43))
+		p.Exposure = (p.Exposure or 0) + 0.35
+		p.Contrast = math.min(p.Contrast or 0.2, 0.18)
+		p.Brightness = math.max(p.Brightness or 1.4, 1.5)
 	end
 	local a = zone == currentZone and math.min(1, dt * 2) or 1
 	currentZone = zone

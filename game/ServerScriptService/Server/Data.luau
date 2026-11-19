@@ -29,6 +29,7 @@ local function fresh()
 		Campaign = {} :: { [string]: number }, Forms = {} :: { [string]: boolean }, FormStim = nil :: string?, FormPotion = nil :: string?,
 		Tutorial = false, -- Tutorial = the tutorial was offered (taken or refused): the lobby's popup is not shown again
 		Trips = { n = 0, reset = 0 },
+		FormTut = false, FormTutCash = false, -- the jars / potions tutorial (Client/FormTutorial): done / its starter cash given
 		Offline = { stim = { q = {} :: { string }, t = 0 }, potion = { q = {} :: { string }, t = 0 }, pity = 0 } }
 end
 local MAX_RECEIPTS = 100
@@ -97,6 +98,7 @@ local function publish(player)
 	-- train tickets (the client counts the refill down itself)
 	player:SetAttribute("TripsLeft", Campaign.TRIPS.max - p.data.Trips.n)
 	player:SetAttribute("TripsReset", p.data.Trips.reset)
+	player:SetAttribute("FormTutDone", p.data.FormTut == true)
 	local ls = player:FindFirstChild("leaderstats")
 	if ls then
 		(ls :: any).Cash.Value = p.data.Cash;
@@ -154,6 +156,8 @@ function Data.load(player: Player)
 						local fm = type(id) == "string" and Forms.byId[id] or nil
 						if fm and prof.data.Forms[fm.id] and fm.kind == (key == "FormStim" and "stim" or "potion") then prof.data[key] = fm.id end
 					end
+					prof.data.FormTut = res.FormTut == true
+					prof.data.FormTutCash = res.FormTutCash == true
 					if type(res.Trips) == "table" then
 						prof.data.Trips.n = math.clamp(math.floor(tonumber(res.Trips.n) or 0), 0, Campaign.TRIPS.max)
 						prof.data.Trips.reset = math.max(0, math.floor(tonumber(res.Trips.reset) or 0))
@@ -196,7 +200,7 @@ function Data.save(player: Player): boolean
 		Bestiary = table.clone(prof.data.Bestiary), Badges = table.clone(prof.data.Badges), Nightmare = prof.data.Nightmare, XP = prof.data.XP,
 		Tutorial = prof.data.Tutorial == true,
 		Campaign = table.clone(prof.data.Campaign), Forms = table.clone(prof.data.Forms), FormStim = prof.data.FormStim, FormPotion = prof.data.FormPotion,
-		Trips = table.clone(prof.data.Trips),
+		Trips = table.clone(prof.data.Trips), FormTut = prof.data.FormTut == true, FormTutCash = prof.data.FormTutCash == true,
 		Offline = { stim = { q = table.clone(prof.data.Offline.stim.q), t = prof.data.Offline.stim.t },
 			potion = { q = table.clone(prof.data.Offline.potion.q), t = prof.data.Offline.potion.t }, pity = prof.data.Offline.pity },
 		Quests = prof.data.Quests and HttpService:JSONDecode(HttpService:JSONEncode(prof.data.Quests)) or nil }
@@ -386,6 +390,23 @@ function Data.setTrips(player: Player, used: number)
 	publish(player)
 end
 
+-- the jars / potions tutorial: "start" gives its starter cash once (true = given now), "done" marks it done
+function Data.formTutorial(player: Player, what: string): boolean
+	local d = Data.get(player)
+	if not d then return false end
+	if what == "start" then
+		if d.FormTutCash or d.FormTut then return false end
+		d.FormTutCash = true
+		d.Cash += 20
+		publish(player)
+		return true
+	elseif what == "done" then
+		d.FormTut = true
+		publish(player)
+	end
+	return false
+end
+
 -- the offline opening queues (Server/Forms changes them in place)
 function Data.offline(player: Player): any
 	local d = Data.get(player)
@@ -403,6 +424,18 @@ function Data.addForm(player: Player, id: string): boolean
 	if not d or not Forms.byId[id] then return false end
 	local new = not d.Forms[id]
 	d.Forms[id] = true
+	publish(player)
+	return new
+end
+-- several at once (X10 / X100): one publish; returns the set of the ones that were new
+function Data.addForms(player: Player, ids: { string }): { [string]: boolean }
+	local d = Data.get(player)
+	local new = {} :: { [string]: boolean }
+	if not d then return new end
+	for _, id in ids do
+		if Forms.byId[id] and not d.Forms[id] then new[id] = true end
+		if Forms.byId[id] then d.Forms[id] = true end
+	end
 	publish(player)
 	return new
 end

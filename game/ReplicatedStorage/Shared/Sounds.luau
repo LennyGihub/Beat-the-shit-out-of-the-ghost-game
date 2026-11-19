@@ -48,10 +48,10 @@ return {
 	Music_Animatronic_E = { ids = { 9044887799 }, volume = 1.6 }, -- Psycho Clown
 	Music_Titan = { ids = { 9039352479 }, volume = 1.6 }, -- The Heroic Battle of Giants
 	-- Camp Hollowmere's monsters (licensed production music)
-	Music_Antlered = { ids = { 1835248699 }, volume = 1.6 }, -- Stalking the Prey Main (the hunt: drums, low brass; the full 1:43 version)
-	Music_LakeWitch = { ids = { 1847041997 }, volume = 1.6 }, -- Drowning 3 (under water)
-	Music_Counselor = { ids = { 1838094537 }, volume = 1.6 }, -- The Slasher (the summer-camp slasher, 2:58)
-	Music_Scarecrow = { ids = { 1840881643 }, volume = 1.6 }, -- Dark Pursuit (A) (the cornfield chase)
+	Music_Antlered = { ids = { 9046674561 }, volume = 1.4 }, -- Taiko Thunderstorm ALT. 1 (war drums for the hunt, 2:27)
+	Music_LakeWitch = { ids = { 1837840805 }, volume = 1.4 }, -- Vanquish the Darkness (Mus) (dark epic orchestra, 2:53)
+	Music_Counselor = { ids = { 9038254416 }, volume = 1.3 }, -- Fight Hard or Die (metal for the burning slasher, 3:34)
+	Music_Scarecrow = { ids = { 1839538604 }, volume = 1.4 }, -- Menacing Forces (trailer action for the cornfield chase, 2:41)
 	Music_Clown = { ids = { 1847690202 }, volume = 1.6 }, -- Evil Clown Clan A (2:40)
 	Music_Strongman = { ids = { 1837078128 }, volume = 1.5 }, -- Brutal Power (2:14)
 	Music_Fortune = { ids = { 1836697907 }, volume = 1.6 }, -- Theatre Macabre (2:18)

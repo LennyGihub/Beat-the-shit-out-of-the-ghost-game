@@ -7,10 +7,14 @@
 --   * THE ROOM HE SITS IN (Fx "CallerRoom": box CFrame, size, seconds; "CallerRoomOff"): that room's walls
 --     outlined in yellow and filled with a fainter, see-through yellow, visible through the whole house. It
 --     shows when he names the room on the phone - the room, never his corner.
+--   * ANY MARKED THING (CollectionService tag "MarkTarget" with a non-empty attribute Mark = its name, MarkColor):
+--     the same outline (its colour) and arrow, e.g. Madame Fortune's CRYSTAL BALL while it is whole
+--     (Server/CarnivalMonsters). The ringing phone goes first.
 -- Only in a run (a player in the park gets nothing).
 -- Studio test hook: player attribute DebugRoomMark = CFrame (see init).
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local CollectionService = game:GetService("CollectionService")
 local Grunge = require(script.Parent.Grunge)
 
 local Marks = {}
@@ -22,6 +26,7 @@ local arrow: Frame
 local label: TextLabel
 local phone: Model? = nil
 local phoneGlow: Highlight? = nil
+local markGlow: Highlight? = nil
 local room: Model? = nil
 local roomUntil = 0
 
@@ -137,22 +142,51 @@ local function step()
 	if ph and not ph.Parent then setPhone(nil); ph = nil end
 	local base = ph and ph:FindFirstChild("Base") :: BasePart?
 	local ringing = ph ~= nil and base ~= nil and inMatch and ph:GetAttribute("Ringing") == true
+	-- (no phone ringing: a marked thing, if there is one)
+	local mark: BasePart? = nil
+	if not ringing and inMatch then
+		for _, t in CollectionService:GetTagged("MarkTarget") do
+			if t:IsA("BasePart") and t:IsDescendantOf(workspace) and (t:GetAttribute("Mark") or "") ~= "" then mark = t; break end
+		end
+	end
+	if markGlow and (not mark or markGlow.Adornee ~= mark) then markGlow:Destroy(); markGlow = nil end
 	if not ringing or not ph or not base then
 		if phoneGlow then phoneGlow:Destroy(); phoneGlow = nil end
-		arrow.Visible = false; label.Visible = false
-		return
+		if not mark then
+			arrow.Visible = false; label.Visible = false
+			return
+		end
 	end
-	if not phoneGlow then
-		local h = Instance.new("Highlight")
-		h.Name = "RingGlow"; h.Adornee = ph; h.FillColor = YELLOW; h.OutlineColor = YELLOW; h.OutlineTransparency = 0
-		h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-		h.Parent = ph
-		phoneGlow = h
+	local target: BasePart
+	local name = "PHONE"
+	if ringing and ph and base then
+		target = base
+		if not phoneGlow then
+			local h = Instance.new("Highlight")
+			h.Name = "RingGlow"; h.Adornee = ph; h.FillColor = YELLOW; h.OutlineColor = YELLOW; h.OutlineTransparency = 0
+			h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+			h.Parent = ph
+			phoneGlow = h
+		end
+		(phoneGlow :: Highlight).FillTransparency = 0.55 + (math.sin(now * 9) * 0.5 + 0.5) * 0.4 -- it flickers like the bell
+	else
+		local mk = mark :: BasePart
+		target = mk
+		name = tostring(mk:GetAttribute("Mark"))
+		if not markGlow then
+			local c = mk:GetAttribute("MarkColor")
+			local col = typeof(c) == "Color3" and c or YELLOW
+			local h = Instance.new("Highlight")
+			h.Name = "MarkGlow"; h.Adornee = mk; h.FillColor = col; h.OutlineColor = col; h.OutlineTransparency = 0
+			h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+			h.Parent = mk
+			markGlow = h
+		end
+		(markGlow :: Highlight).FillTransparency = 0.45 + (math.sin(now * 4) * 0.5 + 0.5) * 0.35
 	end
-	(phoneGlow :: Highlight).FillTransparency = 0.55 + (math.sin(now * 9) * 0.5 + 0.5) * 0.4 -- it flickers like the bell
 	local cam = workspace.CurrentCamera
 	local vp = cam.ViewportSize
-	local at = base.Position + Vector3.new(0, 1.3, 0)
+	local at = target.Position + Vector3.new(0, 1.3, 0)
 	local v = cam:WorldToViewportPoint(at)
 	local margin = 80
 	local x, y, rot
@@ -168,8 +202,8 @@ local function step()
 	end
 	arrow.Position = UDim2.fromOffset(x, y); arrow.Rotation = rot; arrow.Visible = true
 	local hrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
-	local dist = hrp and (hrp.Position - base.Position).Magnitude or (cam.CFrame.Position - base.Position).Magnitude
-	label.Text = "PHONE  " .. tostring(math.floor(dist + 0.5))
+	local dist = hrp and (hrp.Position - target.Position).Magnitude or (cam.CFrame.Position - target.Position).Magnitude
+	label.Text = name .. "  " .. tostring(math.floor(dist + 0.5))
 	label.Position = UDim2.fromOffset(x, y + (rot == 180 and -44 or 40)); label.Visible = true
 end
 
@@ -178,7 +212,7 @@ function Marks.init()
 	gui.Name = "CallerMarks"; gui.ResetOnSpawn = false; gui.IgnoreGuiInset = true; gui.DisplayOrder = 2
 	gui.Parent = lp:WaitForChild("PlayerGui")
 	arrow = buildArrow(gui)
-	label = Grunge.text(gui, { Text = "PHONE", Font = Grunge.FONT, AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(150, 24), TextColor3 = YELLOW, Visible = false })
+	label = Grunge.text(gui, { Text = "PHONE", Font = Grunge.FONT, AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(220, 24), TextColor3 = YELLOW, Visible = false })
 	label.TextScaled = false; label.TextSize = 20
 	local function watch(c: Instance)
 		if c.Name == "CallerPhone" and c:IsA("Model") then setPhone(c) end
