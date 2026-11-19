@@ -4,7 +4,7 @@
 -- middle, an altar of skulls at the far end, candles in skull holders. At the back, behind a wall of bones with two
 -- doorways: the CHARNEL PIT room (bone carts, a pit of bones). Its east end: a SKULL WALL that slides (Secrets: the
 -- stash behind it).
--- Build: cat tools/build/lib2.luau tools/build/furn_lib.luau tools/build/maplib.luau tools/build/maps/abbey_lib.luau tools/build/maps/abb_ossuary.luau
+-- Build: cat tools/build/lib2.luau tools/build/furn_lib.luau tools/build/maplib.luau tools/build/maps/shape_lib.luau tools/build/maps/abbey_lib.luau tools/build/maps/abb_ossuary.luau
 local C3 = Color3.fromRGB
 local function D() return { deco = true } end
 local H = 26
@@ -12,8 +12,9 @@ local rng = Random.new(44)
 local BONE = ABB.bone
 local SOCKET = st(M.SmoothPlastic, nil, C3(20, 16, 14))
 beginMap("Abb_Ossuary", abbTheme({ inner = st(M.Cobblestone, "PS2_Stone1", C3(104, 98, 86)), floor = st(M.Slate, nil, C3(72, 68, 62)) }))
-shell({ two = false, H = H, roof = "gable", pitch = 0.45, front1 = { -60, -36, 36, 60 }, back1 = { -60, 60 }, left1 = { 44, 20, -30 }, right1 = { 44, 20, -30 },
-	winW = 4, winB = 8, winT = 16 })
+-- (2026-11-19) its own shape: a charnel house under a flat roof and an OCTAGONAL DRUM with a DOME, a front of bones
+local TOP = shell2({ H = H, roof = "flat", roofStyle = st(M.Slate, nil, C3(60, 56, 52)), front1 = { -60, -36, 36, 60 }, back1 = { -60, 60 }, left1 = { 44, 20, -30 }, right1 = { 44, 20, -30 },
+	win = { w = 4, b = 8, t = 16 }, door = { w = 12, t = 16 } })
 local inn = model(STR, "Interior")
 local I = INT()
 wall(inn, "PitWall", "x", -32, -78, 78, F1, H, { dr(-30, 12, 14), dr(30, 12, 14) }, I)
@@ -128,6 +129,53 @@ for _, p in { { -30, 30 }, { 20, 0 }, { -40, -48 } } do blood(p[1], F1, p[2], 2.
 for _, p in { { -40, 50 }, { 40, 50 }, { 0, 30 }, { -30, 0 }, { 30, 0 }, { 0, -46 } } do gspawn(p[1], F1, p[2]) end
 keepClear(-6, 40, 6, 58, F1)
 keepClear(56, -42, 70, -34, F1)
-abbSign("THE OSSUARY")
+-- OUTSIDE (2026-11-19): THE FLAYED GIANT'S OSSUARY. The front is faced with bones: rows of SKULLS round a pointed portal,
+-- skull pillars either side, crossed long bones over the windows, MEMENTO MORI carved over the door; on the roof an
+-- octagonal drum and a dark dome with a lantern of bones, red light through its slits.
+local OUT = model(DEC, "Outside")
+-- the octagon drum and the dome
+local DX, DZ, DR = 0, -6, 24
+local oct = {}
+for k = 0, 7 do local a = k * math.pi / 4 + math.pi / 8; table.insert(oct, { DX + DR * math.cos(a), DZ + DR * math.sin(a) }) end
+for i, p0 in oct do
+	local q = oct[i % 8 + 1]
+	local a, z = Vector3.new(p0[1], 0, p0[2]), Vector3.new(q[1], 0, q[2])
+	local mid = (a + z) / 2
+	part(OUT, "Drum", Vector3.new(1.6, 14, (z - a).Magnitude + 1.6), CFrame.lookAt(mid + Vector3.new(0, TOP + 7, 0), z + Vector3.new(0, TOP + 7, 0)), ABB.stone, D())
+	local outv = (mid - Vector3.new(DX, 0, DZ)).Unit
+	part(OUT, "DrumSlit", Vector3.new(0.3, 7, 2.4), CFrame.lookAt(mid + outv * 0.9 + Vector3.new(0, TOP + 7, 0), z + outv * 0.9 + Vector3.new(0, TOP + 7, 0)), st(M.Neon, nil, C3(255, 70, 40)), D())
+end
+domeRoof(OUT, DX, DZ, TOP + 14, DR + 1, DR + 1, 18, 8, 4, st(M.Slate, nil, C3(96, 86, 80)), 1, st(M.Slate, nil, C3(70, 62, 58)))
+washLight(0, 100, Vector3.new(DX, TOP + 24, DZ + 10), C3(255, 150, 110), 160, 2.4)
+cyl(OUT, CFrame.new(DX, TOP + 33, DZ), "LanternBase", 6, 2, 0, 0, 0, ABB.stoneD, D())
+for k = 0, 5 do
+	local a = k * math.pi / 3
+	part(OUT, "LanternBone", Vector3.new(0.6, 6, 0.6), CFrame.new(DX + math.cos(a) * 2.4, TOP + 37, DZ + math.sin(a) * 2.4), ABB.bone, D())
+end
+abbSkull(OUT, CFrame.new(DX, TOP + 41, DZ + 0.3) * CFrame.Angles(0, math.pi, 0), 2.6)
+light(box(OUT, "DomeGlow", DX - 0.1, TOP + 36, DZ - 0.1, DX + 0.1, TOP + 36.2, DZ + 0.1, ABB.lava, { deco = true, t = 1 }), 40, 1.6, C3(255, 80, 40))
+-- the skull arch round the door, skull pillars, crossed bones over the windows
+local SR = 11
+for k = 0, 16 do
+	local a = math.pi * k / 16
+	local cf = CFrame.new(math.cos(a) * SR, 15 + math.sin(a) * SR * 0.9, 60.9) * CFrame.Angles(0, math.pi, 0)
+	abbSkull(OUT, cf, 2)
+end
+for _, sx in { -1, 1 } do
+	for j = 0, 6 do abbSkull(OUT, CFrame.new(sx * 11, 3 + j * 1.9, 60.9) * CFrame.Angles(0, math.pi, 0), 1.9) end
+	for _, y in { 2, 14.5 } do box(OUT, "PillarBand", sx * 11 - 1.6, y, 60.1, sx * 11 + 1.6, y + 0.6, 61.6, ABB.bone, DECO) end
+end
+for _, x in { -60, -36, 36, 60 } do
+	for _, sx in { -1, 1 } do part(OUT, "Bone", Vector3.new(0.8, 9, 0.6), CFrame.new(x, 14, 60.8) * CFrame.Angles(0, 0, sx * 0.62), ABB.bone, D()) end
+	abbSkull(OUT, CFrame.new(x, 20.4, 60.9) * CFrame.Angles(0, math.pi, 0), 2.2)
+end
+-- rows of skulls along the top of the front, under the cornice
+for x = -76, 76, 3.2 do abbSkull(OUT, CFrame.new(x, TOP - 2, 60.9) * CFrame.Angles(0, math.pi, 0), 1.7) end
+box(OUT, "Cornice", -81, TOP - 0.6, 59, 81, TOP + 1.4, 62, ABB.stoneD, DECO)
+sign(OUT, "MEMENTO MORI", CFrame.new(0, 24.6, 61) * CFrame.Angles(0, math.pi, 0), 20, 2.6, ABB.stoneD, C3(220, 200, 160), Enum.Font.Fantasy)
+for _, x in { -18, 18 } do abbLantern(OUT, Vector3.new(x, 12, 61.4), 24) end
+abbSign("THE OSSUARY", CFrame.new(0, 32, 61.6))
+washLight(-30, 88, Vector3.new(-14, 18, 60), C3(255, 170, 130), 90, 2)
+washLight(30, 88, Vector3.new(14, 18, 60), C3(255, 170, 130), 90, 2)
 abbGrounds()
 return endMap()
