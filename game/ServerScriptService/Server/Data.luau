@@ -357,6 +357,7 @@ local function tripWindow(d: any)
 	if d.Trips.reset > 0 and os.time() >= d.Trips.reset then d.Trips.n = 0; d.Trips.reset = 0 end
 end
 function Data.tripsLeft(player: Player): (number, number)
+	if not Campaign.TRIPS.enabled then return Campaign.TRIPS.max, 0 end -- (tickets switched off: Campaign.TRIPS.enabled)
 	local d = Data.get(player)
 	if not d then return 0, 0 end
 	tripWindow(d)
@@ -364,6 +365,7 @@ function Data.tripsLeft(player: Player): (number, number)
 end
 -- one train trip: false when no ticket is left
 function Data.useTrip(player: Player): boolean
+	if not Campaign.TRIPS.enabled then return true end -- (tickets switched off: every trip is free)
 	local d = Data.get(player)
 	if not d then return false end
 	tripWindow(d)
@@ -373,8 +375,26 @@ function Data.useTrip(player: Player): boolean
 	publish(player)
 	return true
 end
+-- the TRAIN TICKETS Developer Product (Server/Monetization): all tickets back, once per PurchaseId (saved with it,
+-- like a cash pack: "granted" = already given, "saved" = given now and saved, "wait" = try again later)
+function Data.grantTripsReceipt(player: Player, purchaseId: string): string
+	local prof = profiles[player]
+	if not prof then return "wait" end
+	if table.find(prof.data.Receipts, purchaseId) then return "granted" end
+	local studio = game:GetService("RunService"):IsStudio()
+	if not prof.loaded and not studio then return "wait" end
+	prof.data.Trips.n = 0
+	prof.data.Trips.reset = 0
+	table.insert(prof.data.Receipts, purchaseId)
+	while #prof.data.Receipts > MAX_RECEIPTS do table.remove(prof.data.Receipts, 1) end
+	publish(player)
+	if studio and not prof.loaded then return "saved" end
+	return Data.save(player) and "saved" or "wait"
+end
+
 -- a trip that did not happen (the teleport failed)
 function Data.refundTrip(player: Player)
+	if not Campaign.TRIPS.enabled then return end
 	local d = Data.get(player)
 	if not d then return end
 	d.Trips.n = math.max(0, d.Trips.n - 1)

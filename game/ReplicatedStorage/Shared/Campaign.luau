@@ -78,8 +78,10 @@ end
 local Campaign = { list = List, mapById = mapById, stageById = stageById, diffRank = DIFF_RANK, rankDiff = RANK_DIFF }
 -- TRAIN TICKETS: a player can take `max` train trips (to a building: from the park, NEXT BUILDING or FIGHT AGAIN) in
 -- `window` seconds; the window starts at the first trip of it (Server/Data: Trips, player attributes TripsLeft /
--- TripsReset = the unix time the tickets come back)
-Campaign.TRIPS = { max = 5, window = 3 * 3600 }
+-- TripsReset = the unix time the tickets come back). `enabled = false` turns the whole system off (2026-11-19, the
+-- user: "disable the train tickets for now but dont remove the script"): every trip is free, nothing is used, the ticket
+-- lines and REFILL buttons are hidden. All the code stays; set it back to true to bring tickets back.
+Campaign.TRIPS = { enabled = false, max = 5, window = 3 * 3600 }
 -- "2:41:07" / "41:07"
 function Campaign.clock(sec: number): string
 	sec = math.max(0, math.floor(sec))
@@ -89,6 +91,7 @@ function Campaign.clock(sec: number): string
 end
 -- tickets left for a player's attributes (the window may be over already)
 function Campaign.ticketsLeft(left: number?, reset: number?, now: number): number
+	if not Campaign.TRIPS.enabled then return Campaign.TRIPS.max end
 	if (reset or 0) > 0 and now >= (reset :: number) then return Campaign.TRIPS.max end
 	return math.clamp(left or Campaign.TRIPS.max, 0, Campaign.TRIPS.max)
 end

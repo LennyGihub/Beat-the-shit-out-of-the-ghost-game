@@ -11,6 +11,7 @@ local TweenService = game:GetService("TweenService")
 local Maps = require(RS.Shared.Maps)
 local Campaign = require(RS.Shared.Campaign)
 local Grunge = require(script.Parent.Grunge)
+local TicketShop = require(script.Parent.TicketShop)
 local Platform = require(script.Parent.Platform)
 local Sfx = require(script.Parent.Sfx)
 local Remotes = RS:WaitForChild("Remotes")
@@ -360,22 +361,30 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 		return Campaign.ticketsLeft(lp:GetAttribute("TripsLeft"), lp:GetAttribute("TripsReset"), now), (tonumber(lp:GetAttribute("TripsReset")) or 0) - now
 	end
 	-- no ticket left: a big red message over the panel (pressing CREATE / START, or opening it)
-	local noTicket = Grunge.slab(panel, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.62, 0.24), Visible = false, ZIndex = 30, Rotation = -1.5 },
+	local noTicket = Grunge.slab(panel, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.62, 0.34), Visible = false, ZIndex = 30, Rotation = -1.5 },
 		Color3.fromRGB(24, 12, 10), 61, 4, false)
-	local ntTitle = Grunge.text(noTicket, { Text = "YOU HAVE NO TRAIN TICKETS", Font = Grunge.HORROR, Position = UDim2.fromScale(0.05, 0.08), Size = UDim2.fromScale(0.9, 0.45),
+	local ntTitle = Grunge.text(noTicket, { Text = "YOU HAVE NO TRAIN TICKETS", Font = Grunge.HORROR, Position = UDim2.fromScale(0.05, 0.05), Size = UDim2.fromScale(0.9, 0.33),
 		TextColor3 = Color3.fromRGB(235, 50, 35), ZIndex = 33 })
-	local ntSub = Grunge.text(noTicket, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0.05, 0.58), Size = UDim2.fromScale(0.9, 0.28), ZIndex = 33 })
+	local ntSub = Grunge.text(noTicket, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0.05, 0.4), Size = UDim2.fromScale(0.9, 0.2), ZIndex = 33 })
+	-- (the TRAIN TICKETS Developer Product: all 5 back now, Client/TicketShop)
+	local ntBuy = button(noTicket, TicketShop.label(), { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.79), Size = UDim2.fromScale(0.62, 0.26),
+		BackgroundColor3 = Color3.fromRGB(190, 40, 120), ZIndex = 34 })
+	ntBuy.Activated:Connect(function()
+		Sfx.play("Click")
+		if not TicketShop.buy() then setText(ntBuy, "TICKET REFILLS: COMING SOON") end
+	end)
 	local ntScale = Instance.new("UIScale"); ntScale.Parent = noTicket
 	local ntUntil = 0
 	local function showNoTicket()
 		local _, wait = ticketsNow()
-		ntSub.Text = Campaign.TRIPS.max .. " NEW TICKETS IN " .. Campaign.clock(wait) .. "  -  OPEN JARS AND POTIONS MEANWHILE"
+		ntSub.Text = Campaign.TRIPS.max .. " NEW TICKETS IN " .. Campaign.clock(wait) .. "  -  OR REFILL THEM NOW"
+		setText(ntBuy, TicketShop.label())
 		noTicket.Visible = true
 		ntScale.Scale = 0.6
 		TweenService:Create(ntScale, TweenInfo.new(0.35, Enum.EasingStyle.Back), { Scale = 1 }):Play()
-		ntUntil = os.clock() + 3.5
+		ntUntil = os.clock() + 7
 		Sfx.play("Click", { PlaybackSpeed = 0.6 })
-		task.delay(3.6, function() if os.clock() >= ntUntil then noTicket.Visible = false end end)
+		task.delay(7.1, function() if os.clock() >= ntUntil then noTicket.Visible = false end end)
 	end
 	(LobbyUI :: any).noTickets = showNoTicket
 	local _ = ntTitle
@@ -393,6 +402,7 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 				ticketT.Text = "TRAIN TICKETS " .. left .. " / " .. max
 				ticketT.TextColor3 = left > 0 and Color3.fromRGB(150, 200, 255) or Color3.fromRGB(255, 110, 80)
 				ticketSub.Text = (left < max and reset > now) and ("REFILL IN " .. Campaign.clock(reset - now)) or (max .. " TRIPS EVERY " .. (Campaign.TRIPS.window // 3600) .. " HOURS")
+				ticketT.Visible = Campaign.TRIPS.enabled; ticketSub.Visible = Campaign.TRIPS.enabled
 			end
 			task.wait(0.5)
 		end

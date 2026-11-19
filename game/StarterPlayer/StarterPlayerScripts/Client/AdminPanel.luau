@@ -163,6 +163,8 @@ local function build()
 		button(g, "UNLOCK ALL MAPS", B, function() cmd("allmaps") end)
 		button(g, "CLEAR HOTBAR", R, function() cmd("clearitems") end)
 		button(g, "LEAVE RUN", R, function() cmd("leave") end)
+		button(g, "REFILL TRAIN TICKETS", G, function() cmd("trips reset") end)
+		button(g, "EMPTY TRAIN TICKETS", R, function() cmd("trips empty") end)
 		local function god()
 			(godBtn:FindFirstChild("Label") :: TextLabel).Text = lp:GetAttribute("AdminGod") and "GOD MODE: ON" or "GOD MODE: OFF"
 		end

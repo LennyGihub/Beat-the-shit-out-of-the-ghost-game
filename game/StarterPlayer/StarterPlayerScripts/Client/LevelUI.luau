@@ -10,6 +10,7 @@ local Grunge = require(script.Parent.Grunge)
 local Platform = require(script.Parent.Platform)
 local Levels = require(RS.Shared.Levels)
 local Campaign = require(RS.Shared.Campaign)
+local TicketShop = require(script.Parent.TicketShop)
 
 local LevelUI = {}
 local lp = Players.LocalPlayer
@@ -32,6 +33,12 @@ function LevelUI.init()
 
 	local tickets = Grunge.text(box, { Text = "", Font = Grunge.TYPE, AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 1.06), Size = UDim2.fromScale(1.3, 0.3),
 		TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 4 })
+	local refill = Instance.new("TextButton")
+	refill.AutoButtonColor = false; refill.BackgroundTransparency = 1; refill.Text = ""; refill.AnchorPoint = Vector2.new(1, 0)
+	refill.Position = UDim2.fromScale(1, 1.4); refill.Size = UDim2.fromScale(0.7, 0.5); refill.ZIndex = 4; refill.Visible = false; refill.Parent = box
+	Grunge.brush(refill, { Size = UDim2.fromScale(1, 1), ZIndex = 4 }, Color3.fromRGB(190, 40, 120), 57, 10, false)
+	local refillT = Grunge.text(refill, { Text = "", Font = Grunge.FONT, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.92, 0.7), ZIndex = 6 })
+	refill.Activated:Connect(function() TicketShop.buy() end)
 	task.spawn(function()
 		while true do
 			local now = workspace:GetServerTimeNow()
@@ -40,6 +47,10 @@ function LevelUI.init()
 			local max = Campaign.TRIPS.max
 			tickets.Text = "TRAIN TICKETS " .. left .. " / " .. max .. ((left < max and reset > now) and ("  -  REFILL IN " .. Campaign.clock(reset - now)) or "")
 			tickets.TextColor3 = left > 0 and Color3.fromRGB(150, 200, 255) or Color3.fromRGB(255, 110, 80)
+			-- (the refill button while a ticket is used, once the product exists)
+			refill.Visible = left < max and TicketShop.ready() and Campaign.TRIPS.enabled
+			tickets.Visible = Campaign.TRIPS.enabled
+			if refill.Visible then refillT.Text = TicketShop.label(true) end
 			task.wait(1)
 		end
 	end)

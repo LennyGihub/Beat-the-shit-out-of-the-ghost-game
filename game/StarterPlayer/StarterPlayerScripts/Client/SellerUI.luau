@@ -411,11 +411,41 @@ function UI.init()
 	grid.SortOrder = Enum.SortOrder.LayoutOrder; grid.Parent = vialFrame
 	statusT = Grunge.text(panel, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0.04, 0.895), Size = UDim2.fromScale(0.56, 0.04), TextXAlignment = Enum.TextXAlignment.Left,
 		TextColor3 = Color3.fromRGB(255, 150, 80), ZIndex = 11 })
-	offlineT = Grunge.text(panel, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0.04, 0.938), Size = UDim2.fromScale(0.56, 0.032), TextXAlignment = Enum.TextXAlignment.Left,
+	offlineT = Grunge.text(panel, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0.04, 0.938), Size = UDim2.fromScale(0.43, 0.032), TextXAlignment = Enum.TextXAlignment.Left,
 		TextColor3 = Color3.fromRGB(150, 200, 255), ZIndex = 11 })
+	-- CANCEL QUEUE (this kind's offline queue, all of it refunded): the first tap shows the refund, a second one within 3 s cancels
+	local cancelB = button(panel, "CANCEL QUEUE", { Name = "CancelQueue", Position = UDim2.fromScale(0.48, 0.93), Size = UDim2.fromScale(0.12, 0.046), ZIndex = 12, Visible = false },
+		Color3.fromRGB(150, 32, 26))
+	local cancelL = cancelB:FindFirstChild("Label") :: TextLabel
+	cancelL.Font = Grunge.TYPE
+	local confirmUntil = 0
+	local function queued(kind: string): ({ string })
+		local st = offlineState()[kind]
+		return (type(st) == "table" and type(st.q) == "table") and st.q or {}
+	end
+	local function updateCancel()
+		local q = kindOpen and queued(kindOpen) or {}
+		cancelB.Visible = #q > 0
+		if os.clock() >= confirmUntil then cancelL.Text = "CANCEL QUEUE" end
+	end
+	cancelB.Activated:Connect(function()
+		if not kindOpen then return end
+		Sfx.play("Click")
+		if os.clock() < confirmUntil then
+			confirmUntil = 0
+			;(Remotes :: any).Forms:FireServer("cancel", kindOpen)
+		else
+			local n = 0
+			for _, id in queued(kindOpen) do local v = Forms.vialById[id]; if v then n += v.price end end
+			confirmUntil = os.clock() + 3
+			cancelL.Text = "REFUND $" .. n .. "?"
+			task.delay(3.05, updateCancel)
+		end
+	end)
+	lp:GetAttributeChangedSignal("Offline"):Connect(updateCancel)
 	task.spawn(function()
 		while true do
-			if panel.Visible and kindOpen then offlineT.Text = offlineLine(kindOpen) end
+			if panel.Visible and kindOpen then offlineT.Text = offlineLine(kindOpen); updateCancel() end
 			task.wait(1)
 		end
 	end)

@@ -8,6 +8,7 @@
 --   ("buy", vialId, 10 | 100) -> X10 / X100: that many rolled at once (no cinematic), all added to the collection,
 --                       the best one worn if that kind had none (Fx "FormMulti": kind, vialId, results, bestId, worn, prevId).
 --   ("equip", formId) -> wear a form you own (Fx "FormEquipped").
+--   ("cancel", kind)  -> cancel that kind's offline queue: the money of every one still waiting comes back.
 --   ("offline", vialId) -> OPEN OFFLINE: paid like a buy, the jar / potion joins its kind's queue (Shared/Forms
 --                       OFFLINE: a few minutes each, one after the other) and opens by itself, by the clock: in the
 --                       park, in a run's server and while the player is away (settled when they come back). Each
@@ -180,6 +181,26 @@ local function offline(p: Player, vialId: any, count: any)
 	toast(p, v.name .. " IS OPENING  (" .. #k.q .. " IN THE QUEUE)", true)
 end
 
+-- CANCEL a kind's queue: everything still waiting (the one opening too) is paid back; what already opened is kept
+local function cancel(p: Player, kind: any)
+	if kind ~= "stim" and kind ~= "potion" then return end
+	local o = Data.offline(p)
+	if not o then return end
+	pcall(settleAndTell, p, false) -- (anything already finished is given first)
+	local k = o[kind]
+	if #k.q == 0 then return end
+	local refund, n = 0, #k.q
+	for _, id in k.q do
+		local v = Forms.vialById[id]
+		if v then refund += v.price end
+	end
+	k.q = {}; k.t = 0
+	Data.addCash(p, refund)
+	publishOffline(p)
+	task.spawn(Data.save, p)
+	Remotes.Fx:FireClient(p, "Toast", "QUEUE CANCELLED - " .. n .. (kind == "stim" and " JAR" or " POTION") .. (n > 1 and "S" or "") .. ", $" .. refund .. " BACK", true)
+end
+
 -- after the save loaded (Main): what finished while the player was away
 function M.setup(p: Player)
 	publishOffline(p)
@@ -201,6 +222,7 @@ function M.start()
 	Remotes.Forms.OnServerEvent:Connect(function(p, action, a, b)
 		if action == "buy" then buy(p, a, b)
 		elseif action == "offline" then offline(p, a, b)
+		elseif action == "cancel" then cancel(p, a)
 		elseif action == "equip" then equip(p, a)
 		elseif action == "tutorial" and (a == "start" or a == "done") then
 			-- the jars / potions tutorial (Client/FormTutorial): starter cash once, then done

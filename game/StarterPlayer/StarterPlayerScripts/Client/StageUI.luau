@@ -12,6 +12,7 @@ local Maps = require(RS.Shared.Maps)
 local Levels = require(RS.Shared.Levels)
 local Forms = require(RS.Shared.Forms)
 local Grunge = require(script.Parent.Grunge)
+local TicketShop = require(script.Parent.TicketShop)
 local Sfx = require(script.Parent.Sfx)
 local Remotes = RS:WaitForChild("Remotes")
 
@@ -180,6 +181,10 @@ function UI.show(info: { [string]: any })
 		TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 5 })
 	local untilT = os.clock() + (tonumber(info.choice) or 60)
 	repickFn = function() picked = false end
+	-- (no ticket left: the TRAIN TICKETS product in place of NEXT / AGAIN)
+	local refillB = button(panel, TicketShop.label(), { Position = UDim2.fromScale(0.05, 0.77), Size = UDim2.fromScale(0.62, 0.11), ZIndex = 8, Rotation = -1, Visible = false },
+		Color3.fromRGB(190, 40, 120), 134)
+	refillB.Activated:Connect(function() Sfx.play("Click"); TicketShop.buy() end)
 	task.spawn(function()
 		while gui == g do
 			timer.Text = picked and "WAITING FOR THE TRAIN..." or ("BACK TO THE PARK IN " .. math.max(0, math.ceil(untilT - os.clock())) .. "  -  ANYONE CAN PICK THE NEXT TRIP")
@@ -194,6 +199,10 @@ function UI.show(info: { [string]: any })
 			for _, b in { panel:FindFirstChild("NextBtn"), panel:FindFirstChild("AgainBtn") } do
 				if b then (b :: GuiObject).Visible = left > 0 end
 			end
+			refillB.Visible = left <= 0
+			ticketT.Visible = Campaign.TRIPS.enabled
+			local lbl = refillB:FindFirstChild("Label") :: TextLabel?
+			if lbl and refillB.Visible then lbl.Text = TicketShop.label() end
 			task.wait(0.25)
 		end
 	end)

@@ -1,7 +1,8 @@
 --!strict
 -- Robux: the Game Passes (Shared/Passes: 2X MONEY, DOUBLE ULTIMATE, VIP, SECOND CHANCE, GLOCK 18; each has its id in
 -- a ReplicatedStorage attribute), the REVIVE Developer Product (attribute ReviveProductId) and the cash packs
--- (Config.CashPacks, attributes CashPack1Id..). 0 = not set up yet (the shop shows SOON). The only ProcessReceipt of
+-- (Config.CashPacks, attributes CashPack1Id..), the TRAIN TICKETS refill (TripsProductId: all 5 tickets back).
+-- 0 = not set up yet (the shop shows SOON). The only ProcessReceipt of
 -- the game lives here.
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
@@ -33,6 +34,7 @@ local IDS: { [string]: number } = {
 	CashPack2Id = 3732931994, -- 2500
 	CashPack3Id = 3732932046, -- 6000
 	CashPack4Id = 3732932132, -- 15000
+	TripsProductId = 0, -- TRAIN TICKETS: all 5 back at once (Developer Product; 0 until it is made in the Creator Hub)
 }
 for attr, default in IDS do
 	if id(attr) <= 0 then RS:SetAttribute(attr, default) end
@@ -54,6 +56,7 @@ function Monetization.start()
 		if RS:GetAttribute(pass.id) == nil then RS:SetAttribute(pass.id, 0) end
 	end
 	if RS:GetAttribute("ReviveProductId") == nil then RS:SetAttribute("ReviveProductId", 0) end
+	if RS:GetAttribute("TripsProductId") == nil then RS:SetAttribute("TripsProductId", 0) end
 	for _, pack in Config.CashPacks do
 		if RS:GetAttribute(pack.attr) == nil then RS:SetAttribute(pack.attr, 0) end
 	end
@@ -95,6 +98,14 @@ function Monetization.start()
 				if res == "saved" then Remotes.Fx:FireClient(p, "Toast", "+$" .. pack.cash .. " CASH - thanks for the support!") end
 				return Enum.ProductPurchaseDecision.PurchaseGranted
 			end
+		end
+		-- train tickets: all back, granted only once it is saved with the purchase id
+		if id("TripsProductId") > 0 and info.ProductId == id("TripsProductId") then
+			local res = Data.grantTripsReceipt(p, info.PurchaseId)
+			if res == "wait" then return Enum.ProductPurchaseDecision.NotProcessedYet end
+			granted[info.PurchaseId] = true
+			if res == "saved" then Remotes.Fx:FireClient(p, "Toast", "TRAIN TICKETS REFILLED - ALL ABOARD!", true) end
+			return Enum.ProductPurchaseDecision.PurchaseGranted
 		end
 		if info.ProductId == id("ReviveProductId") then
 			granted[info.PurchaseId] = true

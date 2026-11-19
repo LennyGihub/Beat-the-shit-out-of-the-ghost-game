@@ -26,10 +26,12 @@ local HOLD = 8 -- seconds a card stays up after its last jar opened (its result 
 type Card = {
 	root: Frame, scale: UIScale, glow: Frame, artBox: Frame, art: Frame?, artVial: string,
 	rarT: TextLabel, nameT: TextLabel, timeT: TextLabel, countT: TextLabel, bar: any, holdUntil: number, shown: boolean,
+	cancel: TextButton, cancelT: TextLabel, confirmUntil: number,
 }
 
 local gui: ScreenGui
 local root: Frame
+local Remotes = RS:WaitForChild("Remotes")
 local row: Frame
 local pityT: TextLabel
 local banner: Frame
@@ -51,6 +53,14 @@ local function queueOf(kind: string): ({ string }, number)
 	local k = state[kind]
 	if type(k) ~= "table" or type(k.q) ~= "table" then return {}, 0 end
 	return k.q, tonumber(k.t) or 0
+end
+
+-- what cancelling this kind's queue gives back (every jar / potion still in it, the one opening too)
+local function refundOf(kind: string): number
+	local q = queueOf(kind)
+	local n = 0
+	for _, id in q do local v = Forms.vialById[id]; if v then n += v.price end end
+	return n
 end
 
 local function hidden(): boolean
@@ -87,8 +97,26 @@ local function newCard(kind: string, order: number): Card
 	for _, d in bar.root:GetDescendants() do if d:IsA("GuiObject") then d.ZIndex = math.max(d.ZIndex, 4) end end
 	bar:set(0)
 	local timeT = Grunge.text(c, { Text = "", Font = Grunge.TYPE, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.85), Size = UDim2.fromScale(0.95, 0.12), ZIndex = 6 })
-	return { root = c, scale = sc, glow = glow, artBox = artBox, art = nil, artVial = "", rarT = rarT, nameT = nameT, timeT = timeT, countT = countT,
-		bar = bar, holdUntil = 0, shown = false }
+	-- CANCEL (left of the jar): the first tap shows the refund, a second one within 3 s cancels the whole queue
+	local cancel = Instance.new("TextButton")
+	cancel.Name = "Cancel"; cancel.AutoButtonColor = false; cancel.BackgroundTransparency = 1; cancel.Text = ""
+	cancel.Position = UDim2.fromScale(0, 0.3); cancel.Size = UDim2.fromScale(0.3, 0.12); cancel.ZIndex = 7; cancel.Visible = false; cancel.Parent = c
+	Grunge.brush(cancel, { Size = UDim2.fromScale(1, 1), ZIndex = 7 }, Color3.fromRGB(150, 32, 26), 440 + order, 10, false)
+	local cancelT = Grunge.text(cancel, { Text = "CANCEL", Font = Grunge.TYPE, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromScale(0.9, 0.72), ZIndex = 8 })
+	local card: Card = { root = c, scale = sc, glow = glow, artBox = artBox, art = nil, artVial = "", rarT = rarT, nameT = nameT, timeT = timeT, countT = countT,
+		bar = bar, holdUntil = 0, shown = false, cancel = cancel, cancelT = cancelT, confirmUntil = 0 }
+	cancel.Activated:Connect(function()
+		Sfx.play("Click")
+		if os.clock() < card.confirmUntil then
+			card.confirmUntil = 0
+			;(Remotes :: any).Forms:FireServer("cancel", kind)
+		else
+			card.confirmUntil = os.clock() + 3
+			cancelT.Text = "REFUND $" .. refundOf(kind) .. "?"
+		end
+	end)
+	return card
 end
 
 -- the picture shows the jar / potion that is opening now
@@ -209,6 +237,8 @@ local function step()
 			c.bar:set(f, 1 / 30)
 			c.timeT.Text = "OPENING  " .. Campaign.clock(dur - (now - t))
 			c.countT.Text = #q > 1 and ("x" .. #q) or ""
+			c.cancel.Visible = true
+			if clock >= c.confirmUntil then c.cancelT.Text = "CANCEL" end
 			if c.rarT.Text == "" then
 				c.rarT.Text = "???"
 				c.rarT.TextColor3 = Grunge.PAPER
@@ -228,6 +258,7 @@ local function step()
 			c.bar:set(1, 1 / 30)
 			c.timeT.Text = "DONE!"
 			c.countT.Text = ""
+			c.cancel.Visible = false
 			if c.art then c.art.Rotation = 0 end
 		end
 	end
