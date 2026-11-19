@@ -34,7 +34,7 @@ function CF.init(fx) Fx = fx end
 CF.KINDS = { "AntlerClimb", "DropWarn", "DropLand", "HookWind", "HookThrow", "HookCatch", "HookPull", "HookMiss", "HookDrown",
 	"FloodStart", "FloodEnd", "TorchWind", "TorchThrow", "TorchLand", "ScareSwap",
 	"ChargeLine", "ChargeGo", "ChargeSmash", "AntlersStuck", "FloodCall", "GraspWarn", "GraspHands", "CounselorScream",
-	"CounselorPant", "CrowsGather", "Crows", "Blinded", "SickleWind", "SickleThrow", "SickleDrop" }
+	"CounselorPant", "CrowsGather", "Crows", "Blinded", "SickleWind", "SickleThrow", "SickleDrop", "SecretOpen" }
 local set = {} :: { [string]: boolean }
 for _, k in CF.KINDS do set[k] = true end
 function CF.handles(kind: string): boolean return set[kind] == true end
@@ -649,6 +649,10 @@ function CF.handle(kind: string, ...)
 		if h then Sfx.at("BladeScrape", h.Position, { Volume = 1 }) end
 	elseif kind == "SickleThrow" then sickleThrow(a[1], a[2], a[3], a[4])
 	elseif kind == "SickleDrop" then if a[1] then sickleDone(a[1]) end
+	elseif kind == "SecretOpen" then -- (Server/Secrets: a hidden door grinds open)
+		Sfx.at("DoorCreak", a[1], { Volume = 1.3, PlaybackSpeed = 0.45 })
+		Sfx.at("WoodBreak", a[1], { Volume = 0.6, PlaybackSpeed = 0.5 })
+		burst(a[1], Color3.fromRGB(130, 116, 96), 14, 1.5, 4)
 	end
 end
 

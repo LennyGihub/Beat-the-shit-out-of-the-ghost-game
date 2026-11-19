@@ -609,7 +609,7 @@ if RunService:IsStudio() then
 		local id = lp:GetAttribute("DebugFormCine")
 		local fm = type(id) == "string" and Forms.byId[id] or nil
 		if not fm then return end
-		local vial = Forms.vialsOf(fm.kind)[math.clamp(fm.rarity - 1, 1, 4)]
+		local vial = Forms.vialsOf(fm.kind, fm.set)[math.clamp(fm.rarity - 1, 1, 4)]
 		task.spawn(FC.play, fm.kind, vial.id, fm.id, true, false, lp:GetAttribute(fm.kind == "stim" and "FormStim" or "FormPotion") or "", true)
 	end)
 end

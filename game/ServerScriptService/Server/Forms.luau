@@ -11,6 +11,7 @@ local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local Forms = require(RS.Shared.Forms)
 local Levels = require(RS.Shared.Levels)
+local Campaign = require(RS.Shared.Campaign)
 local Remotes = require(script.Parent.Remotes)
 local Data = require(script.Parent.Data)
 local Combat = require(script.Parent.Combat)
@@ -37,6 +38,12 @@ local function buy(p: Player, vialId: any)
 	if not v then return end
 	if p:GetAttribute("InMatch") then return end
 	if os.clock() - (lastBuy[p] or 0) < BUY_GAP then return end
+	-- a set is for sale once its map is open (Camp Hollowmere: always)
+	if not Campaign.mapOpen(Data.campaign(p), v.set) then
+		local m = Campaign.mapById[v.set]
+		toast(p, (m and m.name or v.set) .. " IS NOT OPEN YET")
+		return
+	end
 	local level = (Levels.of(p:GetAttribute("XP") or 0))
 	if level < v.level then toast(p, v.name .. " NEEDS LEVEL " .. v.level); return end
 	-- (the seller's stall must be near: a buy is made at the counter)

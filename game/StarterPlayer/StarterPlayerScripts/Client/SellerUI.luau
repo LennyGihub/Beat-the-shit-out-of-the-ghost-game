@@ -10,6 +10,8 @@ local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local Forms = require(RS.Shared.Forms)
 local Levels = require(RS.Shared.Levels)
+local Campaign = require(RS.Shared.Campaign)
+local HttpService = game:GetService("HttpService")
 local Grunge = require(script.Parent.Grunge)
 local Platform = require(script.Parent.Platform)
 local Sfx = require(script.Parent.Sfx)
@@ -63,6 +65,21 @@ local function owned(): { [string]: boolean }
 	return o
 end
 local function level(): number return (Levels.of(lp:GetAttribute("XP") or 0)) end
+-- the player's campaign progress (player attribute Campaign, JSON)
+local function progress(): { [string]: number }
+	local ok, t = pcall(function() return HttpService:JSONDecode(lp:GetAttribute("Campaign") or "{}") end)
+	return Campaign.clean(ok and t or {})
+end
+local function setOpen(set: string): boolean return Campaign.mapOpen(progress(), set) end
+-- the map before a set's map (what to clear to open it)
+local function before(set: string): string
+	for i, m in Campaign.list do
+		if m.id == set then return i > 1 and Campaign.list[i - 1].name or "" end
+	end
+	return ""
+end
+local setShown = "Camp" -- the set tab showing
+local tabs = {} :: { [string]: TextButton }
 
 local function clear(f: Instance) for _, c in f:GetChildren() do if c:IsA("GuiObject") then c:Destroy() end end end
 
@@ -76,10 +93,26 @@ local function refresh()
 	cashT.Text = "$" .. tostring(lp:GetAttribute("Cash") or 0)
 	local lvl = level()
 	local cash = lp:GetAttribute("Cash") or 0
+	-- THE SET TABS (one per map that has a set)
+	for _, set in Forms.sets do
+		local t = tabs[set]
+		if t then
+			local on = set == setShown
+			local open = setOpen(set)
+			local lab = t:FindFirstChild("Label") :: TextLabel?
+			if lab then
+				lab.Text = (Campaign.mapById[set] and Campaign.mapById[set].name or set) .. (open and "" or "  (LOCKED)")
+				lab.TextColor3 = on and Color3.fromRGB(255, 236, 200) or (open and Color3.fromRGB(190, 180, 160) or Color3.fromRGB(120, 110, 100))
+			end
+			local br = t:FindFirstChild("Brush")
+			if br then Grunge.paint(br, on and ACCENT[kind]:Lerp(Color3.new(0, 0, 0), 0.45) or Color3.fromRGB(40, 33, 29)) end
+		end
+	end
+	local mapLocked = not setOpen(setShown)
 	-- VIALS
 	clear(vialFrame)
-	for i, v in Forms.vialsOf(kind) do
-		local locked = lvl < v.level
+	for i, v in Forms.vialsOf(kind, setShown) do
+		local locked = mapLocked or lvl < v.level
 		seedN += 3
 		local card = Grunge.brush(vialFrame, { LayoutOrder = i, ZIndex = 11 }, locked and LOCKED or Color3.fromRGB(30, 24, 21), seedN, 16, false)
 		local img = Instance.new("ImageLabel")
@@ -118,13 +151,13 @@ local function refresh()
 			local c = ch[r]
 			if c then
 				local rr = Forms.rarity[r]
-				Grunge.text(odds, { Text = string.sub(rr.name, 1, 1) .. " " .. (c >= 0.1 and math.floor(c * 100 + 0.5) or (math.floor(c * 1000 + 0.5) / 10)) .. "%",
-					Font = Grunge.TYPE, Size = UDim2.fromScale(0.18, 1), TextColor3 = rr.color, LayoutOrder = r, ZIndex = 14 })
+				Grunge.text(odds, { Text = string.sub(rr.name, 1, 1) .. " " .. Forms.pct(c),
+					Font = Grunge.TYPE, Size = UDim2.fromScale(0.155, 1), TextColor3 = rr.color, LayoutOrder = r, ZIndex = 14 })
 			end
 		end
 		if locked then
-			Grunge.text(card, { Text = "LEVEL " .. v.level, Font = Grunge.FONT, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.66, 0.8),
-				Size = UDim2.fromScale(0.5, 0.2), TextColor3 = Color3.fromRGB(255, 150, 80), Rotation = -3, ZIndex = 14 })
+			Grunge.text(card, { Text = mapLocked and ("CLEAR " .. before(setShown)) or ("LEVEL " .. v.level), Font = Grunge.FONT, AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(0.66, 0.8), Size = UDim2.fromScale(0.58, 0.2), TextColor3 = Color3.fromRGB(255, 150, 80), Rotation = -3, ZIndex = 14 })
 		else
 			local can = cash >= v.price
 			local b = button(card, Forms.SELLER[kind].verb .. "  $" .. v.price, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.66, 0.81),
@@ -157,7 +190,7 @@ local function refresh()
 	-- COLLECTION
 	clear(list)
 	local own = owned()
-	local all = Forms.ofKind(kind)
+	local all = Forms.ofKind(kind, setShown)
 	local n = 0
 	for i, fm in all do
 		local has = own[fm.id] == true
@@ -181,7 +214,7 @@ local function refresh()
 			end)
 		end
 	end
-	collT.Text = "COLLECTION  " .. n .. " / " .. #all
+	collT.Text = "COLLECTION  " .. n .. " / " .. #all .. "  (" .. (Campaign.mapById[setShown] and Campaign.mapById[setShown].name or setShown) .. ")"
 end
 
 function UI.close()
@@ -193,6 +226,9 @@ function UI.isOpen(): boolean return panel ~= nil and panel.Visible end
 function UI.open(kind: string)
 	if lp:GetAttribute("InMatch") or not Forms.SELLER[kind] then return end
 	kindOpen = kind
+	-- the furthest map that is open (its goods are the newest)
+	setShown = Forms.sets[1]
+	for _, set in Forms.sets do if setOpen(set) then setShown = set end end
 	statusT.Text = ""
 	waiting = false
 	refresh()
@@ -233,9 +269,18 @@ function UI.init()
 	local close = button(panel, "CLOSE", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(0.96, 0.03), Size = UDim2.fromScale(0.15, 0.065), ZIndex = 12, Rotation = 1.5, Modal = true }, DARK)
 	close.Activated:Connect(function() Sfx.play("Click"); UI.close() end)
 	Platform.menu(panel, function() UI.close() end)
-	-- the vials: 2 x 2
-	Grunge.text(panel, { Text = "YOU NEVER KNOW WHAT YOU GET", Font = Grunge.FONT, Position = UDim2.fromScale(0.04, 0.18), Size = UDim2.fromScale(0.55, 0.045),
-		TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 11 })
+	-- one tab per map with a set (each map brings 4 new jars and 4 new potions)
+	for i, set in Forms.sets do
+		local t = button(panel, set, { Position = UDim2.fromScale(0.04 + (i - 1) * 0.285, 0.172), Size = UDim2.fromScale(0.27, 0.058), ZIndex = 12, Rotation = (i % 2 == 0) and 1 or -1 }, DARK)
+		local lab = t:FindFirstChild("Label") :: TextLabel?
+		if lab then lab.Font = Grunge.TYPE end
+		t.Activated:Connect(function()
+			Sfx.play("Click")
+			setShown = set
+			refresh()
+		end)
+		tabs[set] = t
+	end
 	vialFrame = Grunge.frame(panel, { Position = UDim2.fromScale(0.04, 0.24), Size = UDim2.fromScale(0.56, 0.64), ZIndex = 10 })
 	local grid = Instance.new("UIGridLayout"); grid.CellSize = UDim2.fromScale(0.49, 0.485); grid.CellPadding = UDim2.fromScale(0.02, 0.03)
 	grid.SortOrder = Enum.SortOrder.LayoutOrder; grid.Parent = vialFrame

@@ -125,15 +125,21 @@ function UI.show(info: { [string]: any })
 	end
 	Grunge.text(panel, { Text = goalText, Font = Grunge.FONT, Position = UDim2.fromScale(0.05, 0.635), Size = UDim2.fromScale(0.9, 0.05),
 		TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(255, 150, 80), ZIndex = 5 })
-	-- a better vial opened at the sellers with this level
-	local newVial = nil
+	-- a better jar / potion opened at the sellers with this level (in a set whose map is open), or a whole new set
+	-- with the next map
+	local newText, newColor = nil, Grunge.PAPER
 	for _, v in Forms.vials do
-		if v.level > before and v.level <= after then newVial = v end
+		if v.level > before and v.level <= after and Campaign.mapOpen(prog, v.set) then
+			newText, newColor = "NEW AT " .. Forms.SELLER[v.kind].name .. ": " .. v.name, v.color
+		end
 	end
-	if newVial then
-		local who = Forms.SELLER[newVial.kind].name
-		Grunge.text(panel, { Text = "NEW AT " .. who .. ": " .. newVial.name, Font = Grunge.TYPE, Position = UDim2.fromScale(0.05, 0.69), Size = UDim2.fromScale(0.9, 0.04),
-			TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = newVial.color, ZIndex = 5 })
+	if nxt and nxt.map ~= st.map and table.find(Forms.sets, nxt.map) then
+		newText = "NEW AT THE SELLERS: " .. Campaign.mapById[nxt.map].name .. " JARS AND POTIONS"
+		newColor = Campaign.mapById[nxt.map].color
+	end
+	if newText then
+		Grunge.text(panel, { Text = newText, Font = Grunge.TYPE, Position = UDim2.fromScale(0.05, 0.69), Size = UDim2.fromScale(0.9, 0.04),
+			TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = newColor, ZIndex = 5 })
 	end
 	-- buttons
 	local picked = false

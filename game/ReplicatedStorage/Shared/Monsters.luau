@@ -104,7 +104,7 @@ local List: { Monster } = {
 	-- `blind`: a blinded player can't hold him still); stare at him over `stare` seconds and he sends them anyway.
 	-- sickle: thrown like a boomerang, out past you and back.
 	m({ id = "Scarecrow", name = "The Scarecrow", title = "THE SCARECROW", rarity = 1, template = "Scarecrow", color = C(214, 182, 96),
-		hp = 1.1, speed = 1.45, dmg = 1.1, reward = 1.5, hover = 5.45, walker = true, scale = 1, solid = false,
+		hp = 0.9, speed = 1.45, dmg = 1.1, reward = 1.5, hover = 5.45, walker = true, scale = 1, solid = false,
 		ability = { kind = "scareSwap", cd = 8, decoys = 8, cone = 0.55, range = 80, swapEvery = 11,
 			crows = { range = 34, cone = 0.75, wind = 0.9, time = 1.6, dps = 14, blind = 3.0, stare = 3.2 },
 			sickle = { min = 10, max = 50, wind = 0.7, flight = 0.7, dmg = 18, power = 45 } },
