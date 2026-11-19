@@ -343,6 +343,27 @@ local function domeRoof(parent, cx: number, cz: number, base: number, rx: number
 	end
 end
 
+-- a surface of revolution round (cx, cz): prof = { { r, y }, ... } from the bottom up (r = 0 closes it); n sides.
+-- Onion domes, bells, turret caps. band = every other ring in that style.
+local function revolve(parent, name: string, cx: number, cz: number, prof, n: number, sty, band, th: number?)
+	local function P(k, j)
+		local a = k * 2 * math.pi / n
+		return Vector3.new(cx + prof[j][1] * math.cos(a), prof[j][2], cz + prof[j][1] * math.sin(a))
+	end
+	for j = 1, #prof - 1 do
+		local s2 = (band and j % 2 == 0) and band or sty
+		for k = 0, n - 1 do
+			local a, bb, c, d = P(k, j), P(k + 1, j), P(k + 1, j + 1), P(k, j + 1)
+			if prof[j + 1][1] < 0.05 then tri(parent, name, a, bb, c, s2, th or 0.8, DECO)
+			elseif prof[j][1] < 0.05 then tri(parent, name, a, c, d, s2, th or 0.8, DECO)
+			else quad(parent, name, a, bb, c, d, s2, th or 0.8, DECO) end
+		end
+	end
+end
+local function onion(parent, cx: number, cz: number, y0: number, r: number, sty, band)
+	revolve(parent, "Onion", cx, cz, { { r * 0.8, y0 }, { r * 1.15, y0 + r * 0.5 }, { r * 1.05, y0 + r * 1.0 }, { r * 0.6, y0 + r * 1.55 }, { r * 0.22, y0 + r * 2.0 }, { 0, y0 + r * 2.5 } }, 12, sty, band)
+end
+
 -- an n-sided prism (a tower, a silo, a chimney stack): radius r round (cx, cz) from y0 to y1
 local function prism(parent, name, cx: number, cz: number, r: number, y0: number, y1: number, n: number, sty, o)
 	local side = 2 * r * math.tan(math.pi / n) + 0.1

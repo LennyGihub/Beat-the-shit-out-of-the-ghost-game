@@ -131,12 +131,14 @@ end
 
 -- each map: { tier-1 spots }, { tier-2 spots {x, y?, z} }, the secret room's tier-3 spot or nil
 local LIST = {
-	Carn_BigTop = { { { -30, 30 }, { 30, 30 }, { -30, -30 }, { 30, -30 }, { 0, -34 }, { -38, 0 }, { 38, 0 }, { -20, 48 }, { 20, 46 } },
-		{ { -72, 8.8, 20 }, { 72, 8.8, -20 }, { 10, 2, -48 } }, { -70, -50 } },
+	-- (2026-11-19: the Big Top is an oval tent now; its wagon's spot is the map's SecretSpot)
+	Carn_BigTop = { { { -22, 22 }, { 22, 22 }, { -26, -26 }, { 26, -26 }, { 0, -36 }, { -36, 0 }, { 36, 0 }, { -14, 46 }, { 16, 46 } },
+		{ { -70, 8.8, 4 }, { 70, 8.8, -8 }, { 10, 2, -50 } }, nil },
 	Carn_Mirrors = { { { -66, -16 }, { -30, 4 }, { 6, 28 }, { 42, -10 }, { 66, 16 }, { -54, 30 }, { 30, 50 }, { -50, 48 }, { -30, -40 } },
 		{ { 40, 0, -46 }, { -60, 0, -50 }, { 0, 0, 16 } }, { 66, -50 } },
-	Carn_Carousel = { { { -40, 10 }, { 40, 10 }, { -50, 40 }, { 50, -30 }, { -60, -20 }, { 20, 40 }, { -10, -44 }, { 60, 20 }, { 0, 30 } },
-		{ { 0, 1.6, 6 }, { -30, 0.5, -48 }, { 56, 0, 44 } }, nil },
+	-- (2026-11-19: the Carousel is a round pavilion now, radius 64 round (0, -4))
+	Carn_Carousel = { { { -40, 10 }, { 40, 10 }, { -40, 34 }, { 46, -30 }, { -48, -20 }, { 20, 40 }, { -10, -44 }, { 46, 24 }, { 0, 30 } },
+		{ { 0, 1.6, 6 }, { -26, 0.5, -44 }, { 34, 0, 40 } }, nil },
 	Carn_Funhouse = { { { -60, 30 }, { -10, 46 }, { 40, 36 }, { 60, 10 }, { -20, 10 }, { 20, -40 }, { -40, -20 }, { 60, -40 }, { 0, -50 } },
 		{ { -40, 0, -42 }, { 36, 9, -51 }, { -70, 0, -50 } }, nil },
 	Carn_Prizes = { { { -40, 30 }, { 40, 30 }, { -40, -10 }, { 40, -10 }, { -20, 46 }, { 20, 46 }, { -30, -36 }, { 30, -36 }, { 0, 20 } },
@@ -152,7 +154,10 @@ for id, l in LIST do
 	local F1 = floorY(map)
 	for _, p in l[1] do spot(map, p[1], F1, p[2], 1) end
 	for _, p in l[2] do spot(map, p[1], F1 + p[2], p[3], 2) end
-	if l[3] then spot(map, l[3][1], F1, l[3][2], 3, true) end
+	-- (a reshaped building says where its secret room's item lies: map attribute SecretSpot)
+	local ss = map:GetAttribute("SecretSpot")
+	if typeof(ss) == "Vector3" then spot(map, ss.X, F1, ss.Z, 3, true)
+	elseif l[3] then spot(map, l[3][1], F1, l[3][2], 3, true) end
 	table.insert(out, id .. ": spots " .. #spotsOf(map):GetChildren() .. (map:FindFirstChild("Secrets") and " (secret room)" or ""))
 end
 return table.concat(out, "\n")
