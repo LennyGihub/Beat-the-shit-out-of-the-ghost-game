@@ -578,6 +578,108 @@ local function abilityPose(ab: string, phase: string, t: number, since: number):
 			p.RightShoulder = A(1.6, 0, 0.9); p.LeftShoulder = A(1.6, 0, -0.9); p.RightElbow = A(0.2, 0, 0); p.LeftElbow = A(0.2, 0, 0)
 			p.RightHip = A(-0.3, 0, 0.3); p.LeftHip = A(-0.3, 0, -0.3)
 		end
+	elseif ab == "nun" then -- the Weeping Nun (the Ashen Abbey)
+		if phase == "veilfade" then -- hands up to her face, pulling the veil down, bowing
+			p.Waist = A(-0.35 * a, 0, 0); p.Neck = A(-0.6 * a, 0, 0)
+			p.RightShoulder = A(2.2 * a, 0, -0.3); p.LeftShoulder = A(2.2 * a, 0, 0.3); p.RightElbow = A(2.0 * a, 0, 0); p.LeftElbow = A(2.0 * a, 0, 0)
+		elseif phase == "stalk" or phase == "rise" then -- (unseen) gliding, arms hanging
+			p.Waist = A(-0.2, 0, 0); p.Neck = A(-0.5, 0, 0)
+			p.RightShoulder = A(0.2, 0, 0.1); p.LeftShoulder = A(0.2, 0, -0.1)
+		elseif phase == "slash" then -- up out of the pool, both claws raked across
+			p.Waist = A(-0.3, 0.5, 0); p.Neck = A(0.2, 0, 0)
+			p.RightShoulder = A(1.6, 0, -0.9); p.LeftShoulder = A(1.2, 0, 1.1); p.RightElbow = A(0.3, 0, 0); p.LeftElbow = A(0.3, 0, 0)
+		elseif phase == "sing" or phase == "chant" then -- head thrown back, arms out to the windows, swaying
+			local sw = s(t * 3) * 0.08
+			p.Waist = A(0.25 * a, sw, 0); p.Neck = A(0.6 * a, 0, sw)
+			p.RightShoulder = A(1.9 * a, 0, 1.1 * a); p.LeftShoulder = A(1.9 * a, 0, -1.1 * a); p.RightElbow = A(0.2, 0, 0); p.LeftElbow = A(0.2, 0, 0)
+			p.RightWrist = A(-0.4, 0, 0); p.LeftWrist = A(-0.4, 0, 0)
+		end
+	elseif ab == "gravedigger" then -- the Gravedigger (the Ashen Abbey)
+		if phase == "dig" then -- the shovel raised high over his head, both hands
+			p.Waist = A(0.3 * a, 0, 0); p.Neck = A(0.2, 0, 0)
+			p.RightShoulder = A(3.0 * a, 0, 0.2); p.LeftShoulder = A(3.0 * a, 0, -0.2); p.RightElbow = A(0.5, 0, 0); p.LeftElbow = A(0.5, 0, 0)
+		elseif phase == "wave" then -- slammed into the floor, bent over the shovel
+			p.Root = CFrame.new(0, -0.6, 0) * A(-0.3, 0, 0); p.Waist = A(-0.6, 0, 0); p.Neck = A(0.5, 0, 0)
+			p.RightShoulder = A(0.6, 0, 0.1); p.LeftShoulder = A(0.6, 0, -0.1); p.RightElbow = A(0.2, 0, 0); p.LeftElbow = A(0.2, 0, 0)
+			p.RightHip = A(0.6, 0, 0.2); p.LeftHip = A(-0.2, 0, -0.2); p.RightKnee = A(-0.8, 0, 0)
+		elseif phase == "heave" then -- the coffin hauled up onto his shoulder, leaning back under its weight
+			local q = s(t * 18) * 0.04
+			p.Root = CFrame.new(0, -0.5 * a, 0); p.Waist = A(0.35 * a + q, 0.4 * a, 0); p.Neck = A(0.1, 0, 0)
+			p.RightShoulder = A(2.8 * a, 0, 0.4); p.LeftShoulder = A(2.6 * a, 0, -0.2); p.RightElbow = A(1.4, 0, 0); p.LeftElbow = A(1.6, 0, 0)
+			p.RightKnee = A(-0.5 * a, 0, 0); p.LeftKnee = A(-0.5 * a, 0, 0); p.RightHip = A(0.3 * a, 0, 0.2); p.LeftHip = A(0.3 * a, 0, -0.2)
+		elseif phase == "throw" then -- flung forward, arms out
+			p.Waist = A(-0.5, -0.4, 0); p.Neck = A(0.2, 0, 0)
+			p.RightShoulder = A(1.4, 0, 0.2); p.LeftShoulder = A(1.4, 0, -0.2)
+			p.RightHip = A(0.5, 0, 0.1); p.LeftHip = A(-0.4, 0, -0.1)
+		end
+	elseif ab == "ringer" then -- the Bell Ringer (the Ashen Abbey)
+		if phase == "yank" or phase == "follow" then -- hauling down on a rope overhead, hand over hand
+			local h = s(t * 8)
+			p.Root = CFrame.new(0, -0.6, 0); p.Waist = A(-0.2, 0, 0); p.Neck = A(0.4, 0, 0)
+			p.RightShoulder = A(2.6 + h * 0.4, 0, 0.1); p.LeftShoulder = A(2.6 - h * 0.4, 0, -0.1); p.RightElbow = A(0.8 - h * 0.5, 0, 0); p.LeftElbow = A(0.8 + h * 0.5, 0, 0)
+			p.RightKnee = A(-0.6, 0, 0); p.LeftKnee = A(-0.6, 0, 0); p.RightHip = A(0.4, 0, 0.2); p.LeftHip = A(0.4, 0, -0.2)
+		elseif phase == "drop" or phase == "ring" then -- arms flung wide, laughing at the sky
+			local sw = s(t * 11) * 0.06
+			p.Waist = A(0.35, 0, 0); p.Neck = A(0.6 + sw, 0, 0)
+			p.RightShoulder = A(1.6, 0, 1.3); p.LeftShoulder = A(1.6, 0, -1.3); p.RightElbow = A(0.2, 0, 0); p.LeftElbow = A(0.2, 0, 0)
+		elseif phase == "lift" then -- his own bell lifted over his head in both hands
+			p.Waist = A(0.4 * a, 0, 0); p.Neck = A(0.3, 0, 0)
+			p.RightShoulder = A(3.1 * a, 0, 0.3); p.LeftShoulder = A(3.1 * a, 0, -0.3); p.RightElbow = A(0.6, 0, 0); p.LeftElbow = A(0.6, 0, 0)
+			p.RightKnee = A(-0.3, 0, 0); p.LeftKnee = A(-0.3, 0, 0)
+		elseif phase == "toll" then -- slammed down to the floor, crouched over it
+			p.Root = CFrame.new(0, -1.4, 0) * A(-0.4, 0, 0); p.Waist = A(-0.7, 0, 0); p.Neck = A(0.6, 0, 0)
+			p.RightShoulder = A(1.1, 0, 0.15); p.LeftShoulder = A(1.1, 0, -0.15); p.RightElbow = A(0.2, 0, 0); p.LeftElbow = A(0.2, 0, 0)
+			p.RightHip = A(1.2, 0, 0.3); p.LeftHip = A(1.2, 0, -0.3); p.RightKnee = A(-1.6, 0, 0); p.LeftKnee = A(-1.6, 0, 0)
+		end
+	elseif ab == "astronaut" then -- the Lost Astronaut (the Black Moon)
+		if phase == "smash" then -- the fist drawn back for a punch at the wall
+			p.Waist = A(0.1, 0.7 * a, 0); p.Neck = A(0, -0.4 * a, 0)
+			p.RightShoulder = A(1.0 * a, 0, 0.6); p.RightElbow = A(2.2 * a, 0, 0); p.LeftShoulder = A(1.4 * a, 0, -0.3)
+			p.RightHip = A(-0.3, 0, 0.1); p.LeftHip = A(0.4, 0, -0.1)
+		elseif phase == "vent" then -- bracing against the wind, arms over the visor
+			p.Root = CFrame.new(0, -0.6, 0) * A(-0.25, 0, 0); p.Waist = A(-0.3, 0, 0)
+			p.RightShoulder = A(2.0, 0, -0.4); p.LeftShoulder = A(2.0, 0, 0.4); p.RightElbow = A(1.8, 0, 0); p.LeftElbow = A(1.8, 0, 0)
+			p.RightHip = A(0.4, 0, 0.3); p.LeftHip = A(-0.3, 0, -0.3); p.RightKnee = A(-0.6, 0, 0)
+		elseif phase == "ignite" or phase == "hang" then -- hanging under the jet, legs dangling, arms out
+			local d = s(t * 4) * 0.12
+			p.Waist = A(0.15, 0, 0); p.Neck = A(-0.5, 0, 0)
+			p.RightShoulder = A(0.4, 0, 0.9); p.LeftShoulder = A(0.4, 0, -0.9); p.RightElbow = A(0.5, 0, 0); p.LeftElbow = A(0.5, 0, 0)
+			p.RightHip = A(0.2 + d, 0, 0.1); p.LeftHip = A(0.1 - d, 0, -0.1); p.RightKnee = A(-0.5, 0, 0); p.LeftKnee = A(-0.4, 0, 0)
+		elseif phase == "dive" then -- diving fist first
+			p.Root = A(-0.9, 0, 0); p.Waist = A(-0.3, 0, 0); p.Neck = A(0.6, 0, 0)
+			p.RightShoulder = A(2.9, 0, 0.1); p.LeftShoulder = A(2.9, 0, -0.1); p.RightElbow = A(0.1, 0, 0); p.LeftElbow = A(0.1, 0, 0)
+		elseif phase == "land" then -- landed on one knee, fist in the floor
+			p.Root = CFrame.new(0, -1.8, 0) * A(-0.35, 0, 0); p.Waist = A(-0.4, 0, 0); p.Neck = A(0.6, 0, 0)
+			p.RightShoulder = A(1.0, 0, 0.1); p.RightElbow = A(0.1, 0, 0); p.LeftShoulder = A(0.4, 0, -0.6)
+			p.RightHip = A(1.5, 0, 0.2); p.RightKnee = A(-1.8, 0, 0); p.LeftHip = A(0.2, 0, -0.2); p.LeftKnee = A(-2.2, 0, 0)
+		end
+	elseif ab == "specimen" then -- the Specimen (the Black Moon)
+		if phase == "rear" then -- reared up, head back, throat swelling
+			local q = s(t * 26) * 0.05
+			p.Waist = A(0.45 * a, 0, 0); p.Neck = A(0.8 * a + q, 0, 0)
+			p.RightShoulder = A(1.2, 0, 1.0 * a); p.LeftShoulder = A(1.2, 0, -1.0 * a); p.RightElbow = A(1.6, 0, 0); p.LeftElbow = A(1.6, 0, 0)
+		elseif phase == "spit" then -- lunged forward, jaws first
+			p.Waist = A(-0.7, 0, 0); p.Neck = A(-0.2, 0, 0)
+			p.RightShoulder = A(-0.5, 0, 0.6); p.LeftShoulder = A(-0.5, 0, -0.6)
+		elseif phase == "split" or phase == "shudder" then -- hunched over, shuddering, its back splitting
+			local q = s(t * 40) * 0.08
+			p.Root = CFrame.new(0, -1.2, 0) * A(-0.5, 0, 0); p.Waist = A(-0.6 + q, q, 0); p.Neck = A(0.4, 0, q)
+			p.RightShoulder = A(0.9, 0, 0.5); p.LeftShoulder = A(0.9, 0, -0.5); p.RightElbow = A(1.6, 0, 0); p.LeftElbow = A(1.6, 0, 0)
+			p.RightHip = A(1.0, 0, 0.3); p.LeftHip = A(1.0, 0, -0.3); p.RightKnee = A(-1.4, 0, 0); p.LeftKnee = A(-1.4, 0, 0)
+		end
+	elseif ab == "sentinel" then -- the Sentinel (the Black Moon)
+		if phase == "aim" then -- shoulders squared, arms out, scanning
+			p.Waist = A(0, s(t * 2.5) * 0.25, 0); p.Neck = A(0.1, s(t * 5) * 0.2, 0)
+			p.RightShoulder = A(1.5, 0, 0.3); p.LeftShoulder = A(1.5, 0, -0.3); p.RightElbow = A(0.3, 0, 0); p.LeftElbow = A(0.3, 0, 0)
+		elseif phase == "fire" then -- recoil, leaning back
+			p.Waist = A(0.35, 0, 0); p.Neck = A(0.25, 0, 0)
+			p.RightShoulder = A(1.9, 0, 0.6); p.LeftShoulder = A(1.9, 0, -0.6)
+		elseif phase == "plug" or phase == "arc" then -- both fists driven into the floor, juddering with the current
+			local q = phase == "arc" and s(t * 50) * 0.06 or 0
+			p.Root = CFrame.new(0, -1.6, 0) * A(-0.5 + q, 0, 0); p.Waist = A(-0.5, q, 0); p.Neck = A(0.6, 0, q)
+			p.RightShoulder = A(0.7, 0, 0.35); p.LeftShoulder = A(0.7, 0, -0.35); p.RightElbow = A(0.1, 0, 0); p.LeftElbow = A(0.1, 0, 0)
+			p.RightHip = A(1.1, 0, 0.35); p.LeftHip = A(1.1, 0, -0.35); p.RightKnee = A(-1.5, 0, 0); p.LeftKnee = A(-1.5, 0, 0)
+		end
 	elseif ab == "ringmaster" then -- the Ringmaster
 		if phase == "wind" then
 			-- the whip arm drawn back over his shoulder

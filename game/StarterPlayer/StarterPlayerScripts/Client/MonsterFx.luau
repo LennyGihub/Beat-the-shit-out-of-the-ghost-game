@@ -1063,6 +1063,20 @@ function MonsterFx.handle(kind: string, ...)
 		emitter(pos, { Color = ColorSequence.new(Color3.fromRGB(210, 200, 180)), Size = NumberSequence.new(1.2, 2.4), Transparency = NumberSequence.new(0.5, 1),
 			Speed = NumberRange.new(2, 6), Lifetime = NumberRange.new(0.3, 0.6) }, 8, 1.2)
 		Sfx.at("WoodBreak", pos, { PlaybackSpeed = 1.7 + rng:NextNumber(0, 0.3), Volume = 0.5 })
+	elseif kind == "CloneSpawn" and a[2] == "larva" then
+		-- the Specimen's larvae crawl out: a splash of green slime
+		local pos = a[1]
+		emitter(pos, { Color = ColorSequence.new(Color3.fromRGB(140, 255, 90), Color3.fromRGB(60, 120, 40)), LightEmission = 0.7, Size = NumberSequence.new(0.8, 0.1),
+			Speed = NumberRange.new(5, 12), Lifetime = NumberRange.new(0.3, 0.7), Acceleration = Vector3.new(0, -30, 0), Texture = "rbxasset://textures/particles/forcefield_glow_main.dds" }, 18, 1.4)
+		Sfx.at("FormSquish", pos, { PlaybackSpeed = 1.3 + rng:NextNumber(0, 0.4), Volume = 0.7 })
+	elseif kind == "CloneShatter" and a[2] == "larva" then
+		-- ...and burst into slime
+		local pos = a[1]
+		emitter(pos, { Color = ColorSequence.new(Color3.fromRGB(140, 255, 90)), LightEmission = 0.8, Size = NumberSequence.new(1.2, 0.2),
+			Speed = NumberRange.new(8, 18), Lifetime = NumberRange.new(0.3, 0.6), Acceleration = Vector3.new(0, -40, 0), Texture = "rbxasset://textures/particles/forcefield_glow_main.dds" }, 26, 1.4)
+		emitter(pos, { Color = ColorSequence.new(Color3.fromRGB(150, 190, 110)), Size = NumberSequence.new(1, 2.5), Transparency = NumberSequence.new(0.5, 1),
+			Speed = NumberRange.new(2, 6), Lifetime = NumberRange.new(0.4, 0.8) }, 10, 1.2)
+		Sfx.at("FormSquish", pos, { PlaybackSpeed = 0.8 + rng:NextNumber(0, 0.3), Volume = 1 })
 	elseif kind == "CloneSpawn" and a[2] == "balloon" then
 		-- Pop the Clown's balloon copies: a squeak of air, a puff of confetti
 		local pos = a[1]

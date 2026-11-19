@@ -59,6 +59,12 @@ local COLORS: { [string]: { { Color3 } } } = {
 	Strongman = { { C(200, 170, 130), C(90, 70, 50) }, { C(255, 120, 60), C(110, 30, 10) } },
 	Fortune = { { C(200, 120, 255), C(60, 20, 90) }, { C(255, 120, 220), C(90, 10, 70) } },
 	Ringmaster = { { C(255, 90, 90), C(120, 10, 20) }, { C(255, 210, 90), C(150, 80, 10) } },
+	Nun = { { C(235, 230, 255), C(40, 30, 60) }, { C(255, 80, 60), C(60, 10, 10) } },
+	Gravedigger = { { C(150, 255, 120), C(50, 40, 30) }, { C(255, 120, 60), C(60, 30, 10) } },
+	Ringer = { { C(230, 170, 70), C(90, 60, 30) }, { C(255, 90, 40), C(90, 20, 10) } },
+	Astronaut = { { C(255, 170, 80), C(70, 80, 100) }, { C(170, 110, 255), C(30, 10, 60) } },
+	Specimen = { { C(140, 255, 90), C(30, 70, 20) }, { C(255, 90, 200), C(60, 10, 50) } },
+	Sentinel = { { C(255, 60, 50), C(60, 20, 20) }, { C(110, 220, 255), C(10, 40, 70) } },
 }
 
 type Ctx = {
@@ -1610,6 +1616,383 @@ local RARITY_TAG = { [2] = "RARE MONSTER", [3] = "EVOLVED MONSTER", [4] = "SECRE
 SCRIPTS.DeepOne = SCRIPTS.LakeWitch
 SCRIPTS.Keeper = SCRIPTS.Counselor
 SCRIPTS.Netman = SCRIPTS.Pirate
+
+
+-- THE ASHEN ABBEY and THE BLACK MOON (2026-11-19): each new monster borrows another monster's body motion
+-- (EntrancePose: the Nun the Woman's rise, the Gravedigger the Rat's burst, the Ringer the Giant's fall, the Astronaut
+-- the Conqueror's walk, the Specimen the Antlered One's ceiling crawl, the Sentinel the Ringmaster's arms) but has its
+-- own camera, effects and sounds, bigger than the earlier maps' (the last two maps: Client/FxTier adds its layer too)
+
+-- THE WEEPING NUN: candles light one by one round a black pool; she rises out of it under a shaft of window light,
+-- weeping, then screams with her arms up and the candles flare into holy fire
+SCRIPTS.Nun = function(x)
+	local T = EP.T.Woman
+	local f = x.floor
+	local HOLY = C(255, 230, 160)
+	at(x, 0, function()
+		darkness(x, 0.45, 0.3)
+		Sfx.play("Choir", { Volume = 1.3 })
+		Sfx.play("GhostWhisper", { Volume = 1.2, PlaybackSpeed = 0.6 })
+		local pool = disc(x, f + UP * 0.08, 0.5, C(4, 2, 8), 0.1)
+		pool.Material = Enum.Material.SmoothPlastic
+		each(x, function(s)
+			local r = 6 * ss(seg(s, 0, 1.0)) * (1 - ss(seg(s, x.D - 1.0, x.D - 0.3)))
+			pool.Size = Vector3.new(0.12, r * 2, r * 2)
+		end)
+		-- a shaft of window light from high up, slanting down onto the pool
+		local top = f + UP * math.min(x.ceil, 40) - x.cright * 8 + x.look * 4
+		local shaft = part(x, { Color = HOLY, Transparency = 1, Size = Vector3.new(7, 7, (top - f).Magnitude), CFrame = CFrame.lookAt((top + f) / 2, top) })
+		each(x, function(s) shaft.Transparency = 1 - 0.2 * ss(seg(s, T.rise0, T.rise1)) - 0.25 * seg(s, T.scream - 0.1, T.scream) * (1 - seg(s, T.scream, T.calm)) end)
+		-- eight candles round the pool, lit one after another
+		for i = 1, 8 do
+			local a = i / 8 * math.pi * 2
+			local cp = f + Vector3.new(math.cos(a) * 8, 0, math.sin(a) * 8)
+			part(x, { Material = Enum.Material.SmoothPlastic, Color = C(230, 222, 200), Size = Vector3.new(0.5, 1.6, 0.5), Position = cp + UP * 0.8 })
+			local flame = part(x, { Color = C(255, 200, 110), Size = Vector3.new(0.25, 0.5, 0.25), Position = cp + UP * 1.85, Transparency = 1 })
+			local l = Instance.new("PointLight"); l.Color = C(255, 180, 90); l.Range = 10; l.Brightness = 0; l.Parent = flame
+			local lit = 0.2 + i * 0.22
+			each(x, function(s)
+				local on = seg(s, lit, lit + 0.1)
+				local flare = seg(s, T.scream, T.scream + 0.15) * (1 - seg(s, T.scream + 0.3, T.calm))
+				flame.Transparency = 1 - on
+				flame.Size = Vector3.new(0.25, 0.5 + flare * 2.5 + math.sin(s * 30 + i) * 0.05, 0.25)
+				l.Brightness = on * (0.8 + flare * 3)
+			end)
+			at(x, lit, function() Sfx.play("FormHiss", { Volume = 0.3, PlaybackSpeed = 1.6 + i * 0.05 }) end)
+		end
+	end)
+	-- black tears falling into the pool while she rises
+	stream(x, T.rise0, T.scream, f + UP * 9, { Texture = SMOKE, Color = ColorSequence.new(C(10, 6, 14)), Size = NumberSequence.new(0.35, 0.2),
+		Transparency = NumberSequence.new(0.1, 0.4), Lifetime = NumberRange.new(0.5, 0.8), Speed = NumberRange.new(8, 14), Acceleration = Vector3.new(0, -40, 0),
+		SpreadAngle = Vector2.new(25, 25), EmissionDirection = Enum.NormalId.Bottom }, 16)
+	stream(x, 0.1, T.calm, f + UP * 0.3, with(SMOKE_FLOOR, { Color = ColorSequence.new(C(30, 20, 40), C(6, 4, 10)) }), 20)
+	at(x, T.rise0 + 0.6, function() Sfx.play(Sfx.voice("WindUp", x.id), { Volume = 1.2 }) end)
+	at(x, T.scream - 0.04, function()
+		Sfx.play(Sfx.voice("Spawn", x.id), { Volume = 1.5 })
+		Sfx.play("MagicBurst", { Volume = 1, PlaybackSpeed = 0.7 })
+		flash(x, Color3.new(1, 1, 1), 0.6, 0.5)
+		darkness(x, 0, 0.5)
+		shake(1.0); kick(13)
+		ring(x, f, HOLY, 2, 34, 0.8)
+		task.delay(0.12, function() if x.alive() then ring(x, f, x.c1, 2, 26, 0.7) end end)
+		burst(x, f + UP * 1.5, { Texture = FIRE, Color = ColorSequence.new(HOLY, C(255, 140, 50)), LightEmission = 1, Size = NumberSequence.new(1.5, 0),
+			Lifetime = NumberRange.new(0.6, 1.1), Speed = NumberRange.new(14, 30), SpreadAngle = Vector2.new(70, 70), EmissionDirection = Enum.NormalId.Top }, 70)
+		x.card()
+	end)
+	x.camera = function(s)
+		local k = ss(seg(s, 0, T.scream))
+		local rise = ss(seg(s, T.rise0, T.rise1))
+		local back = s > T.scream and seg(s, T.scream, T.scream + 0.25) * 2.5 or 0
+		return spot(x, lerp(16, 9, k) + back, lerp(-4, -1.2, k), lerp(1.2, x.H * 0.7, k)), f + UP * math.max(0.6, x.H * 0.86 - (x.H + 1.5) * (1 - rise))
+	end
+end
+
+-- THE GRAVEDIGGER: a gravestone in the floor; the ground heaves, the stone tips and falls, he claws his way out on all
+-- fours in a spray of grave dirt and green grave-light, sniffs, then rears up and roars
+SCRIPTS.Gravedigger = function(x)
+	local T = EP.T.Rat
+	local f = x.floor
+	local DIRT, MUD, GRAVE = C(86, 66, 48), C(52, 40, 30), C(150, 255, 120)
+	local dirt = { Color = ColorSequence.new(DIRT, MUD), Size = NumberSequence.new(1.5, 5), Transparency = NumberSequence.new(0.25, 1), Lifetime = NumberRange.new(0.6, 1.3), Drag = 2 }
+	at(x, 0, function()
+		Sfx.play("BoneRattle", { Volume = 1 })
+		local mound = disc(x, f + UP * 0.15, 0.5, MUD, 0)
+		mound.Material = Enum.Material.Slate
+		each(x, function(s)
+			local r = 5.5 * ss(seg(s, 0, T.burst)) * (1 - seg(s, x.D - 0.9, x.D - 0.3))
+			mound.Size = Vector3.new(0.3 + 0.9 * seg(s, 0.3, T.burst), r * 2 + 0.01, r * 2 + 0.01)
+			if s < T.burst then shake(0.012) end
+		end)
+		-- the headstone at the head of the grave, behind him; it rocks, then topples at the burst
+		local stone = part(x, { Material = Enum.Material.Slate, Color = C(110, 110, 104), Size = Vector3.new(4, 5, 0.8) })
+		local base = f - x.look * 5.5
+		each(x, function(s)
+			local rock = s < T.burst and math.sin(s * 22) * 0.05 * seg(s, 0.4, T.burst) or 0
+			local fall = ss(seg(s, T.burst, T.burst + 0.5)) * 1.45
+			stone.CFrame = CFrame.lookAt(base, base + x.look) * CFrame.Angles(-(rock + fall), 0, 0) * CFrame.new(0, 2.5, 0)
+			stone.Transparency = seg(s, x.D - 0.7, x.D - 0.2)
+		end)
+		local gl = light(x, f + UP * 1.5, GRAVE, 26, 0)
+		each(x, function(s) gl.Brightness = 2.5 * seg(s, 0.3, T.burst) * (1 - seg(s, x.D - 0.8, x.D - 0.2)) end)
+	end)
+	stream(x, 0.3, T.burst, f + UP * 0.3, { Texture = SPARK, Color = ColorSequence.new(GRAVE), LightEmission = 1, Size = NumberSequence.new(0.4, 0),
+		Lifetime = NumberRange.new(0.8, 1.4), Speed = NumberRange.new(2, 5), SpreadAngle = Vector2.new(50, 50), EmissionDirection = Enum.NormalId.Top }, 20)
+	for _, t in { 0.5, 1.0, 1.35 } do
+		at(x, t, function()
+			Sfx.play("ShovelDig", { Volume = 1.2, PlaybackSpeed = 0.9 })
+			shake(0.2)
+			burst(x, f + UP * 0.5, with(dirt, { Speed = NumberRange.new(8, 18), SpreadAngle = Vector2.new(50, 50), EmissionDirection = Enum.NormalId.Top, Acceleration = Vector3.new(0, -40, 0) }), 16)
+		end)
+	end
+	at(x, T.burst, function()
+		Sfx.play("Explosion", { Volume = 0.8, PlaybackSpeed = 0.9 })
+		Sfx.play("CoffinCreak", { Volume = 1.3 })
+		shake(1.1); kick(12)
+		flash(x, GRAVE, 0.3, 0.35)
+		ring(x, f, GRAVE, 2, 30, 0.7)
+		chunks(x, f + UP, 20, DIRT, Enum.Material.Slate, 34)
+		chunks(x, f + UP, 8, C(226, 214, 186), Enum.Material.SmoothPlastic, 24) -- bones
+		burst(x, f + UP * 1.5, with(dirt, { Speed = NumberRange.new(16, 40), SpreadAngle = Vector2.new(70, 70), EmissionDirection = Enum.NormalId.Top, Acceleration = Vector3.new(0, -30, 0) }), 110)
+	end)
+	at(x, T.land, function()
+		Sfx.play("PunchHeavy", { Volume = 1, PlaybackSpeed = 0.6 })
+		shake(0.6)
+		ring(x, f, x.c2, 1.5, 14, 0.45)
+	end)
+	at(x, T.rear + 0.15, function()
+		Sfx.play(Sfx.voice("Spawn", x.id), { Volume = 1.5 })
+		Sfx.play("BoneRattle", { Volume = 1.2, PlaybackSpeed = 0.8 })
+		shake(0.9); kick(11)
+		flash(x, x.c1, 0.25, 0.35)
+		ring(x, f, x.c1, 2, 30, 0.7)
+		burst(x, f + UP * 1, { Texture = SPARK, Color = ColorSequence.new(GRAVE), LightEmission = 1, Size = NumberSequence.new(0.6, 0),
+			Lifetime = NumberRange.new(0.8, 1.4), Speed = NumberRange.new(10, 22), SpreadAngle = Vector2.new(80, 80), EmissionDirection = Enum.NormalId.Top }, 50)
+		x.card()
+	end)
+	x.camera = function(s)
+		local up = seg(s, T.burst, T.peak)
+		local down = seg(s, T.peak, T.land)
+		local rear = ss(seg(s, T.rear, T.rear + 0.3))
+		local y = s < T.burst and 0.8 or (5 * up * (1 - down * down) + x.H * lerp(0.3, 0.62, rear))
+		local k = ss(seg(s, 0, x.D))
+		return spot(x, lerp(14, 10.5, k), lerp(-4, -2, k), lerp(1.4, x.H * 0.5, ss(seg(s, T.burst, T.rear)))), f + UP * y
+	end
+end
+
+-- THE BELL RINGER: the bells toll in the dark above, dust rains down; he drops out of the bell tower and lands on
+-- one fist - the floor rings like a bell (three bronze shockwaves) - stands, and roars
+SCRIPTS.Ringer = function(x)
+	local T = EP.T.Titan
+	local f = x.floor
+	local top = f + UP * (x.ceil - 0.6)
+	local BRONZE = C(210, 160, 70)
+	local dust = { Color = ColorSequence.new(C(170, 150, 120), C(90, 76, 60)), Size = NumberSequence.new(2.5, 7), Transparency = NumberSequence.new(0.35, 1), Lifetime = NumberRange.new(1, 2.2), Drag = 2 }
+	for i, t in { 0, 0.5, 1.0 } do
+		at(x, t, function()
+			Sfx.play("BellToll", { Volume = 0.6 + i * 0.25, PlaybackSpeed = 0.75 + i * 0.05 })
+			shake(0.15 + i * 0.1)
+			darkness(x, 0.25 * i, 0.2)
+			burst(x, top, with(dust, { Speed = NumberRange.new(2, 8), Acceleration = Vector3.new(0, -26, 0), SpreadAngle = Vector2.new(60, 60), EmissionDirection = Enum.NormalId.Bottom,
+				Size = NumberSequence.new(1.2, 3) }), 12 + i * 6)
+		end)
+	end
+	at(x, T.fall, function() Sfx.play("Whoosh", { Volume = 1.3, PlaybackSpeed = 0.45 }) end)
+	at(x, T.land, function()
+		Sfx.play("BellToll", { Volume = 1.8, PlaybackSpeed = 0.6 })
+		Sfx.play("Explosion", { Volume = 0.9, PlaybackSpeed = 0.8 })
+		Sfx.play("Crash", { Volume = 1 })
+		shake(1.3); kick(15)
+		darkness(x, 0, 0.4)
+		flash(x, C(255, 220, 160), 0.5, 0.4)
+		for i = 0, 2 do task.delay(i * 0.18, function() if x.alive() then ring(x, f, i == 1 and Color3.new(1, 1, 1) or BRONZE, 3, 34 + i * 8, 0.9) end end) end
+		chunks(x, f + UP, 18, C(120, 110, 100), Enum.Material.Cobblestone, 34)
+		burst(x, f + UP * 1.5, with(dust, { Speed = NumberRange.new(14, 38), SpreadAngle = Vector2.new(85, 85), EmissionDirection = Enum.NormalId.Top }), 110)
+		for i = 1, 9 do
+			local a = i / 9 * math.pi * 2 + rng:NextNumber(-0.2, 0.2)
+			local len = rng:NextNumber(5, 11)
+			local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+			local c = part(x, { Color = BRONZE, Size = Vector3.new(rng:NextNumber(0.25, 0.5), 0.08, len),
+				CFrame = CFrame.lookAt(f + dir * (len / 2 + 1.5) + UP * 0.06, f + dir * 40 + UP * 0.06) })
+			each(x, function(s) c.Transparency = 0.1 + 0.9 * seg(s, x.D - 0.7, x.D - 0.2) end)
+		end
+	end)
+	at(x, T.roar + 0.05, function()
+		Sfx.play(Sfx.voice("Spawn", x.id), { Volume = 1.5 })
+		Sfx.play("HandBell", { Volume = 1.2, PlaybackSpeed = 0.7 })
+		shake(1.0); kick(12)
+		ring(x, f, x.c1, 3, 32, 0.8)
+		burst(x, f + UP * x.H * 0.75, with(dust, { Speed = NumberRange.new(20, 40), Lifetime = NumberRange.new(0.5, 1) }), 50)
+		x.card()
+	end)
+	at(x, 0, function()
+		local l = light(x, spot(x, 6, 2, x.H * 0.7), C(255, 220, 170), 40, 0)
+		each(x, function(s) l.Brightness = 0.7 * seg(s, T.fall, T.land) * (1 - seg(s, x.D - 0.6, x.D - 0.1)) end)
+	end)
+	x.camera = function(s)
+		local fall = seg(s, T.fall, T.land)
+		local rise = ss(seg(s, T.rise0, T.rise1))
+		local y: number
+		if s < T.fall then y = lerp(x.H * 0.5, x.ceil - 1, ss(seg(s, 0, 1.1)))
+		elseif s < T.land then y = lerp(x.ceil - 1, x.H * 0.35, fall * fall)
+		else y = x.H * lerp(0.35, 0.62, rise) end
+		local pull = s >= T.land and 3 * (1 - seg(s, T.land, T.land + 1.2)) or 0
+		return spot(x, lerp(17, 13.5, ss(seg(s, 0, x.D))) + pull, -5, lerp(1.5, 2.6, rise)), f + UP * y
+	end
+end
+
+-- THE LOST ASTRONAUT: the klaxon, a red light turning; an airlock door slides open behind him in a burst of cold fog,
+-- he walks out with his helmet lamp on, stops, and raises his fist - his jetpack roars
+SCRIPTS.Astronaut = function(x)
+	local T = EP.T.Conqueror
+	local f = x.floor
+	local RED = C(255, 50, 40)
+	at(x, 0, function()
+		darkness(x, 0.5, 0.3)
+		Sfx.play("Klaxon", { Volume = 1.2 })
+		-- the airlock behind him: a frame and two doors sliding apart
+		local back = f - x.look * (7.5 * x.back + 2.5)
+		local cf = CFrame.lookAt(back, back + x.look)
+		part(x, { Material = Enum.Material.Metal, Color = C(90, 94, 104), Size = Vector3.new(9, 0.8, 0.8), CFrame = cf * CFrame.new(0, 9.5, 0) })
+		for _, sx in { -1, 1 } do
+			part(x, { Material = Enum.Material.Metal, Color = C(90, 94, 104), Size = Vector3.new(0.8, 10, 0.8), CFrame = cf * CFrame.new(sx * 4.5, 5, 0) })
+			local door = part(x, { Material = Enum.Material.DiamondPlate, Color = C(150, 156, 166), Size = Vector3.new(3.6, 9, 0.4) })
+			local stripe = part(x, { Material = Enum.Material.Neon, Color = C(255, 200, 40), Size = Vector3.new(3.6, 0.4, 0.45) })
+			each(x, function(s)
+				local o = ss(seg(s, T.portal + 0.3, T.step0)) * 3.6 * (1 - ss(seg(s, T.close, T.close + 0.5)))
+				door.CFrame = cf * CFrame.new(sx * (1.8 + o), 4.6, 0)
+				stripe.CFrame = door.CFrame * CFrame.new(0, 2, 0)
+				door.Transparency = seg(s, x.D - 0.6, x.D - 0.2); stripe.Transparency = door.Transparency
+			end)
+		end
+		-- the red alarm light turning
+		local al = part(x, { Size = Vector3.one * 0.2, Transparency = 1, CFrame = cf * CFrame.new(0, 11, 1) })
+		local sp = Instance.new("SpotLight"); sp.Color = RED; sp.Range = 50; sp.Angle = 60; sp.Brightness = 4; sp.Parent = al
+		each(x, function(s) al.CFrame = cf * CFrame.new(0, 11, 1) * CFrame.Angles(0, s * 6, -0.6); sp.Brightness = 4 * (1 - seg(s, x.D - 0.8, x.D - 0.2)) end)
+		task.delay(T.portal + 0.3, function() if x.alive() then Sfx.play("Airlock", { Volume = 1.5 }) end end)
+	end)
+	stream(x, T.portal + 0.3, T.step1, f - x.look * (7.5 * x.back + 1), with(SMOKE_FLOOR, { Color = ColorSequence.new(C(220, 230, 245), C(120, 130, 150)),
+		Speed = NumberRange.new(6, 12), EmissionDirection = Enum.NormalId.Front }), 40)
+	for i = 0, 3 do at(x, T.step0 + i * 0.45, function() Sfx.play("PunchHeavy", { Volume = 0.5, PlaybackSpeed = 0.5 }); shake(0.08) end) end
+	at(x, T.fist, function()
+		Sfx.play(Sfx.voice("Spawn", x.id), { Volume = 1.4 })
+		Sfx.play("Jetpack", { Volume = 1.5 })
+		darkness(x, 0, 0.4)
+		shake(0.9); kick(12)
+		flash(x, C(255, 200, 140), 0.4, 0.4)
+		ring(x, f, C(255, 150, 60), 2, 30, 0.7)
+		burst(x, f + UP * 1, { Texture = FIRE, Color = ColorSequence.new(C(255, 230, 160), C(255, 120, 40)), LightEmission = 1, Size = NumberSequence.new(2, 0),
+			Lifetime = NumberRange.new(0.4, 0.8), Speed = NumberRange.new(14, 30), SpreadAngle = Vector2.new(85, 85), EmissionDirection = Enum.NormalId.Top }, 60)
+		burst(x, f + UP * 1, with(SMOKE_FLOOR, { Color = ColorSequence.new(C(220, 220, 230)), Speed = NumberRange.new(16, 30), Lifetime = NumberRange.new(0.8, 1.4) }), 40)
+		x.card()
+	end)
+	x.camera = function(s)
+		local k = ss(seg(s, 0, x.D))
+		local walk = seg(s, T.step0, T.step1)
+		return spot(x, lerp(16, 11.5, k), lerp(3.5, 1.5, k), lerp(2, x.H * 0.42, k)), body(x, lerp(6, 0, walk), x.H * lerp(0.5, 0.66, ss(seg(s, T.fist, T.clench))))
+	end
+end
+
+-- THE SPECIMEN: green slime drips from the dark ceiling; it crawls along up there upside down, drops in a splash of
+-- acid and screeches
+SCRIPTS.Specimen = function(x)
+	local T = EP.T.Antlered
+	local f = x.floor
+	local ACIDC = C(140, 255, 90)
+	local cl = math.min(x.ceil, 26)
+	local hv = tonumber(x.model:GetAttribute("Hover")) or 6
+	local yRoot = math.max(0, cl - 2 * hv)
+	local chestUp = math.max(2, hv + yRoot - (x.H - hv) * 0.45)
+	local function zAt(s: number): number return 9 * (1 - ss(seg(s, T.crawl0, T.crawl1))) end
+	at(x, 0, function()
+		darkness(x, 0.45, 0.4)
+		Sfx.play(Sfx.voice("WindUp", x.id), { Volume = 1.2 })
+		local gl = light(x, f + UP * 2, ACIDC, 30, 0)
+		each(x, function(s) gl.Brightness = 1.5 * seg(s, 0, 1) * (1 - seg(s, x.D - 0.6, x.D - 0.1)) end)
+	end)
+	-- slime dripping off it while it crawls
+	for i = 0, 5 do
+		at(x, 0.2 + i * 0.28, function()
+			local p = body(x, zAt(0.2 + i * 0.28), cl - 1)
+			burst(x, p, { Texture = SPARK, Color = ColorSequence.new(ACIDC), LightEmission = 1, Size = NumberSequence.new(0.4, 0.2), Lifetime = NumberRange.new(0.6, 0.9),
+				Speed = NumberRange.new(1, 3), Acceleration = Vector3.new(0, -50, 0), SpreadAngle = Vector2.new(10, 10), EmissionDirection = Enum.NormalId.Bottom }, 6)
+			if i % 2 == 0 then Sfx.play("FormSquish", { Volume = 0.6, PlaybackSpeed = 1.2 + i * 0.05 }) end
+		end)
+	end
+	at(x, T.fall, function() Sfx.play("Whoosh", { Volume = 1.2, PlaybackSpeed = 0.6 }) end)
+	at(x, T.land, function()
+		Sfx.play("AcidSizzle", { Volume = 1.4 })
+		Sfx.play("Crash", { Volume = 0.8 })
+		shake(1.0); kick(12)
+		darkness(x, 0, 0.5)
+		ring(x, f, ACIDC, 3, 28, 0.7)
+		local pool = disc(x, f + UP * 0.07, 7, ACIDC, 0.3)
+		each(x, function(s) pool.Transparency = 0.3 + 0.7 * seg(s, x.D - 0.8, x.D - 0.2) end)
+		burst(x, f + UP * 1, { Texture = SPARK, Color = ColorSequence.new(ACIDC), LightEmission = 1, Size = NumberSequence.new(1, 0.2), Lifetime = NumberRange.new(0.5, 1),
+			Speed = NumberRange.new(14, 30), Acceleration = Vector3.new(0, -50, 0), SpreadAngle = Vector2.new(70, 70), EmissionDirection = Enum.NormalId.Top }, 80)
+	end)
+	at(x, T.roar, function()
+		Sfx.play(Sfx.voice("Spawn", x.id), { Volume = 1.5 })
+		Sfx.play("AlienScreech", { Volume = 1.2 })
+		shake(0.9); kick(11)
+		flash(x, ACIDC, 0.25, 0.35)
+		ring(x, f, x.c1, 3, 32, 0.8)
+		x.card()
+	end)
+	x.camera = function(s)
+		local fall = seg(s, T.fall, T.land)
+		local rise = ss(seg(s, T.rise0, T.rise1))
+		local hy: number
+		if s < T.fall then hy = chestUp elseif s < T.land then hy = lerp(chestUp, x.H * 0.4, fall * fall) else hy = x.H * lerp(0.4, 0.7, rise) end
+		local pull = s >= T.land and 2.5 * (1 - seg(s, T.land, T.land + 1)) or 0
+		return spot(x, lerp(13, 11, ss(seg(s, 0, x.D))) + pull, -3.5, lerp(1.6, 2.4, rise)), body(x, s < T.fall and zAt(s) or 0, hy)
+	end
+end
+
+-- THE SENTINEL: powered down in the dark, head bowed; one red eye flickers on, its servos whine, it straightens and
+-- spreads its arms, sparks pour off its joints, a red scanning fan sweeps the room, its lights come up
+SCRIPTS.Sentinel = function(x)
+	local T = EP.T.Ringmaster
+	local f = x.floor
+	local RED = C(255, 60, 50)
+	at(x, 0, function()
+		darkness(x, 0.65, 0.2)
+		Sfx.play("RobotServo", { Volume = 0.8, PlaybackSpeed = 0.5 })
+		local eye = x.model:FindFirstChild("Eye", true) :: BasePart?
+		local el = light(x, limb(x, "Head"), RED, 24, 0)
+		each(x, function(s)
+			local on = s > T.spot and ((s < T.raise and (math.sin(s * 40) > 0.2)) or s >= T.raise) and 1 or 0
+			el.Brightness = on * (1.5 + seg(s, T.raise, T.arms) * 2)
+			local h = x.model:FindFirstChild("Head") :: BasePart?
+			if h then (el.Parent :: BasePart).Position = h.Position + x.look * 1.5 end
+			if eye then eye.Transparency = 1 - on end
+		end)
+	end)
+	at(x, T.spot, function() Sfx.play("Breaker", { Volume = 1, PlaybackSpeed = 0.7 }) end)
+	at(x, T.raise, function()
+		Sfx.play("RobotServo", { Volume = 1.3 })
+		Sfx.play(Sfx.voice("WindUp", x.id), { Volume = 1.2 })
+		darkness(x, 0.35, 0.4)
+	end)
+	stream(x, T.arms, T.lights, limb(x, "RightUpperArm"), { Texture = SPARK, Color = ColorSequence.new(C(255, 220, 120)), LightEmission = 1, Size = NumberSequence.new(0.35, 0),
+		Lifetime = NumberRange.new(0.3, 0.7), Speed = NumberRange.new(8, 16), Acceleration = Vector3.new(0, -40, 0), SpreadAngle = Vector2.new(60, 60) }, 40)
+	stream(x, T.arms, T.lights, limb(x, "LeftUpperArm"), { Texture = SPARK, Color = ColorSequence.new(C(255, 220, 120)), LightEmission = 1, Size = NumberSequence.new(0.35, 0),
+		Lifetime = NumberRange.new(0.3, 0.7), Speed = NumberRange.new(8, 16), Acceleration = Vector3.new(0, -40, 0), SpreadAngle = Vector2.new(60, 60) }, 40)
+	at(x, T.arms, function()
+		Sfx.play("ElectricArc", { Volume = 1.2 })
+		-- the scanning fan: red lines from its eye sweeping the room
+		local head = limb(x, "Head")
+		for i = -3, 3 do
+			local ln = part(x, { Color = RED, Transparency = 0.4, Size = Vector3.new(0.12, 0.12, 30) })
+			each(x, function(s)
+				local k = seg(s, T.arms, T.crack)
+				local yaw = (i * 0.12) + math.sin(k * math.pi * 2) * 0.5
+				local d = (CFrame.Angles(0, yaw, 0) * (x.look - UP * 0.25)).Unit
+				ln.CFrame = CFrame.lookAt(head + d * 15, head + d * 30)
+				ln.Transparency = (s > T.arms and s < T.crack) and 0.4 or 1
+			end)
+		end
+	end)
+	at(x, T.crack, function()
+		Sfx.play(Sfx.voice("Spawn", x.id), { Volume = 1.5 })
+		Sfx.play("Klaxon", { Volume = 1 })
+		shake(0.9); kick(12)
+		flash(x, RED, 0.35, 0.4)
+		ring(x, f, RED, 2, 32, 0.8)
+		for i = 1, 8 do
+			local a = i / 8 * math.pi * 2
+			bolt(x, limb(x, "UpperTorso"), f + Vector3.new(math.cos(a) * 9, 0.2, math.sin(a) * 9), C(110, 220, 255), 0.3, 0.3)
+		end
+	end)
+	at(x, T.lights, function()
+		darkness(x, 0, 0.5)
+		Sfx.play("Breaker", { Volume = 1.2, PlaybackSpeed = 1.1 })
+		x.card()
+	end)
+	x.camera = function(s)
+		local push = ss(seg(s, 0, T.crack))
+		return spot(x, lerp(16, 11, push), lerp(-4, -1.5, push), lerp(2.2, x.H * 0.5, push)), f + UP * x.H * lerp(0.55, 0.72, push)
+	end
+end
 
 function Entrance.play(model: Model?, id: string, evolved: boolean, title: string, rarity: number, level: number, dur: number)
 	if not SCRIPTS[id] or not lp:GetAttribute("InMatch") then return end

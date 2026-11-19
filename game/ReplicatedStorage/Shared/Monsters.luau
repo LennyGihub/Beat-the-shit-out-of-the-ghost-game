@@ -160,6 +160,55 @@ local List: { Monster } = {
 		ability = { kind = "netman", cd = 8, net = { min = 8, max = 55, wind = 0.65, speed = 58, radius = 4, life = 1.6, hold = 2.2, dmg = 12 },
 			anchor = { max = 20, wind = 0.85, spin = 1.6, turns = 1.5, radius = 15, dmg = 26, power = 55 } },
 		desc = "He nets you where you stand, then swings his anchor round the room. Jump it - or hug him." }),
+	-- THE ASHEN ABBEY (Server/AbbeyMonsters; models: tools/build/abbey_monsters.luau; client: Client/AbbeyFx)
+	-- THE WEEPING NUN (the Cloister): veil - she pulls her veil down and is gone; only her black tears fall where she
+	-- walks, toward you; a black pool opens under your feet and she rises behind you (move!). hymn - she sings and the
+	-- windows' light falls on the floor in pools that burst into holy fire, three times: stay in the shadows.
+	m({ id = "Nun", name = "The Weeping Nun", title = "THE WEEPING NUN", rarity = 1, template = "Nun", color = C(230, 230, 240),
+		hp = 1.5, speed = 1.05, dmg = 1.25, reward = 1.9, hover = 5.45, walker = true, scale = 1.15, solid = false,
+		ability = { kind = "nun", cd = 7.5, veil = { max = 80, fade = 0.6, walk = 2.0, warn = 0.6, dmg = 30, power = 60, up = 30 },
+			hymn = { max = 90, sing = 0.9, waves = 3, gap = 1.0, warn = 0.85, radius = 6, extra = 3, dmg = 22 } },
+		desc = "Her tears fall where she walks when you can't see her. When she sings, stay out of the light." }),
+	-- THE GRAVEDIGGER (the Crypt): hands - his shovel bites the floor and a wave of dead hands bursts up along it toward
+	-- you (jump it or step aside: caught = held and hurt); coffin - he hurls a coffin at you: it bursts open where it
+	-- lands and the dead crawl out after you.
+	m({ id = "Gravedigger", name = "The Gravedigger", title = "THE GRAVEDIGGER", rarity = 1, template = "Gravedigger", color = C(150, 170, 120),
+		hp = 1.6, speed = 0.95, dmg = 1.3, reward = 1.95, hover = 5.05, walker = true, scale = 1.15, solid = false, reach = 1.2,
+		ability = { kind = "gravedigger", cd = 7.5, hands = { min = 6, max = 55, wind = 0.75, speed = 36, width = 4.5, len = 64, hold = 1.4, dmg = 20 },
+			coffin = { min = 10, max = 70, wind = 0.9, speed = 58, radius = 8, dmg = 26, power = 50, up = 40, skel = 3, life = 14, skSpeed = 15, skDmg = 10 } },
+		desc = "He digs the dead up for you. Jump the hands that come up through the floor - and smash the skeletons in his coffins." }),
+	-- THE BELL RINGER (the Bell Tower): bell - a great bronze bell's shadow follows you, stops, and the bell drops: under
+	-- it you are TRAPPED (held, deafened, hurt); toll - he slams his own bell into the floor: three rings of sound roll
+	-- out along the floor, one after another: jump each one.
+	m({ id = "Ringer", name = "The Bell Ringer", title = "THE BELL RINGER", rarity = 1, template = "Ringer", color = C(210, 160, 70),
+		hp = 1.7, speed = 0.9, dmg = 1.35, reward = 2.0, hover = 4.95, walker = true, scale = 1.2, solid = false, reach = 1.3,
+		ability = { kind = "ringer", cd = 8, bell = { max = 80, wind = 0.7, follow = 1.5, lock = 0.55, radius = 6, trap = 2.2, dmg = 30, tick = 0.5, tickDmg = 4 },
+			toll = { max = 70, wind = 0.9, rings = 3, gap = 0.75, speed = 34, range = 60, dmg = 18, power = 40, up = 40, deaf = 2.5 } },
+		desc = "When his bell's shadow finds you, run. When he swings his own bell down, jump the rings." }),
+	-- THE BLACK MOON (Server/MoonMonsters; models: tools/build/moon_monsters.luau; client: Client/MoonFx)
+	-- THE LOST ASTRONAUT (the Docking Bay): breach - he smashes a hole in the hull: everyone is dragged toward the void
+	-- (walk against it; at the hole it hurts); jetpack - he blasts up to the ceiling, a red ring follows you, locks, and
+	-- he drops on it in a ring of fire.
+	m({ id = "Astronaut", name = "The Lost Astronaut", title = "THE LOST ASTRONAUT", rarity = 1, template = "Astronaut", color = C(220, 225, 235),
+		hp = 1.7, speed = 1.0, dmg = 1.35, reward = 2.1, hover = 5.25, walker = true, scale = 1.15, solid = false,
+		ability = { kind = "astronaut", cd = 8, breach = { max = 90, wind = 1.0, pull = 3.0, force = 12, radius = 7, tick = 0.4, dmg = 12 },
+			jetpack = { min = 12, max = 90, lift = 0.8, hang = 1.1, dive = 0.4, radius = 9, dmg = 28, power = 45, up = 55 } },
+		desc = "When he breaks the hull, the void pulls: walk away from the hole. When his jetpack roars, keep moving." }),
+	-- THE SPECIMEN (the Lab): acid - three globs of acid spat in a fan: the pools stay and burn; brood - its back splits
+	-- and its larvae crawl out after you (one hit kills one).
+	m({ id = "Specimen", name = "The Specimen", title = "THE SPECIMEN", rarity = 1, template = "Specimen", color = C(140, 255, 120),
+		hp = 1.75, speed = 1.12, dmg = 1.35, reward = 2.15, hover = 5.85, walker = true, scale = 1.15, solid = false, reach = 1.25,
+		ability = { kind = "specimen", cd = 7.5, acid = { min = 8, max = 60, wind = 0.6, globs = 3, spread = 0.32, speed = 52, pool = 6.5, life = 6, dmg = 10, tick = 0.5, tickDmg = 6 },
+			brood = { max = 80, wind = 1.0, count = 4, life = 14, speed = 18, dmg = 9 } },
+		desc = "It spits acid that stays on the floor, and its young crawl out of its back. Never stand in the green." }),
+	-- THE SENTINEL (the Reactor): missiles - red rings lock on everyone and missiles rain down on them (get out of the
+	-- ring); overload - it plugs into the reactor and arcs of lightning jump to everyone near it (get far, or behind
+	-- cover).
+	m({ id = "Sentinel", name = "The Sentinel", title = "THE SENTINEL", rarity = 1, template = "Sentinel", color = C(255, 70, 60),
+		hp = 1.9, speed = 0.85, dmg = 1.4, reward = 2.25, hover = 5.55, walker = true, scale = 1.25, solid = false, reach = 1.35,
+		ability = { kind = "sentinel", cd = 8, missiles = { max = 100, lock = 1.4, count = 2, radius = 7, flight = 0.8, dmg = 24, power = 40, up = 45 },
+			overload = { max = 26, charge = 1.0, t = 2.6, range = 26, tick = 0.35, dmg = 8 } },
+		desc = "A guard robot. Its missiles find you: leave the red ring. When it overloads, get far away or behind something solid." }),
 	-- THE SEWER RAT (hand-built: tools/build/rat.luau): a rat the size of a car. ratRush = two moves (Server/Abilities):
 	-- the CHARGE (wind seconds of warning along a red line, then dashSpeed studs/s in a straight line for dashTime
 	-- seconds: furniture, inside walls and players in the way are all sent flying, and he is dizzy for a moment after)

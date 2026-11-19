@@ -44,6 +44,12 @@ local VOICES = {
 	DeepOne = { Spawn = "V_DeepOne_Spawn", WindUp = "V_DeepOne_WindUp", Claw = "V_DeepOne_Claw", Hurt = "V_DeepOne_Hurt", Death = "V_DeepOne_Death" },
 	Keeper = { Spawn = "V_Keeper_Spawn", WindUp = "V_Keeper_WindUp", Claw = "V_Keeper_Claw", Hurt = "V_Keeper_Hurt", Death = "V_Keeper_Death" },
 	Netman = { Spawn = "V_Netman_Spawn", WindUp = "V_Netman_WindUp", Claw = "V_Netman_Claw", Hurt = "V_Netman_Hurt", Death = "V_Netman_Death" },
+	Nun = { Spawn = "V_Nun_Spawn", WindUp = "V_Nun_WindUp", Claw = "V_Nun_Claw", Hurt = "V_Nun_Hurt", Death = "V_Nun_Death" },
+	Gravedigger = { Spawn = "V_Gravedigger_Spawn", WindUp = "V_Gravedigger_WindUp", Claw = "V_Gravedigger_Claw", Hurt = "V_Gravedigger_Hurt", Death = "V_Gravedigger_Death" },
+	Ringer = { Spawn = "V_Ringer_Spawn", WindUp = "V_Ringer_WindUp", Claw = "V_Ringer_Claw", Hurt = "V_Ringer_Hurt", Death = "V_Ringer_Death" },
+	Astronaut = { Spawn = "V_Astronaut_Spawn", WindUp = "V_Astronaut_WindUp", Claw = "V_Astronaut_Claw", Hurt = "V_Astronaut_Hurt", Death = "V_Astronaut_Death" },
+	Specimen = { Spawn = "V_Specimen_Spawn", WindUp = "V_Specimen_WindUp", Claw = "V_Specimen_Claw", Hurt = "V_Specimen_Hurt", Death = "V_Specimen_Death" },
+	Sentinel = { Spawn = "V_Sentinel_Spawn", WindUp = "V_Sentinel_WindUp", Claw = "V_Sentinel_Claw", Hurt = "V_Sentinel_Hurt", Death = "V_Sentinel_Death" },
 }
 local lastMonster = "Woman"
 function Sfx.voice(role: string, monsterId: string?): string

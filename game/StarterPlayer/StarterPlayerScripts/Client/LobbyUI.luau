@@ -300,7 +300,7 @@ end
 
 -- quests: opener, how many are ready to claim, and the signal that fires when that may change
 function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpener: (() -> ())?, questCount: (() -> number)?, questChanged: RBXScriptSignal?,
-	bestiaryOpener: (() -> ())?)
+	bestiaryOpener: (() -> ())?, tradeOpener: (() -> ())?)
 	openShop = shopOpener
 	onToggle = toggled
 	gui = Instance.new("ScreenGui")
@@ -311,20 +311,25 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 	-- left column: PLAY / SHOP / QUESTS, drawn like the fight HUD's bars (health red, stamina mustard, brutality orange)
 	side = Grunge.frame(gui, { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 28, 0.5, 0), Size = UDim2.fromScale(0.2, 0.54) })
 	local sar = Instance.new("UIAspectRatioConstraint"); sar.AspectRatio = 0.82; sar.Parent = side
-	bigButton("PLAY", "TAKE THE TRAIN", Color3.fromRGB(150, 18, 20), 0, -1.2, function() setOpen(not panel.Visible) end, 0.19)
-	bigButton("SHOP", "ULTIMATES", Color3.fromRGB(176, 150, 40), 0.21, 0.8, function()
+	bigButton("PLAY", "TAKE THE TRAIN", Color3.fromRGB(150, 18, 20), 0, -1.2, function() setOpen(not panel.Visible) end, 0.155)
+	bigButton("SHOP", "ULTIMATES", Color3.fromRGB(176, 150, 40), 0.165, 0.8, function()
 		if panel.Visible then setOpen(false) end
 		if openShop then openShop() end
-	end, 0.19)
-	local questBtn = bigButton("QUESTS", "DAILY CASH", Color3.fromRGB(210, 86, 18), 0.42, -0.6, function()
+	end, 0.155)
+	local questBtn = bigButton("QUESTS", "DAILY CASH", Color3.fromRGB(210, 86, 18), 0.33, -0.6, function()
 		if panel.Visible then setOpen(false) end
 		if questOpener then questOpener() end
-	end, 0.19)
+	end, 0.155)
 	-- long-term goals: the monsters you have beaten and the badges (Client/BestiaryUI)
-	bigButton("BESTIARY", "BADGES", Color3.fromRGB(96, 52, 150), 0.63, 0.7, function()
+	bigButton("BESTIARY", "BADGES", Color3.fromRGB(96, 52, 150), 0.495, 0.7, function()
 		if panel.Visible then setOpen(false) end
 		if bestiaryOpener then bestiaryOpener() end
-	end, 0.19)
+	end, 0.155)
+	-- trading with the other players here (Client/TradeUI)
+	bigButton("TRADE", "JARS, POTIONS, CASH", Color3.fromRGB(40, 110, 120), 0.66, -0.9, function()
+		if panel.Visible then setOpen(false) end
+		if tradeOpener then tradeOpener() end
+	end, 0.155)
 	-- red badge: quests ready to claim
 	local badge = Grunge.frame(questBtn.Parent :: Instance, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.98, 0.2), Size = UDim2.fromScale(0.2, 0.46), BackgroundTransparency = 0, BackgroundColor3 = Color3.fromRGB(200, 30, 24), ZIndex = 10, Visible = false })
 	local bc = Instance.new("UICorner"); bc.CornerRadius = UDim.new(0.5, 0); bc.Parent = badge
