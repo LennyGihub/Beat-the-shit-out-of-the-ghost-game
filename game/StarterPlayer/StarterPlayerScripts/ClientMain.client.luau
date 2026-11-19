@@ -123,6 +123,7 @@ NameTags.init() -- the lobby's name tags (name plate + DEV / VIP titles, level a
 LevelUI.init() -- your own level in the lobby's corner
 CallerUI.init() -- the Caller's phone call
 CallerMarks.init() -- his ringing phone (outline + arrow) and the outline of the room he sits in
+require(Client.WorldSpin).init() -- the lighthouse's turning beams (and anything else with a Spin attribute)
 TrainRide.init(Fx, HUD)
 SellerUI.init()
 FormCine.init(Fx, HUD)

@@ -4,15 +4,16 @@
 -- control desk, warning lights, a glowing coolant channel across the floor (flush), catwalk rails high up. At the
 -- back, behind a wall with two doorways: the PUMP ROOM (pumps, valves, gauges). Its east end: a FUSE PANEL that
 -- slides (Secrets).
--- Build: cat tools/build/lib2.luau tools/build/furn_lib.luau tools/build/maplib.luau tools/build/maps/moon_lib.luau tools/build/maps/moon_reactor.luau
+-- Build: cat tools/build/lib2.luau tools/build/furn_lib.luau tools/build/maplib.luau tools/build/maps/shape_lib.luau tools/build/maps/moon_lib.luau tools/build/maps/moon_reactor.luau
 local C3 = Color3.fromRGB
 local function D() return { deco = true } end
 local H = 30
 local rng = Random.new(53)
 local CORE = st(M.Neon, nil, C3(90, 210, 255))
 beginMap("Moon_Reactor", moonTheme())
-shell({ two = false, H = H, roof = "flat", front1 = { -60, -36, 36, 60 }, back1 = { -60, 60 }, left1 = { 44, -30 }, right1 = { 44, -30 },
-	winW = 5, winB = 6, winT = 12 })
+-- (2026-11-19) its own shape: the power hall with the CORE STACK glowing through its roof and two COOLING TOWERS
+local TOP = shell2({ H = H, roof = "flat", roofStyle = st(M.Metal, nil, C3(70, 74, 82)), front1 = { -60, -36, 36, 60 }, back1 = { -60, 60 }, left1 = { 44, -30 }, right1 = { 44, -30 },
+	win = { w = 5, b = 6, t = 12 } })
 local inn = model(STR, "Interior")
 local I = INT()
 wall(inn, "PumpWall", "x", -30, -78, 78, F1, 18, { dr(-30, 10, 12), dr(30, 10, 12) }, I)
@@ -94,6 +95,63 @@ for _, p in { { -30, 30 }, { 20, -14 }, { -40, -48 } } do blood(p[1], F1, p[2], 
 for _, p in { { -46, 50 }, { 46, 50 }, { -20, 14 }, { 20, 14 }, { 0, -18 }, { 0, -46 } } do gspawn(p[1], F1, p[2]) end
 keepClear(-6, 40, 6, 58, F1)
 keepClear(56, -42, 70, -34, F1)
-moonSign("THE REACTOR")
+-- OUTSIDE (2026-11-19): THE SENTINEL'S REACTOR. The core rises through the roof as a stack ringed with glowing coils,
+-- two great hyperboloid COOLING TOWERS stand behind it breathing steam, thick pipes run from them along the walls,
+-- power PYLONS crackle in the yard (frozen arcs between their tips), DANGER HIGH VOLTAGE on the door.
+local OUT = model(DEC, "Outside")
+local CORE = st(M.Neon, nil, C3(110, 200, 255))
+-- the core stack on the roof
+prism(OUT, "CoreStack", 0, -6, 9, TOP, TOP + 40, 12, MOON.steelD, D())
+for y = TOP + 4, TOP + 36, 6 do prism(OUT, "CoreCoil", 0, -6, 10, y, y + 1.6, 12, CORE, D()) end
+revolve(OUT, "CoreCap", 0, -6, { { 11, TOP + 40 }, { 8, TOP + 43 }, { 0, TOP + 45 } }, 12, MOON.steel)
+light(box(OUT, "CoreGlow", -0.2, TOP + 20, -6.2, 0.2, TOP + 20.4, -5.8, CORE, { deco = true, t = 1 }), 70, 2.4, C3(110, 200, 255))
+-- the cooling towers behind (hyperboloids: wide foot, a waist, a flared lip), steam rising
+for _, tw in { { -70, -110 }, { 60, -130 } } do
+	local cx, cz = tw[1], tw[2]
+	revolve(OUT, "CoolingTower", cx, cz, { { 34, 0 }, { 28, 30 }, { 22, 62 }, { 21, 78 }, { 23, 96 } }, 16, st(M.Concrete, nil, C3(130, 130, 128)), st(M.Concrete, nil, C3(116, 116, 114)))
+	prism(OUT, "TowerStripe", cx, cz, 22.4, 82, 86, 16, st(M.SmoothPlastic, nil, C3(180, 50, 40)), D())
+	local sm = box(OUT, "SteamSource", cx - 1, 96, cz - 1, cx + 1, 97, cz + 1, MOON.steelD, { deco = true, t = 1 })
+	local pe = Instance.new("ParticleEmitter")
+	pe.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	pe.Color = ColorSequence.new(C3(200, 210, 220))
+	pe.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.55), NumberSequenceKeypoint.new(1, 1) })
+	pe.Size = NumberSequence.new(20, 50); pe.Lifetime = NumberRange.new(8, 12); pe.Rate = 3
+	pe.Speed = NumberRange.new(5, 8); pe.SpreadAngle = Vector2.new(12, 12); pe.Shape = Enum.ParticleEmitterShape.Disc
+	pe.Parent = sm
+	light(box(OUT, "TowerLamp", cx - 0.5, 97, cz + 22, cx + 0.5, 98, cz + 23, MOON.red, DECO), 30, 1.4, C3(255, 60, 50))
+end
+-- pipes from the towers along the side walls
+for _, sx in { -1, 1 } do
+	for _, y in { 8, 14 } do cyl(OUT, CFrame.new(sx * 82.4, y, -10) * CFrame.Angles(math.pi / 2, 0, 0), "Pipe", 2.6, 100, 0, 0, 0, st(M.Metal, nil, C3(150, 120, 60)), D()) end
+	for z = -50, 30, 20 do box(OUT, "PipeClamp", sx * 82.4 - 1.8, 6, z - 0.5, sx * 82.4 + 1.8, 16, z + 0.5, MOON.steelD, DECO) end
+end
+-- power pylons in the yard with frozen arcs between their tips
+local function zig(a: Vector3, z: Vector3)
+	local prng = Random.new(math.floor(a.X * 7 + z.Z))
+	local prev = a
+	for k = 1, 6 do
+		local q = a:Lerp(z, k / 6) + (k < 6 and Vector3.new(prng:NextNumber(-1.6, 1.6), prng:NextNumber(-1.6, 1.6), prng:NextNumber(-1.6, 1.6)) or Vector3.zero)
+		part(OUT, "Arc", Vector3.new(0.3, 0.3, (q - prev).Magnitude + 0.2), CFrame.lookAt((prev + q) / 2, q), CORE, D())
+		prev = q
+	end
+end
+local tips = {}
+for i, p0 in { { -40, 84 }, { 40, 84 } } do
+	local x, z = p0[1], p0[2]
+	for _, c in { { -1.6, -1.6 }, { 1.6, -1.6 }, { 0, 1.6 } } do part(OUT, "PylonLeg", Vector3.new(0.6, 24, 0.6), CFrame.new(x + c[1], 12, z + c[2]) * CFrame.Angles(c[2] * -0.04, 0, c[1] * 0.04), MOON.steelL, D()) end
+	for y = 4, 20, 4 do box(OUT, "PylonRung", x - 1.6, y, z - 1.6, x + 1.6, y + 0.3, z + 1.6, MOON.steelD, DECO) end
+	local tip = ball(OUT, CFrame.new(x, 25, z), "PylonTip", 2.4, 0, 0, 0, CORE, D())
+	light(tip, 26, 1.4, C3(110, 200, 255))
+	tips[i] = Vector3.new(x, 25, z)
+end
+zig(tips[1], tips[2])
+zig(tips[1], Vector3.new(-30, TOP, 59))
+zig(tips[2], Vector3.new(30, TOP, 59))
+-- danger signs and stripes
+sign(OUT, "DANGER  -  HIGH VOLTAGE", CFrame.new(0, 19.4, 60.7) * CFrame.Angles(0, math.pi, 0), 20, 2.4, MOON.yellow, C3(20, 20, 20), Enum.Font.SciFi)
+for _, x in { -60, -36, 36, 60 } do box(OUT, "WindowGlow", x - 2.5, 8, 59.3, x + 2.5, 14, 59.5, CORE, { deco = true, t = 0.5 }) end
+moonSign("THE REACTOR", CFrame.new(0, 25.6, 61))
+washLight(-30, 88, Vector3.new(-10, TOP + 20, -6), C3(160, 210, 255), 140, 2.2)
+washLight(30, 88, Vector3.new(10, TOP + 20, -6), C3(160, 210, 255), 140, 2.2)
 moonGrounds()
 return endMap()

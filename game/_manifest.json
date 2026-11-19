@@ -863,11 +863,18 @@
    "sha1": "728735e86ecd338378a43bebb1c572e22d39328f"
   },
   {
+   "file": "StarterPlayer/StarterPlayerScripts/Client/WorldSpin.luau",
+   "instance": "game.StarterPlayer.StarterPlayerScripts.Client.WorldSpin",
+   "class": "ModuleScript",
+   "bytes": 2209,
+   "sha1": "4f70d4945a540a23beb276bbc19e7ce3fe50bd61"
+  },
+  {
    "file": "StarterPlayer/StarterPlayerScripts/ClientMain.client.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.ClientMain",
    "class": "LocalScript",
-   "bytes": 13375,
-   "sha1": "89ae1103bf1d4c9cfe220636b74043b1457daf7b"
+   "bytes": 13484,
+   "sha1": "9ab0631ea3a63639b6df626ec86d919e02067e1b"
   }
  ]
 }

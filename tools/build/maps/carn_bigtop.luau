@@ -253,6 +253,8 @@ washLight(-30, 84, Vector3.new(-14, TOP + 10, 50), C3(255, 190, 200), 90, 2)
 washLight(30, 84, Vector3.new(14, TOP + 10, 50), C3(255, 190, 200), 90, 2)
 -- the yard beside the tent is closed off (nobody walks round it): striped boards along z 56
 -- (from the entrance's edge: the strip in front of the curved wall is in the house box)
+-- (the canvas rises to y 64 over the ring: up to 40 is still inside the tent, Server/Ghost houseBounds)
+MAP:SetAttribute("CeilingY", 40)
 sideBarrier(10.5, 58.4, function(bm, x1, x2, z)
 	for x = x1, x2 - 3, 4 do
 		if math.abs(x + 2) > 30 then box(bm, "Board", x, 0, z - 0.2, x + 3.8, 4.6, z + 0.2, (math.floor(x / 4) % 2 == 0) and CARN.red or CARN.white, DECO) end

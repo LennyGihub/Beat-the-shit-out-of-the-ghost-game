@@ -84,13 +84,14 @@ local function moonScreen(parent: Instance, cf: CFrame, w: number, h: number, co
 end
 
 -- the building's name on a steel board over the porch roof, a warning light each side
-local function moonSign(text: string)
+local function moonSign(text: string, at: CFrame?)
 	local m = model(DEC, "Marquee")
-	local cf = CFrame.new(0, 21, 61) * CFrame.Angles(0, math.pi, 0)
+	local cf = (at or CFrame.new(0, 21, 61)) * CFrame.Angles(0, math.pi, 0)
 	b(m, cf, "Board", 26, 5, 0.5, 0, 0, 0.3, MOON.steelD, DECO)
 	b(m, cf, "Frame", 27, 5.8, 0.3, 0, 0, 0.55, MOON.yellow, DECO)
 	sign(m, text, cf * CFrame.new(0, 0, -0.05), 23, 3.4, MOON.steelD, C3m(200, 225, 255), Enum.Font.SciFi)
-	for _, x in { -14.5, 14.5 } do moonBeacon(m, Vector3.new(x, 19.6, 61.5), C3m(255, 60, 50), 22) end
+	for _, x in { -14.5, 14.5 } do moonBeacon(m, (cf * CFrame.new(x, -1.4, -0.5)).Position, C3m(255, 60, 50), 22) end
+	return m
 end
 
 -- the lunar surface round the building (everything decoration: no collision, never hit by a ray)
@@ -142,29 +143,18 @@ local function moonGrounds()
 		part(yd, "Solar", Vector3.new(12, 0.3, 7), cf, st(M.Glass, nil, C3m(30, 50, 110)), DECO)
 		box(yd, "SolarPost", 59.6 + k * 14, 0, 129.6, 60.4 + k * 14, 3, 130.4, MOON.steelL, DECO)
 	end
-	-- DOMES of the base off to the sides
-	for _, p in { { -96, 150, 22 }, { 104, 80, 26 }, { -120, 80, 18 } } do
-		ball(yd, CFrame.new(p[1], 0, p[2]), "Dome", p[3], 0, 0, 0, st(M.Glass, nil, C3m(150, 190, 220)), { deco = true, t = 0.35 })
-		cyl(yd, CFrame.new(p[1], 0.6, p[2]), "DomeRing", p[3] + 1, 1.2, 0, 0, 0, MOON.steelD, { deco = true })
-		local g = ball(yd, CFrame.new(p[1], p[3] * 0.2, p[2]), "DomeGlow", 2, 0, 0, 0, MOON.blue, { deco = true, t = 0.5 })
-		light(g, p[3], 1.2, C3m(150, 210, 255))
-	end
+	-- (2026-11-19: the base's domes, the arch and the Earth are in the Moon WORLD now: tools/build/worlds/moon.luau)
 	-- the flag by the walkway (a stiff flag on a pole: no wind on the moon)
 	box(yd, "FlagPole", -14.2, 0, 72.8, -13.8, 14, 73.2, MOON.steelL, DECO)
 	box(yd, "Flag", -13.8, 10, 72.9, -7, 13.6, 73.1, MOON.white, DECO)
 	box(yd, "FlagStripe", -13.8, 11.4, 72.85, -7, 12.2, 73.15, MOON.orange, DECO)
-	-- THE ARCH: two steel pylons and a beam with the name, warning lights
-	for _, x in { -8, 8 } do box(yd, "ArchPylon", x - 1, 0, 130.5, x + 1, 15, 132.5, MOON.steelD, DECO) end
-	box(yd, "ArchBeam", -9.5, 12.6, 131, 9.5, 15.4, 132, MOON.steel, DECO)
-	sign(yd, "BLACK MOON BASE", CFrame.new(0, 14, 130.9) * CFrame.Angles(0, math.pi, 0), 17, 2, MOON.steelD, C3m(200, 225, 255), Enum.Font.SciFi).Name = "MoonSign"
-	sign(yd, "BLACK MOON BASE", CFrame.new(0, 14, 132.1), 17, 2, MOON.steelD, C3m(200, 225, 255), Enum.Font.SciFi).Name = "MoonSignBack"
-	for _, x in { -8, 8 } do moonBeacon(yd, Vector3.new(x, 15.4, 131.5), C3m(255, 60, 50), 24) end
-	-- THE EARTH in the black sky, huge and far: blue oceans, green land, white clouds, a glow
-	local e = model(yd, "Earth")
-	local ec = CFrame.new(-260, 230, -520)
-	ball(e, ec, "Ocean", 150, 0, 0, 0, MOON.earth, { deco = true })
-	for k = 1, 6 do ball(e, ec * CFrame.Angles(rng:NextNumber(0, 6), rng:NextNumber(0, 6), 0) * CFrame.new(0, 0, -64), "Land", rng:NextNumber(30, 55), 0, 0, 0, MOON.land, { deco = true }) end
-	for k = 1, 8 do ball(e, ec * CFrame.Angles(rng:NextNumber(0, 6), rng:NextNumber(0, 6), 0) * CFrame.new(0, 0, -68), "Cloud", rng:NextNumber(18, 36), 0, 0, 0, MOON.cloud, { deco = true, t = 0.3 }) end
-	local glow = ball(e, ec, "Glow", 166, 0, 0, 0, st(M.Neon, nil, C3m(120, 180, 255)), { deco = true, t = 0.85 })
-	local _ = glow
+end
+
+-- yellow and black warning stripes along a face at z (facing +Z), from x0 to x1, y0 to y1 (2026-11-19)
+local function hazard(parent, x0: number, x1: number, y0: number, y1: number, z: number)
+	local k = 0
+	for x = x0, x1 - 2, 2.4 do
+		k += 1
+		part(parent, "Hazard", Vector3.new(2.4, y1 - y0, 0.2), CFrame.new(x + 1.2, (y0 + y1) / 2, z) * CFrame.Angles(0, 0, 0), k % 2 == 0 and MOON.yellow or MOON.black, { deco = true })
+	end
 end

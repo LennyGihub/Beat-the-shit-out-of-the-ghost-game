@@ -4,14 +4,15 @@
 -- (a glowing map of the moon), red alert lights. At the back, behind the window wall with two doorways: the COMMS ROOM
 -- (radio racks, a desk, headsets). Its west end: a MAP CABINET that slides (Secrets).
 -- (The Knight needs KnightSpots: run tools/build/knight_spots.luau after building.)
--- Build: cat tools/build/lib2.luau tools/build/furn_lib.luau tools/build/maplib.luau tools/build/maps/moon_lib.luau tools/build/maps/moon_control.luau
+-- Build: cat tools/build/lib2.luau tools/build/furn_lib.luau tools/build/maplib.luau tools/build/maps/shape_lib.luau tools/build/maps/moon_lib.luau tools/build/maps/moon_control.luau
 local C3 = Color3.fromRGB
 local function D() return { deco = true } end
 local H = 22
 local rng = Random.new(54)
 beginMap("Moon_Control", moonTheme({ inner = st(M.SmoothPlastic, nil, C3(68, 70, 80)) }))
-shell({ two = false, H = H, roof = "flat", front1 = { -60, -36, 36, 60 }, back1 = { -60, 60 }, left1 = { 44, 20, -30 }, right1 = { 44, 20, -30 },
-	winW = 6, winB = 5, winT = 12 })
+-- (2026-11-19) its own shape: the base's COMMAND TOWER - a tall tower with a ring of slanted windows and a radar dish
+local TOP = shell2({ H = H, roof = "flat", roofStyle = MOON.panelD, front1 = { -60, -36, 36, 60 }, back1 = { -60, 60 }, left1 = { 44, 20, -30 }, right1 = { 44, 20, -30 },
+	win = { w = 6, b = 5, t = 12 } })
 local inn = model(STR, "Interior")
 local I = INT()
 wall(inn, "WindowWall", "x", -30, -78, 78, F1, H, { dr(-60, 10, 12), dr(60, 10, 12) }, I)
@@ -87,6 +88,58 @@ for _, p in { { -30, 40 }, { 20, 10 }, { -40, -48 } } do blood(p[1], F1, p[2], 2
 for _, p in { { -40, 50 }, { 40, 50 }, { -50, 14 }, { 50, 14 }, { 0, -16 }, { 0, -46 } } do gspawn(p[1], F1, p[2]) end
 keepClear(-6, 40, 6, 58, F1)
 keepClear(-62, -42, -54, -34, F1)
-moonSign("THE CONTROL ROOM")
+-- OUTSIDE (2026-11-19): THE VOID KNIGHT'S CONTROL ROOM. The command tower rises from the back of the roof: a steel
+-- shaft with lit slits, the cab at the top with a ring of slanted windows glowing red (ALERT), an antenna array and a
+-- RADAR DISH that turns (attribute Spin: Client/WorldSpin). A sloped glass front over the door, red alert beacons.
+local OUT = model(DEC, "Outside")
+local TX, TZ = 0, -34
+prism(OUT, "Shaft", TX, TZ, 13, TOP, TOP + 56, 8, MOON.steel, D())
+for y = TOP + 8, TOP + 48, 10 do
+	for k = 0, 3 do
+		local a = k * math.pi / 2 + math.pi / 8
+		local w = box(OUT, "ShaftSlit", 0, 0, 0, 1, 1, 1, MOON.blue, DECO)
+		w.Size = Vector3.new(2, 5, 0.3)
+		w.CFrame = CFrame.new(TX + math.cos(a) * 12.8, y, TZ + math.sin(a) * 12.8) * CFrame.Angles(0, -a + math.pi / 2, 0)
+	end
+end
+-- the cab: a wider ring, slanted windows all round, a roof, the antennas, the dish
+local CY = TOP + 56
+prism(OUT, "CabFloor", TX, TZ, 22, CY, CY + 2, 12, MOON.steelD, D())
+for k = 0, 11 do
+	local a = (k + 0.5) * math.pi / 6
+	local cf = CFrame.new(TX + math.cos(a) * 21.5, CY + 6.5, TZ + math.sin(a) * 21.5) * CFrame.Angles(0, -a + math.pi / 2, 0) * CFrame.Angles(0.25, 0, 0)
+	part(OUT, "CabWindow", Vector3.new(11.6, 9, 0.4), cf, st(M.Neon, nil, C3(255, 70, 60)), { deco = true, t = 0.35 })
+	part(OUT, "CabMullion", Vector3.new(0.8, 9.4, 0.8), CFrame.new(TX + math.cos(a + math.pi / 12) * 21.8, CY + 6.5, TZ + math.sin(a + math.pi / 12) * 21.8), MOON.steelD, D())
+end
+prism(OUT, "CabRoof", TX, TZ, 24, CY + 11, CY + 13, 12, MOON.steel, D())
+light(box(OUT, "CabGlow", TX - 0.2, CY + 6, TZ - 0.2, TX + 0.2, CY + 6.4, TZ + 0.2, MOON.red, { deco = true, t = 1 }), 60, 1.8, C3(255, 70, 60))
+for k = 0, 2 do
+	local x = TX - 12 + k * 12
+	box(OUT, "Antenna", x - 0.3, CY + 13, TZ + 10 - 0.3, x + 0.3, CY + 30 + k * 4, TZ + 10 + 0.3, MOON.steelL, DECO)
+	moonBeacon(OUT, Vector3.new(x, CY + 30.6 + k * 4, TZ + 10), C3(255, 60, 50), 30)
+end
+do -- the radar dish on a short mast: it turns
+	local rd = model(OUT, "Radar")
+	box(rd, "RadarMast", TX - 0.8, CY + 13, TZ - 6.8, TX + 0.8, CY + 22, TZ - 5.2, MOON.steelD, DECO)
+	local base = CFrame.new(TX, CY + 24, TZ - 6)
+	part(rd, "RadarBar", Vector3.new(28, 2, 1), base, MOON.steelL, D())
+	part(rd, "RadarFace", Vector3.new(26, 5, 0.6), base * CFrame.new(0, 0, -1.2) * CFrame.Angles(-0.3, 0, 0), MOON.white, D())
+	part(rd, "RadarFeed", Vector3.new(1, 1, 5), base * CFrame.new(0, 0.6, -3.6), MOON.steelD, D())
+	rd.WorldPivot = base
+	rd:SetAttribute("Spin", 30)
+end
+-- the sloped glass front over the door, its frame, alert beacons along the roof edge
+for k = 0, 5 do
+	local x = -30 + k * 12
+	if math.abs(x) > 4 then
+		part(OUT, "FrontGlass", Vector3.new(11.6, 8, 0.4), CFrame.new(x, TOP - 4, 61.6) * CFrame.Angles(-0.4, 0, 0), st(M.Neon, nil, C3(90, 170, 220)), { deco = true, t = 0.45 })
+	end
+end
+box(OUT, "FrontFrame", -36, TOP - 0.4, 60, 36, TOP + 0.6, 63.4, MOON.steelD, DECO)
+for _, x in { -78, -40, 40, 78 } do moonBeacon(OUT, Vector3.new(x, TOP + 1.4, 59), C3(255, 60, 50), 26) end
+sign(OUT, "COMMAND", CFrame.new(TX, TOP + 36, TZ + 13.4) * CFrame.Angles(0, math.pi, 0), 14, 3, MOON.steel, C3(200, 225, 255), Enum.Font.SciFi)
+moonSign("THE CONTROL ROOM", CFrame.new(0, 20.6, 61))
+washLight(-30, 90, Vector3.new(-6, TOP + 40, TZ), C3(200, 210, 255), 160, 2.4)
+washLight(30, 90, Vector3.new(6, TOP + 40, TZ), C3(200, 210, 255), 160, 2.4)
 moonGrounds()
 return endMap()
