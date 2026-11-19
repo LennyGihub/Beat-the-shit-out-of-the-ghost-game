@@ -59,7 +59,7 @@ local function find(list: { any }, word: string?): any
 	return nil
 end
 
-local HELP = "cash <n> | xp <n> | camp all|reset|<n> | trips reset|empty|<n> | form <id>|all|off|tutorial | offline finish | offline pity <h> | runcash <n> | give <item> | clearitems | ult <id> | allults | allmaps | heal | brut | god | start [map] [diff] | "
+local HELP = "cash <n> | xp <n> | camp all|reset|<n> | trips reset|empty|<n> | form <id>|all|off|tutorial | offline finish | offline pity <h> | trade bot | runcash <n> | give <item> | clearitems | ult <id> | allults | allmaps | heal | brut | god | start [map] [diff] | "
 	.. "revive | money2 | glock | vip | doubleult | secondchance | next | killghost | bring | ragdoll [power] | monster <id|off> | boss <id> [tier 1-3] | evolved on|off|<tier> | event plane|van|train | leave | endrun"
 
 local CMD: { [string]: (p: Player, a: string?, b: string?) -> (boolean, string) } = {}
@@ -103,7 +103,7 @@ CMD.form = function(p, a)
 		-- (the jars / potions tutorial again: not done, starter cash again, no form owned)
 		local d = Data.get(p)
 		if not d then return false, "No save" end
-		d.FormTut = false; d.FormTutCash = false; d.Forms = {}; d.FormStim = nil; d.FormPotion = nil
+		d.FormTut = false; d.FormTutCash = false; d.Forms = {}; d.FormN = {}; d.FormStim = nil; d.FormPotion = nil
 		Data.refresh(p)
 		Combat.refreshHealth(p)
 		return true, "Forms wiped, the jars / potions tutorial will start"
@@ -128,6 +128,11 @@ CMD.form = function(p, a)
 	Data.equipForm(p, fm.id)
 	Combat.refreshHealth(p)
 	return true, "Wearing " .. fm.name .. " (" .. Forms.rarity[fm.rarity].name .. ")"
+end
+-- trading: "trade bot" opens a trade with a test partner (Studio only, Server/Trade)
+CMD.trade = function(p, a)
+	if a ~= "bot" then return false, "Usage: trade bot" end
+	return require(script.Parent.Trade).bot(p)
 end
 -- train tickets: "trips reset" (all 5 back), "trips empty" (none left), "trips <n>" (n left)
 CMD.trips = function(p, a)

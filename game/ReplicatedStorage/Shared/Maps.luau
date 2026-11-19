@@ -83,6 +83,28 @@ local List: { Map } = {
 		light = light(C(240, 220, 200), C(26, 22, 20), -0.3, 0.26, 1.2, -0.1) },
 	{ id = "Harb_Ship", name = "The Ghost Ship", price = 0, campaign = true, desc = "The captain's ship, moored at the end of the pier.", color = C(80, 130, 170),
 		light = light(C(200, 220, 255), C(20, 26, 34), -0.3, 0.28, 1.15, -0.15) },
+	-- THE ASHEN ABBEY (Shared/Campaign map 4; tools/build/maps/abbey_lib.luau + abb_<building>.luau): ash and hellfire
+	{ id = "Abb_Cloister", name = "The Cloister", price = 0, campaign = true, desc = "Arcades round a dead garden, a fountain of black water.", color = C(170, 150, 120),
+		light = light(C(255, 226, 200), C(30, 24, 22), -0.25, 0.26, 1.2, -0.1) },
+	{ id = "Abb_Crypt", name = "The Crypt", price = 0, campaign = true, desc = "Tombs, coffins, bones in the walls.", color = C(120, 140, 110),
+		light = light(C(220, 240, 210), C(22, 26, 22), -0.3, 0.28, 1.15, -0.15) },
+	{ id = "Abb_Belfry", name = "The Bell Tower", price = 0, campaign = true, desc = "The bell chamber: ropes, beams and great bronze bells.", color = C(200, 150, 70),
+		light = light(C(255, 220, 170), C(30, 24, 18), -0.25, 0.26, 1.2, -0.1) },
+	{ id = "Abb_Ossuary", name = "The Ossuary", price = 0, campaign = true, desc = "Walls built of skulls, piles of bones.", color = C(220, 210, 180),
+		light = light(C(255, 236, 210), C(28, 24, 20), -0.3, 0.26, 1.15, -0.15) },
+	{ id = "Abb_Nave", name = "The Cathedral", price = 0, campaign = true, desc = "The nave split open to the fire below.", color = C(230, 80, 40),
+		light = light(C(255, 190, 150), C(40, 20, 16), -0.15, 0.3, 1.25, -0.05) },
+	-- THE BLACK MOON (Shared/Campaign map 5; tools/build/maps/moon_lib.luau + moon_<building>.luau): steel, neon, the void
+	{ id = "Moon_Dock", name = "The Docking Bay", price = 0, campaign = true, desc = "Airlocks, a lander, cargo pods.", color = C(150, 170, 210),
+		light = light(C(210, 225, 255), C(22, 26, 36), -0.2, 0.26, 1.2, -0.1) },
+	{ id = "Moon_Lab", name = "The Lab", price = 0, campaign = true, desc = "Broken tanks, lab benches, green light.", color = C(110, 230, 140),
+		light = light(C(210, 255, 225), C(20, 30, 26), -0.2, 0.26, 1.2, -0.1) },
+	{ id = "Moon_Reactor", name = "The Reactor", price = 0, campaign = true, desc = "The core, its pipes and its coolant.", color = C(90, 200, 255),
+		light = light(C(200, 235, 255), C(18, 26, 36), -0.15, 0.28, 1.2, -0.1) },
+	{ id = "Moon_Control", name = "The Control Room", price = 0, campaign = true, desc = "Consoles, screens and a window on the Earth.", color = C(230, 70, 70),
+		light = light(C(255, 215, 215), C(30, 20, 24), -0.2, 0.28, 1.15, -0.12) },
+	{ id = "Moon_Gate", name = "The Black Gate", price = 0, campaign = true, desc = "A ring of black stone and a portal to somewhere else.", color = C(170, 110, 255),
+		light = light(C(225, 205, 255), C(24, 18, 36), -0.1, 0.3, 1.2, -0.08) },
 }
 
 local Difficulties: { Difficulty } = {

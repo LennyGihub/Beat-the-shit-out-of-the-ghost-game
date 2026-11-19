@@ -470,6 +470,13 @@ end
 EP.T.DeepOne = EP.T.LakeWitch; POSES.DeepOne = POSES.LakeWitch
 EP.T.Keeper = EP.T.Counselor; POSES.Keeper = POSES.Counselor
 EP.T.Netman = EP.T.Pirate; POSES.Netman = POSES.Pirate
+-- the Ashen Abbey and the Black Moon: borrowed body motions, their own effects (Client/Entrance)
+EP.T.Nun = EP.T.Woman; POSES.Nun = POSES.Woman
+EP.T.Gravedigger = EP.T.Rat; POSES.Gravedigger = POSES.Rat
+EP.T.Ringer = EP.T.Titan; POSES.Ringer = POSES.Titan
+EP.T.Astronaut = EP.T.Conqueror; POSES.Astronaut = POSES.Conqueror
+EP.T.Specimen = EP.T.Antlered; POSES.Specimen = POSES.Antlered
+EP.T.Sentinel = EP.T.Ringmaster; POSES.Sentinel = POSES.Ringmaster
 
 function EP.pose(id: string, evolved: boolean, s: number, t: number, H: number): (Pose?, number)
 	local f = POSES[id]

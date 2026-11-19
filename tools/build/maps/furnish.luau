@@ -62,6 +62,28 @@ local THEMES = {
 		function(c) F.crate(c, 3) end, function(c) F.chair(c, Wd.dark, Fab.green) end },
 	Harb_Ship = { function(c) F.barrel(c) end, function(c) F.crate(c, 3.5) end, function(c) F.table(c, 7, 4, 3.4, Wd.dark, "Table") end,
 		function(c) F.chair(c, Wd.dark, Fab.brown) end, function(c) F.bench(c, 6) end, function(c) F.toyChest(c) end },
+	-- THE ASHEN ABBEY (maps/abb_*.luau): pews to throw in the Cathedral (the Red Demon)
+	Abb_Cloister = { function(c) F.bench(c, 7) end, function(c) G2.pew(c, 7) end, function(c) F.chair(c, Wd.dark, Fab.red) end, function(c) F.pedestal(c) end,
+		function(c) F.crate(c, 3) end, function(c) F.bookshelf(c, 6, 9) end },
+	Abb_Crypt = { function(c) G2.coffin(c, false) end, function(c) G2.coffin(c, true) end, function(c) F.crate(c, 3) end, function(c) F.barrel(c) end,
+		function(c) F.bench(c, 6) end },
+	Abb_Belfry = { function(c) F.crate(c, 3.5) end, function(c) F.crate(c, 3) end, function(c) F.barrel(c) end, function(c) F.bench(c, 6) end,
+		function(c) G2.workbench(c, 7) end },
+	Abb_Ossuary = { function(c) G2.coffin(c, false) end, function(c) F.crate(c, 3) end, function(c) F.barrel(c) end, function(c) F.bench(c, 6) end,
+		function(c) F.pedestal(c) end },
+	Abb_Nave = { function(c) G2.pew(c, 8) end, function(c) G2.pew(c, 8) end, function(c) G2.pew(c, 8) end, function(c) F.bench(c, 7) end,
+		function(c) F.pedestal(c) end, function(c) F.chair(c, Wd.dark, Fab.red) end },
+	-- THE BLACK MOON (maps/moon_*.luau)
+	Moon_Dock = { function(c) F.crate(c, 3.5) end, function(c) F.crate(c, 3) end, function(c) F.barrel(c) end, function(c) G2.steelTable(c) end,
+		function(c) G2.locker(c, C3(80, 90, 110)) end, function(c) F.bench(c, 6) end },
+	Moon_Lab = { function(c) G2.steelTable(c) end, function(c) G2.gurney(c) end, function(c) F.chair(c, Wd.mid, Fab.grey) end, function(c) F.cabinet(c, 6, 9) end,
+		function(c) G2.vending(c, C3(40, 90, 120)) end, function(c) F.crate(c, 3) end },
+	Moon_Reactor = { function(c) F.crate(c, 3.5) end, function(c) F.barrel(c) end, function(c) G2.workbench(c, 7) end, function(c) G2.locker(c, C3(70, 76, 90)) end,
+		function(c) G2.steelTable(c) end },
+	Moon_Control = { function(c) F.chair(c, Wd.dark, Fab.grey) end, function(c) F.chair(c, Wd.dark, Fab.blue) end, function(c) G2.steelTable(c) end,
+		function(c) F.cabinet(c, 6, 9) end, function(c) G2.vending(c, C3(170, 40, 60)) end, function(c) F.crate(c, 3) end },
+	Moon_Gate = { function(c) F.crate(c, 3.5) end, function(c) F.barrel(c) end, function(c) G2.steelTable(c) end, function(c) F.pedestal(c) end,
+		function(c) G2.locker(c, C3(70, 60, 100)) end },
 	Farm = { function(c) G2.hay(c) end, function(c) G2.hay(c) end, function(c) F.crate(c, 3.5) end, function(c) F.barrel(c) end,
 		function(c) G2.workbench(c, 7) end, function(c) F.rockingChair(c) end, function(c) F.table(c, 7, 4, 3.4, Wd.mid, "Table") end,
 		function(c) F.chair(c, Wd.mid, Fab.brown) end, function(c) F.dresser(c, 6) end },
@@ -140,7 +162,7 @@ for id, list in THEMES do
 		local down = workspace:Raycast(Vector3.new(x, rngF:NextNumber() < 0.55 and 18 or 40, z), Vector3.new(0, -30, 0), rp)
 		if down and down.Normal.Y > 0.9 and down.Position.Y < 30 and not down.Instance:FindFirstAncestor("Stairs") and not noGo(x, down.Position.Y, z) then
 			local fy = down.Position.Y
-			local roof = workspace:Raycast(Vector3.new(x, fy + 3, z), Vector3.new(0, 30, 0), rp)
+			local roof = workspace:Raycast(Vector3.new(x, fy + 3, z), Vector3.new(0, 45, 0), rp) -- (45: the tall halls, the Cathedral is 36 high)
 			if roof then
 				-- room around it: nothing standing in a 9 x 9 footprint (walls, doors, furniture)
 				local clear = true

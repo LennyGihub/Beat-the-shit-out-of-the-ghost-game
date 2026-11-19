@@ -73,6 +73,10 @@ local FormTutorial = require(Client.FormTutorial) -- after the intro: how to get
 local CampFx = require(Client.CampFx) -- Camp Hollowmere's monsters' moves (rafter drop, hook, flood, torch, straw)
 local CarnivalFx = require(Client.CarnivalFx) -- the Moonlight Carnival's monsters' moves (crates, shockwave, curse, whip)
 local HarborFx = require(Client.HarborFx) -- Blackwater Harbor's monsters' moves (ink, dive, beam, flash, net, anchor)
+local AbbeyFx = require(Client.AbbeyFx) -- the Ashen Abbey's monsters' moves (veil, hymn, hands, coffin, bell, toll)
+local MoonFx = require(Client.MoonFx) -- the Black Moon's monsters' moves (breach, jetpack, acid, brood, missiles, overload)
+local FxTier = require(Client.FxTier) -- the further the map, the bigger the effects
+local TradeUI = require(Client.TradeUI) -- trading cash, jar forms and potion forms with other players
 
 Platform.init()
 -- the server is told which controls this player uses: touch players reach further, lift from far and face a weaker
@@ -128,6 +132,9 @@ FormTutorial.init(SellerUI, FormCine, Intro)
 CampFx.init(Fx)
 CarnivalFx.init(Fx)
 HarborFx.init(Fx, HUD)
+AbbeyFx.init(Fx, HUD)
+MoonFx.init(Fx, HUD)
+FxTier.init(Fx, HUD)
 -- lobby screen: PLAY (create / join lobbies) and SHOP buttons, friend booster
 QuestUI.init(function(open)
 	Input.setShopOpen(open)
@@ -142,7 +149,8 @@ BestiaryUI.init(function(open)
 end)
 Entrance.init(Fx, HUD) -- each monster's entrance cinematic
 LobbyUI.init(function() UltShop.open() end, function(open) Input.setShopOpen(open) end, function() QuestUI.open() end, QuestUI.claimable, QuestUI.changed,
-	function() BestiaryUI.open() end)
+	function() BestiaryUI.open() end, function() TradeUI.openPicker() end)
+TradeUI.init(function(open) Input.setShopOpen(open) end)
 Input.openPlay = LobbyUI.togglePlay
 Intro.init(Fx, HUD) -- the new player's intro (the TV, the Woman, the frozen lessons, the way out)
 TutorialUI.init() -- starts it on the first join; HOW TO PLAY in the lobby
@@ -162,6 +170,8 @@ end
 for _, k in CampFx.KINDS do FIGHT[k] = true end -- (Camp Hollowmere's monsters' moves: fight-only too)
 for _, k in CarnivalFx.KINDS do FIGHT[k] = true end
 for _, k in HarborFx.KINDS do FIGHT[k] = true end
+for _, k in AbbeyFx.KINDS do FIGHT[k] = true end
+for _, k in MoonFx.KINDS do FIGHT[k] = true end
 
 Remotes.Fx.OnClientEvent:Connect(function(kind: string, ...)
 	if FIGHT[kind] and not lp:GetAttribute("InMatch") then return end
@@ -248,11 +258,18 @@ Remotes.Fx.OnClientEvent:Connect(function(kind: string, ...)
 		CarnivalFx.handle(kind, ...)
 	elseif HarborFx.handles(kind) then
 		HarborFx.handle(kind, ...)
+	elseif AbbeyFx.handles(kind) then
+		AbbeyFx.handle(kind, ...)
+	elseif MoonFx.handles(kind) then
+		MoonFx.handle(kind, ...)
 	elseif MonsterFx.handles(kind) then
 		MonsterFx.handle(kind, ...)
 	else
 		Fx.handle(kind, ...)
 	end
+	-- the further the campaign map, the bigger the effects (Client/FxTier adds its layer on top)
+	local ok, err = pcall(FxTier.on, kind, ...)
+	if not ok then warn("[FxTier] " .. tostring(err)) end
 end)
 
 -- Studio-only test hook: player attribute DebugCam = CFrame puts the camera there (nil = normal camera)

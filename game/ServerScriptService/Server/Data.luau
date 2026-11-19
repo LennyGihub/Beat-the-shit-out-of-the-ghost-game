@@ -27,6 +27,7 @@ local function fresh()
 	return { Cash = 0, Owned = {}, GhostLevel = 1, Kills = 0, Ults = { Rage = true }, Equipped = "Rage", Receipts = {},
 		Bestiary = {} :: { [string]: number }, Badges = {} :: { [string]: boolean }, Nightmare = 0, XP = 0,
 		Campaign = {} :: { [string]: number }, Forms = {} :: { [string]: boolean }, FormStim = nil :: string?, FormPotion = nil :: string?,
+		FormN = {} :: { [string]: number }, -- copies of each owned form (missing = 1): duplicates can be traded (Server/Trade)
 		Tutorial = false, -- Tutorial = the tutorial was offered (taken or refused): the lobby's popup is not shown again
 		Trips = { n = 0, reset = 0 },
 		FormTut = false, FormTutCash = false, -- the jars / potions tutorial (Client/FormTutorial): done / its starter cash given
@@ -93,6 +94,10 @@ local function publish(player)
 	for id in p.data.Forms do table.insert(forms, id) end
 	table.sort(forms)
 	player:SetAttribute("Forms", table.concat(forms, ","))
+	-- copies of the forms owned more than once (JSON id -> n; Client/TradeUI, SellerUI)
+	local copies = {}
+	for id, n in p.data.FormN do if p.data.Forms[id] and n > 1 then copies[id] = n end end
+	player:SetAttribute("FormN", HttpService:JSONEncode(copies))
 	player:SetAttribute("FormStim", p.data.FormStim or "")
 	player:SetAttribute("FormPotion", p.data.FormPotion or "")
 	-- train tickets (the client counts the refill down itself)
@@ -151,6 +156,12 @@ function Data.load(player: Player)
 					if type(res.Forms) == "table" then
 						for id, v in res.Forms do if type(id) == "string" and Forms.byId[id] and v == true then prof.data.Forms[id] = true end end
 					end
+					if type(res.FormN) == "table" then
+						for id, v in res.FormN do
+							local n = tonumber(v)
+							if type(id) == "string" and prof.data.Forms[id] and n and n == n and n > 1 then prof.data.FormN[id] = math.min(math.floor(n), 1e6) end
+						end
+					end
 					for _, key in { "FormStim", "FormPotion" } do
 						local id = res[key]
 						local fm = type(id) == "string" and Forms.byId[id] or nil
@@ -200,6 +211,7 @@ function Data.save(player: Player): boolean
 		Bestiary = table.clone(prof.data.Bestiary), Badges = table.clone(prof.data.Badges), Nightmare = prof.data.Nightmare, XP = prof.data.XP,
 		Tutorial = prof.data.Tutorial == true,
 		Campaign = table.clone(prof.data.Campaign), Forms = table.clone(prof.data.Forms), FormStim = prof.data.FormStim, FormPotion = prof.data.FormPotion,
+		FormN = table.clone(prof.data.FormN),
 		Trips = table.clone(prof.data.Trips), FormTut = prof.data.FormTut == true, FormTutCash = prof.data.FormTutCash == true,
 		Offline = { stim = { q = table.clone(prof.data.Offline.stim.q), t = prof.data.Offline.stim.t },
 			potion = { q = table.clone(prof.data.Offline.potion.q), t = prof.data.Offline.potion.t }, pity = prof.data.Offline.pity },
@@ -443,6 +455,7 @@ function Data.addForm(player: Player, id: string): boolean
 	local d = Data.get(player)
 	if not d or not Forms.byId[id] then return false end
 	local new = not d.Forms[id]
+	if not new then d.FormN[id] = (d.FormN[id] or 1) + 1 end -- (a copy: it can be traded)
 	d.Forms[id] = true
 	publish(player)
 	return new
@@ -453,7 +466,8 @@ function Data.addForms(player: Player, ids: { string }): { [string]: boolean }
 	local new = {} :: { [string]: boolean }
 	if not d then return new end
 	for _, id in ids do
-		if Forms.byId[id] and not d.Forms[id] then new[id] = true end
+		if Forms.byId[id] and not d.Forms[id] then new[id] = true
+		elseif Forms.byId[id] then d.FormN[id] = (d.FormN[id] or 1) + 1 end
 		if Forms.byId[id] then d.Forms[id] = true end
 	end
 	publish(player)
@@ -472,6 +486,50 @@ function Data.equipForm(player: Player, id: string): boolean
 	publish(player)
 	return true
 end
+-- how many copies of a form the player owns (0 = none)
+function Data.formCount(player: Player, id: string): number
+	local d = Data.get(player)
+	if not d or not d.Forms[id] then return 0 end
+	return d.FormN[id] or 1
+end
+-- TRADES (Server/Trade): take n copies away (false = not that many owned). The last copy of a worn form: the best
+-- other form of that kind is worn instead (or none). publish = false: the caller publishes (Data.refresh).
+function Data.takeForm(player: Player, id: string, n: number, publishNow: boolean?): boolean
+	local d = Data.get(player)
+	local fm = Forms.byId[id]
+	if not d or not fm or n < 1 then return false end
+	local have = d.Forms[id] and (d.FormN[id] or 1) or 0
+	if have < n then return false end
+	local left = have - n
+	if left <= 0 then
+		d.Forms[id] = nil; d.FormN[id] = nil
+		local key = fm.kind == "stim" and "FormStim" or "FormPotion"
+		if d[key] == id then
+			local best, bp = nil, -1
+			for oid in d.Forms do
+				local o = Forms.byId[oid]
+				if o and o.kind == fm.kind and Forms.power(o) > bp then best, bp = oid, Forms.power(o) end
+			end
+			d[key] = best
+		end
+	elseif left == 1 then d.FormN[id] = nil
+	else d.FormN[id] = left end
+	if publishNow ~= false then publish(player) end
+	return true
+end
+-- TRADES: give n copies (worn at once if nothing of that kind is worn)
+function Data.giveForm(player: Player, id: string, n: number, publishNow: boolean?)
+	local d = Data.get(player)
+	local fm = Forms.byId[id]
+	if not d or not fm or n < 1 then return end
+	local have = d.Forms[id] and (d.FormN[id] or 1) or 0
+	d.Forms[id] = true
+	if have + n > 1 then d.FormN[id] = have + n end
+	local key = fm.kind == "stim" and "FormStim" or "FormPotion"
+	if d[key] == nil then d[key] = id end
+	if publishNow ~= false then publish(player) end
+end
+
 function Data.formOf(player: Player, kind: string): string?
 	local d = Data.get(player)
 	if not d then return nil end

@@ -36,6 +36,7 @@ local Tutorial = require(Server.Tutorial)
 local Sandbox = require(Server.Sandbox)
 local Bestiary = require(Server.Bestiary)
 local FormShop = require(Server.Forms)
+local Trade = require(Server.Trade)
 
 local isMatchServer = game.PrivateServerId ~= "" and game.PrivateServerOwnerId == 0
 Run.mode = isMatchServer and "Match" or "Lobby"
@@ -53,6 +54,7 @@ Sandbox.start() -- after Run.start: it takes over the monster's death while a sa
 Tutorial.start(Run.mode == "Lobby") -- the intro's server side (saved as played, the character brought back to the park)
 Lobby.start()
 FormShop.start() -- Doc Mercy's ectoplasm, Mother Moth's potions (the park's two sellers)
+Trade.start() -- players trade cash, jar forms and potion forms in the park
 Admin.start()
 Friends.start()
 Monetization.start()

@@ -66,12 +66,15 @@ end
 local FACE = { N = 0, S = math.pi, E = -math.pi / 2, W = math.pi / 2 }
 local function at(x, y, z, face) return CFrame.new(x, y, z) * CFrame.Angles(0, FACE[face] or face or 0, 0) end
 local function b(m, cf, name, sx, sy, sz, x, y, z, s, o) return part(m, name, Vector3.new(sx, sy, sz), cf * CFrame.new(x, y, z), s, o) end
+-- (cyl / ball copy their options: they used to write the shape into the table they were given, and the shared DECO
+-- table then turned every later decoration into a ball - giant spheres where boards and piers should be)
+local function withShape(o, shape) local c = {} if o then for k, v in o do c[k] = v end end c.shape = shape return c end
 local function cyl(m, cf, name, d, h, x, y, z, s, o)
-	o = o or {}; o.shape = Enum.PartType.Cylinder
+	o = withShape(o, Enum.PartType.Cylinder)
 	return part(m, name, Vector3.new(h, d, d), cf * CFrame.new(x, y, z) * CFrame.Angles(0, 0, math.pi / 2), s, o)
 end
 local function ball(m, cf, name, d, x, y, z, s, o)
-	o = o or {}; o.shape = Enum.PartType.Ball
+	o = withShape(o, Enum.PartType.Ball)
 	return part(m, name, Vector3.new(d, d, d), cf * CFrame.new(x, y, z), s, o)
 end
 local function light(p, range, brightness, color, shadows)

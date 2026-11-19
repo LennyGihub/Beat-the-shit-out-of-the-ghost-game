@@ -71,3 +71,9 @@ rotated so the item points toward -Z.
 -> `rat` (standalone): ServerStorage.Monsters.Rat = The Sewer Rat, a hand-built blocky rig like the Demon's.
 -> `maps/sewer.luau` (prepend `lib2 furn_lib maplib`): The Old Sewer (ServerStorage.Maps.Sewer); then `detail` (TARGET = "Sewer"),
    `phones` and `doors_clear`. (No `furnish` list for it: its furniture is placed by hand in the map file.)
+-> `abbey_monsters`, `moon_monsters` (standalone): the Ashen Abbey's Nun / Gravedigger / Ringer and the Black Moon's Astronaut /
+   Specimen / Sentinel into ServerStorage.Monsters (hand-built blocky rigs, the harbor_monsters rig builder).
+-> `maps/abbey_lib.luau` + `maps/abb_<cloister|crypt|belfry|ossuary|nave>.luau`, `maps/moon_lib.luau` + `maps/moon_<dock|lab|reactor|control|gate>.luau`
+   (prepend lib2 + furn_lib + maplib + the lib), then furnish (ONLY), detail (TARGET), doors_clear, knight_spots, and
+   `maps/abbey_moon_items.luau` (item spots of all ten, tier 3 in each secret room).
+   lib2's cyl / ball no longer write the shape into the options table (the shared DECO used to turn later parts into balls).
