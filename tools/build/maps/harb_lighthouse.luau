@@ -3,15 +3,16 @@
 -- (the big cover from his beam) with an iron stair winding up it, stacks of oil barrels and crates of spare lenses
 -- (more cover), a lens on a stand. West, behind a wall with two doorways: THE KEEPER'S QUARTERS - his bed, his
 -- stove, his table and logbook, a ship in a bottle; his BOOKCASE pulls away (Secrets: the room behind it).
--- Build: cat tools/build/lib2.luau tools/build/furn_lib.luau tools/build/maplib.luau tools/build/maps/harbor_lib.luau tools/build/maps/harb_lighthouse.luau
+-- Build: cat tools/build/lib2.luau tools/build/furn_lib.luau tools/build/maplib.luau tools/build/maps/shape_lib.luau tools/build/maps/harbor_lib.luau tools/build/maps/harb_lighthouse.luau
 local C3 = Color3.fromRGB
 local function D() return { deco = true } end
 local H = 24
 local rng = Random.new(33)
 beginMap("Harb_Lighthouse", harbTheme({ ext = st(M.Plaster, nil, C3(210, 206, 196)), inner = st(M.Plaster, nil, C3(170, 162, 146)),
 	floor = st(M.Cobblestone, "PS2_Stone1", C3(110, 106, 100)) }))
-shell({ two = false, H = H, roof = "gable", pitch = 0.45, front1 = { -60, -36, 36, 60 }, back1 = { -60, 60 }, left1 = { 44, 20, -30 }, right1 = { 44, 20, -30 },
-	winW = 5, winB = 6, winT = 12 })
+-- (2026-11-19) its own shape: the whitewashed keeper's house under a red hip roof, and the TOWER rising out of it
+local TOP = shell2({ H = H, roof = "hip", rise = 16, roofStyle = st(M.Slate, nil, C3(140, 44, 36)), found = st(M.Cobblestone, "PS2_Stone1", C3(90, 88, 84)),
+	front1 = { -60, -36, 36, 60 }, back1 = { -60, 60 }, left1 = { 44, 20, -30 }, right1 = { 44, 20, -30 }, win = { w = 5, b = 6, t = 12 } })
 local inn = model(STR, "Interior")
 local I = INT()
 wall(inn, "QuartersWall", "z", -44, -58, 58, F1, H, { dr(30, 9, 12), dr(-20, 9, 12) }, I)
@@ -95,6 +96,71 @@ for _, p in { { 20, 30 }, { -10, -30 } } do blood(p[1], F1, p[2], 2) end
 for _, p in { { -20, 44 }, { 40, 30 }, { 50, -20 }, { -20, -20 }, { -60, 20 }, { 30, 50 } } do gspawn(p[1], F1, p[2]) end
 keepClear(-6, 40, 6, 58, F1)
 keepClear(-74, -42, -64, -34, F1) -- (in front of the bookcase)
-harbSign("THE LIGHTHOUSE")
+-- OUTSIDE (2026-11-19): THE KEEPER'S LIGHTHOUSE. The stone column inside rises through the roof as the tower: red
+-- and white rings narrowing to the gallery, the glass lamp room, a red cap, and the LAMP whose two beams turn
+-- (model Beam, attribute Spin: Client/WorldSpin turns it). Rocks round the house, a foghorn, a ship's bell by the door.
+local OUT = model(DEC, "Outside")
+local TX, TZ = 8, -4
+local TW, TR = st(M.Plaster, nil, C3(226, 222, 212)), st(M.Plaster, nil, C3(170, 40, 34))
+local y = TOP + 2
+local r = 11.4
+for k = 0, 8 do
+	local h = 11
+	prism(OUT, "TowerRing", TX, TZ, r - k * 0.38, y, y + h, 16, k % 2 == 0 and TW or TR, D())
+	y += h
+end
+local gy = y -- the gallery
+cyl(OUT, CFrame.new(TX, gy + 0.5, TZ), "Gallery", 2 * (r - 9 * 0.38) + 6, 1, 0, 0, 0, HARB.iron, D())
+for k = 0, 23 do
+	local a = k * math.pi / 12
+	local rr = r - 9 * 0.38 + 2.6
+	box(OUT, "Railing", TX + rr * math.cos(a) - 0.12, gy + 1, TZ + rr * math.sin(a) - 0.12, TX + rr * math.cos(a) + 0.12, gy + 4, TZ + rr * math.sin(a) + 0.12, HARB.iron, DECO)
+end
+cyl(OUT, CFrame.new(TX, gy + 4, TZ), "RailTop", 2 * (r - 9 * 0.38 + 2.6) + 0.4, 0.3, 0, 0, 0, HARB.iron, D())
+prism(OUT, "LampRoom", TX, TZ, 5.6, gy + 1, gy + 10, 12, st(M.Glass, nil, C3(255, 236, 180)), { deco = true, t = 0.35 })
+revolve(OUT, "LampCap", TX, TZ, { { 6.6, gy + 10 }, { 5, gy + 13 }, { 2, gy + 15.5 }, { 0, gy + 16.5 } }, 12, TR)
+box(OUT, "Vane", TX - 0.15, gy + 16.5, TZ - 0.15, TX + 0.15, gy + 21, TZ + 0.15, HARB.iron, DECO)
+local lamp = ball(OUT, CFrame.new(TX, gy + 5.5, TZ), "Lamp", 3.6, 0, 0, 0, HARB.lamp, D())
+light(lamp, 70, 2.4, C3(255, 226, 160))
+do -- the two beams (they turn on the clients)
+	local bm = model(OUT, "Beam")
+	for _, dir in { 1, -1 } do
+		local len = 260
+		local cf = CFrame.new(TX, gy + 5.5, TZ) * CFrame.Angles(0, dir > 0 and 0 or math.pi, 0) * CFrame.new(0, 0, -len / 2 - 2)
+		local p = part(bm, "BeamCone", Vector3.new(9, 9, len), cf, st(M.Neon, nil, C3(255, 236, 170)), { deco = true, t = 0.86, noShadow = true })
+		p.CastShadow = false
+	end
+	bm.WorldPivot = CFrame.new(TX, gy + 5.5, TZ)
+	bm:SetAttribute("Spin", 36) -- (degrees a second, round y)
+end
+-- the foghorn on the gallery, the ship's bell by the door, a life ring, an anchor
+cyl(OUT, CFrame.new(TX + 9, gy + 3, TZ) * CFrame.Angles(0, 0, -math.pi / 2), "Foghorn", 2.4, 4, 0, 0, 0, HARB.iron, D())
+box(OUT, "BellPost", 11.6, 0, 66, 12.4, 10, 66.8, HARB.beam, DECO)
+box(OUT, "BellArm", 11.6, 9.6, 63, 12.4, 10.4, 66.8, HARB.beam, DECO)
+cyl(OUT, CFrame.new(12, 8.2, 63.6), "ShipsBell", 2.2, 2.4, 0, 0, 0, st(M.Metal, nil, C3(190, 150, 70)), D())
+for k = 0, 7 do
+	b(OUT, CFrame.new(-14, 10, 60.7) * CFrame.Angles(0, 0, k / 8 * math.pi * 2), "RingPiece", 0.9, 1.3, 0.6, 0, 1.6, 0, k % 2 == 0 and HARB.red or HARB.white, D())
+end
+harbSign("THE LIGHTHOUSE", CFrame.new(0, 20.8, 61))
+-- the rocks it stands on, round the house
+local rrng = Random.new(8)
+for k = 1, 26 do
+	local side = k % 2 == 0 and 1 or -1
+	local x = side * rrng:NextNumber(82, 100)
+	local z = rrng:NextNumber(-70, 48)
+	local s2 = rrng:NextNumber(5, 11)
+	local rk = box(OUT, "ShoreRock", 0, 0, 0, 1, 1, 1, HARB.stone, DECO)
+	rk.Size = Vector3.new(s2, s2 * 0.8, s2)
+	rk.CFrame = CFrame.new(x, s2 * 0.2, z) * CFrame.Angles(rrng:NextNumber(-0.4, 0.4), rrng:NextNumber(0, 3), rrng:NextNumber(-0.4, 0.4))
+end
+for k = 1, 10 do
+	local x = rrng:NextNumber(-90, 90)
+	local s2 = rrng:NextNumber(6, 12)
+	local rk = box(OUT, "ShoreRock", 0, 0, 0, 1, 1, 1, HARB.stone, DECO)
+	rk.Size = Vector3.new(s2, s2 * 0.8, s2)
+	rk.CFrame = CFrame.new(x, s2 * 0.2, -66 - rrng:NextNumber(0, 8)) * CFrame.Angles(rrng:NextNumber(-0.4, 0.4), rrng:NextNumber(0, 3), 0)
+end
+washLight(-30, 86, Vector3.new(-14, TOP + 8, 60), C3(200, 210, 230), 90, 2)
+washLight(30, 86, Vector3.new(TX, TOP + 40, TZ), C3(220, 220, 240), 120, 2.4)
 harbGrounds()
 return endMap()

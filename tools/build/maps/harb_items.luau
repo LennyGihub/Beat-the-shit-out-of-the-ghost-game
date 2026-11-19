@@ -140,8 +140,9 @@ local LIST = {
 		{ { -57, 3.4, -2 }, { 66, 9, 30 }, { -71, 2.6, 35 } }, { -68, -52 } },
 	Harb_NetLoft = { { { -40, 48 }, { 40, 48 }, { -20, 30 }, { 20, 0 }, { -50, -20 }, { 50, -10 }, { -40, -46 }, { 40, -46 }, { 0, 36 } },
 		{ { -36, 5.4, 0 }, { 10, 2, 22 }, { 0, 3.4, -47 } }, nil },
-	Harb_Ship = { { { -30, 48 }, { 30, 48 }, { -20, 16 }, { 20, 30 }, { -46, -10 }, { 46, 0 }, { -20, -40 }, { 20, -40 }, { 0, 20 } },
-		{ { 27, 3.2, 16 }, { 24, 4, -51 }, { 0, 3.6, -45 } }, { -40, -53 } },
+	-- (2026-11-19: the Ghost Ship is a real hull now, x -98..122 along the quay; its hold's spot is the map's SecretSpot)
+	Harb_Ship = { { { -30, 30 }, { 30, 30 }, { -8, 18 }, { 20, -20 }, { -46, -10 }, { 46, 10 }, { -14, -34 }, { 40, -32 }, { 92, -6 } },
+		{ { -25, 3.2, -10 }, { -86, 4, -26 }, { -83, 3.6, 0 } }, nil },
 }
 for id, l in LIST do
 	local map = maps:FindFirstChild(id)
@@ -151,7 +152,10 @@ for id, l in LIST do
 	local F1 = floorY(map)
 	for _, p in l[1] do spot(map, p[1], F1, p[2], 1) end
 	for _, p in l[2] do spot(map, p[1], F1 + p[2], p[3], 2) end
-	if l[3] then spot(map, l[3][1], F1, l[3][2], 3, true) end
+	-- (a reshaped building says where its secret room's item lies: map attribute SecretSpot)
+	local ss = map:GetAttribute("SecretSpot")
+	if typeof(ss) == "Vector3" then spot(map, ss.X, F1, ss.Z, 3, true)
+	elseif l[3] then spot(map, l[3][1], F1, l[3][2], 3, true) end
 	table.insert(out, id .. ": spots " .. #spotsOf(map):GetChildren() .. (map:FindFirstChild("Secrets") and " (secret room)" or ""))
 end
 return table.concat(out, "\n")

@@ -3,14 +3,16 @@
 -- fish hanging on hooks, a big DRAIN into the harbor in the middle (where he came up), scales and ice boxes. At the
 -- back, behind a wall with two doorways: the COLD ROOM (crates of ice, hanging fish). Its east end: a rusty ICE
 -- LOCKER that pulls away (Secrets: the stash behind it; item spot by maps/harb_items.luau).
--- Build: cat tools/build/lib2.luau tools/build/furn_lib.luau tools/build/maplib.luau tools/build/maps/harbor_lib.luau tools/build/maps/harb_market.luau
+-- Build: cat tools/build/lib2.luau tools/build/furn_lib.luau tools/build/maplib.luau tools/build/maps/shape_lib.luau tools/build/maps/harbor_lib.luau tools/build/maps/harb_market.luau
 local C3 = Color3.fromRGB
 local function D() return { deco = true } end
 local H = 22
 local rng = Random.new(12)
-beginMap("Harb_Market", harbTheme({ floor = HARB.tile, inner = st(M.Plaster, nil, C3(104, 118, 114)), ext = st(M.WoodPlanks, "PS2_Siding1", C3(60, 90, 96)) }))
-shell({ two = false, H = H, roof = "gable", pitch = 0.4, front1 = { -60, -36, 36, 60 }, back1 = { -60, 60 }, left1 = { 44, 20, -30 }, right1 = { 44, 20, -30 },
-	winW = 6, winB = 5, winT = 13 })
+local IRONG = st(M.Metal, nil, C3(46, 86, 70)) -- (the market's green-painted cast iron)
+beginMap("Harb_Market", harbTheme({ floor = HARB.tile, inner = st(M.Plaster, nil, C3(104, 118, 114)), ext = st(M.Brick, nil, C3(110, 70, 56)), trim = IRONG }))
+-- (2026-11-19) its own shape: a Victorian iron-and-glass market hall, its glass gable to the yard, a clerestory on top
+local TOP = shell2({ H = H, ridge = "z", roof = "gable", rise = 28, roofStyle = st(M.Metal, nil, C3(70, 96, 86)),
+	front1 = { -60, -36, 36, 60 }, back1 = { -60, 60 }, left1 = { 44, 20, -30 }, right1 = { 44, 20, -30 }, win = { w = 6, b = 5, t = 13 }, postStyle = IRONG })
 local inn = model(STR, "Interior")
 local I = INT()
 -- the cold room's wall (z = -32), two doorways
@@ -105,6 +107,74 @@ for _, p in { { -40, 44 }, { 40, 44 }, { 0, 30 }, { -30, -10 }, { 30, -10 }, { 0
 keepClear(-6, 40, 6, 58, F1)
 keepClear(-6, 12, 6, 24, F1) -- (the drain)
 keepClear(56, -42, 70, -34, F1) -- (in front of the ice locker)
-harbSign("THE FISH MARKET")
+-- OUTSIDE (2026-11-19): THE FISH MARKET. Brick walls under a green iron roof; the front gable is a great FAN WINDOW of
+-- glass and iron with the market clock over it; a glazed CLERESTORY runs along the ridge; an iron ARCADE of columns
+-- and arches covers the stalls along the front (ice, fish on slabs, a scale, the price board); gulls on the ridge.
+local OUT = model(DEC, "Outside")
+local GLASSG = st(M.Glass, nil, C3(150, 190, 170))
+-- the fan window: glass rays round a hub over the door, iron spokes, a rim, a glow behind
+local HUB, FR = Vector3.new(0, TOP + 1, 60.3), 24
+local rim = {}
+for k = 0, 10 do local a = math.pi * k / 10; table.insert(rim, HUB + Vector3.new(FR * math.cos(a), FR * math.sin(a), 0)) end
+for k = 1, #rim - 1 do
+	tri(OUT, "FanGlass", HUB, rim[k], rim[k + 1], GLASSG, 0.3, { deco = true, t = 0.35 })
+	part(OUT, "FanSpoke", Vector3.new(0.6, 0.6, FR), CFrame.lookAt((HUB + rim[k]) / 2 + Vector3.new(0, 0, 0.3), rim[k] + Vector3.new(0, 0, 0.3)), IRONG, D())
+	part(OUT, "FanRim", Vector3.new(0.8, 0.8, (rim[k + 1] - rim[k]).Magnitude + 0.4), CFrame.lookAt((rim[k] + rim[k + 1]) / 2 + Vector3.new(0, 0, 0.3), rim[k + 1] + Vector3.new(0, 0, 0.3)), IRONG, D())
+end
+box(OUT, "FanSill", -FR - 1, TOP - 0.6, 60, FR + 1, TOP + 1, 61.2, IRONG, DECO)
+light(box(OUT, "FanGlow", -0.1, TOP + 10, 57, 0.1, TOP + 10.2, 57.2, GLASSG, { deco = true, t = 1 }), 40, 1.2, C3(190, 230, 210))
+-- the clock at the gable's top
+cyl(OUT, CFrame.new(0, TOP + 27.6, 60.6) * CFrame.Angles(math.pi / 2, 0, 0), "ClockFace", 6, 0.4, 0, 0, 0, st(M.Neon, nil, C3(240, 232, 200)), D())
+cyl(OUT, CFrame.new(0, TOP + 27.6, 60.4) * CFrame.Angles(math.pi / 2, 0, 0), "ClockRim", 7, 0.4, 0, 0, 0, IRONG, D())
+box(OUT, "Hand", -0.15, TOP + 27.6, 60.9, 0.15, TOP + 30, 61.1, HARB.black, DECO)
+box(OUT, "Hand", 0, TOP + 27.45, 60.9, 1.8, TOP + 27.75, 61.1, HARB.black, DECO)
+-- the clerestory along the ridge: glazed sides, its own little roof
+do
+	local y0 = TOP + 18
+	for _, sx in { -1, 1 } do
+		box(OUT, "ClerestoryWall", sx * 9 - 0.4, y0, -56, sx * 9 + 0.4, y0 + 9, 56, IRONG, DECO)
+		for z = -52, 52, 8 do box(OUT, "ClerestoryGlass", sx * 9 - 0.5, y0 + 2, z - 3, sx * 9 + 0.5, y0 + 8, z + 3, st(M.Neon, nil, C3(170, 210, 190)), { deco = true, t = 0.4 }) end
+	end
+	extrude(OUT, -57, 57, { { -11, y0 + 9 }, { 0, y0 + 14 }, { 11, y0 + 9 } }, st(M.Metal, nil, C3(70, 96, 86)), { axis = "z", ends = IRONG, th = 0.8, over = 0, panelO = D(), endParent = OUT })
+end
+-- THE ARCADE along the front: iron columns, arches between them, a glass roof sloping out, stalls underneath
+local AZ = 69
+for x = -72, 72, 12 do
+	if math.abs(x) > 8 then cyl(OUT, CFrame.new(x, 9, AZ), "Column", 1.4, 16, 0, 0, 0, IRONG, D()) end
+	cyl(OUT, CFrame.new(x, 1.1, AZ), "ColumnFoot", 2.2, 2.2, 0, 0, 0, IRONG, D())
+	if x < 72 then
+		for _, half in { { x, x + 6 }, { x + 12, x + 6 } } do
+			local a, z = Vector3.new(half[1], 15, AZ), Vector3.new(half[2], 17.4, AZ)
+			part(OUT, "Arch", Vector3.new(0.6, 0.6, (z - a).Magnitude), CFrame.lookAt((a + z) / 2, z), IRONG, D())
+		end
+	end
+end
+box(OUT, "ArcadeBeam", -73, 17.4, AZ - 0.5, 73, 18.4, AZ + 0.5, IRONG, DECO)
+panel(OUT, "ArcadeRoof", Vector3.new(0, 20, 60.4), Vector3.new(0, 18.4, AZ + 0.6), Vector3.new(1, 0, 0), 146, GLASSG, 0.3, { deco = true, t = 0.45 })
+harbSign("THE FISH MARKET", CFrame.new(0, 20.6, AZ + 0.6))
+for _, sx in { -1, 1 } do
+	for k = 0, 2 do
+		local x = sx * (22 + k * 16)
+		box(OUT, "StallSlab", x - 5, 0, 62, x + 5, 3, 66, HARB.stone, DECO)
+		box(OUT, "Ice", x - 4.6, 3, 62.4, x + 4.6, 3.6, 65.6, HARB.ice, DECO)
+		for f = 0, 3 do
+			local fc = CFrame.new(x - 3.4 + f * 2.3, 3.9, 64) * CFrame.Angles(0, 0.2 * f, 0)
+			b(OUT, fc, "Fish", 0.8, 0.6, 3, 0, 0, 0, st(M.SmoothPlastic, nil, ({ C3(150, 160, 170), C3(180, 120, 90), C3(120, 140, 130) })[f % 3 + 1]), D())
+		end
+	end
+end
+-- a hanging scale and the price board
+box(OUT, "ScaleHook", 8.8, 13, AZ - 0.2, 9.2, 17.4, AZ + 0.2, HARB.iron, DECO)
+cyl(OUT, CFrame.new(9, 12, AZ), "ScaleDial", 2.2, 0.6, 0, 0, 0, st(M.SmoothPlastic, nil, C3(220, 214, 196)), D())
+box(OUT, "ScalePan", 7.4, 9, AZ - 1.6, 10.6, 9.4, AZ + 1.6, HARB.iron, DECO)
+sign(OUT, "TODAY: COD - EEL - CRAB - ???", CFrame.new(-60, 10, 60.6) * CFrame.Angles(0, math.pi, 0), 14, 3, st(M.Slate, nil, C3(30, 34, 30)), C3(230, 230, 220), Enum.Font.SpecialElite)
+-- gulls along the ridge
+for k, z in { 50, 20, -10, -40 } do
+	local cf = CFrame.new(((k % 2 == 0) and 0.8 or -0.8), TOP + 33, z) * CFrame.Angles(0, k * 1.3, 0)
+	b(OUT, cf, "Gull", 0.9, 0.9, 2, 0, 0, 0, HARB.white, D())
+	b(OUT, cf, "GullHead", 0.6, 0.6, 0.6, 0, 0.6, -0.9, HARB.white, D())
+end
+washLight(-30, 86, Vector3.new(-14, TOP + 10, 60), C3(180, 220, 210), 90, 2)
+washLight(30, 86, Vector3.new(14, TOP + 10, 60), C3(180, 220, 210), 90, 2)
 harbGrounds()
 return endMap()
