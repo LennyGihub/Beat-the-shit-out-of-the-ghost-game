@@ -63,7 +63,8 @@ local out = {}
 local maps = SS:FindFirstChild("Maps")
 if maps then
 	for _, m in maps:GetChildren() do
-		if m.Name ~= "Mansion" then table.insert(out, clear(m)) end
+		-- (a line `ONLYP = "Camp_"` before the script: only the maps whose id starts with it)
+		if m.Name ~= "Mansion" and (not ONLYP or string.sub(m.Name, 1, #ONLYP) == ONLYP) then table.insert(out, clear(m)) end
 	end
 end
 return table.concat(out, "\n")

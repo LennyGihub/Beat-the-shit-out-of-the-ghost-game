@@ -2,13 +2,14 @@
 -- system). A long dining hall (four long tables and their benches, a stone fireplace, the camp's banner over the
 -- serving hatch), and behind the hatch the kitchen (stoves, counters, a butcher block, a huge pot), the pantry and
 -- the walk-in cooler. Scorch marks round the kitchen: it has burnt before. One storey, 24 high.
--- Build: cat tools/build/lib2.luau tools/build/furn_lib.luau tools/build/maplib.luau tools/build/maps/camp_lib.luau tools/build/maps/camp_messhall.luau
+-- Build: cat tools/build/lib2.luau tools/build/furn_lib.luau tools/build/maplib.luau tools/build/maps/shape_lib.luau tools/build/maps/camp_lib.luau tools/build/maps/camp_messhall.luau
 local C3 = Color3.fromRGB
 local function D() return { deco = true } end
 local SOOT = st(M.SmoothPlastic, nil, C3(20, 16, 14))
 beginMap("Camp_MessHall", campTheme({ ext = st(M.WoodPlanks, "PS2_Siding1", C3(100, 70, 46)), lanternColor = C3(255, 190, 110) }))
-shell({ two = false, H = 24, roof = "gable", pitch = 0.45, front1 = { -60, -36, 36, 60 }, back1 = { -60, -30, 54 }, left1 = { 44, 20, -4, -40 }, right1 = { 44, -4, -40 },
-	winW = 6, winB = 5, winT = 13 })
+-- (2026-11-19) its own shape: a long hall under a hip roof, a bell cupola on the ridge, a burnt corner
+local TOP = shell2({ H = 24, roof = "hip", rise = 24, over = 3, roofStyle = st(M.Slate, nil, C3(48, 42, 38)),
+	front1 = { -60, -36, 36, 60 }, back1 = { -60, -30, 54 }, left1 = { 44, 20, -4, -40 }, right1 = { 44, -4, -40 }, win = { w = 6, b = 5, t = 13 } })
 local inn = model(STR, "Interior")
 local I = INT()
 -- the kitchen wall with its serving hatch, the pantry and the cooler behind
@@ -82,6 +83,106 @@ bulb(54, 21, -46, 3, C3(255, 200, 140))
 for _, p in { { -20, 22 }, { 40, 48 }, { -50, -40 } } do blood(p[1], F1, p[2], 2) end
 for _, p in { { -40, 23 }, { 22, 48 }, { -50, -34 }, { 54, -46 }, { 54, -22 }, { 60, 24 } } do gspawn(p[1], F1, p[2]) end
 keepClear(-6, 40, 6, 58, F1)
-campNameBoard("MESS HALL")
+-- OUTSIDE (2026-11-19): the Burned Counselor's mess hall. A hip roof with the dinner bell in a cupola on the ridge,
+-- a stone chimney, a gabled canopy over the door with the iron triangle, and the corner of the roof that burnt:
+-- charred, the rafters showing, still smoking. Soot over the windows he set alight.
+local OUT = model(DEC, "Outside")
+local function roofY(z: number): number return TOP + (60 - z) * 0.4 end -- (the front slope: rise 24 over 60)
+-- the chimney up the east end
+box(OUT, "Chimney", 81, 0, 17, 89, TOP + 26, 29, CAMP.stone, DECO)
+box(OUT, "ChimneyCap", 80.4, TOP + 26, 16.4, 89.6, TOP + 27, 29.6, CAMP.iron, DECO)
+-- the bell cupola on the ridge (x -20..20 at TOP + 24)
+do
+	local ry = TOP + 24
+	local cu = model(OUT, "BellCupola")
+	for _, c in { { -3.5, -3.5 }, { 3.5, -3.5 }, { -3.5, 3.5 }, { 3.5, 3.5 } } do box(cu, "Post", c[1] - 0.4, ry - 1, c[2] - 0.4, c[1] + 0.4, ry + 7, c[2] + 0.4, CAMP.logD, DECO) end
+	box(cu, "Floor", -4.2, ry - 1, -4.2, 4.2, ry, 4.2, CAMP.logD, DECO)
+	local apex = Vector3.new(0, ry + 12, 0)
+	local cs = { Vector3.new(-5.5, ry + 7, -5.5), Vector3.new(5.5, ry + 7, -5.5), Vector3.new(5.5, ry + 7, 5.5), Vector3.new(-5.5, ry + 7, 5.5) }
+	for k = 1, 4 do tri(cu, "CupolaRoof", cs[k], cs[k % 4 + 1], apex, T.roof, 0.6, D()) end
+	cyl(cu, CFrame.new(0, ry + 4.2, 0), "Bell", 3, 3, 0, 0, 0, st(M.Metal, nil, C3(150, 120, 60)), D())
+	cyl(cu, CFrame.new(0, ry + 2.7, 0), "BellLip", 3.8, 0.4, 0, 0, 0, st(M.Metal, nil, C3(150, 120, 60)), D())
+end
+-- the burnt corner on the front slope (x -58..-30, z 22..46): charred shingles, the rafters through, embers, smoke
+do
+	local bz = model(OUT, "BurntRoof")
+	panel(bz, "Char", Vector3.new(-44, roofY(46) + 0.35, 46), Vector3.new(-44, roofY(22) + 0.35, 22), Vector3.new(1, 0, 0), 28, SOOT, 0.3, D())
+	panel(bz, "Hole", Vector3.new(-44, roofY(40) + 0.55, 40), Vector3.new(-44, roofY(28) + 0.55, 28), Vector3.new(1, 0, 0), 14, st(M.SmoothPlastic, nil, C3(6, 4, 4)), 0.3, D())
+	for x = -54, -34, 5 do
+		local a, z = Vector3.new(x, roofY(44) + 0.6, 44), Vector3.new(x, roofY(24) + 1.2, 24)
+		part(bz, "CharredRafter", Vector3.new(1.2, 1.2, (z - a).Magnitude), CFrame.lookAt((a + z) / 2, z), st(M.Wood, nil, C3(22, 16, 12)), D())
+	end
+	for k = 0, 4 do
+		local e = box(bz, "Ember", -50 + k * 4, roofY(34) + 0.7, 33 - k, -49 + k * 4, roofY(34) + 1.1, 34 - k, CAMP.ember, DECO)
+		if k == 2 then light(e, 34, 1.8, C3(255, 120, 50)) end
+		if k % 2 == 0 then -- (it still burns: small flames along the hole)
+			local f = Instance.new("Fire"); f.Size = 4 + k; f.Heat = 7; f.Color = C3(255, 130, 50); f.SecondaryColor = C3(190, 50, 20); f.Parent = e
+		end
+	end
+	local sm = box(bz, "SmokeSource", -45, roofY(34) + 1, 33, -43, roofY(34) + 2, 35, SOOT, { deco = true, t = 1 })
+	local pe = Instance.new("ParticleEmitter")
+	pe.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	pe.Color = ColorSequence.new(C3(40, 36, 34), C3(80, 76, 72))
+	pe.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(1, 1) })
+	pe.Size = NumberSequence.new(3, 12)
+	pe.Lifetime = NumberRange.new(5, 7)
+	pe.Rate = 4
+	pe.Speed = NumberRange.new(3, 5)
+	pe.SpreadAngle = Vector2.new(12, 12)
+	pe.Acceleration = Vector3.new(1.5, 0.6, 0)
+	pe.Parent = sm
+end
+-- soot up the front wall over the windows nearest the burn, blackened siding at that corner
+for _, x in { -60, -36 } do part(OUT, "Soot", Vector3.new(8, 12, 0.2), CFrame.new(x, 20, 60.3), SOOT, { deco = true, t = 0.25 }) end
+part(OUT, "Soot", Vector3.new(14, 22, 0.2), CFrame.new(-74, 13, 60.3), SOOT, { deco = true, t = 0.3 })
+part(OUT, "Soot", Vector3.new(0.2, 20, 24), CFrame.new(-80.3, 14, 40), SOOT, { deco = true, t = 0.3 })
+-- the gabled canopy over the door, the dinner triangle, the name
+for _, x in { -8, 8 } do cyl(OUT, CFrame.new(x, 8.5, 71), "CanopyPost", 1.2, 15, 0, 0, 0, CAMP.logD, D()) end
+extrude(OUT, 60, 73, { { -10, 15.6 }, { 0, 21 }, { 10, 15.6 } }, T.roof, { axis = "z", ends = CAMP.log, endsAt = { 72.6 }, th = 0.8, over = 0, panelO = D() })
+campNameBoard("MESS HALL", CFrame.new(0, 17.4, 73), 14, 2.4)
+do
+	local tg = model(OUT, "DinnerTriangle")
+	local IRONB = st(M.Metal, nil, C3(70, 66, 60))
+	box(tg, "Hook", -0.1, 12.6, 72.4, 0.1, 15.6, 72.6, IRONB, DECO)
+	part(tg, "Side", Vector3.new(0.3, 3.6, 0.3), CFrame.new(-0.9, 11, 72.5) * CFrame.Angles(0, 0, -0.5), IRONB, D())
+	part(tg, "Side", Vector3.new(0.3, 3.6, 0.3), CFrame.new(0.9, 11, 72.5) * CFrame.Angles(0, 0, 0.5), IRONB, D())
+	box(tg, "Base", -1.8, 9.4, 72.35, 1.8, 9.7, 72.65, IRONB, DECO)
+end
+for _, x in { -14, 14 } do campLantern(OUT, x, 11, 60.2) end
+washLight(-34, 84, Vector3.new(-30, TOP + 6, 50), C3(170, 186, 230), 80, 2)
+washLight(34, 84, Vector3.new(30, TOP + 6, 50), C3(170, 186, 230), 80, 2)
+-- kitchen vent pipes on the back slope
+for _, x in { -64, -50 } do
+	cyl(OUT, CFrame.new(x, TOP + 12, -40), "VentPipe", 1.6, 12, 0, 0, 0, CAMP.iron, D())
+	cyl(OUT, CFrame.new(x, TOP + 18.4, -40), "VentCap", 2.6, 0.8, 0, 0, 0, CAMP.iron, D())
+end
+-- THE MESS HALL'S YARD: picnic tables, the menu board, trash cans (one still smoking), crates of milk bottles
+local YD = model(DEC, "MessYard")
+for _, p in { { -32, 86, 0.1 }, { 30, 92, -0.15 } } do
+	local cf = CFrame.new(p[1], 0, p[2]) * CFrame.Angles(0, p[3], 0)
+	b(YD, cf, "Top", 12, 0.4, 4, 0, 3.2, 0, CAMP.plank, D())
+	for _, z in { -3, 3 } do b(YD, cf, "Seat", 12, 0.3, 1.2, 0, 1.8, z, CAMP.plank, D()) end
+	for _, x in { -5, 5 } do b(YD, cf, "Leg", 0.4, 3, 3, x, 1.5, 0, CAMP.logD, D()) end
+end
+do
+	local ez = CFrame.new(16, 0, 70) * CFrame.Angles(0, -0.3, 0)
+	part(YD, "EaselLeg", Vector3.new(0.3, 7, 0.3), ez * CFrame.new(-1.6, 3.4, 0) * CFrame.Angles(0.15, 0, 0.12), CAMP.logD, D())
+	part(YD, "EaselLeg", Vector3.new(0.3, 7, 0.3), ez * CFrame.new(1.6, 3.4, 0) * CFrame.Angles(0.15, 0, -0.12), CAMP.logD, D())
+	part(YD, "Board", Vector3.new(4.6, 5.4, 0.3), ez * CFrame.new(0, 4.6, -0.5) * CFrame.Angles(0.15, 0, 0), st(M.Slate, nil, C3(30, 34, 30)), D())
+	sign(YD, "TODAY: SLOPPY JOES", ez * CFrame.new(0, 5.2, -0.75) * CFrame.Angles(0.15, math.pi, 0), 4, 1.4, st(M.Slate, nil, C3(30, 34, 30)), C3(230, 230, 220), Enum.Font.SpecialElite)
+end
+for i, p in { { -20, 64 }, { -24, 65 } } do cyl(YD, CFrame.new(p[1], 2, p[2]), "TrashCan", 3, 4, 0, 0, 0, st(M.Metal, nil, C3(90, 92, 88)), D()) end
+do
+	cyl(YD, CFrame.new(44, 2, 74), "BurntBarrel", 3.2, 4, 0, 0, 0, SOOT, D())
+	local fx = box(YD, "BarrelEmbers", 43, 3.6, 73, 45, 4, 75, CAMP.ember, DECO)
+	light(fx, 16, 1, C3(255, 120, 50))
+	local pe = Instance.new("ParticleEmitter")
+	pe.Texture = "rbxasset://textures/particles/smoke_main.dds"; pe.Color = ColorSequence.new(C3(50, 46, 44))
+	pe.Transparency = NumberSequence.new(0.6, 1); pe.Size = NumberSequence.new(1.5, 5); pe.Lifetime = NumberRange.new(3, 4)
+	pe.Rate = 3; pe.Speed = NumberRange.new(2, 3); pe.Parent = fx
+end
+for k = 0, 3 do
+	box(YD, "MilkCrate", -46 + (k % 2) * 2.6, 0 + math.floor(k / 2) * 1.8, 64, -43.6 + (k % 2) * 2.6, 1.8 + math.floor(k / 2) * 1.8, 66.4, st(M.SmoothPlastic, nil, C3(170, 40, 34)), DECO)
+end
 campYard("MESS HALL")
 return endMap()

@@ -184,12 +184,13 @@ end
 -- the Mansion is live in workspace; the others are copied into workspace for the raycasts, then put back
 local out = {}
 local live = workspace:FindFirstChild("Mansion")
-if live then table.insert(out, place(live, "Mansion")) end
+-- (a line `ONLYP = "Camp_"` before the script: only the maps whose id starts with it)
+if live and not ONLYP then table.insert(out, place(live, "Mansion")) end
 local maps = SS:FindFirstChild("Maps")
 if maps then
 	local temp = Instance.new("Folder"); temp.Name = "_PhoneTemp"; temp.Parent = workspace
 	for _, src in maps:GetChildren() do
-		if src.Name ~= "Mansion" then
+		if src.Name ~= "Mansion" and (not ONLYP or string.sub(src.Name, 1, #ONLYP) == ONLYP) then
 			local copy = src:Clone()
 			copy.Parent = temp
 			local ok, res = pcall(place, copy, src.Name)

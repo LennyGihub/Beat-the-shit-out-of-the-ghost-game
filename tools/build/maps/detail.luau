@@ -288,29 +288,29 @@ local THEMES = {
 	Motel = { trim = C3(70, 40, 44), light = C3(255, 150, 190), wall = { "picture", "neon", "mirror", "poster", "stain", "vent", "cracks" }, floor = { "bottles", "cans", "papers", "stain", "suitcase" }, kit = { "chair", "side", "lamp", "crate" }, ext = "rust", beams = false },
 	Ship = { trim = C3(60, 44, 32), light = C3(255, 190, 110), wall = { "rope", "lantern", "shelf", "chains", "cracks" }, floor = { "ropecoil", "fish", "planks", "puddle", "bottles" }, kit = { "barrel", "barrel", "crate", "crate", "bench" }, ext = "none", beams = false },
 	-- CAMP HOLLOWMERE (no "pills" / "bottles" anywhere: Roblox moderation, CLAUDE.md)
-	Camp_Bunkhouse = { trim = C3(62, 44, 32), light = C3(255, 196, 130), wall = { "picture", "shelf", "lantern", "poster", "cracks", "clock", "rope" }, floor = { "papers", "books", "planks", "stain", "cans" }, kit = { "chair", "crate", "bench", "lamp" }, ext = "ivy", beams = false, posters = { C3(80, 110, 70), C3(180, 150, 90), C3(150, 60, 50) } },
-	Camp_Boathouse = { trim = C3(58, 46, 36), light = C3(220, 236, 240), wall = { "rope", "lantern", "shelf", "tools", "cracks", "chains" }, floor = { "ropecoil", "fish", "planks", "puddle", "puddle" }, kit = { "barrel", "crate", "crate", "bench" }, ext = "ivy", beams = true },
-	Camp_MessHall = { trim = C3(62, 44, 32), light = C3(255, 206, 150), wall = { "poster", "shelf", "clock", "picture", "cracks", "lantern" }, floor = { "papers", "cans", "tray", "stain", "planks" }, kit = { "chair", "chair", "crate", "barrel", "bench" }, ext = "ivy", beams = true, posters = { C3(200, 150, 60), C3(80, 120, 80), C3(170, 60, 50) } },
-	Camp_Barn = { trim = C3(220, 214, 200), light = C3(255, 190, 110), wall = { "tools", "lantern", "shelf", "rope", "cracks" }, floor = { "hay", "hay", "planks", "sawdust" }, kit = { "barrel", "crate", "crate", "bench" }, ext = "ivy", beams = true },
+	Camp_Bunkhouse = { trim = C3(62, 44, 32), light = C3(255, 196, 130), wall = { "picture", "shelf", "lantern", "poster", "cracks", "clock", "rope" }, floor = { "papers", "books", "planks", "stain", "cans" }, kit = { "chair", "crate", "bench", "lamp" }, ext = "lamps", beams = false, posters = { C3(80, 110, 70), C3(180, 150, 90), C3(150, 60, 50) } },
+	Camp_Boathouse = { trim = C3(58, 46, 36), light = C3(220, 236, 240), wall = { "rope", "lantern", "shelf", "tools", "cracks", "chains" }, floor = { "ropecoil", "fish", "planks", "puddle", "puddle" }, kit = { "barrel", "crate", "crate", "bench" }, ext = "lamps", beams = true },
+	Camp_MessHall = { trim = C3(62, 44, 32), light = C3(255, 206, 150), wall = { "poster", "shelf", "clock", "picture", "cracks", "lantern" }, floor = { "papers", "cans", "tray", "stain", "planks" }, kit = { "chair", "chair", "crate", "barrel", "bench" }, ext = "lamps", beams = true, posters = { C3(200, 150, 60), C3(80, 120, 80), C3(170, 60, 50) } },
+	Camp_Barn = { trim = C3(220, 214, 200), light = C3(255, 190, 110), wall = { "tools", "lantern", "shelf", "rope", "cracks" }, floor = { "hay", "hay", "planks", "sawdust" }, kit = { "barrel", "crate", "crate", "bench" }, ext = "lamps", beams = true },
 	-- Blackwater Harbor
-	Harb_Market = { trim = C3(58, 70, 74), light = C3(220, 236, 240), wall = { "rope", "lantern", "shelf", "cracks", "chains", "clock" }, floor = { "fish", "puddle", "puddle", "planks", "ropecoil" }, kit = { "crate", "barrel", "bench" }, ext = "ivy", beams = true },
-	Harb_Cannery = { trim = C3(70, 46, 36), light = C3(255, 226, 180), wall = { "tools", "chains", "shelf", "cracks", "lantern" }, floor = { "cans", "cans", "stain", "planks", "puddle" }, kit = { "crate", "barrel", "crate" }, ext = "ivy", beams = true },
-	Harb_Lighthouse = { trim = C3(62, 50, 40), light = C3(255, 220, 160), wall = { "picture", "lantern", "shelf", "rope", "clock", "cracks" }, floor = { "papers", "books", "ropecoil", "puddle" }, kit = { "chair", "crate", "barrel", "lamp" }, ext = "ivy", beams = true },
-	Harb_NetLoft = { trim = C3(62, 46, 34), light = C3(255, 210, 160), wall = { "rope", "rope", "lantern", "tools", "chains", "shelf" }, floor = { "ropecoil", "fish", "planks", "puddle" }, kit = { "barrel", "crate", "bench" }, ext = "ivy", beams = false },
-	Harb_Ship = { trim = C3(40, 32, 26), light = C3(255, 200, 130), wall = { "rope", "lantern", "chains", "shelf", "cracks" }, floor = { "ropecoil", "planks", "puddle", "stain" }, kit = { "barrel", "crate", "chair" }, ext = "ivy", beams = false },
-	Camp_Lodge = { trim = C3(62, 44, 32), light = C3(255, 196, 140), wall = { "picture", "picture", "sconce", "clock", "shelf", "plaque", "mirror" }, floor = { "papers", "books", "stain", "shards" }, kit = { "chair", "side", "lamp", "bust" }, ext = "ivy", beams = false, frame = C3(120, 90, 50) },
+	Harb_Market = { trim = C3(58, 70, 74), light = C3(220, 236, 240), wall = { "rope", "lantern", "shelf", "cracks", "chains", "clock" }, floor = { "fish", "puddle", "puddle", "planks", "ropecoil" }, kit = { "crate", "barrel", "bench" }, ext = "lamps", beams = true },
+	Harb_Cannery = { trim = C3(70, 46, 36), light = C3(255, 226, 180), wall = { "tools", "chains", "shelf", "cracks", "lantern" }, floor = { "cans", "cans", "stain", "planks", "puddle" }, kit = { "crate", "barrel", "crate" }, ext = "lamps", beams = true },
+	Harb_Lighthouse = { trim = C3(62, 50, 40), light = C3(255, 220, 160), wall = { "picture", "lantern", "shelf", "rope", "clock", "cracks" }, floor = { "papers", "books", "ropecoil", "puddle" }, kit = { "chair", "crate", "barrel", "lamp" }, ext = "lamps", beams = true },
+	Harb_NetLoft = { trim = C3(62, 46, 34), light = C3(255, 210, 160), wall = { "rope", "rope", "lantern", "tools", "chains", "shelf" }, floor = { "ropecoil", "fish", "planks", "puddle" }, kit = { "barrel", "crate", "bench" }, ext = "lamps", beams = false },
+	Harb_Ship = { trim = C3(40, 32, 26), light = C3(255, 200, 130), wall = { "rope", "lantern", "chains", "shelf", "cracks" }, floor = { "ropecoil", "planks", "puddle", "stain" }, kit = { "barrel", "crate", "chair" }, ext = "lamps", beams = false },
+	Camp_Lodge = { trim = C3(62, 44, 32), light = C3(255, 196, 140), wall = { "picture", "picture", "sconce", "clock", "shelf", "plaque", "mirror" }, floor = { "papers", "books", "stain", "shards" }, kit = { "chair", "side", "lamp", "bust" }, ext = "lamps", beams = false, frame = C3(120, 90, 50) },
 	-- the Ashen Abbey
-	Abb_Cloister = { trim = C3(60, 56, 52), light = C3(255, 200, 140), wall = { "cross", "candles", "stained", "sconce", "cracks", "picture" }, floor = { "candlestubs", "rubble", "petals", "papers" }, kit = { "bench", "bust", "chair" }, ext = "ivy", beams = true, frame = C3(150, 120, 50) },
-	Abb_Crypt = { trim = C3(54, 52, 48), light = C3(255, 190, 130), wall = { "candles", "cross", "cracks", "chains", "sconce" }, floor = { "candlestubs", "rubble", "rubble", "stain" }, kit = { "crate", "bench", "bust" }, ext = "ivy", beams = false },
-	Abb_Belfry = { trim = C3(56, 40, 30), light = C3(255, 196, 140), wall = { "rope", "lantern", "shelf", "cracks", "chains", "tools" }, floor = { "planks", "ropecoil", "rubble", "sawdust" }, kit = { "crate", "barrel", "bench" }, ext = "ivy", beams = false },
-	Abb_Ossuary = { trim = C3(60, 56, 50), light = C3(255, 190, 130), wall = { "candles", "cracks", "chains", "cross" }, floor = { "rubble", "candlestubs", "stain" }, kit = { "crate", "bench", "bust" }, ext = "ivy", beams = false },
-	Abb_Nave = { trim = C3(60, 50, 46), light = C3(255, 170, 120), wall = { "cross", "candles", "stained", "sconce", "picture", "cracks" }, floor = { "candlestubs", "rubble", "petals", "papers" }, kit = { "bench", "bust", "chair", "lamp" }, ext = "ivy", beams = false, frame = C3(150, 120, 50) },
+	Abb_Cloister = { trim = C3(60, 56, 52), light = C3(255, 200, 140), wall = { "cross", "candles", "stained", "sconce", "cracks", "picture" }, floor = { "candlestubs", "rubble", "petals", "papers" }, kit = { "bench", "bust", "chair" }, ext = "lamps", beams = true, frame = C3(150, 120, 50) },
+	Abb_Crypt = { trim = C3(54, 52, 48), light = C3(255, 190, 130), wall = { "candles", "cross", "cracks", "chains", "sconce" }, floor = { "candlestubs", "rubble", "rubble", "stain" }, kit = { "crate", "bench", "bust" }, ext = "lamps", beams = false },
+	Abb_Belfry = { trim = C3(56, 40, 30), light = C3(255, 196, 140), wall = { "rope", "lantern", "shelf", "cracks", "chains", "tools" }, floor = { "planks", "ropecoil", "rubble", "sawdust" }, kit = { "crate", "barrel", "bench" }, ext = "lamps", beams = false },
+	Abb_Ossuary = { trim = C3(60, 56, 50), light = C3(255, 190, 130), wall = { "candles", "cracks", "chains", "cross" }, floor = { "rubble", "candlestubs", "stain" }, kit = { "crate", "bench", "bust" }, ext = "lamps", beams = false },
+	Abb_Nave = { trim = C3(60, 50, 46), light = C3(255, 170, 120), wall = { "cross", "candles", "stained", "sconce", "picture", "cracks" }, floor = { "candlestubs", "rubble", "petals", "papers" }, kit = { "bench", "bust", "chair", "lamp" }, ext = "lamps", beams = false, frame = C3(150, 120, 50) },
 	-- the Black Moon (no "pills" / "bottles": Roblox moderation)
-	Moon_Dock = { trim = C3(60, 64, 72), light = C3(210, 225, 255), wall = { "pipes", "vent", "lightbox", "board", "clock" }, floor = { "papers", "cans", "stain", "shards" }, kit = { "crate", "stool", "side" }, ext = "rust", beams = false, posters = { C3(200, 170, 60), C3(60, 100, 170), C3(170, 60, 50) } },
-	Moon_Lab = { trim = C3(70, 80, 78), light = C3(210, 255, 225), wall = { "board", "lightbox", "pipes", "vent", "firstaid", "clock" }, floor = { "papers", "shards", "stain", "puddle" }, kit = { "stool", "side", "crate" }, ext = "rust", beams = false },
-	Moon_Reactor = { trim = C3(56, 62, 72), light = C3(200, 235, 255), wall = { "pipes", "pipes", "vent", "lightbox", "board" }, floor = { "cans", "stain", "puddle", "shards" }, kit = { "crate", "barrel", "stool" }, ext = "rust", beams = false },
-	Moon_Control = { trim = C3(64, 60, 68), light = C3(255, 215, 215), wall = { "lightbox", "board", "vent", "clock", "poster" }, floor = { "papers", "papers", "cans", "stain" }, kit = { "stool", "side", "crate" }, ext = "rust", beams = false, posters = { C3(200, 60, 60), C3(60, 100, 170), C3(220, 220, 220) } },
-	Moon_Gate = { trim = C3(54, 48, 66), light = C3(225, 205, 255), wall = { "pipes", "vent", "cracks", "lightbox" }, floor = { "rubble", "shards", "stain" }, kit = { "crate", "stool", "bust" }, ext = "rust", beams = false },
+	Moon_Dock = { trim = C3(60, 64, 72), light = C3(210, 225, 255), wall = { "pipes", "vent", "lightbox", "board", "clock" }, floor = { "papers", "cans", "stain", "shards" }, kit = { "crate", "stool", "side" }, ext = "lamps", beams = false, posters = { C3(200, 170, 60), C3(60, 100, 170), C3(170, 60, 50) } },
+	Moon_Lab = { trim = C3(70, 80, 78), light = C3(210, 255, 225), wall = { "board", "lightbox", "pipes", "vent", "firstaid", "clock" }, floor = { "papers", "shards", "stain", "puddle" }, kit = { "stool", "side", "crate" }, ext = "lamps", beams = false },
+	Moon_Reactor = { trim = C3(56, 62, 72), light = C3(200, 235, 255), wall = { "pipes", "pipes", "vent", "lightbox", "board" }, floor = { "cans", "stain", "puddle", "shards" }, kit = { "crate", "barrel", "stool" }, ext = "lamps", beams = false },
+	Moon_Control = { trim = C3(64, 60, 68), light = C3(255, 215, 215), wall = { "lightbox", "board", "vent", "clock", "poster" }, floor = { "papers", "papers", "cans", "stain" }, kit = { "stool", "side", "crate" }, ext = "lamps", beams = false, posters = { C3(200, 60, 60), C3(60, 100, 170), C3(220, 220, 220) } },
+	Moon_Gate = { trim = C3(54, 48, 66), light = C3(225, 205, 255), wall = { "pipes", "vent", "cracks", "lightbox" }, floor = { "rubble", "shards", "stain" }, kit = { "crate", "stool", "bust" }, ext = "lamps", beams = false },
 	Farm = { trim = C3(70, 50, 36), light = C3(255, 190, 110), wall = { "tools", "lantern", "shelf", "rope", "cracks" }, floor = { "hay", "hay", "planks", "sawdust", "bottles" }, kit = { "barrel", "crate", "crate", "bench", "chair" }, ext = "ivy", beams = true },
 	Asylum = { trim = C3(52, 42, 36), light = C3(255, 206, 140), wall = { "tally", "chains", "stain", "vent", "cracks", "pipes", "firstaid" }, floor = { "pills", "papers", "stain", "rubble", "puddle" }, kit = { "stool", "crate", "side" }, ext = "ivy", beams = false, stains = { BLOOD, C3(50, 60, 44), C3(60, 50, 34) } },
 	Hotel = { trim = C3(70, 30, 26), light = C3(255, 200, 140), wall = { "picture", "picture", "mirror", "sconce", "plaque", "clock" }, floor = { "suitcase", "papers", "shards", "stain", "bottles" }, kit = { "chair", "side", "lamp", "bust", "bench" }, ext = "ivy", beams = false, frame = C3(176, 140, 60) },
@@ -519,7 +519,8 @@ local function detail(MP, id) -- (M is Enum.Material in lib2)
 				counts.ext += 2
 			end
 		end
-		for i = 1, 3 do
+		-- (ext = "lamps": the campaign buildings draw their own outsides - only downpipes and wall lamps here)
+		for i = 1, (TH.ext == "lamps" and 0 or 3) do
 			local x, z = c.X + R(-hx * 0.7, hx * 0.7), c.Z + R(-hz * 0.5, hz * 0.5)
 			local roof = workspace:Raycast(Vector3.new(x, top + 60, z), Vector3.new(0, -90, 0), rp)
 			if roof then
@@ -551,7 +552,7 @@ local function detail(MP, id) -- (M is Enum.Material in lib2)
 				end
 				return centre
 			end
-			for i = 1, 9 do
+			for i = 1, (TH.ext == "lamps" and 0 or 9) do
 				local t = R(-half + 6, half - 6)
 				local at = c + n * (depth + 0.12) + right * t
 				if TH.ext == "ivy" then
