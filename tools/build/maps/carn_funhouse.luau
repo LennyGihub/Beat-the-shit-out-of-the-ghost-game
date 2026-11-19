@@ -3,14 +3,15 @@
 -- parts are where Server/CarnivalMonsters makes the crates rattle and he bursts out of one), a spinning-barrel
 -- tunnel, leaning crooked panels. Between the halls: a GIANT CLOWN HEAD - its open mouth is the doorway. The back
 -- hall: the BALL PIT, a slide off a platform, warped mirrors, balloon bunches, a clown car.
--- Build: cat tools/build/lib2.luau tools/build/furn_lib.luau tools/build/maplib.luau tools/build/maps/carnival_lib.luau tools/build/maps/carn_funhouse.luau
+-- Build: cat tools/build/lib2.luau tools/build/furn_lib.luau tools/build/maplib.luau tools/build/maps/shape_lib.luau tools/build/maps/carnival_lib.luau tools/build/maps/carn_funhouse.luau
 local C3 = Color3.fromRGB
 local function D() return { deco = true } end
 local H = 24
 beginMap("Carn_Funhouse", carnTheme({ ext = st(M.WoodPlanks, "PS2_Siding1", C3(150, 60, 120)), inner = st(M.WoodPlanks, "PS2_Siding1", C3(70, 110, 140)) }))
-shell({ two = false, H = H, roof = "gable", pitch = 0.45, front1 = { -60, -36, 36, 60 }, back1 = { -60, 60 }, left1 = { 44, 20, -30 }, right1 = { 44, 20, -30 },
-	winW = 6, winB = 5, winT = 13 })
-carnFrieze(H)
+-- (2026-11-19) its own shape: a gable to the yard and the whole front is a GIANT CLOWN FACE (in through his mouth)
+local TOP = shell2({ H = H, ridge = "z", roof = "gable", rise = 30, roofStyle = st(M.Slate, nil, C3(70, 40, 100)),
+	front1 = { -60, -36, 36, 60 }, back1 = { -60, 60 }, left1 = { 44, 20, -30 }, right1 = { 44, 20, -30 }, win = { w = 6, b = 5, t = 13 },
+	postStyle = st(M.SmoothPlastic, nil, C3(240, 200, 50)) })
 local inn = model(STR, "Interior")
 local I = INT()
 wall(inn, "HeadWall", "x", 0, -78, 78, F1, H, { dr(0, 12, 13), dr(-54, 8, 12), dr(54, 8, 12) }, I)
@@ -122,6 +123,74 @@ for _, p in { { -40, 40 }, { 40, 30 }, { 0, 34 }, { -50, -20 }, { 30, -40 }, { 0
 keepClear(-6, 40, 6, 58, F1)
 keepClear(-7, -6, 7, 6, F1) -- (the mouth)
 keepClear(-48, 19, -32, 37, F1) -- (the barrel)
-carnMarquee("THE FUNHOUSE")
+-- OUTSIDE (2026-11-19): POP THE CLOWN'S FUNHOUSE. The front is his face: a white head, diamond eyes, a red ball
+-- nose, a red grin whose open middle is the door (teeth over it), orange and blue tufts of hair, a striped cone hat.
+-- Black and white checkerboard either side, two crooked candy-striped towers, his name tilted on a marquee.
+local OUT = model(DEC, "Outside")
+local WHITEF = st(M.SmoothPlastic, nil, C3(206, 200, 190))
+local REDF = st(M.SmoothPlastic, nil, C3(200, 30, 40))
+local BLK = st(M.SmoothPlastic, nil, C3(20, 18, 24))
+local YELF = st(M.SmoothPlastic, nil, C3(240, 200, 50))
+local FZ = 60.9
+-- the head: strips round a circle, the doorway left open (x -7..7 up to y 18)
+local HY, HR = 24, 22
+for y = HY - HR + 1, HY + HR - 1, 2 do
+	local w = math.sqrt(math.max(0, HR * HR - (y + 1 - HY) ^ 2))
+	if w > 1 then
+		if y < 18 then
+			if w > 7.4 then box(OUT, "Face", -w, math.max(y, 2), FZ - 0.4, -7.4, y + 2, FZ, WHITEF, DECO); box(OUT, "Face", 7.4, math.max(y, 2), FZ - 0.4, w, y + 2, FZ, WHITEF, DECO) end
+		else box(OUT, "Face", -w, y, FZ - 0.4, w, y + 2, FZ, WHITEF, DECO) end
+	end
+end
+-- the grin round the door, teeth along the top lip
+box(OUT, "Lip", -13, 17.4, FZ, 13, 19.6, FZ + 0.4, REDF, DECO)
+for _, sx in { -1, 1 } do
+	box(OUT, "Lip", sx * 7.4, 2, FZ, sx * 13, 17.4, FZ + 0.4, REDF, DECO)
+	part(OUT, "LipCorner", Vector3.new(6, 2.2, 0.4), CFrame.new(sx * 15, 20.4, FZ + 0.2) * CFrame.Angles(0, 0, sx * 0.55), REDF, D())
+end
+for x = -6, 5, 2.4 do box(OUT, "Tooth", x, 15.6, FZ + 0.4, x + 2, 17.4, FZ + 0.7, WHITEF, DECO) end
+-- the nose, the eyes, the brows, the cheeks
+ball(OUT, CFrame.new(0, 25, FZ + 2.6), "Nose", 6, 0, 0, 0, st(M.Neon, nil, C3(255, 40, 50)), D())
+light(box(OUT, "NoseGlow", -0.1, 25, FZ + 6, 0.1, 25.2, FZ + 6.2, REDF, { deco = true, t = 1 }), 14, 0.7, C3(255, 60, 60))
+for _, sx in { -1, 1 } do
+	part(OUT, "Eye", Vector3.new(5, 5, 0.3), CFrame.new(sx * 8, 32, FZ + 0.2) * CFrame.Angles(0, 0, math.pi / 4), BLK, D())
+	part(OUT, "EyeShine", Vector3.new(1.4, 1.4, 0.3), CFrame.new(sx * 8 - 0.8, 32.8, FZ + 0.4), WHITEF, D())
+	part(OUT, "Brow", Vector3.new(7, 1, 0.3), CFrame.new(sx * 8, 37.2, FZ + 0.2) * CFrame.Angles(0, 0, sx * 0.3), BLK, D())
+	cyl(OUT, CFrame.new(sx * 13, 24, FZ + 0.1) * CFrame.Angles(math.pi / 2, 0, 0), "Cheek", 4.6, 0.3, 0, 0, 0, st(M.SmoothPlastic, nil, C3(240, 130, 150)), D())
+end
+-- the hair tufts and the hat
+for _, sx in { -1, 1 } do
+	for k, p in { { 22, 30, 9 }, { 26, 22, 8 }, { 20, 38, 8 }, { 28, 32, 7 } } do
+		ball(OUT, CFrame.new(sx * p[1], p[2], FZ - 2), "Hair", p[3], 0, 0, 0, st(M.SmoothPlastic, nil, k % 2 == 0 and C3(250, 120, 30) or C3(60, 120, 240)), D())
+	end
+end
+revolve(OUT, "Hat", 0, FZ - 3, { { 9, HY + HR - 2 }, { 6, HY + HR + 6 }, { 3, HY + HR + 13 }, { 0, HY + HR + 19 } }, 12, YELF, REDF)
+ball(OUT, CFrame.new(0, HY + HR + 19.5, FZ - 3), "PomPom", 3.2, 0, 0, 0, st(M.SmoothPlastic, nil, C3(60, 120, 240)), D())
+-- checkerboard on the rest of the front (two bands), skipping the windows
+local function isWin(x, y) for _, c in { -60, -36, 36, 60 } do if math.abs(x - c) < 4.4 and y > 5 and y < 17 then return true end end return false end
+for _, band in { { 2, 6 }, { 18, 26 } } do
+	for x = -78, 74, 4 do
+		if math.abs(x + 2) > 25 then
+			for y = band[1], band[2] - 4, 4 do
+				if not isWin(x + 2, y + 2) then
+					box(OUT, "Check", x, y, FZ - 0.5, x + 4, y + 4, FZ - 0.2, ((x / 4 + y / 4) % 2 == 0) and BLK or WHITEF, DECO)
+				end
+			end
+		end
+	end
+end
+-- two crooked candy-striped towers at the front corners, tilted hats with bells
+for _, sx in { -1, 1 } do
+	local tw = model(OUT, "CrookedTower")
+	for k = 0, 9 do
+		part(tw, "Ring", Vector3.new(9, 4, 9), CFrame.new(sx * 84 + sx * k * 0.35, 2 + k * 4, 54) * CFrame.Angles(0, k * 0.08, sx * -0.03), k % 2 == 0 and REDF or WHITEF) -- (solid)
+	end
+	local hx = sx * 84 + sx * 3.6
+	revolve(tw, "TowerHat", hx, 54, { { 6, 42 }, { 3, 49 }, { 0, 56 } }, 8, YELF, st(M.SmoothPlastic, nil, C3(120, 60, 180)))
+	ball(tw, CFrame.new(hx + sx * 1, 56.4, 54), "Bell", 1.6, 0, 0, 0, YELF, D())
+end
+carnMarquee("THE FUNHOUSE", CFrame.new(-46, 34, FZ + 0.6) * CFrame.Angles(0, 0, 0.12))
+washLight(-34, 84, Vector3.new(-30, 22, 60), C3(255, 150, 210), 80, 1.6)
+washLight(34, 84, Vector3.new(30, 22, 60), C3(150, 230, 255), 80, 1.6)
 carnGrounds()
 return endMap()

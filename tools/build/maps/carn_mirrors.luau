@@ -4,7 +4,7 @@
 -- her orb and her cards). The back: her PARLOUR (drapes, candles, tarot posters, a huge painted eye) with the
 -- CRYSTAL BALL on its table (part CrystalBall: the prompt to smash it is put on it by Server/CarnivalMonsters).
 -- The SECRET: a cracked mirror on the parlour's east wall swings away - her stash behind it.
--- Build: cat tools/build/lib2.luau tools/build/furn_lib.luau tools/build/maplib.luau tools/build/maps/carnival_lib.luau tools/build/maps/carn_mirrors.luau
+-- Build: cat tools/build/lib2.luau tools/build/furn_lib.luau tools/build/maplib.luau tools/build/maps/shape_lib.luau tools/build/maps/carnival_lib.luau tools/build/maps/carn_mirrors.luau
 local C3 = Color3.fromRGB
 local function D() return { deco = true } end
 local H = 22
@@ -12,8 +12,9 @@ local MIRROR = st(M.Glass, nil, C3(196, 206, 220))
 local FRAME = st(M.Metal, nil, C3(150, 120, 60))
 local DRAPE = st(M.Fabric, nil, C3(70, 20, 80))
 beginMap("Carn_Mirrors", carnTheme({ ext = st(M.WoodPlanks, "PS2_Siding1", C3(60, 30, 80)), inner = st(M.WoodPlanks, "PS2_Siding1", C3(70, 40, 76)), wain = true }))
-shell({ two = false, H = H, roof = "gable", pitch = 0.45, front1 = { -60, -36, 36, 60 }, back1 = {}, left1 = { 44 }, right1 = { 44 }, winW = 6, winB = 5, winT = 13 })
-carnFrieze(H)
+-- (2026-11-19) its own shape: Madame Fortune's palace - a flat roof behind a stepped false front, an onion dome
+local TOP = shell2({ H = H, roof = "flat", roofStyle = st(M.Slate, nil, C3(40, 26, 50)), front1 = { -60, -36, 36, 60 }, left1 = { 44 }, right1 = { 44 },
+	win = { w = 6, b = 5, t = 13 }, postStyle = FRAME })
 local inn = model(STR, "Interior")
 local I = INT()
 
@@ -177,6 +178,86 @@ for _, p in { { -40, 20 }, { 40, -10 }, { 0, 46 }, { -50, -44 }, { 50, 30 }, { 3
 keepClear(-6, 40, 6, 58, F1)
 keepClear(-8, -30, 8, -16, F1) -- (the arch)
 keepClear(-6, 34, 6, 46, F1) -- (the maze's door)
-carnMarquee("HALL OF MIRRORS")
+-- OUTSIDE (2026-11-19): MADAME FORTUNE'S PALACE. A stepped false front with the ALL-SEEING EYE, mirror diamonds,
+-- gold stars and moons, a teal onion dome on a drum and onion-capped turrets at the corners, her tarot cards by the door.
+local OUT = model(DEC, "Outside")
+local PURP = st(M.WoodPlanks, "PS2_Siding1", C3(60, 30, 80))
+local TEAL = st(M.SmoothPlastic, nil, C3(40, 120, 120))
+local GOLDT = st(M.Metal, nil, C3(210, 170, 70))
+-- the false front, three steps up to a point
+box(OUT, "FalseFront", -62, TOP, 59, 62, TOP + 10, 60.6, PURP, DECO)
+box(OUT, "FalseFront", -38, TOP + 10, 59, 38, TOP + 18, 60.6, PURP, DECO)
+box(OUT, "FalseFront", -16, TOP + 18, 59, 16, TOP + 24, 60.6, PURP, DECO)
+tri(OUT, "FalseFrontPeak", Vector3.new(-16, TOP + 24, 59.8), Vector3.new(16, TOP + 24, 59.8), Vector3.new(0, TOP + 34, 59.8), PURP, 1.6, D())
+for _, st2 in { { -62, 62, TOP + 10 }, { -38, 38, TOP + 18 }, { -16, 16, TOP + 24 } } do
+	box(OUT, "Trim", st2[1] - 0.4, st2[3] - 0.6, 60.5, st2[2] + 0.4, st2[3] + 0.2, 61.1, GOLDT, DECO)
+	carnBulbs(OUT, Vector3.new(st2[1] + 1, st2[3] - 1.2, 61.2), Vector3.new(st2[2] - 1, st2[3] - 1.2, 61.2), 2.6)
+end
+-- THE EYE: a white almond, a violet iris, the pupil, gold lashes, glowing
+do
+	local ey, ez = TOP + 17, 61
+	tri(OUT, "EyeWhite", Vector3.new(-11, ey, ez), Vector3.new(11, ey, ez), Vector3.new(0, ey + 5.5, ez), st(M.SmoothPlastic, nil, C3(236, 230, 214)), 0.3, D())
+	tri(OUT, "EyeWhite", Vector3.new(-11, ey, ez), Vector3.new(11, ey, ez), Vector3.new(0, ey - 5.5, ez), st(M.SmoothPlastic, nil, C3(236, 230, 214)), 0.3, D())
+	cyl(OUT, CFrame.new(0, ey, ez + 0.3) * CFrame.Angles(math.pi / 2, 0, 0), "Iris", 7, 0.3, 0, 0, 0, st(M.Neon, nil, C3(150, 70, 230)), D())
+	cyl(OUT, CFrame.new(0, ey, ez + 0.5) * CFrame.Angles(math.pi / 2, 0, 0), "Pupil", 3, 0.3, 0, 0, 0, st(M.SmoothPlastic, nil, C3(10, 6, 14)), D())
+	for _, e in { { -11, 0, 0, 5.5 }, { 0, 5.5, 11, 0 }, { -11, 0, 0, -5.5 }, { 0, -5.5, 11, 0 } } do
+		local a, z = Vector3.new(e[1], ey + e[2], ez + 0.4), Vector3.new(e[3], ey + e[4], ez + 0.4)
+		part(OUT, "EyeRim", Vector3.new(0.6, 0.6, (z - a).Magnitude), CFrame.lookAt((a + z) / 2, z), GOLDT, D())
+	end
+	for k = -3, 3 do part(OUT, "Lash", Vector3.new(0.4, 2.4, 0.3), CFrame.new(k * 2.6, ey + 5.4 - math.abs(k) * 1.3, ez + 0.4) * CFrame.Angles(0, 0, -k * 0.25), GOLDT, D()) end
+	light(box(OUT, "EyeGlow", -0.1, ey, ez + 3, 0.1, ey + 0.2, ez + 3.2, GOLDT, { deco = true, t = 1 }), 30, 1.6, C3(190, 120, 255))
+end
+-- mirror diamonds between the windows, gold stars and moons on the false front
+for _, x in { -48, -24, 24, 48 } do
+	part(OUT, "MirrorDiamond", Vector3.new(4.6, 4.6, 0.3), CFrame.new(x, 11, 60.7) * CFrame.Angles(0, 0, math.pi / 4), MIRROR, { deco = true }).Reflectance = 0.6
+	part(OUT, "DiamondFrame", Vector3.new(5.6, 5.6, 0.2), CFrame.new(x, 11, 60.55) * CFrame.Angles(0, 0, math.pi / 4), GOLDT, D())
+end
+for _, p in { { -50, TOP + 5 }, { 50, TOP + 5 }, { -28, TOP + 13 }, { 28, TOP + 13 }, { -8, TOP + 28 }, { 8, TOP + 28 } } do
+	part(OUT, "Star", Vector3.new(2, 2, 0.2), CFrame.new(p[1], p[2], 60.8) * CFrame.Angles(0, 0, math.pi / 4), GOLDT, D())
+	part(OUT, "Star", Vector3.new(2, 2, 0.2), CFrame.new(p[1], p[2], 60.8), GOLDT, D())
+end
+for _, sx in { -1, 1 } do
+	cyl(OUT, CFrame.new(sx * 40, TOP + 5, 60.8) * CFrame.Angles(math.pi / 2, 0, 0), "Moon", 6, 0.2, 0, 0, 0, st(M.Neon, nil, C3(240, 230, 190)), D())
+	cyl(OUT, CFrame.new(sx * 40 + sx * 1.8, TOP + 5.8, 60.9) * CFrame.Angles(math.pi / 2, 0, 0), "MoonShade", 5.4, 0.2, 0, 0, 0, PURP, D())
+end
+-- the pointed gold arch round the door, the marquee over it
+for _, sx in { -1, 1 } do
+	local a, z = Vector3.new(sx * 6.4, 16.6, 60.8), Vector3.new(0, 22.4, 60.8)
+	part(OUT, "DoorArch", Vector3.new(1, 1, (z - a).Magnitude + 0.6), CFrame.lookAt((a + z) / 2, z), GOLDT, D())
+	box(OUT, "DoorPost", sx * 6.4 - 0.5, 2, 60.3, sx * 6.4 + 0.5, 16.8, 61.3, GOLDT, DECO)
+end
+carnMarquee("HALL OF MIRRORS", CFrame.new(0, 26, 61.4))
+-- the dome: a drum with gold bands, a teal onion, a gold finial with a crescent
+-- (tall enough to rise over the false front's peak, seen from the yard)
+prism(OUT, "Drum", 0, 14, 13, TOP, TOP + 20, 12, PURP, D())
+for _, y in { TOP + 0.5, TOP + 10, TOP + 19.4 } do prism(OUT, "DrumBand", 0, 14, 13.4, y, y + 0.8, 12, GOLDT, D()) end
+for k = 0, 11 do
+	local a = (k + 0.5) * math.pi / 6
+	local w = box(OUT, "DrumWindow", 0, 0, 0, 1, 1, 1, st(M.Neon, nil, C3(200, 130, 255)), DECO)
+	w.Size = Vector3.new(2.2, 5, 0.3)
+	w.CFrame = CFrame.new(math.cos(a) * 13.2, TOP + 14.5, 14 + math.sin(a) * 13.2) * CFrame.Angles(0, -a + math.pi / 2, 0)
+end
+onion(OUT, 0, 14, TOP + 20, 12, TEAL, nil)
+prism(OUT, "OnionNeck", 0, 14, 3, TOP + 49, TOP + 51, 8, GOLDT, D())
+box(OUT, "Finial", -0.4, TOP + 51, 13.6, 0.4, TOP + 58, 14.4, GOLDT, DECO)
+cyl(OUT, CFrame.new(0, TOP + 59.6, 14) * CFrame.Angles(math.pi / 2, 0, 0), "Crescent", 3.4, 0.4, 0, 0, 0, GOLDT, D())
+-- onion-capped turrets on the four corners
+for _, c in { { -75, 55 }, { 75, 55 }, { -75, -55 }, { 75, -55 } } do
+	prism(OUT, "Turret", c[1], c[2], 4.6, TOP, TOP + 10, 8, PURP, D())
+	onion(OUT, c[1], c[2], TOP + 10, 4.4, TEAL, nil)
+	ball(OUT, CFrame.new(c[1], TOP + 21.6, c[2]), "TurretBall", 1.2, 0, 0, 0, GOLDT, D())
+end
+-- her tarot cards standing either side of the way in
+for _, t in { { -20, "THE MOON", C3(200, 210, 240) }, { 20, "THE TOWER", C3(230, 90, 60) } } do
+	local cf = CFrame.new(t[1], 0, 70) * CFrame.Angles(0, math.pi + (t[1] < 0 and -0.3 or 0.3), 0)
+	b(OUT, cf, "CardBack", 7.4, 11.4, 0.4, 0, 6.8, 0.3, GOLDT, D())
+	b(OUT, cf, "Card", 6.6, 10.6, 0.4, 0, 6.8, 0, st(M.SmoothPlastic, nil, C3(236, 226, 200)), D())
+	local sym = b(OUT, cf, "Symbol", 3.6, 3.6, 0.2, 0, 8, -0.25, st(M.Neon, nil, t[3]), D())
+	sym.Shape = Enum.PartType.Cylinder; sym.Size = Vector3.new(0.2, 3.6, 3.6); sym.CFrame = cf * CFrame.new(0, 8, -0.25) * CFrame.Angles(0, math.pi / 2, 0)
+	sign(OUT, t[2], cf * CFrame.new(0, 3.2, -0.25), 5.6, 1.4, st(M.SmoothPlastic, nil, C3(236, 226, 200)), C3(60, 30, 80), Enum.Font.Creepster)
+	b(OUT, cf, "Stand", 1.2, 1.4, 2, 0, 0.7, 0.6, GOLDT, D())
+end
+washLight(-30, 84, Vector3.new(-14, TOP + 12, 60), C3(190, 140, 255), 90, 2)
+washLight(30, 84, Vector3.new(14, TOP + 12, 60), C3(140, 230, 230), 90, 2)
 carnGrounds()
 return endMap() .. " (mirror panels " .. nPanels .. ")"

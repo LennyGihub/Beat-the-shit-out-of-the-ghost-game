@@ -648,7 +648,7 @@ end
 -- teleported back in at the closest monster spawn point
 -- The limit is the inner side of the loaded map's outside walls (they are ~2 studs thick): a body centre past
 -- it is inside the wall or out of the house. Measured once per map from Structure.Exterior.
-local bounds = { map = "", min = Config.House.Min, max = Config.House.Max }
+local bounds = { map = "", min = Config.House.Min, max = Config.House.Max, foot = nil :: { any }? }
 local function houseBounds()
 	local live = workspace:FindFirstChild("Mansion")
 	local id = live and live:GetAttribute("MapId") or "Mansion"
@@ -675,15 +675,37 @@ local function houseBounds()
 	local minY, ceil = live and live:GetAttribute("MinY"), live and live:GetAttribute("CeilingY")
 	if type(minY) == "number" then bounds.min = Vector3.new(bounds.min.X, minY + 10, bounds.min.Z) end
 	if type(ceil) == "number" then bounds.max = Vector3.new(bounds.max.X, ceil, bounds.max.Z) end
+	-- a building that is not a box (a round tent, a hull, an octagon: tools/build/maps/shape_lib.luau) has a
+	-- Footprint folder of invisible boxes over its floor: past them is outside even inside the box
+	bounds.foot = nil
+	local fp = live and live:FindFirstChild("Footprint")
+	if fp then
+		local list = {}
+		for _, d in fp:GetChildren() do
+			if d:IsA("BasePart") then table.insert(list, { cf = d.CFrame, hx = d.Size.X / 2, hz = d.Size.Z / 2 }) end
+		end
+		if #list > 0 then bounds.foot = list end
+	end
 	-- the clients light the inside of the house with it (Client/Fx)
 	RS:SetAttribute("MapMin", bounds.min)
 	RS:SetAttribute("MapMax", bounds.max)
 	return bounds
 end
 Ghost.houseBounds = houseBounds
+local function inFoot(p: Vector3): boolean
+	local foot = houseBounds().foot
+	if not foot then return true end
+	for _, f in foot do
+		local l = f.cf:PointToObjectSpace(Vector3.new(p.X, f.cf.Position.Y, p.Z))
+		if math.abs(l.X) <= f.hx and math.abs(l.Z) <= f.hz then return true end
+	end
+	return false
+end
+Ghost.inFoot = inFoot
 local function outside(p: Vector3): boolean
 	local B = houseBounds()
 	return p.X < B.min.X or p.X > B.max.X or p.Z < B.min.Z or p.Z > B.max.Z or p.Y < B.min.Y - 10 or p.Y > B.max.Y
+		or not inFoot(p)
 end
 
 local function bringBack(g)
@@ -696,6 +718,23 @@ local function bringBack(g)
 	local m = 2.5
 	local inX = math.clamp(from.X, B.min.X + m, B.max.X - m)
 	local inZ = math.clamp(from.Z, B.min.Z + m, B.max.Z - m)
+	-- (a shaped building: from there, step toward the middle until well inside its footprint)
+	if B.foot and not inFoot(Vector3.new(inX, from.Y, inZ)) then
+		local mid = Vector3.new((B.min.X + B.max.X) / 2, 0, (B.min.Z + B.max.Z) / 2)
+		local pt = Vector3.new(inX, 0, inZ)
+		local dir = mid - pt
+		local len = dir.Magnitude
+		if len > 0.1 then
+			dir = dir / len
+			local k, inside = 0, nil :: number?
+			while k < len do
+				k += 2
+				if inFoot(pt + dir * k) then inside = k; break end
+			end
+			local q = pt + dir * math.min(len, (inside or len) + 4)
+			inX, inZ = q.X, q.Z
+		end
+	end
 	if math.abs(inX - from.X) < 8 and math.abs(inZ - from.Z) < 8 and from.Y > B.min.Y - 10 and from.Y < B.max.Y then
 		local fy = floorBelow(Vector3.new(inX, from.Y + 1, inZ), g.rp)
 		if from.Y + 1 - fy < 12 then

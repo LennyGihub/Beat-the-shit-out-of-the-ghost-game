@@ -52,7 +52,7 @@ end
 local function inPlay(x: number, z: number, pad: number?): boolean
 	pad = pad or 0
 	if x > -100 - pad and x < 100 + pad and z > 45 - pad and z < 172 + pad then return true end -- the yard
-	if x > -88 - pad and x < 88 + pad and z > -70 - pad and z < 66 + pad then return true end -- the building
+	if x > -92 - pad and x < 92 + pad and z > -100 - pad and z < 66 + pad then return true end -- the building (a round one reaches z -95)
 	if math.abs(z - 150) < 9 + pad and math.abs(x) < 280 then return true end -- the railway
 	return false
 end

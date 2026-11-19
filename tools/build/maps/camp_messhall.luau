@@ -169,7 +169,7 @@ do
 	part(YD, "EaselLeg", Vector3.new(0.3, 7, 0.3), ez * CFrame.new(-1.6, 3.4, 0) * CFrame.Angles(0.15, 0, 0.12), CAMP.logD, D())
 	part(YD, "EaselLeg", Vector3.new(0.3, 7, 0.3), ez * CFrame.new(1.6, 3.4, 0) * CFrame.Angles(0.15, 0, -0.12), CAMP.logD, D())
 	part(YD, "Board", Vector3.new(4.6, 5.4, 0.3), ez * CFrame.new(0, 4.6, -0.5) * CFrame.Angles(0.15, 0, 0), st(M.Slate, nil, C3(30, 34, 30)), D())
-	sign(YD, "TODAY: SLOPPY JOES", ez * CFrame.new(0, 5.2, -0.75) * CFrame.Angles(0.15, math.pi, 0), 4, 1.4, st(M.Slate, nil, C3(30, 34, 30)), C3(230, 230, 220), Enum.Font.SpecialElite)
+	sign(YD, "TODAY: SLOPPY JOES", ez * CFrame.new(0, 5.2, -0.15) * CFrame.Angles(0.15, math.pi, 0), 4, 1.4, st(M.Slate, nil, C3(30, 34, 30)), C3(230, 230, 220), Enum.Font.SpecialElite)
 end
 for i, p in { { -20, 64 }, { -24, 65 } } do cyl(YD, CFrame.new(p[1], 2, p[2]), "TrashCan", 3, 4, 0, 0, 0, st(M.Metal, nil, C3(90, 92, 88)), D()) end
 do

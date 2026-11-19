@@ -109,9 +109,9 @@ local function carnTent(parent: Instance, cf: CFrame, w: number, h: number)
 end
 
 -- the building's name on a marquee over the porch roof: a board ringed with bulbs
-local function carnMarquee(text: string)
+local function carnMarquee(text: string, at: CFrame?)
 	local m = model(DEC, "Marquee")
-	local cf = CFrame.new(0, 21, 61) * CFrame.Angles(0, math.pi, 0)
+	local cf = (at or CFrame.new(0, 21, 61)) * CFrame.Angles(0, math.pi, 0)
 	b(m, cf, "Back", 26, 5.4, 0.4, 0, 0, 0.3, CARN.velvet, DECO)
 	b(m, cf, "Frame", 27, 6.2, 0.3, 0, 0, 0.5, CARN.gold, DECO)
 	sign(m, text, cf * CFrame.new(0, 0, -0.05), 23, 3.6, CARN.velvet, C3k(255, 226, 150), Enum.Font.Creepster)
@@ -122,7 +122,8 @@ local function carnMarquee(text: string)
 	end
 	local glow = b(m, cf, "Glow", 0.2, 0.2, 0.2, 0, 0, -2, CARN.bulb, { deco = true, t = 1 })
 	light(glow, 30, 1.3, C3k(255, 200, 120))
-	for _, x in { -12, 12 } do box(m, "Peg", x - 0.25, 17.4, 60.6, x + 0.25, 24.5, 61.2, CARN.woodD, DECO) end
+	if not at then for _, x in { -12, 12 } do box(m, "Peg", x - 0.25, 17.4, 60.6, x + 0.25, 24.5, 61.2, CARN.woodD, DECO) end end
+	return m
 end
 
 -- a frieze round the top of the outside walls: red and cream blocks, a row of bulbs under it
@@ -153,21 +154,10 @@ end
 local function carnGrounds()
 	local yd = model(DEC, "Fairground")
 	-- the path, porch to railway, with a few boards in it
-	box(yd, "Path", -5, 0.02, 76, 5, 0.14, 146, CARN.dirt, DECO)
-	for z = 80, 140, 10 do box(yd, "PathBoard", -2, 0.1, z, 2, 0.2, z + 1.2, CARN.woodD, DECO) end
-	-- THE ARCH: two striped towers, a curved beam, the name in bulbs
-	for _, x in { -8, 8 } do
-		for k = 0, 6 do box(yd, "Tower", x - 1.2, k * 2.2, 131, x + 1.2, k * 2.2 + 2.2, 133.4, k % 2 == 0 and CARN.red or CARN.canvasW, DECO) end
-		ball(yd, CFrame.new(x, 16.2, 132.2), "TowerBall", 2, 0, 0, 0, CARN.gold, Dk())
-	end
-	box(yd, "ArchBeam", -9.5, 13.4, 131.4, 9.5, 15.6, 133, CARN.velvet, DECO)
-	local s1 = sign(yd, "MOONLIGHT CARNIVAL", CFrame.new(0, 14.5, 131.3) * CFrame.Angles(0, math.pi, 0), 17, 2, CARN.velvet, C3k(255, 220, 140), Enum.Font.Creepster)
-	s1.Name = "CarnSign"
-	sign(yd, "MOONLIGHT CARNIVAL", CFrame.new(0, 14.5, 133.1), 17, 2, CARN.velvet, C3k(255, 220, 140), Enum.Font.Creepster).Name = "CarnSignBack"
-	carnBulbs(yd, Vector3.new(-9.4, 16, 131.2), Vector3.new(9.4, 16, 131.2), 1.4)
-	carnBulbs(yd, Vector3.new(-9.4, 13.2, 131.2), Vector3.new(9.4, 13.2, 131.2), 1.4)
-	local ag = b(yd, CFrame.new(0, 12, 128), "ArchGlow", 0.2, 0.2, 0.2, 0, 0, 0, CARN.bulb, { deco = true, t = 1 })
-	light(ag, 30, 1.4, C3k(255, 190, 120))
+	box(yd, "Path", -5, 0.08, 62, 5, 0.18, 113, CARN.dirt, DECO)
+	for z = 80, 110, 10 do box(yd, "PathBoard", -2, 0.1, z, 2, 0.2, z + 1.2, CARN.woodD, DECO) end
+	-- (2026-11-19: the arch, the Ferris wheel, the tents and the popcorn cart are in the Carnival WORLD now:
+	-- tools/build/worlds/carnival.luau. A building keeps its path, the string lights, the ticket booth, balloons.)
 	-- string lights on poles along the path
 	for _, z in { 86, 104, 122 } do
 		for _, x in { -9, 9 } do cyl(yd, CFrame.new(x, 6, z), "LightPole", 0.4, 12, 0, 0, 0, CARN.woodD, Dk()) end
@@ -185,36 +175,6 @@ local function carnGrounds()
 	box(tb, "Window", 15.5, 4, 123.8, 20.5, 7, 124.05, CARN.black, DECO)
 	box(tb, "Roof", 13, 9, 123, 23, 10, 131, CARN.gold, DECO)
 	sign(tb, "TICKETS", CFrame.new(18, 11.3, 123.6) * CFrame.Angles(0, math.pi, 0), 7, 1.6, CARN.velvet, C3k(255, 220, 140), Enum.Font.Creepster)
-	-- the Ferris wheel (far west): two rings of spokes, gondolas, a frame
-	local fw = model(yd, "FerrisWheel")
-	local c = CFrame.new(-62, 26, 112) * CFrame.Angles(0, math.pi / 2, 0)
-	for _, side in { -1.2, 1.2 } do
-		for k = 0, 11 do
-			local a = k / 12 * math.pi * 2
-			b(fw, c * CFrame.new(0, 0, side) * CFrame.Angles(0, 0, a), "Spoke", 0.4, 22, 0.4, 0, 11, 0, CARN.iron, DECO)
-			b(fw, c * CFrame.new(0, 0, side) * CFrame.Angles(0, 0, a + math.pi / 12), "Rim", 0.5, 5.8, 0.5, 0, 21.8, 0, CARN.iron, DECO)
-		end
-	end
-	for k = 0, 11 do
-		local a = k / 12 * math.pi * 2
-		local p = (c * CFrame.new(math.cos(a) * 22, math.sin(a) * 22, 0)).Position
-		box(fw, "Gondola", p.X - 1.6, p.Y - 3.2, p.Z - 1.4, p.X + 1.6, p.Y - 1, p.Z + 1.4, k % 3 == 0 and CARN.red or (k % 3 == 1 and CARN.yellow or CARN.blue), DECO)
-		ball(fw, CFrame.new(p), "WheelBulb", 0.7, 0, 0, 0, CARN.bulb, Dk())
-	end
-	for _, sz in { -1, 1 } do
-		b(fw, CFrame.new(-62, 13, 112 + sz * 3) * CFrame.Angles(0, 0, 0.35), "Leg", 1, 28, 1, 0, 0, 0, CARN.iron, DECO)
-		b(fw, CFrame.new(-62, 13, 112 + sz * 3) * CFrame.Angles(0, 0, -0.35), "Leg", 1, 28, 1, 0, 0, 0, CARN.iron, DECO)
-	end
-	-- little striped tents, a popcorn cart, balloons on posts
-	carnTent(yd, CFrame.new(-30, 0, 100), 10, 6)
-	carnTent(yd, CFrame.new(32, 0, 102), 9, 5)
-	carnTent(yd, CFrame.new(44, 0, 128), 7, 4.5)
-	local pc = model(yd, "PopcornCart")
-	box(pc, "Cart", -22, 1.2, 120, -16, 6, 124, CARN.red, DECO)
-	box(pc, "Glass", -21.6, 6, 120.4, -16.4, 9, 123.6, st(M.Glass, nil, C3k(230, 230, 210)), { deco = true, t = 0.5 })
-	box(pc, "Popcorn", -21.4, 6, 120.6, -16.6, 7.2, 123.4, st(M.SmoothPlastic, nil, C3k(250, 236, 180)), DECO)
-	box(pc, "Lid", -22.4, 9, 119.6, -15.6, 9.6, 124.4, CARN.yellow, DECO)
-	for _, x in { -21, -17 } do cyl(pc, CFrame.new(x, 1.2, 124.3) * CFrame.Angles(0, math.pi / 2, 0), "Wheel", 2.4, 0.4, 0, 0, 0, CARN.iron, Dk()) end
 	for _, p in { { -12, 96 }, { 12, 116 }, { -26, 128 } } do
 		cyl(yd, CFrame.new(p[1], 3, p[2]), "BalloonPost", 0.25, 6, 0, 0, 0, CARN.woodD, Dk())
 		for k, col in { C3k(220, 40, 40), C3k(60, 120, 230), C3k(240, 200, 50) } do

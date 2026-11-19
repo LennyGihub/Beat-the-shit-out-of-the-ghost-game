@@ -64,23 +64,64 @@ function MapLoader.load(id: string): boolean
 	current = id
 	RS:SetAttribute("MapId", id)
 	Furniture.recapture()
-	MapLoader.setSea(live:GetAttribute("AtSea") == true)
+	MapLoader.setSurroundings(MapLoader.worldOf(id), live:GetAttribute("AtSea") == true)
 	MapLoader.hookRescue(live)
 	return true
 end
 
--- the ship map floats at sea: the forest around the yard is put away while it is loaded (and comes back after)
-local hiddenForest: Instance? = nil
-function MapLoader.setSea(on: boolean)
-	local grounds = workspace:FindFirstChild("Grounds")
-	if on and not hiddenForest then
-		local f = grounds and grounds:FindFirstChild("Forest")
-		if f then hiddenForest = f; f.Parent = SS end
-	elseif not on and hiddenForest then
-		hiddenForest.Parent = grounds
-		hiddenForest = nil
+-- WORLDS (2026-11-19, the user: "every map is the same dark forest"): each campaign map has its own surroundings,
+-- ServerStorage.Worlds.<Campaign map id> (tools/build/worlds/<map>.luau: the camp's lake and cabins, the carnival's
+-- rides, the harbour's water and boats, the abbey's graveyard, the moon's craters). While one of its buildings is
+-- loaded the world is cloned into workspace.Grounds.World and the forest, its fence and its floor are put away
+-- (ServerStorage.GroundsAway). RS attribute World = the map id (Client/Fx lights the yard with it).
+-- The ship map floats at sea: only the forest is put away (no world).
+local Campaign = require(RS.Shared.Campaign)
+local AWAY_ALL = { "Forest", "Fence", "ForestFloor" }
+function MapLoader.worldOf(id: string): string?
+	local s = Campaign.stageById and Campaign.stageById[id]
+	local w = s and s.map
+	if not w then
+		local m = folder():FindFirstChild(id)
+		w = m and m:GetAttribute("World")
 	end
+	local worlds = SS:FindFirstChild("Worlds")
+	if type(w) == "string" and worlds and worlds:FindFirstChild(w) then return w end
+	return nil
 end
+
+function MapLoader.setSurroundings(world: string?, atSea: boolean)
+	local grounds = workspace:FindFirstChild("Grounds")
+	if not grounds then return end
+	local away = SS:FindFirstChild("GroundsAway")
+	if not away then
+		away = Instance.new("Folder")
+		away.Name = "GroundsAway"
+		away.Parent = SS
+	end
+	-- what must be away now
+	local want = {} :: { [string]: boolean }
+	if world then for _, n in AWAY_ALL do want[n] = true end elseif atSea then want.Forest = true end
+	for _, n in AWAY_ALL do
+		local here, gone = grounds:FindFirstChild(n), (away :: Folder):FindFirstChild(n)
+		if want[n] and here then here.Parent = away
+		elseif not want[n] and gone then gone.Parent = grounds end
+	end
+	-- the world itself
+	local cur = grounds:FindFirstChild("World")
+	if cur and cur:GetAttribute("World") ~= world then cur:Destroy(); cur = nil end
+	if world and not cur then
+		local src = (SS:FindFirstChild("Worlds") :: Folder):FindFirstChild(world)
+		if src then
+			local w = src:Clone()
+			w.Name = "World"
+			w:SetAttribute("World", world)
+			w.Parent = grounds
+		end
+	end
+	RS:SetAttribute("World", world)
+end
+-- (older callers)
+function MapLoader.setSea(on: boolean) MapLoader.setSurroundings(nil, on) end
 
 -- parts with the Rescue attribute (the sea): a player who falls in is put back at the map's spawn point. The sea
 -- also runs under the ship's decks (just below the lowest one): a touch from inside the hull (a hard landing on the

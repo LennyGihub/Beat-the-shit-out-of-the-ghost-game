@@ -3,13 +3,14 @@
 -- ring toss, duck pond, whack-a-mole, skee-ball, balloon board, a claw machine), the PRIZE COUNTER island in the
 -- middle with a giant teddy on it, the GRAND PRIZES wall at the back. The SECRET: the middle section of the grand
 -- prize shelf is a door - behind it the Goblin's hoard (coins, stolen prizes; a tier-3 item from carn_items).
--- Build: cat tools/build/lib2.luau tools/build/furn_lib.luau tools/build/maplib.luau tools/build/maps/carnival_lib.luau tools/build/maps/carn_prizes.luau
+-- Build: cat tools/build/lib2.luau tools/build/furn_lib.luau tools/build/maplib.luau tools/build/maps/shape_lib.luau tools/build/maps/carnival_lib.luau tools/build/maps/carn_prizes.luau
 local C3 = Color3.fromRGB
 local function D() return { deco = true } end
 local H = 22
 beginMap("Carn_Prizes", carnTheme({ ext = st(M.WoodPlanks, "PS2_Siding1", C3(160, 110, 40)), inner = st(M.WoodPlanks, "PS2_Siding1", C3(120, 50, 50)) }))
-shell({ two = false, H = H, roof = "gable", pitch = 0.45, front1 = { -60, -36, 36, 60 }, back1 = {}, left1 = {}, right1 = {}, winW = 6, winB = 5, winT = 13 })
-carnFrieze(H)
+-- (2026-11-19) its own shape: an arched arcade hall, the arch to the yard with a sunburst, a giant teddy on the roof
+local TOP = shell2({ H = H, ridge = "z", roof = "barrel", rise = 34, n = 14, roofStyle = st(M.CorrodedMetal, nil, C3(150, 120, 60)),
+	front1 = { -60, -36, 36, 60 }, win = { w = 6, b = 5, t = 13 }, postStyle = CARN.gold })
 local inn = model(STR, "Interior")
 local rng = Random.new(11)
 local PRIZE = { C3(220, 120, 160), C3(120, 170, 230), C3(240, 200, 80), C3(140, 210, 130), C3(200, 150, 100), C3(230, 230, 220) }
@@ -140,6 +141,70 @@ for _, p in { { -30, 40 }, { 36, -16 }, { -14, -30 } } do blood(p[1], F1, p[2], 
 for _, p in { { -36, 30 }, { 36, 30 }, { 0, 40 }, { -36, -30 }, { 36, -34 }, { 0, -30 } } do gspawn(p[1], F1, p[2]) end
 keepClear(-6, 40, 6, 58, F1)
 keepClear(-3, -46, 3, -40, F1) -- (in front of the prize shelf)
-carnMarquee("PRIZE ARCADE")
+-- OUTSIDE (2026-11-19): THE GOBLIN'S PRIZE ARCADE. The arch over the front is a SUNBURST of red and yellow rays
+-- round the door, chaser bulbs follow the arch, the name on a big board, striped awnings over the windows, and a
+-- GIANT TEDDY BEAR sits on the roof (the grand prize nobody ever won). Gold coins and tickets in the yard.
+local OUT = model(DEC, "Outside")
+local YELP = st(M.SmoothPlastic, nil, C3(240, 196, 50))
+local REDP = st(M.SmoothPlastic, nil, C3(200, 40, 40))
+-- the sunburst: rays from over the door out to the arch
+local arc = {}
+for k = 0, 14 do
+	local a = math.pi * k / 14
+	table.insert(arc, Vector3.new(81 * math.cos(a), TOP + 34 * math.sin(a), 60.6))
+end
+local hub = Vector3.new(0, 19, 60.8)
+for k = 1, #arc - 1 do tri(OUT, "Ray", hub, arc[k], arc[k + 1], k % 2 == 0 and YELP or REDP, 0.3, D()) end
+for _, sx in { -1, 1 } do -- (the wall between the arch's foot and the ray fan)
+	tri(OUT, "Ray", hub, Vector3.new(sx * 81, TOP, 60.6), Vector3.new(sx * 81, 18, 60.6), REDP, 0.3, D())
+end
+cyl(OUT, CFrame.new(0, 19, 61) * CFrame.Angles(math.pi / 2, 0, 0), "Hub", 12, 0.4, 0, 0, 0, CARN.gold, D())
+for k = 1, #arc - 1 do carnBulbs(OUT, arc[k] + Vector3.new(0, 0, 0.6), arc[k + 1] + Vector3.new(0, 0, 0.6), 3) end
+carnMarquee("PRIZE ARCADE", CFrame.new(0, 34, 61.6))
+do -- a big board on the arch: WIN A PRIZE!, framed in bulbs
+	box(OUT, "BigBoard", -20, 41, 60.8, 20, 49, 61.4, st(M.SmoothPlastic, nil, C3(110, 20, 40)), DECO)
+	sign(OUT, "WIN A PRIZE!", CFrame.new(0, 45, 61.5) * CFrame.Angles(0, math.pi, 0), 38, 7, st(M.SmoothPlastic, nil, C3(110, 20, 40)), C3(255, 230, 120), Enum.Font.Creepster)
+	carnBulbs(OUT, Vector3.new(-20, 49.4, 61.6), Vector3.new(20, 49.4, 61.6), 1.6)
+	carnBulbs(OUT, Vector3.new(-20, 40.6, 61.6), Vector3.new(20, 40.6, 61.6), 1.6)
+end
+-- striped awnings over the four windows
+for _, x in { -60, -36, 36, 60 } do
+	for k = 0, 3 do
+		panel(OUT, "Awning", Vector3.new(x - 3 + k * 2 + 1, 16.6, 60.4), Vector3.new(x - 3 + k * 2 + 1, 14.6, 64), Vector3.new(1, 0, 0), 2.05, k % 2 == 0 and REDP or CARN.white, 0.3, D())
+	end
+end
+-- THE GIANT TEDDY on the roof (a blocky bear, sitting, a bow tie and a ribbon: GRAND PRIZE)
+do
+	local ty = TOP + 31
+	local tz = 46
+	local FUR = st(M.Fabric, nil, C3(176, 120, 76))
+	local MUZ = st(M.Fabric, nil, C3(230, 200, 160))
+	local tb = model(OUT, "GiantTeddy")
+	box(tb, "Body", -8, ty, tz - 6, 8, ty + 14, tz + 6, FUR, DECO)
+	box(tb, "Belly", -5, ty + 2, tz + 5.9, 5, ty + 10, tz + 6.3, MUZ, DECO)
+	box(tb, "Head", -7, ty + 14, tz - 5, 7, ty + 26, tz + 6, FUR, DECO)
+	box(tb, "Snout", -3, ty + 16, tz + 5.9, 3, ty + 20, tz + 9, MUZ, DECO)
+	box(tb, "NoseB", -1.2, ty + 18.6, tz + 9, 1.2, ty + 20, tz + 9.6, st(M.SmoothPlastic, nil, C3(30, 20, 18)), DECO)
+	for _, sx in { -1, 1 } do
+		box(tb, "Ear", sx * 4.5 - 2.5, ty + 25, tz - 1.5, sx * 4.5 + 2.5, ty + 29, tz + 1.5, FUR, DECO)
+		box(tb, "EarIn", sx * 4.5 - 1.4, ty + 25.6, tz + 1.5, sx * 4.5 + 1.4, ty + 28.2, tz + 1.8, MUZ, DECO)
+		cyl(tb, CFrame.new(sx * 3, ty + 22, tz + 6.1) * CFrame.Angles(math.pi / 2, 0, 0), "Eye", 2.2, 0.3, 0, 0, 0, st(M.SmoothPlastic, nil, C3(16, 12, 12)), D())
+		part(tb, "Arm", Vector3.new(4, 12, 4), CFrame.new(sx * 10, ty + 8, tz + 1) * CFrame.Angles(0.3, 0, sx * 0.35), FUR, D())
+		box(tb, "Leg", sx * 6 - 2.5, ty - 1, tz + 4, sx * 6 + 2.5, ty + 4, tz + 14, FUR, DECO)
+		box(tb, "Foot", sx * 6 - 2.8, ty - 1, tz + 13.6, sx * 6 + 2.8, ty + 5, tz + 15, MUZ, DECO)
+		part(tb, "Bow", Vector3.new(4, 3, 1), CFrame.new(sx * 2.4, ty + 13.4, tz + 6.6) * CFrame.Angles(0, 0, sx * 0.3), REDP, D())
+	end
+	box(tb, "BowKnot", -1, ty + 12.6, tz + 6.4, 1, ty + 14.2, tz + 7.2, REDP, DECO)
+	box(tb, "Seat", -12, TOP + 18, tz - 10, 12, ty, tz + 16, CARN.woodD, DECO)
+	sign(tb, "GRAND PRIZE", CFrame.new(0, ty + 7, tz + 6.5) * CFrame.Angles(0, math.pi, 0), 8, 1.6, REDP, C3(255, 236, 160), Enum.Font.Creepster)
+	light(box(tb, "TeddyLight", -0.1, ty + 12, tz + 20, 0.1, ty + 12.2, tz + 20.2, YELP, { deco = true, t = 1 }), 40, 1.6, C3(255, 210, 150))
+end
+-- coins and tickets in the yard
+for i, p in { { -24, 70, 0.3 }, { -20, 74, -0.5 }, { 22, 72, 0.8 } } do
+	cyl(OUT, CFrame.new(p[1], 3, p[2]) * CFrame.Angles(math.pi / 2, p[3], 0.2), "BigCoin", 6, 0.8, 0, 0, 0, CARN.gold, D())
+end
+for k = 0, 5 do box(OUT, "Ticket", 26 + k * 1.1, 0.08, 80 - k * 0.6, 27 + k * 1.1, 0.14, 81.6 - k * 0.6, REDP, DECO) end
+washLight(-30, 84, Vector3.new(-14, TOP + 14, 60), C3(255, 210, 150), 90, 2)
+washLight(30, 84, Vector3.new(14, TOP + 14, 60), C3(255, 210, 150), 90, 2)
 carnGrounds()
 return endMap()

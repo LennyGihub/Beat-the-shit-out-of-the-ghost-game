@@ -159,7 +159,7 @@ for i, c in cabinSpots do
 	local cf = CFrame.new(c[1], 0, c[2]) * CFrame.Angles(0, -math.pi / 2 + c[3], 0) -- (the door faces the yard, +x)
 	cabin(camp, cf, 16, 20, 9, LOG, SHINGLE, LOGD, i % 3 ~= 0)
 	-- a number board over the door
-	sign(camp, "CABIN " .. i, cf * CFrame.new(0, 10.2, -10.4) * CFrame.Angles(0, math.pi, 0), 5, 1.2, LOGD, C3(226, 214, 186), Enum.Font.SpecialElite)
+	sign(camp, "CABIN " .. i, cf * CFrame.new(0, 10.2, -10.4), 5, 1.2, LOGD, C3(226, 214, 186), Enum.Font.SpecialElite)
 end
 -- the paths between them and their lamp posts
 for i = 1, #cabinSpots - 1 do
@@ -242,7 +242,7 @@ do -- the camp bus, parked (yellow, rusty, one window lit)
 	for _, z in { -14, 10 } do
 		for _, x in { -4.4, 4.4 } do cyl(bus, cf * CFrame.new(x, 1.8, z) * CFrame.Angles(0, 0, -math.pi / 2), "Wheel", 3.6, 1.4, 0, 0, 0, st(M.SmoothPlastic, nil, C3(20, 20, 20)), WD()) end
 	end
-	sign(bus, "CAMP HOLLOWMERE", cf * CFrame.new(4.62, 7, 0) * CFrame.Angles(0, math.pi / 2, 0), 18, 1.8, Y, C3(20, 20, 20), Enum.Font.SpecialElite)
+	sign(bus, "CAMP HOLLOWMERE", cf * CFrame.new(4.62, 7, 0) * CFrame.Angles(0, -math.pi / 2, 0), 18, 1.8, Y, C3(20, 20, 20), Enum.Font.SpecialElite)
 end
 do -- THE WELCOME SIGN facing the yard: two log posts, a carved board, a little roof, lanterns
 	local ws = model(south, "WelcomeSign")

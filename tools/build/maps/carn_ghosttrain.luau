@@ -3,14 +3,15 @@
 -- tombstones, a dead tree cut-out, a coffin), the HAUNTED HALL (middle: a painted moon, portraits, hanging bats, a
 -- witch cut-out, cobwebs) and SHOWTIME (east: the Party Bear's stage - curtains, footlights, a drum kit, spotlights).
 -- Three ride cars wait on the track by the entrance; the GHOST TRAIN sign with its skull over the door inside.
--- Build: cat tools/build/lib2.luau tools/build/furn_lib.luau tools/build/maplib.luau tools/build/maps/carnival_lib.luau tools/build/maps/carn_ghosttrain.luau
+-- Build: cat tools/build/lib2.luau tools/build/furn_lib.luau tools/build/maplib.luau tools/build/maps/shape_lib.luau tools/build/maps/carnival_lib.luau tools/build/maps/carn_ghosttrain.luau
 local C3 = Color3.fromRGB
 local function D() return { deco = true } end
 local H = 22
 local CUT = st(M.WoodPlanks, nil, C3(40, 36, 48))
-beginMap("Carn_GhostTrain", carnTheme({ ext = st(M.WoodPlanks, "PS2_Siding1", C3(30, 30, 40)), inner = st(M.WoodPlanks, "PS2_Siding1", C3(36, 32, 44)), wain = false }))
-shell({ two = false, H = H, roof = "gable", pitch = 0.45, front1 = { -60, -36, 36, 60 }, back1 = {}, left1 = {}, right1 = {}, winW = 6, winB = 5, winT = 13 })
-carnFrieze(H)
+local CSTONE = st(M.Cobblestone, "PS2_Stone1", C3(100, 96, 108))
+beginMap("Carn_GhostTrain", carnTheme({ ext = CSTONE, inner = st(M.WoodPlanks, "PS2_Siding1", C3(36, 32, 44)), wain = false, trim = st(M.Slate, nil, C3(40, 38, 46)) }))
+-- (2026-11-19) its own shape: a HAUNTED CASTLE - stone walls, battlements, round towers, a skull over the gate
+local TOP = shell2({ H = H, roof = "flat", roofStyle = st(M.Slate, nil, C3(30, 28, 34)), front1 = { -60, 60 }, win = { w = 5, b = 6, t = 14 } })
 local inn = model(STR, "Interior")
 local I = INT()
 -- the curtained zone walls (the track goes through at z +-42, a walkway in the middle)
@@ -135,6 +136,114 @@ for _, p in { { -30, 46 }, { 36, -16 }, { -14, -30 } } do blood(p[1], F1, p[2], 
 for _, p in { { -50, 10 }, { 0, 20 }, { 50, 10 }, { -50, -30 }, { 0, -30 }, { 50, -20 } } do gspawn(p[1], F1, p[2]) end
 keepClear(-6, 40, 6, 58, F1)
 for _, x in { -26, 26 } do keepClear(x - 4, -6, x + 4, 6, F1) end
-carnMarquee("THE GHOST TRAIN")
+-- OUTSIDE (2026-11-19): THE GHOST TRAIN CASTLE. Stone walls with battlements, two round towers with black cones
+-- and green-lit slits, the gatehouse with a GIANT SKULL (red eyes) over the gate and a raised portcullis, the track
+-- coming out of a tunnel in the wall, round a loop in the yard and back in, a ride car waiting on it, the Party
+-- Bear's poster, bats.
+local OUT = model(DEC, "Outside")
+local DSTONE = st(M.Cobblestone, "PS2_Stone1", C3(84, 80, 92))
+local BONE = st(M.SmoothPlastic, nil, C3(176, 168, 150))
+local SLIT = st(M.Neon, nil, C3(90, 255, 120))
+-- battlements along the front and the sides
+for x = -80, 77, 6 do box(OUT, "Merlon", x, TOP, 58.2, x + 3.4, TOP + 4, 60.6, CSTONE, DECO) end
+for _, sx in { -1, 1 } do for z = -58, 55, 6 do box(OUT, "Merlon", sx * 80 - 1.2, TOP, z, sx * 80 + 1.2, TOP + 4, z + 3.4, CSTONE, DECO) end end
+box(OUT, "Band", -80.6, TOP - 1.2, 60, 80.6, TOP, 61, DSTONE, DECO)
+-- the round towers at the front corners
+for _, sx in { -1, 1 } do
+	local tx, tz = sx * 82, 54
+	prism(OUT, "Tower", tx, tz, 10, 0, 52, 12, DSTONE) -- (solid)
+	for k = 0, 11 do
+		local a = k * math.pi / 6
+		box(OUT, "TowerMerlon", tx + 10.4 * math.cos(a) - 1.4, 52, tz + 10.4 * math.sin(a) - 1.4, tx + 10.4 * math.cos(a) + 1.4, 55.6, tz + 10.4 * math.sin(a) + 1.4, DSTONE, DECO)
+	end
+	local cone = {}
+	for k = 0, 11 do local a = k * math.pi / 6; table.insert(cone, { tx + 9 * math.cos(a), tz + 9 * math.sin(a) }) end
+	coneRoof(OUT, cone, 54, Vector3.new(tx, 78, tz), st(M.Slate, nil, C3(26, 22, 30)), 1, 0.8)
+	for _, y in { 14, 28, 42 } do
+		local g = box(OUT, "Slit", tx - sx * 0.4 - 0.5, y, tz + 9.8, tx - sx * 0.4 + 0.5, y + 4, tz + 10.4, SLIT, DECO)
+		if y == 28 then light(g, 22, 1.2, C3(90, 255, 120)) end
+	end
+	box(OUT, "TowerFlag", tx - 0.15, 78, tz - 0.15, tx + 0.15, 84, tz + 0.15, CARN.iron, DECO)
+	box(OUT, "TowerFlagCloth", tx + 0.15, 81.4, tz - 0.1, tx + 4, 83.8, tz + 0.1, st(M.Fabric, nil, C3(110, 20, 40)), DECO)
+end
+-- the gatehouse over the entrance, its battlements, the giant skull, the portcullis drawn up
+box(OUT, "Gatehouse", -16, TOP - 4, 59, 16, TOP + 14, 62, DSTONE, DECO)
+for x = -16, 13, 5 do box(OUT, "Merlon", x, TOP + 14, 59, x + 3, TOP + 18, 62, DSTONE, DECO) end
+do
+	local sy, sz = TOP + 5, 62.4
+	box(OUT, "Skull", -8, sy - 4, sz, 8, sy + 8, sz + 1, BONE, DECO)
+	box(OUT, "SkullJaw", -5.5, sy - 8.6, sz, 5.5, sy - 4, sz + 1, BONE, DECO)
+	for _, sx in { -1, 1 } do
+		box(OUT, "Socket", sx * 3.8 - 2.2, sy + 1, sz + 1, sx * 3.8 + 2.2, sy + 5, sz + 1.2, st(M.SmoothPlastic, nil, C3(14, 8, 8)), DECO)
+		local e = ball(OUT, CFrame.new(sx * 3.8, sy + 3, sz + 1.3), "SkullEye", 1.6, 0, 0, 0, st(M.Neon, nil, C3(255, 40, 30)), D())
+		light(e, 12, 0.8, C3(255, 50, 40))
+	end
+	part(OUT, "SkullNose", Vector3.new(2.2, 2.2, 0.2), CFrame.new(0, sy - 1.6, sz + 1.1) * CFrame.Angles(0, 0, math.pi / 4), st(M.SmoothPlastic, nil, C3(14, 8, 8)), D())
+	for x = -4.5, 4, 1.8 do box(OUT, "SkullTooth", x, sy - 5, sz + 1, x + 1.4, sy - 3.4, sz + 1.3, BONE, DECO) end
+end
+for x = -5.5, 5.5, 1.6 do box(OUT, "Portcullis", x - 0.25, 13, 60.6, x + 0.25, 17.4, 61, CARN.iron, DECO) end
+for _, y in { 14, 16 } do box(OUT, "Portcullis", -6, y, 60.6, 6, y + 0.4, 61, CARN.iron, DECO) end
+sign(OUT, "THE GHOST TRAIN", CFrame.new(0, TOP + 10.4, 62.2) * CFrame.Angles(0, math.pi, 0), 26, 3, DSTONE, C3(120, 255, 140), Enum.Font.Creepster)
+-- THE TRACK: out of a tunnel in the west front, a loop in the yard, back in through the east one; a ride car
+local TRK = model(OUT, "Track")
+local RAIL = st(M.Metal, nil, C3(120, 116, 110))
+local function rails(a: Vector3, z: Vector3)
+	local cf = CFrame.lookAt((a + z) / 2, z)
+	local len = (z - a).Magnitude
+	for _, sx in { -1.6, 1.6 } do part(TRK, "Rail", Vector3.new(0.4, 0.4, len + 0.2), cf * CFrame.new(sx, 0.3, 0), RAIL, D()) end
+	for t = 0, len - 0.5, 2.5 do part(TRK, "Sleeper", Vector3.new(4.6, 0.3, 0.8), cf * CFrame.new(0, 0.05, -len / 2 + t + 0.4), CARN.woodD, D()) end
+end
+local loop = {}
+for k = 0, 16 do
+	local a = math.pi * k / 16
+	table.insert(loop, Vector3.new(-36 - 10 * math.cos(a), 0.1, 80 + 14 * math.sin(a)))
+end
+rails(Vector3.new(-46, 0.1, 60), loop[1])
+for k = 1, #loop - 1 do rails(loop[k], loop[k + 1]) end
+rails(loop[#loop], Vector3.new(-26, 0.1, 60))
+for _, x in { -46, -26 } do
+	box(OUT, "Tunnel", x - 4, 2, 60.4, x + 4, 11, 60.7, st(M.SmoothPlastic, nil, C3(6, 6, 8)), DECO)
+	box(OUT, "TunnelArch", x - 5, 11, 60.4, x + 5, 13, 61.4, DSTONE, DECO)
+	for _, sx in { -1, 1 } do box(OUT, "TunnelSide", x + sx * 4.5 - 0.5, 0, 60.4, x + sx * 4.5 + 0.5, 11, 61.4, DSTONE, DECO) end
+	for k = 0, 2 do box(OUT, "Flap", x - 3.6 + k * 2.5, 3, 60.8, x - 1.4 + k * 2.5, 10.6, 61, st(M.Fabric, nil, C3(20, 18, 22)), DECO) end
+end
+do
+	local p = loop[9]
+	local cf = CFrame.lookAt(p + Vector3.new(0, 1.6, 0), loop[10] + Vector3.new(0, 1.6, 0))
+	b(OUT, cf, "RideCar", 4.6, 2.8, 6, 0, 0.8, 0, st(M.SmoothPlastic, nil, C3(60, 20, 70)), D())
+	b(OUT, cf, "CarSeat", 4, 1.4, 1.6, 0, 2.4, 1.4, st(M.SmoothPlastic, nil, C3(140, 20, 30)), D())
+	for _, sx in { -1, 1 } do part(OUT, "BatWing", Vector3.new(4, 0.3, 3), cf * CFrame.new(sx * 4, 2.4, 0) * CFrame.Angles(0, 0, sx * 0.4), st(M.SmoothPlastic, nil, C3(20, 16, 22)), D()) end
+	b(OUT, cf, "CarSkull", 1.8, 1.8, 1.8, 0, 2.6, -3, BONE, D())
+end
+-- the Party Bear's poster on the east front, bats on the towers
+do
+	local cf = CFrame.new(38, 13, 60.5) * CFrame.Angles(0, math.pi, 0)
+	b(OUT, cf, "PosterFrame", 18, 16, 0.3, 0, 0, 0.2, CARN.gold, D())
+	b(OUT, cf, "Poster", 17, 15, 0.3, 0, 0, 0, st(M.SmoothPlastic, nil, C3(60, 30, 80)), D())
+	local FURB = st(M.SmoothPlastic, nil, C3(120, 70, 40))
+	cyl(OUT, cf * CFrame.new(0, 1.4, -0.3) * CFrame.Angles(math.pi / 2, 0, 0), "BearHead", 8, 0.2, 0, 0, 0, FURB, D())
+	for _, sx in { -1, 1 } do
+		cyl(OUT, cf * CFrame.new(sx * 3.4, 5, -0.25) * CFrame.Angles(math.pi / 2, 0, 0), "BearEar", 3, 0.2, 0, 0, 0, FURB, D())
+		cyl(OUT, cf * CFrame.new(sx * 1.6, 2.4, -0.45) * CFrame.Angles(math.pi / 2, 0, 0), "BearEye", 1.4, 0.2, 0, 0, 0, st(M.Neon, nil, C3(255, 230, 120)), D())
+	end
+	b(OUT, cf, "BearGrin", 4, 0.8, 0.2, 0, -0.6, -0.45, st(M.SmoothPlastic, nil, C3(20, 10, 10)), D())
+	sign(OUT, "PARTY BEAR - SHOWTIME!", cf * CFrame.new(0, -5.6, -0.4), 15, 2.2, st(M.SmoothPlastic, nil, C3(60, 30, 80)), C3(255, 220, 120), Enum.Font.Creepster)
+end
+for _, p in { { -80, 46, 62 }, { -86, 38, 58 }, { 84, 44, 62 }, { 78, 34, 60 }, { -40, 30, 61 } } do
+	local cf = CFrame.new(p[1], p[2], p[3]) * CFrame.Angles(0, 0, (p[1] % 7) * 0.1)
+	b(OUT, cf, "BatBody", 0.8, 1.2, 0.3, 0, 0, 0, st(M.SmoothPlastic, nil, C3(16, 12, 18)), D())
+	for _, sx in { -1, 1 } do part(OUT, "BatWing", Vector3.new(2.4, 1, 0.2), cf * CFrame.new(sx * 1.4, 0.2, 0) * CFrame.Angles(0, 0, sx * 0.4), st(M.SmoothPlastic, nil, C3(16, 12, 18)), D()) end
+end
+washLight(-44, 86, Vector3.new(-50, TOP, 60), C3(150, 255, 170), 100, 2.4)
+washLight(44, 86, Vector3.new(50, TOP, 60), C3(190, 150, 255), 100, 2.4)
+washLight(-80, 80, Vector3.new(-82, 40, 54), C3(150, 255, 170), 70, 2)
+washLight(80, 80, Vector3.new(82, 40, 54), C3(190, 150, 255), 70, 2)
+-- torches either side of the gate and on the towers
+for _, p in { { -10, 18, 61.4 }, { 10, 18, 61.4 }, { -72, 20, 61 }, { 72, 20, 61 } } do
+	box(OUT, "TorchBracket", p[1] - 0.3, p[2] - 2, p[3] - 0.6, p[1] + 0.3, p[2], p[3] + 0.6, CARN.iron, DECO)
+	local t = box(OUT, "Torch", p[1] - 0.5, p[2], p[3] - 0.5, p[1] + 0.5, p[2] + 0.6, p[3] + 0.5, st(M.Neon, nil, C3(255, 140, 50)), DECO)
+	local f = Instance.new("Fire"); f.Size = 3; f.Heat = 6; f.Color = C3(255, 130, 50); f.SecondaryColor = C3(200, 50, 20); f.Parent = t
+	light(t, 22, 1.3, C3(255, 140, 60))
+end
 carnGrounds()
 return endMap()
