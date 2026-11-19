@@ -5,6 +5,8 @@
 -- have that building open. Every trip goes by TRAIN: the party boards the train waiting at the park's station
 -- (Fx "TrainDepart" plays the ride out, Client/TrainRide), then the match starts / the teleport goes. The old
 -- queue pads in the cabins are off (the train is the only way out of the park).
+-- TRAIN TICKETS (Campaign.TRIPS: 5 trips in 3 hours): every rider uses one when the train leaves; who has none stays
+-- in the park (a toast says when they come back); a failed teleport gives them back.
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -76,11 +78,23 @@ local function setSign(room, title: string, line: string, color: Color3?)
 end
 
 local TRAIN_DEPART = 5.5 -- seconds of the client's ride out of the station (Client/TrainRide)
+local function noTicket(p: Player)
+	local _, reset = Data.tripsLeft(p)
+	Remotes.Fx:FireClient(p, "Toast", "NO TRAIN TICKETS LEFT - " .. Campaign.TRIPS.max .. " MORE IN " .. Campaign.clock(reset - os.time()))
+end
+
 local function launch(room, members: { Player })
 	room.countdownStart = nil
 	-- all aboard: the train pulls out of the park's station (each client rides it), then the trip itself
 	local st = Campaign.stage(room.map)
 	if st then
+		-- a ticket each (who has none stays in the park)
+		local riders = {}
+		for _, p in members do
+			if Data.useTrip(p) then table.insert(riders, p) else noTicket(p) end
+		end
+		members = riders
+		if #members == 0 then return end
 		for _, p in members do
 			p:SetAttribute("Boarding", true)
 			Remotes.Fx:FireClient(p, "TrainDepart", st.id, room.diff, nil, true)
@@ -89,17 +103,25 @@ local function launch(room, members: { Player })
 		local still = {}
 		for _, p in members do
 			p:SetAttribute("Boarding", nil)
-			if p.Parent and not p:GetAttribute("InMatch") then table.insert(still, p) end
+			if p.Parent and not p:GetAttribute("InMatch") then table.insert(still, p) elseif p.Parent then Data.refundTrip(p) end
 		end
 		members = still
 		if #members == 0 then return end
 	end
 	-- the loading screen (ReplicatedFirst/Loading) comes up for everyone who goes
 	local function loading(text: string) for _, p in members do Remotes.Fx:FireClient(p, "Teleporting", text) end end
-	local function failed() for _, p in members do Remotes.Fx:FireClient(p, "TeleportFailed") end end
+	local function failed()
+		for _, p in members do
+			Remotes.Fx:FireClient(p, "TeleportFailed")
+			if st then Data.refundTrip(p) end
+		end
+	end
 	if RunService:IsStudio() then
 		if Run.running() then
-			for _, p in members do Remotes.Fx:FireClient(p, "Toast", "A match is already running in this Studio test") end
+			for _, p in members do
+				Remotes.Fx:FireClient(p, "Toast", "A match is already running in this Studio test")
+				if st then Data.refundTrip(p) end
+			end
 			return
 		end
 		loading(st and ("TO " .. st.name .. "...") or "LOADING THE HOUSE...")
@@ -256,6 +278,7 @@ local function onParty(p: Player, action: any, a: any, b: any, c: any, d: any, e
 	elseif action == "start" then
 		local pt = partyOf(p)
 		if not pt or pt.host ~= p then return end
+		if Data.tripsLeft(p) <= 0 then noTicket(p); return end
 		local members = {}
 		for _, m in pt.members do if m.Parent and not m:GetAttribute("InMatch") then table.insert(members, m) end end
 		for _, m in pt.members do m:SetAttribute("PartyId", nil) end

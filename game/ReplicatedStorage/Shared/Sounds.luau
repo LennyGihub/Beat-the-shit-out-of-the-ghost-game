@@ -35,26 +35,27 @@ return {
 	FightMusic = { ids = { 110184030258486 }, volume = 1.1 }, -- the fallback (a monster with no track of its own)
 	-- FIGHT MUSIC: one track per monster and one per evolved form (Music_<MonsterId> / Music_<MonsterId>_E), started
 	-- by that monster's entrance (Client/Fx setMusic). All from the Creator Store's licensed library (APM Music);
-	-- to change one, put another audio id here. Volume 1.6: these recordings are much quieter than the sound effects
+	-- to change one, put another audio id here (at least 1:30 long: a short one loops too often in a fight; the tracks
+	-- under 1:30 were replaced on 2026-11-19). Volume 1.6: these recordings are much quieter than the sound effects
 	-- (at 0.5 the fight drowned them out); the MUSIC slider in the settings still scales them.
 	Music_Woman = { ids = { 94597327890629 }, volume = 1.6 }, -- Ghost Stalker
 	Music_Woman_E = { ids = { 109753218180637 }, volume = 1.6 }, -- Wailing Walls (the Violet Widow)
 	Music_Demon = { ids = { 1837853076 }, volume = 1.6 }, -- See You In Hell
 	Music_Demon_E = { ids = { 1837246602 }, volume = 1.6 }, -- Demonic Torment (the Demon Lord: metal, like Black Plague)
-	Music_Pirate = { ids = { 1842925663 }, volume = 1.6 }, -- Pirate Battle
+	Music_Pirate = { ids = { 1845219835 }, volume = 1.6 }, -- Pirate Chase (2:03; Pirate Battle was 1:11)
 	Music_Pirate_E = { ids = { 1835322563 }, volume = 1.6 }, -- Pirate King
 	Music_Animatronic = { ids = { 1837432993 }, volume = 1.6 }, -- Freak Circus
 	Music_Animatronic_E = { ids = { 9044887799 }, volume = 1.6 }, -- Psycho Clown
 	Music_Titan = { ids = { 9039352479 }, volume = 1.6 }, -- The Heroic Battle of Giants
 	-- Camp Hollowmere's monsters (licensed production music)
-	Music_Antlered = { ids = { 1835248722 }, volume = 1.6 }, -- Stalking the Prey 60 (the hunt: drums, low brass)
+	Music_Antlered = { ids = { 1835248699 }, volume = 1.6 }, -- Stalking the Prey Main (the hunt: drums, low brass; the full 1:43 version)
 	Music_LakeWitch = { ids = { 1847041997 }, volume = 1.6 }, -- Drowning 3 (under water)
-	Music_Counselor = { ids = { 9041745725 }, volume = 1.6 }, -- 80s Horror Throwback Synth Bed 2 (the summer-camp slasher)
+	Music_Counselor = { ids = { 1838094537 }, volume = 1.6 }, -- The Slasher (the summer-camp slasher, 2:58)
 	Music_Scarecrow = { ids = { 1840881643 }, volume = 1.6 }, -- Dark Pursuit (A) (the cornfield chase)
-	Music_Clown = { ids = { 1846596742 }, volume = 1.6 }, -- Evil Clown
-	Music_Strongman = { ids = { 1837850904 }, volume = 1.5 }, -- Hell's Canyon (Perc)
-	Music_Fortune = { ids = { 1837177862 }, volume = 1.6 }, -- Wild Eyed
-	Music_Ringmaster = { ids = { 1848096077 }, volume = 1.5 }, -- Path To Hell D
+	Music_Clown = { ids = { 1847690202 }, volume = 1.6 }, -- Evil Clown Clan A (2:40)
+	Music_Strongman = { ids = { 1837078128 }, volume = 1.5 }, -- Brutal Power (2:14)
+	Music_Fortune = { ids = { 1836697907 }, volume = 1.6 }, -- Theatre Macabre (2:18)
+	Music_Ringmaster = { ids = { 1845844372 }, volume = 1.5 }, -- Dark Circus A (2:21)
 	Music_Titan_E = { ids = { 9039352746 }, volume = 1.6 }, -- The Fall of the Titans
 	Music_Goblin = { ids = { 1841594035 }, volume = 1.6 }, -- Mischievous Elves (sneaky, not epic)
 	Music_Goblin_E = { ids = { 1839900676 }, volume = 1.6 }, -- In the Hall of the Mountain King

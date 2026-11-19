@@ -406,6 +406,11 @@ function Run.stageCleared()
 		local kills0 = st and st.kills or 0
 		local cash, xp, before, after = Run.payout(p, "cleared", first and (60 + 25 * s0.index) or 25)
 		local prog = Data.campaign(p)
+		-- a cleared map: the player's level is brought up to what its best jar / potion needs
+		if Campaign.mapDone(prog, s0.map) then
+			local _, lv = Data.mapLevel(p)
+			if lv > after then after = lv; task.spawn(Data.save, p) end
+		end
 		local done, total = Campaign.cleared(prog, s0.map)
 		local goal = Campaign.goal(prog)
 		Quests.add(p, "stage")
@@ -427,8 +432,24 @@ local function onStageChoice(p: Player, choice: any)
 	local target = choice == "again" and stage or Campaign.nextStage(stage.id)
 	if not target then return end
 	if choice == "next" and not Campaign.stageOpen(Data.campaign(p), target.id) then return end
+	-- train tickets (Campaign.TRIPS): the one who picks needs one; everyone who rides uses one, who has none goes back
+	-- to the park
+	if Data.tripsLeft(p) <= 0 then
+		local _, reset = Data.tripsLeft(p)
+		Remotes.Fx:FireClient(p, "Toast", "NO TRAIN TICKETS LEFT - " .. Campaign.TRIPS.max .. " MORE IN " .. Campaign.clock(reset - os.time()))
+		Remotes.Fx:FireClient(p, "StageRepick")
+		return
+	end
 	setState("Depart", "")
 	setWaypoint(nil)
+	for _, o in Run.matchPlayers() do
+		if not Data.useTrip(o) then
+			Remotes.Fx:FireClient(o, "Toast", "NO TRAIN TICKETS LEFT - BACK TO THE PARK")
+			task.spawn(Run.leave, o, "left")
+		end
+	end
+	task.wait(0.1)
+	if #Run.matchPlayers() == 0 then return end
 	for _, o in Run.matchPlayers() do Remotes.Fx:FireClient(o, "TrainDepart", target.id, diff.id, p.DisplayName) end
 	task.wait(0.6)
 	for _, o in Run.matchPlayers() do holdBody(o) end

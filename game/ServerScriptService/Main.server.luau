@@ -105,6 +105,7 @@ local function onPlayer(p: Player)
 	Data.load(p)
 	Quests.setup(p)
 	Bestiary.setup(p) -- badges already earned by an older save
+	FormShop.setup(p) -- the jars / potions that finished opening while the player was away
 	if Run.mode == "Match" then
 		firstJoin = firstJoin or os.clock()
 		-- start when the whole party has arrived (or after 15 s)

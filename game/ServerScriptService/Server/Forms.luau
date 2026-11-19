@@ -6,6 +6,13 @@
 --                       and saved; worn at once if no form of that kind was worn yet. The client then plays the
 --                       first-person jar / drink (Fx "FormRolled": kind, vialId, formId, isNew, worn, prevId).
 --   ("equip", formId) -> wear a form you own (Fx "FormEquipped").
+--   ("offline", vialId) -> OPEN OFFLINE: paid like a buy, the jar / potion joins its kind's queue (Shared/Forms
+--                       OFFLINE: a few minutes each, one after the other) and opens by itself, by the clock: in the
+--                       park, in a run's server and while the player is away (settled when they come back). Each
+--                       finished one is rolled here, added to the collection (worn if that kind had none) and sent
+--                       to the client (Fx "OfflineDone": results, away). 24 h of finished offline opening make the
+--                       next offline result RARE or better (the count is kept in the save: Offline.pity).
+--                       Player attribute "Offline" (JSON) = the queues, for Client/OfflineOpen's bar.
 -- Combat.stat reads the worn forms (health, stamina, damage, knockback).
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
@@ -15,6 +22,7 @@ local Campaign = require(RS.Shared.Campaign)
 local Remotes = require(script.Parent.Remotes)
 local Data = require(script.Parent.Data)
 local Combat = require(script.Parent.Combat)
+local HttpService = game:GetService("HttpService")
 
 local M = {}
 local rng = Random.new()
@@ -63,6 +71,94 @@ local function buy(p: Player, vialId: any)
 	Remotes.Fx:FireClient(p, "FormRolled", v.kind, v.id, fm.id, isNew, worn, prev or "")
 end
 
+-- OPEN OFFLINE ----------------------------------------------------------------------------------------------------
+local lastOffline = {} :: { [Player]: number }
+
+local function publishOffline(p: Player)
+	local o = Data.offline(p)
+	if not o then return end
+	p:SetAttribute("Offline", HttpService:JSONEncode({
+		stim = { q = o.stim.q, t = o.stim.t }, potion = { q = o.potion.q, t = o.potion.t }, pity = o.pity,
+	}))
+end
+
+-- every jar / potion whose time is up at `now`: rolled, added to the collection (worn if that kind had none).
+-- Returns the results ({ kind, vial, form, new, worn, pity }).
+local function settle(p: Player, now: number): { any }
+	local o = Data.offline(p)
+	local out = {}
+	if not o then return out end
+	local OFF = Forms.OFFLINE
+	for _, kind in { "stim", "potion" } do
+		local k = o[kind]
+		while #k.q > 0 do
+			local v = Forms.vialById[k.q[1]]
+			if not v then table.remove(k.q, 1); continue end
+			if k.t <= 0 then k.t = now end
+			local dur = Forms.openTime(v)
+			if now < k.t + dur then break end
+			table.remove(k.q, 1)
+			k.t += dur -- (the next one started when this one finished, even offline)
+			o.pity += dur
+			local sure = o.pity >= OFF.pity
+			if sure then o.pity -= OFF.pity end
+			local fm = Forms.roll(v, rng, sure and OFF.pityRarity or nil)
+			local isNew = Data.addForm(p, fm.id)
+			local worn = false
+			if Data.formOf(p, kind) == nil then worn = Data.equipForm(p, fm.id) end
+			table.insert(out, { kind = kind, vial = v.id, form = fm.id, new = isNew, worn = worn, pity = sure })
+			if #out >= 200 then break end -- (a very long absence: the rest is settled on the next tick)
+		end
+		if #k.q == 0 then k.t = 0 end
+	end
+	return out
+end
+
+local function settleAndTell(p: Player, away: boolean)
+	local res = settle(p, os.time())
+	if #res == 0 then return end
+	publishOffline(p)
+	Combat.refreshHealth(p)
+	task.spawn(Data.save, p)
+	Remotes.Fx:FireClient(p, "OfflineDone", res, away)
+end
+
+local function offline(p: Player, vialId: any)
+	local v = type(vialId) == "string" and Forms.vialById[vialId] or nil
+	if not v then return end
+	if p:GetAttribute("InMatch") then return end
+	if os.clock() - (lastOffline[p] or 0) < 0.3 then return end
+	lastOffline[p] = os.clock()
+	if not Campaign.mapOpen(Data.campaign(p), v.set) then
+		local m = Campaign.mapById[v.set]
+		toast(p, (m and m.name or v.set) .. " IS NOT OPEN YET")
+		return
+	end
+	local level = (Levels.of(p:GetAttribute("XP") or 0))
+	if level < v.level then toast(p, v.name .. " NEEDS LEVEL " .. v.level); return end
+	local at = sellerPart(v.kind)
+	local hrp = p.Character and p.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if at and hrp and (hrp.Position - at.Position).Magnitude > REACH then return end
+	local o = Data.offline(p)
+	if not o then return end
+	local k = o[v.kind]
+	if #k.q >= Forms.OFFLINE.maxQueue then toast(p, "THE QUEUE IS FULL (" .. Forms.OFFLINE.maxQueue .. ")"); return end
+	if not Data.spend(p, v.price) then toast(p, "NOT ENOUGH CASH FOR " .. v.name); return end
+	settle(p, os.time()) -- (a finished one is out of the way first)
+	table.insert(k.q, v.id)
+	if #k.q == 1 then k.t = os.time() end
+	publishOffline(p)
+	toast(p, v.name .. " IS OPENING  (" .. #k.q .. " IN THE QUEUE)", true)
+end
+
+-- after the save loaded (Main): what finished while the player was away
+function M.setup(p: Player)
+	publishOffline(p)
+	task.delay(5, function()
+		if p.Parent then settleAndTell(p, true) end
+	end)
+end
+
 local function equip(p: Player, id: any)
 	local fm = type(id) == "string" and Forms.byId[id] or nil
 	if not fm or not Data.ownsForm(p, fm.id) then return end
@@ -75,9 +171,23 @@ end
 function M.start()
 	Remotes.Forms.OnServerEvent:Connect(function(p, action, a)
 		if action == "buy" then buy(p, a)
+		elseif action == "offline" then offline(p, a)
 		elseif action == "equip" then equip(p, a) end
 	end)
-	Players.PlayerRemoving:Connect(function(p) lastBuy[p] = nil end)
+	Players.PlayerRemoving:Connect(function(p) lastBuy[p] = nil; lastOffline[p] = nil end)
+	-- the offline queues open by the clock (here, in a run's server too)
+	task.spawn(function()
+		while true do
+			task.wait(1)
+			for _, p in Players:GetPlayers() do
+				local o = Data.offline(p)
+				if o and (#o.stim.q > 0 or #o.potion.q > 0) then
+					local ok, err = pcall(settleAndTell, p, false)
+					if not ok then warn("[Forms] offline: " .. tostring(err)) end
+				end
+			end
+		end
+	end)
 	-- the prompts on the two stalls (they may be built after the server started: look for a while)
 	task.spawn(function()
 		local done = {} :: { [string]: boolean }

@@ -22,6 +22,7 @@ local RED = Color3.fromRGB(150, 18, 20)
 local DARK = Color3.fromRGB(38, 31, 27)
 local GREEN = Color3.fromRGB(62, 118, 40)
 local GOLD = Color3.fromRGB(255, 200, 90)
+local repickFn: (() -> ())? = nil -- (the open result screen: the server refused a pick, pick again)
 
 local function button(parent: Instance, text: string, props: { [string]: any }, color: Color3, seed: number): TextButton
 	local b = Instance.new("TextButton")
@@ -36,6 +37,11 @@ local function button(parent: Instance, text: string, props: { [string]: any }, 
 	b.MouseEnter:Connect(function() TweenService:Create(sc, TweenInfo.new(0.12, Enum.EasingStyle.Back), { Scale = 1.06 }):Play() end)
 	b.MouseLeave:Connect(function() TweenService:Create(sc, TweenInfo.new(0.12), { Scale = 1 }):Play() end)
 	return b
+end
+
+-- the server refused the pick (no train ticket): the buttons work again
+function UI.repick()
+	if repickFn then repickFn() end
 end
 
 function UI.close()
@@ -141,10 +147,14 @@ function UI.show(info: { [string]: any })
 		Grunge.text(panel, { Text = newText, Font = Grunge.TYPE, Position = UDim2.fromScale(0.05, 0.69), Size = UDim2.fromScale(0.9, 0.04),
 			TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = newColor, ZIndex = 5 })
 	end
-	-- buttons
+	-- buttons (NEXT / AGAIN need a train ticket: Campaign.TRIPS)
 	local picked = false
+	local function tickets(): number
+		return Campaign.ticketsLeft(lp:GetAttribute("TripsLeft"), lp:GetAttribute("TripsReset"), workspace:GetServerTimeNow())
+	end
 	local function pick(choice: string)
 		if picked then return end
+		if choice ~= "lobby" and tickets() <= 0 then Sfx.play("Click", { PlaybackSpeed = 0.6 }); return end
 		picked = true
 		Sfx.play("Click")
 		;(Remotes :: any).Stage:FireServer(choice)
@@ -153,10 +163,12 @@ function UI.show(info: { [string]: any })
 	local x = 0.05
 	if nxt then
 		local b = button(panel, "NEXT BUILDING", { Position = UDim2.fromScale(x, 0.77), Size = UDim2.fromScale(0.34, 0.11), ZIndex = 8, Rotation = -1.5 }, GREEN, 131)
+		b.Name = "NextBtn"
 		b.Activated:Connect(function() pick("next") end)
 		x += 0.36
 	end
 	local again = button(panel, "FIGHT AGAIN", { Position = UDim2.fromScale(x, 0.775), Size = UDim2.fromScale(0.27, 0.1), ZIndex = 8, Rotation = 1 }, nxt and DARK or GREEN, 132)
+	again.Name = "AgainBtn"
 	again.Activated:Connect(function() pick("again") end)
 	x += 0.29
 	-- (Modal: the mouse is free while this screen is up, even in first person)
@@ -164,10 +176,24 @@ function UI.show(info: { [string]: any })
 	park.Activated:Connect(function() pick("lobby") end)
 	local timer = Grunge.text(panel, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0.05, 0.9), Size = UDim2.fromScale(0.9, 0.04),
 		TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(170, 160, 145), ZIndex = 5 })
+	local ticketT = Grunge.text(panel, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0.05, 0.733), Size = UDim2.fromScale(0.9, 0.033),
+		TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 5 })
 	local untilT = os.clock() + (tonumber(info.choice) or 60)
+	repickFn = function() picked = false end
 	task.spawn(function()
 		while gui == g do
 			timer.Text = picked and "WAITING FOR THE TRAIN..." or ("BACK TO THE PARK IN " .. math.max(0, math.ceil(untilT - os.clock())) .. "  -  ANYONE CAN PICK THE NEXT TRIP")
+			local left = tickets()
+			if left > 0 then
+				ticketT.Text = "TRAIN TICKETS  " .. left .. " / " .. Campaign.TRIPS.max .. "  -  A TRIP USES ONE"
+				ticketT.TextColor3 = Color3.fromRGB(150, 200, 255)
+			else
+				ticketT.Text = "NO TRAIN TICKETS LEFT  -  " .. Campaign.TRIPS.max .. " MORE IN " .. Campaign.clock((tonumber(lp:GetAttribute("TripsReset")) or 0) - workspace:GetServerTimeNow())
+				ticketT.TextColor3 = Color3.fromRGB(255, 110, 80)
+			end
+			for _, b in { panel:FindFirstChild("NextBtn"), panel:FindFirstChild("AgainBtn") } do
+				if b then (b :: GuiObject).Visible = left > 0 end
+			end
 			task.wait(0.25)
 		end
 	end)

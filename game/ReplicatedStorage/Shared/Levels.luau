@@ -22,6 +22,13 @@ function Levels.of(xp: number): (number, number, number)
 	return level, left, Levels.need(level)
 end
 
+-- the total XP a level starts at (level 1 = 0)
+function Levels.total(level: number): number
+	local n = 0
+	for l = 1, math.clamp(math.floor(level), 1, Levels.MAX) - 1 do n += Levels.need(l) end
+	return n
+end
+
 -- the titles, one every 5 levels (the last one stays after level 100)
 local TITLES: { { at: number, name: string, color: Color3 } } = {
 	{ at = 1, name = "FRESH MEAT", color = Color3.fromRGB(190, 182, 168) },

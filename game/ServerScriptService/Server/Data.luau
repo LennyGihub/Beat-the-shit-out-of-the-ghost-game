@@ -5,6 +5,9 @@
 -- Nightmare (monsters beaten on NIGHTMARE). XP: the player's total XP (Shared/Levels: the level and its title).
 -- Campaign: stage id -> best difficulty rank cleared (Shared/Campaign). Forms: the fist / body forms got from Doc
 -- Mercy's ectoplasm and Mother Moth's potions (id -> true), FormStim / FormPotion = the ones worn (Shared/Forms).
+-- Offline: the jars / potions opening by themselves (Server/Forms: a queue of vial ids per kind + when the first one
+-- started, and the opening time towards the RARE+ guarantee). Trips: train tickets used ({ n, reset }: Campaign.TRIPS).
+-- A cleared map brings the player's level up to what that map's best jar / potion needs (Data.mapLevel).
 -- Never overwrites a save that failed to load; saves on leave, every 90 s and on shutdown.
 local DSS = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
@@ -24,7 +27,9 @@ local function fresh()
 	return { Cash = 0, Owned = {}, GhostLevel = 1, Kills = 0, Ults = { Rage = true }, Equipped = "Rage", Receipts = {},
 		Bestiary = {} :: { [string]: number }, Badges = {} :: { [string]: boolean }, Nightmare = 0, XP = 0,
 		Campaign = {} :: { [string]: number }, Forms = {} :: { [string]: boolean }, FormStim = nil :: string?, FormPotion = nil :: string?,
-		Tutorial = false } -- Tutorial = the tutorial was offered (taken or refused): the lobby's popup is not shown again
+		Tutorial = false, -- Tutorial = the tutorial was offered (taken or refused): the lobby's popup is not shown again
+		Trips = { n = 0, reset = 0 },
+		Offline = { stim = { q = {} :: { string }, t = 0 }, potion = { q = {} :: { string }, t = 0 }, pity = 0 } }
 end
 local MAX_RECEIPTS = 100
 
@@ -89,6 +94,9 @@ local function publish(player)
 	player:SetAttribute("Forms", table.concat(forms, ","))
 	player:SetAttribute("FormStim", p.data.FormStim or "")
 	player:SetAttribute("FormPotion", p.data.FormPotion or "")
+	-- train tickets (the client counts the refill down itself)
+	player:SetAttribute("TripsLeft", Campaign.TRIPS.max - p.data.Trips.n)
+	player:SetAttribute("TripsReset", p.data.Trips.reset)
 	local ls = player:FindFirstChild("leaderstats")
 	if ls then
 		(ls :: any).Cash.Value = p.data.Cash;
@@ -146,6 +154,24 @@ function Data.load(player: Player)
 						local fm = type(id) == "string" and Forms.byId[id] or nil
 						if fm and prof.data.Forms[fm.id] and fm.kind == (key == "FormStim" and "stim" or "potion") then prof.data[key] = fm.id end
 					end
+					if type(res.Trips) == "table" then
+						prof.data.Trips.n = math.clamp(math.floor(tonumber(res.Trips.n) or 0), 0, Campaign.TRIPS.max)
+						prof.data.Trips.reset = math.max(0, math.floor(tonumber(res.Trips.reset) or 0))
+					end
+					if type(res.Offline) == "table" then
+						local o = prof.data.Offline
+						for _, kind in { "stim", "potion" } do
+							local src = res.Offline[kind]
+							if type(src) == "table" and type(src.q) == "table" then
+								for _, id in src.q do
+									local v = type(id) == "string" and Forms.vialById[id] or nil
+									if v and v.kind == kind and #o[kind].q < Forms.OFFLINE.maxQueue then table.insert(o[kind].q, id) end
+								end
+								o[kind].t = math.max(0, math.floor(tonumber(src.t) or 0))
+							end
+						end
+						o.pity = math.max(0, math.floor(tonumber(res.Offline.pity) or 0))
+					end
 					if type(res.Receipts) == "table" then
 						for _, id in res.Receipts do if type(id) == "string" then table.insert(prof.data.Receipts, id) end end
 					end
@@ -157,6 +183,7 @@ function Data.load(player: Player)
 		end
 	end
 	if not prof.loaded then warn("[Data] playing without saving for " .. player.Name) end
+	Data.mapLevel(player) -- (an older save may have cleared a map before this rule)
 	publish(player)
 	return prof
 end
@@ -169,6 +196,9 @@ function Data.save(player: Player): boolean
 		Bestiary = table.clone(prof.data.Bestiary), Badges = table.clone(prof.data.Badges), Nightmare = prof.data.Nightmare, XP = prof.data.XP,
 		Tutorial = prof.data.Tutorial == true,
 		Campaign = table.clone(prof.data.Campaign), Forms = table.clone(prof.data.Forms), FormStim = prof.data.FormStim, FormPotion = prof.data.FormPotion,
+		Trips = table.clone(prof.data.Trips),
+		Offline = { stim = { q = table.clone(prof.data.Offline.stim.q), t = prof.data.Offline.stim.t },
+			potion = { q = table.clone(prof.data.Offline.potion.q), t = prof.data.Offline.potion.t }, pity = prof.data.Offline.pity },
 		Quests = prof.data.Quests and HttpService:JSONDecode(HttpService:JSONEncode(prof.data.Quests)) or nil }
 	for i = 1, 3 do
 		local ok, err = pcall(function()
@@ -301,6 +331,67 @@ function Data.clearStage(player: Player, stageId: string, rank: number): boolean
 	publish(player)
 	return before <= 0
 end
+-- A CLEARED MAP gives the level its jars / potions need: the player's XP is raised to the level of the best jar /
+-- potion of every map they have cleared (Forms.topLevel). Returns the level before and after.
+function Data.mapLevel(player: Player): (number, number)
+	local d = Data.get(player)
+	if not d then return 1, 1 end
+	local before = (Levels.of(d.XP))
+	local want = 1
+	for _, m in Campaign.list do
+		if Campaign.mapDone(d.Campaign, m.id) then want = math.max(want, Forms.topLevel(m.id)) end
+	end
+	if before < want then
+		d.XP = math.max(d.XP, Levels.total(want))
+		publish(player)
+	end
+	return before, (Levels.of(d.XP))
+end
+
+-- TRAIN TICKETS (Campaign.TRIPS): how many are left and when they come back (unix, 0 = the window has not started)
+local function tripWindow(d: any)
+	if d.Trips.reset > 0 and os.time() >= d.Trips.reset then d.Trips.n = 0; d.Trips.reset = 0 end
+end
+function Data.tripsLeft(player: Player): (number, number)
+	local d = Data.get(player)
+	if not d then return 0, 0 end
+	tripWindow(d)
+	return Campaign.TRIPS.max - d.Trips.n, d.Trips.reset
+end
+-- one train trip: false when no ticket is left
+function Data.useTrip(player: Player): boolean
+	local d = Data.get(player)
+	if not d then return false end
+	tripWindow(d)
+	if d.Trips.n >= Campaign.TRIPS.max then return false end
+	d.Trips.n += 1
+	if d.Trips.reset <= 0 then d.Trips.reset = os.time() + Campaign.TRIPS.window end
+	publish(player)
+	return true
+end
+-- a trip that did not happen (the teleport failed)
+function Data.refundTrip(player: Player)
+	local d = Data.get(player)
+	if not d then return end
+	d.Trips.n = math.max(0, d.Trips.n - 1)
+	if d.Trips.n == 0 then d.Trips.reset = 0 end
+	publish(player)
+end
+-- admin: n tickets used (0 = all back)
+function Data.setTrips(player: Player, used: number)
+	local d = Data.get(player)
+	if not d then return end
+	d.Trips.n = math.clamp(math.floor(used), 0, Campaign.TRIPS.max)
+	d.Trips.reset = d.Trips.n > 0 and os.time() + Campaign.TRIPS.window or 0
+	publish(player)
+end
+
+-- the offline opening queues (Server/Forms changes them in place)
+function Data.offline(player: Player): any
+	local d = Data.get(player)
+	return d and d.Offline
+end
+
 function Data.campaign(player: Player): { [string]: number }
 	local d = Data.get(player)
 	return d and d.Campaign or {}

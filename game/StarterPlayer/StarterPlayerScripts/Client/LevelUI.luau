@@ -2,12 +2,14 @@
 -- YOUR LEVEL, in the lobby's top right corner under your cash: LV n and its title (Shared/Levels, in the title's
 -- colour), and a bar of the XP into the next level. Other players see it over your head (Client/NameTags). Hidden
 -- in a run and while a lobby window is open. Player attributes (Server/Data): XP, Level.
+-- Under it: the TRAIN TICKETS left (Campaign.TRIPS; TripsLeft / TripsReset) and when they come back.
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local Grunge = require(script.Parent.Grunge)
 local Platform = require(script.Parent.Platform)
 local Levels = require(RS.Shared.Levels)
+local Campaign = require(RS.Shared.Campaign)
 
 local LevelUI = {}
 local lp = Players.LocalPlayer
@@ -28,6 +30,19 @@ function LevelUI.init()
 	local xpText = Grunge.text(box, { Text = "", Font = Grunge.TYPE, AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 0.8), Size = UDim2.fromScale(0.6, 0.22),
 		TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = Color3.fromRGB(190, 180, 160), ZIndex = 4 })
 
+	local tickets = Grunge.text(box, { Text = "", Font = Grunge.TYPE, AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 1.06), Size = UDim2.fromScale(1.3, 0.3),
+		TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 4 })
+	task.spawn(function()
+		while true do
+			local now = workspace:GetServerTimeNow()
+			local left = Campaign.ticketsLeft(lp:GetAttribute("TripsLeft"), lp:GetAttribute("TripsReset"), now)
+			local reset = tonumber(lp:GetAttribute("TripsReset")) or 0
+			local max = Campaign.TRIPS.max
+			tickets.Text = "TRAIN TICKETS " .. left .. " / " .. max .. ((left < max and reset > now) and ("  -  REFILL IN " .. Campaign.clock(reset - now)) or "")
+			tickets.TextColor3 = left > 0 and Color3.fromRGB(150, 200, 255) or Color3.fromRGB(255, 110, 80)
+			task.wait(1)
+		end
+	end)
 	local shown = -1
 	local function update()
 		local xp = lp:GetAttribute("XP")

@@ -351,6 +351,25 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 	local close = button(panel, "CLOSE", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(0.96, 0.035), Size = UDim2.fromScale(0.15, 0.07), BackgroundColor3 = DARK, ZIndex = 12, Modal = true, Rotation = 1.5 })
 	close.Activated:Connect(function() Sfx.play("Click"); setOpen(false) end)
 	Platform.menu(panel, function() setOpen(false) end)
+	-- the train tickets (Campaign.TRIPS: every trip to a building uses one)
+	local ticketT = Grunge.text(panel, { Text = "", Font = Grunge.FONT, AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(0.79, 0.03), Size = UDim2.fromScale(0.26, 0.05),
+		TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 11, Rotation = 1 })
+	local ticketSub = Grunge.text(panel, { Text = "", Font = Grunge.TYPE, AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(0.79, 0.083), Size = UDim2.fromScale(0.26, 0.032),
+		TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 11, TextColor3 = Color3.fromRGB(190, 180, 160) })
+	task.spawn(function()
+		while true do
+			if panel.Visible then
+				local now = workspace:GetServerTimeNow()
+				local left = Campaign.ticketsLeft(lp:GetAttribute("TripsLeft"), lp:GetAttribute("TripsReset"), now)
+				local reset = tonumber(lp:GetAttribute("TripsReset")) or 0
+				local max = Campaign.TRIPS.max
+				ticketT.Text = "TRAIN TICKETS " .. left .. " / " .. max
+				ticketT.TextColor3 = left > 0 and Color3.fromRGB(150, 200, 255) or Color3.fromRGB(255, 110, 80)
+				ticketSub.Text = (left < max and reset > now) and ("REFILL IN " .. Campaign.clock(reset - now)) or (max .. " TRIPS EVERY " .. (Campaign.TRIPS.window // 3600) .. " HOURS")
+			end
+			task.wait(0.5)
+		end
+	end)
 
 	-- left half: create a lobby
 	createPage = Grunge.frame(panel, { Position = UDim2.fromScale(0.04, 0.14), Size = UDim2.fromScale(0.46, 0.82), ZIndex = 10 })

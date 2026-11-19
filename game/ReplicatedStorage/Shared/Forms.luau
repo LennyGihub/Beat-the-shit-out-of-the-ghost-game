@@ -4,6 +4,9 @@
 -- (more punch damage, more knockback). MOTHER MOTH (a witch, a hut by the pond) sells POTIONS: drunk, they give a
 -- BODY form (more health, more stamina). You never know which form a jar / bottle gives: each one rolls one at
 -- random, with its own odds by rarity: they are CHEAP, and the rare forms are very rare (open a lot of them).
+-- OPEN OFFLINE: a jar / potion can also be put to open by itself (Forms.OFFLINE: a few minutes each, one after the
+-- other, a queue per kind), even while you are in a run or not playing; 24 h of offline opening in total makes the
+-- next offline result RARE or better (Server/Forms, Client/OfflineOpen).
 -- SETS: every campaign map (Shared/Campaign) brings its own 4 jars and 4 potions, and its own forms in all 6
 -- rarities (stronger map after map). A set is for sale once its map is open; in a set, the better jars / potions
 -- also need a player level.
@@ -14,7 +17,7 @@
 -- them (Combat.stat); Client/FormCine plays the first-person jar / drink and shows what you got.
 export type Form = { id: string, kind: string, set: string, name: string, rarity: number, color: Color3, desc: string,
 	dmg: number?, knock: number?, hp: number?, sta: number? }
-export type Vial = { id: string, kind: string, set: string, name: string, level: number, price: number, odds: { number }, color: Color3, desc: string }
+export type Vial = { id: string, kind: string, set: string, tier: number, name: string, level: number, price: number, odds: { number }, color: Color3, desc: string }
 
 local function C(r, g, b) return Color3.fromRGB(r, g, b) end
 
@@ -141,28 +144,28 @@ local ODDS = {
 	{ 25, 33, 25, 13, 3.5, 0.5 },
 }
 local function V(set: string, tier: number, t: { [string]: any }): Vial
-	t.set = set; t.odds = ODDS[tier]
+	t.set = set; t.odds = ODDS[tier]; t.tier = tier
 	return t :: any
 end
 local Vials: { Vial } = {
 	-- CAMP HOLLOWMERE
-	V("Camp", 1, { id = "PaleEcto", kind = "stim", name = "PALE ECTOPLASM", level = 1, price = 10, color = C(200, 240, 170), desc = "Scraped off a haunted wall." }),
-	V("Camp", 2, { id = "GreenEcto", kind = "stim", name = "FRESH ECTOPLASM", level = 3, price = 25, color = C(110, 220, 90), desc = "Still warm. Still moving." }),
-	V("Camp", 3, { id = "VioletEcto", kind = "stim", name = "POLTERGEIST GOO", level = 6, price = 50, color = C(190, 90, 240), desc = "It knocks on the glass from the inside." }),
-	V("Camp", 4, { id = "RedEcto", kind = "stim", name = "BANSHEE GOO", level = 10, price = 100, color = C(255, 60, 60), desc = "It screams when you open the jar." }),
-	V("Camp", 1, { id = "MurkyPotion", kind = "potion", name = "MURKY POTION", level = 1, price = 10, color = C(150, 170, 90), desc = "Pond water and a good spell." }),
-	V("Camp", 2, { id = "MoonPotion", kind = "potion", name = "MOONLIT POTION", level = 3, price = 25, color = C(150, 190, 240), desc = "Made under a full moon. She says." }),
-	V("Camp", 3, { id = "HexPotion", kind = "potion", name = "HEX POTION", level = 6, price = 50, color = C(200, 70, 200), desc = "It moves in the bottle when you don't look." }),
-	V("Camp", 4, { id = "CauldronPotion", kind = "potion", name = "BLACK CAULDRON", level = 10, price = 100, color = C(255, 60, 60), desc = "From the bottom of her oldest pot." }),
+	V("Camp", 1, { id = "PaleEcto", kind = "stim", name = "PALE ECTOPLASM", level = 1, price = 5, color = C(200, 240, 170), desc = "Scraped off a haunted wall." }),
+	V("Camp", 2, { id = "GreenEcto", kind = "stim", name = "FRESH ECTOPLASM", level = 3, price = 12, color = C(110, 220, 90), desc = "Still warm. Still moving." }),
+	V("Camp", 3, { id = "VioletEcto", kind = "stim", name = "POLTERGEIST GOO", level = 6, price = 25, color = C(190, 90, 240), desc = "It knocks on the glass from the inside." }),
+	V("Camp", 4, { id = "RedEcto", kind = "stim", name = "BANSHEE GOO", level = 10, price = 50, color = C(255, 60, 60), desc = "It screams when you open the jar." }),
+	V("Camp", 1, { id = "MurkyPotion", kind = "potion", name = "MURKY POTION", level = 1, price = 5, color = C(150, 170, 90), desc = "Pond water and a good spell." }),
+	V("Camp", 2, { id = "MoonPotion", kind = "potion", name = "MOONLIT POTION", level = 3, price = 12, color = C(150, 190, 240), desc = "Made under a full moon. She says." }),
+	V("Camp", 3, { id = "HexPotion", kind = "potion", name = "HEX POTION", level = 6, price = 25, color = C(200, 70, 200), desc = "It moves in the bottle when you don't look." }),
+	V("Camp", 4, { id = "CauldronPotion", kind = "potion", name = "BLACK CAULDRON", level = 10, price = 50, color = C(255, 60, 60), desc = "From the bottom of her oldest pot." }),
 	-- MOONLIGHT CARNIVAL (open once Camp Hollowmere is cleared)
-	V("Carnival", 1, { id = "CandyEcto", kind = "stim", name = "CANDY GOO", level = 1, price = 30, color = C(255, 140, 200), desc = "Off the candy floss machine. It still spins." }),
-	V("Carnival", 2, { id = "PaintEcto", kind = "stim", name = "GREASEPAINT GOO", level = 5, price = 75, color = C(240, 236, 228), desc = "Off a clown's face. Don't ask which clown." }),
-	V("Carnival", 3, { id = "MirrorEcto", kind = "stim", name = "MIRROR GOO", level = 9, price = 150, color = C(190, 220, 240), desc = "Your reflection moves before you do." }),
-	V("Carnival", 4, { id = "BigTopEcto", kind = "stim", name = "BIG TOP GOO", level = 13, price = 300, color = C(230, 40, 60), desc = "From under the ring. The crowd still cheers in it." }),
-	V("Carnival", 1, { id = "CaramelPotion", kind = "potion", name = "CARAMEL POTION", level = 1, price = 30, color = C(220, 150, 60), desc = "Toffee apples, boiled down to a spell." }),
-	V("Carnival", 2, { id = "FortunePotion", kind = "potion", name = "FORTUNE POTION", level = 5, price = 75, color = C(170, 90, 240), desc = "Madame Fortune's recipe. She wasn't using it." }),
-	V("Carnival", 3, { id = "CarouselPotion", kind = "potion", name = "CAROUSEL POTION", level = 9, price = 150, color = C(90, 210, 200), desc = "Everything spins, then you feel great." }),
-	V("Carnival", 4, { id = "MidnightPotion", kind = "potion", name = "MIDNIGHT SHOW", level = 13, price = 300, color = C(255, 200, 80), desc = "Brewed in the Big Top after closing time." }),
+	V("Carnival", 1, { id = "CandyEcto", kind = "stim", name = "CANDY GOO", level = 1, price = 15, color = C(255, 140, 200), desc = "Off the candy floss machine. It still spins." }),
+	V("Carnival", 2, { id = "PaintEcto", kind = "stim", name = "GREASEPAINT GOO", level = 5, price = 35, color = C(240, 236, 228), desc = "Off a clown's face. Don't ask which clown." }),
+	V("Carnival", 3, { id = "MirrorEcto", kind = "stim", name = "MIRROR GOO", level = 9, price = 75, color = C(190, 220, 240), desc = "Your reflection moves before you do." }),
+	V("Carnival", 4, { id = "BigTopEcto", kind = "stim", name = "BIG TOP GOO", level = 13, price = 150, color = C(230, 40, 60), desc = "From under the ring. The crowd still cheers in it." }),
+	V("Carnival", 1, { id = "CaramelPotion", kind = "potion", name = "CARAMEL POTION", level = 1, price = 15, color = C(220, 150, 60), desc = "Toffee apples, boiled down to a spell." }),
+	V("Carnival", 2, { id = "FortunePotion", kind = "potion", name = "FORTUNE POTION", level = 5, price = 35, color = C(170, 90, 240), desc = "Madame Fortune's recipe. She wasn't using it." }),
+	V("Carnival", 3, { id = "CarouselPotion", kind = "potion", name = "CAROUSEL POTION", level = 9, price = 75, color = C(90, 210, 200), desc = "Everything spins, then you feel great." }),
+	V("Carnival", 4, { id = "MidnightPotion", kind = "potion", name = "MIDNIGHT SHOW", level = 13, price = 150, color = C(255, 200, 80), desc = "Brewed in the Big Top after closing time." }),
 }
 -- the sets in order (the campaign maps that have one)
 local SETS = { "Camp", "Carnival" }
@@ -189,6 +192,18 @@ Forms.SELLER = {
 }
 
 local function setIndex(set: string): number return table.find(SETS, set) or 99 end
+
+-- OPEN OFFLINE (Server/Forms): seconds one jar / potion takes by its tier (1..4), how many can wait in a kind's queue,
+-- and the total opening time after which the next offline result is RARE or better (rarity 3+)
+Forms.OFFLINE = { times = { 180, 360, 600, 900 }, maxQueue = 50, pity = 24 * 3600, pityRarity = 3 }
+function Forms.openTime(v: Vial): number return Forms.OFFLINE.times[v.tier] or 600 end
+
+-- the level the set's best jar / potion needs (clearing that map brings a player to it: Server/Data.mapLevel)
+function Forms.topLevel(set: string): number
+	local n = 0
+	for _, v in Vials do if v.set == set then n = math.max(n, v.level) end end
+	return n
+end
 
 -- every form of a kind (set = only that set's), sorted by set, then rarity
 function Forms.ofKind(kind: string, set: string?): { Form }
@@ -220,9 +235,19 @@ function Forms.chances(v: Vial): { [number]: number }
 	return out
 end
 
--- a random form out of a vial (server only)
-function Forms.roll(v: Vial, rng: Random): Form
+-- a random form out of a vial (server only). minRarity: only that rarity or better (the offline 24 h guarantee),
+-- with the vial's own odds between them
+function Forms.roll(v: Vial, rng: Random, minRarity: number?): Form
 	local ch = Forms.chances(v)
+	if minRarity and minRarity > 1 then
+		local t = 0
+		for r, c in ch do if r >= minRarity then t += c end end
+		if t > 0 then
+			local out = {}
+			for r, c in ch do if r >= minRarity then out[r] = c / t end end
+			ch = out
+		end
+	end
 	local x = rng:NextNumber()
 	local rarity = 1
 	local acc = 0

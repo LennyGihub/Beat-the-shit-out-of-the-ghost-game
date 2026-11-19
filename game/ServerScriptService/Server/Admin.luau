@@ -59,7 +59,7 @@ local function find(list: { any }, word: string?): any
 	return nil
 end
 
-local HELP = "cash <n> | runcash <n> | give <item> | clearitems | ult <id> | allults | allmaps | heal | brut | god | start [map] [diff] | "
+local HELP = "cash <n> | xp <n> | camp all|reset|<n> | trips reset|empty|<n> | form <id>|all|off | offline finish | offline pity <h> | runcash <n> | give <item> | clearitems | ult <id> | allults | allmaps | heal | brut | god | start [map] [diff] | "
 	.. "revive | money2 | glock | vip | doubleult | secondchance | next | killghost | bring | ragdoll [power] | monster <id|off> | boss <id> [tier 1-3] | evolved on|off|<tier> | event plane|van|train | leave | endrun"
 
 local CMD: { [string]: (p: Player, a: string?, b: string?) -> (boolean, string) } = {}
@@ -88,7 +88,72 @@ CMD.camp = function(p, a)
 			if k < n then Data.clearStage(p, st.id, 2); k += 1 end
 		end
 	end
-	return true, k .. " building(s) cleared"
+	local before, after = Data.mapLevel(p) -- (a cleared map brings the level its jars / potions need)
+	return true, k .. " building(s) cleared" .. (after > before and (" - level " .. before .. " -> " .. after) or "")
+end
+
+-- forms: "form <id>" gives that form and wears it, "form all" gives every form, "form off" wears none (to look at them)
+CMD.form = function(p, a)
+	local Forms = require(game:GetService("ReplicatedStorage").Shared.Forms)
+	if a == "all" then
+		for _, fm in Forms.list do Data.addForm(p, fm.id) end
+		return true, #Forms.list .. " forms given"
+	end
+	if a == "off" then
+		local d = Data.get(p)
+		if not d then return false, "No save" end
+		d.FormStim = nil; d.FormPotion = nil
+		Data.refresh(p)
+		Combat.refreshHealth(p)
+		return true, "No form worn"
+	end
+	local fm = nil
+	if a then
+		for _, x in Forms.list do
+			if string.lower(x.id) == string.lower(a) then fm = x end
+		end
+		if not fm then fm = find(Forms.list, a) end
+	end
+	if not fm then return false, "Usage: form <id> | form all" end
+	Data.addForm(p, fm.id)
+	Data.equipForm(p, fm.id)
+	Combat.refreshHealth(p)
+	return true, "Wearing " .. fm.name .. " (" .. Forms.rarity[fm.rarity].name .. ")"
+end
+-- train tickets: "trips reset" (all 5 back), "trips empty" (none left), "trips <n>" (n left)
+CMD.trips = function(p, a)
+	local Campaign = require(game:GetService("ReplicatedStorage").Shared.Campaign)
+	local max = Campaign.TRIPS.max
+	local left = a == "reset" and max or (a == "empty" and 0 or tonumber(a))
+	if not left then return false, "Usage: trips reset | empty | <n left>" end
+	Data.setTrips(p, max - math.clamp(math.floor(left), 0, max))
+	local l, reset = Data.tripsLeft(p)
+	return true, l .. " / " .. max .. " train tickets" .. (reset > 0 and (" (back in " .. Campaign.clock(reset - os.time()) .. ")") or "")
+end
+-- offline opening: "offline finish" (everything in the queues is done now), "offline pity <hours>" (opening time
+-- counted towards the RARE+ guarantee)
+CMD.offline = function(p, a, b)
+	local Forms = require(game:GetService("ReplicatedStorage").Shared.Forms)
+	local o = Data.offline(p)
+	if not o then return false, "No save" end
+	if a == "finish" then
+		local n = 0
+		for _, kind in { "stim", "potion" } do
+			local k = o[kind]
+			local total = 0
+			for _, id in k.q do
+				local v = Forms.vialById[id]
+				total += v and Forms.openTime(v) or 0
+			end
+			if #k.q > 0 then k.t = os.time() - total - 1; n += #k.q end
+		end
+		return true, n .. " jar(s) / potion(s) finish now"
+	elseif a == "pity" then
+		local h = tonumber(b) or 23.99
+		o.pity = math.floor(h * 3600)
+		return true, "Offline opening counted: " .. h .. " h (RARE+ at " .. (Forms.OFFLINE.pity / 3600) .. " h)"
+	end
+	return false, "Usage: offline finish | offline pity <hours>"
 end
 
 CMD.cash = function(p, a)

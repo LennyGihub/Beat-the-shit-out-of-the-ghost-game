@@ -62,6 +62,22 @@ for _, m in List do
 end
 
 local Campaign = { list = List, mapById = mapById, stageById = stageById, diffRank = DIFF_RANK, rankDiff = RANK_DIFF }
+-- TRAIN TICKETS: a player can take `max` train trips (to a building: from the park, NEXT BUILDING or FIGHT AGAIN) in
+-- `window` seconds; the window starts at the first trip of it (Server/Data: Trips, player attributes TripsLeft /
+-- TripsReset = the unix time the tickets come back)
+Campaign.TRIPS = { max = 5, window = 3 * 3600 }
+-- "2:41:07" / "41:07"
+function Campaign.clock(sec: number): string
+	sec = math.max(0, math.floor(sec))
+	local h, m, x = sec // 3600, (sec % 3600) // 60, sec % 60
+	if h > 0 then return string.format("%d:%02d:%02d", h, m, x) end
+	return string.format("%d:%02d", m, x)
+end
+-- tickets left for a player's attributes (the window may be over already)
+function Campaign.ticketsLeft(left: number?, reset: number?, now: number): number
+	if (reset or 0) > 0 and now >= (reset :: number) then return Campaign.TRIPS.max end
+	return math.clamp(left or Campaign.TRIPS.max, 0, Campaign.TRIPS.max)
+end
 export type Progress = { [string]: number }
 
 function Campaign.stage(id: string?): Stage?
