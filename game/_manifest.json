@@ -250,8 +250,8 @@
    "file": "ServerScriptService/Server/Ghost.luau",
    "instance": "game.ServerScriptService.Server.Ghost",
    "class": "ModuleScript",
-   "bytes": 45686,
-   "sha1": "d3050a8b5e92e10d1bfb7159ea6193aecc58ed7c"
+   "bytes": 47145,
+   "sha1": "27a63b26e6a918220c14b571adf46cbfca3b7fc7"
   },
   {
    "file": "ServerScriptService/Server/GoblinLoot.luau",
@@ -306,8 +306,8 @@
    "file": "ServerScriptService/Server/MapLoader.luau",
    "instance": "game.ServerScriptService.Server.MapLoader",
    "class": "ModuleScript",
-   "bytes": 9098,
-   "sha1": "fc39b1cc160994205eee6db8a5f05ce287364082"
+   "bytes": 10948,
+   "sha1": "18b592232d2fb46a83f5ea004934cd2a64ae714e"
   },
   {
    "file": "ServerScriptService/Server/Mobile.luau",
@@ -544,8 +544,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/Fx.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.Fx",
    "class": "ModuleScript",
-   "bytes": 31526,
-   "sha1": "3346dde6f9955204900fc24a81fefd4defbfe879"
+   "bytes": 35080,
+   "sha1": "7c57114aef03b95fc6929e463d615eb308d27a4e"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/FxTier.luau",

@@ -514,10 +514,51 @@ PRESETS.cine.AtmColor = Color3.fromRGB(44, 50, 64)
 PRESETS.cine.AtmHaze = 1.0
 local currentZone = ""
 local Maps = require(RS.Shared.Maps)
+-- WORLDS (Server/MapLoader, RS World = the campaign map whose building is loaded): each map's outside has its own sky
+-- (the camp's blue moonlight, the carnival's purple night, the harbour's green fog, the abbey's blood-red dusk, the
+-- moon's black starry sky). Merged over the yard preset; the sky colour and the clock also hold inside the building
+-- (the windows show the same sky). Stars / MoonSize go to Lighting.Sky.
+local WORLD = {
+	Camp = { ClockTime = 0, Brightness = 2.5, Exposure = 0.9, Ambient = Color3.fromRGB(40, 46, 62), Outdoor = Color3.fromRGB(135, 155, 200),
+		AtmDensity = 0.3, AtmColor = Color3.fromRGB(62, 80, 104), AtmDecay = Color3.fromRGB(30, 40, 62), AtmHaze = 1.6, AtmGlare = 0,
+		Tint = Color3.fromRGB(215, 230, 255), Sat = -0.18, Contrast = 0.16, Stars = 3000, MoonSize = 20 },
+	Carnival = { ClockTime = 0, Brightness = 1.6, Exposure = 0.5, Ambient = Color3.fromRGB(52, 36, 64), Outdoor = Color3.fromRGB(132, 92, 160),
+		AtmDensity = 0.28, AtmColor = Color3.fromRGB(96, 52, 116), AtmDecay = Color3.fromRGB(52, 22, 74), AtmHaze = 1.7, AtmGlare = 0,
+		Tint = Color3.fromRGB(255, 226, 250), Sat = -0.02, Contrast = 0.16, Stars = 2000, MoonSize = 24 },
+	Harbor = { ClockTime = 21.5, Brightness = 1.4, Exposure = 0.45, Ambient = Color3.fromRGB(38, 48, 50), Outdoor = Color3.fromRGB(92, 112, 112),
+		AtmDensity = 0.46, AtmColor = Color3.fromRGB(70, 88, 90), AtmDecay = Color3.fromRGB(38, 52, 56), AtmHaze = 2.6, AtmGlare = 0,
+		Tint = Color3.fromRGB(214, 236, 234), Sat = -0.3, Contrast = 0.15, Stars = 0, MoonSize = 10 },
+	Abbey = { ClockTime = 18.15, Brightness = 1.6, Exposure = 0.3, Ambient = Color3.fromRGB(62, 32, 26), Outdoor = Color3.fromRGB(150, 84, 62),
+		AtmDensity = 0.36, AtmColor = Color3.fromRGB(150, 64, 40), AtmDecay = Color3.fromRGB(96, 30, 18), AtmHaze = 2.2, AtmGlare = 0.3,
+		Tint = Color3.fromRGB(255, 218, 202), Sat = -0.08, Contrast = 0.17, Stars = 0, MoonSize = 14 },
+	Moon = { ClockTime = 0, Brightness = 2.1, Exposure = 0.4, Ambient = Color3.fromRGB(40, 42, 54), Outdoor = Color3.fromRGB(122, 128, 152),
+		AtmDensity = 0.03, AtmColor = Color3.fromRGB(20, 20, 30), AtmDecay = Color3.fromRGB(8, 8, 16), AtmHaze = 0, AtmGlare = 0,
+		Tint = Color3.fromRGB(230, 236, 255), Sat = -0.3, Contrast = 0.22, Stars = 5000, MoonSize = 0 },
+}
+local SKY_KEYS = { "ClockTime", "AtmColor", "AtmDecay", "Stars", "MoonSize" }
 function Fx.applyZone(zone: string, dt: number)
 	-- Studio photo hook: player attribute DebugBright = true lights everything like an event cinematic (bright moon)
 	if game:GetService("RunService"):IsStudio() and game:GetService("Players").LocalPlayer:GetAttribute("DebugBright") then zone = "cine" end
 	local p = PRESETS[zone]
+	local wp = WORLD[RS:GetAttribute("World") or ""]
+	-- Studio tuning hook: player attribute DebugWorldLight = JSON of preset keys (colours as [r, g, b]) laid over the world's
+	if wp and game:GetService("RunService"):IsStudio() then
+		local j = game:GetService("Players").LocalPlayer:GetAttribute("DebugWorldLight")
+		if type(j) == "string" and j ~= "" then
+			local ok, t = pcall(function() return game:GetService("HttpService"):JSONDecode(j) end)
+			if ok and type(t) == "table" then
+				wp = table.clone(wp)
+				for k, v in t do
+					if type(v) == "table" then wp[k] = Color3.fromRGB(v[1] or 0, v[2] or 0, v[3] or 0) else wp[k] = v end
+				end
+			end
+		end
+	end
+	if wp and (zone == "yard" or zone == "cine") then
+		p = table.clone(p)
+		for k, v in wp do p[k] = v end
+		if zone == "cine" then p.Exposure += 0.5; p.Brightness = math.max(p.Brightness, 2.2) end
+	end
 	-- each map has its own interior look (tint, ambient, grade)
 	if zone == "inside" then
 		local m = Maps.byId[RS:GetAttribute("MapId") or "Mansion"]
@@ -534,6 +575,15 @@ function Fx.applyZone(zone: string, dt: number)
 		p.Exposure = (p.Exposure or 0) + 0.35
 		p.Contrast = math.min(p.Contrast or 0.2, 0.18)
 		p.Brightness = math.max(p.Brightness or 1.4, 1.5)
+		if wp then for _, k in SKY_KEYS do p[k] = wp[k] end end
+	end
+	do -- the stars and the moon (a world's own, else the usual sky)
+		local sky = Lighting:FindFirstChildOfClass("Sky")
+		if sky then
+			sky.StarCount = p.Stars or 1500
+			sky.MoonAngularSize = p.MoonSize or 14
+			sky.CelestialBodiesShown = (p.MoonSize or 14) > 0
+		end
 	end
 	local a = zone == currentZone and math.min(1, dt * 2) or 1
 	currentZone = zone
