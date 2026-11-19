@@ -525,6 +525,59 @@ local function abilityPose(ab: string, phase: string, t: number, since: number):
 			p.Waist = A(0.3 + k, 0, 0); p.Neck = A(0.6 + k, s(t * 31) * 0.1, 0)
 			p.RightShoulder = A(2.4, 0, 0.9); p.LeftShoulder = A(2.4, 0, -0.9); p.RightElbow = A(1.9, 0, 0); p.LeftElbow = A(1.9, 0, 0)
 		end
+	elseif ab == "deepOne" then -- the Deep One (Blackwater Harbor)
+		if phase == "gurgle" then -- head thrown back, throat swelling, arms out
+			local q = s(t * 22) * 0.05
+			p.Waist = A(0.35 * a, 0, 0); p.Neck = A(0.7 * a + q, 0, 0)
+			p.RightShoulder = A(0.6, 0, 0.7 * a); p.LeftShoulder = A(0.6, 0, -0.7 * a); p.RightElbow = A(0.9, 0, 0); p.LeftElbow = A(0.9, 0, 0)
+		elseif phase == "spit" then -- snapped forward, mouth first
+			p.Waist = A(-0.5, 0, 0); p.Neck = A(-0.3, 0, 0)
+			p.RightShoulder = A(-0.4, 0, 0.5); p.LeftShoulder = A(-0.4, 0, -0.5)
+		elseif phase == "sink" then -- crouching into the floor
+			p.Root = CFrame.new(0, -2.2 * a, 0) * A(-0.3, 0, 0); p.Waist = A(-0.4, 0, 0)
+			p.RightHip = A(1.4, 0, 0.2); p.LeftHip = A(1.4, 0, -0.2); p.RightKnee = A(-2.0, 0, 0); p.LeftKnee = A(-2.0, 0, 0)
+			p.RightShoulder = A(2.8, 0, 0.2); p.LeftShoulder = A(2.8, 0, -0.2)
+		elseif phase == "burst" then -- out of the floor, arms flung up
+			p.Waist = A(0.3, 0, 0); p.Neck = A(0.4, 0, 0)
+			p.RightShoulder = A(3.0, 0, 0.6); p.LeftShoulder = A(3.0, 0, -0.6); p.RightElbow = A(0.2, 0, 0); p.LeftElbow = A(0.2, 0, 0)
+			p.RightHip = A(0.4, 0, 0.2); p.LeftHip = A(0.4, 0, -0.2)
+		elseif phase == "gasp" then -- doubled over, gasping, gills flaring
+			local br = s(t * 9) * 0.12
+			p.Waist = A(-0.7 - br, 0, 0); p.Neck = A(0.5 + br, 0, 0)
+			p.RightShoulder = A(0.5, 0, 0.3); p.LeftShoulder = A(0.5, 0, -0.3); p.RightElbow = A(1.3, 0, 0); p.LeftElbow = A(1.3, 0, 0)
+			p.RightHip = A(0.4, 0, 0.1); p.LeftHip = A(0.4, 0, -0.1); p.RightKnee = A(-0.6, 0, 0); p.LeftKnee = A(-0.6, 0, 0)
+		end
+	elseif ab == "keeper" then -- the Keeper (Blackwater Harbor)
+		if phase == "raise" or phase == "sweep" then -- the lamp held up high and out in front, the other hand shading his eyes
+			p.RightShoulder = A(2.3 * a, 0, 0.15); p.RightElbow = A(0.3, 0, 0); p.RightWrist = A(-0.4, 0, 0)
+			p.LeftShoulder = A(2.0 * a, 0, -0.5); p.LeftElbow = A(2.2 * a, 0, 0)
+			p.Waist = A(0.1, 0, 0); p.Neck = A(0.1, 0, 0)
+		elseif phase == "charge" then -- the lamp thrust at you at arm's length, trembling, leaning in
+			local q = s(t * 40) * 0.05
+			p.RightShoulder = A(1.6 + q, 0, 0.05); p.RightElbow = A(0.05, 0, 0); p.Waist = A(-0.25, 0, 0); p.Neck = A(0.2, 0, 0)
+			p.LeftShoulder = A(0.3, 0, -0.4); p.LeftElbow = A(0.6, 0, 0)
+		elseif phase == "lunge" then -- running at you, the lamp swinging back
+			local r = s(t * 18)
+			p.Root = A(-0.35, 0, 0); p.Waist = A(-0.2, 0, 0)
+			p.RightShoulder = A(-0.8 + r * 0.3, 0, 0.3); p.LeftShoulder = A(1.6, 0, -0.3); p.LeftElbow = A(0.4, 0, 0)
+			p.RightHip = A(r * 1.1, 0, 0); p.LeftHip = A(-r * 1.1, 0, 0); p.RightKnee = A(-0.4 - math.max(0, r), 0, 0); p.LeftKnee = A(-0.4 - math.max(0, -r), 0, 0)
+		end
+	elseif ab == "netman" then -- the Netman (Blackwater Harbor)
+		if phase == "swing" then -- the net whirled overhead
+			p.RightShoulder = A(3.0, s(t * 14) * 0.5, 0.4); p.RightElbow = A(0.4, 0, 0)
+			p.LeftShoulder = A(1.0, 0, -0.4); p.Waist = A(0.15, 0.3 * a, 0)
+		elseif phase == "throw" then
+			p.RightShoulder = A(1.3, 0, -0.3); p.RightElbow = A(0.1, 0, 0); p.Waist = A(-0.35, -0.4, 0); p.Neck = A(0.2, 0.3, 0)
+			p.RightHip = A(0.5, 0, 0.1); p.LeftHip = A(-0.4, 0, -0.1)
+		elseif phase == "windup" then -- the chain gathered in both hands, crouched, twisting back
+			p.Root = CFrame.new(0, -0.8 * a, 0); p.Waist = A(-0.2, 0.8 * a, 0)
+			p.RightShoulder = A(1.2, 0, 0.6); p.LeftShoulder = A(1.2, 0, -0.2); p.RightElbow = A(0.8, 0, 0); p.LeftElbow = A(0.8, 0, 0)
+			p.RightHip = A(0.6, 0, 0.3); p.LeftHip = A(0.6, 0, -0.3); p.RightKnee = A(-0.9, 0, 0); p.LeftKnee = A(-0.9, 0, 0)
+		elseif phase == "spin" then -- leaning back against the whirling chain, both arms out holding it
+			p.Waist = A(0.3, 0, 0); p.Neck = A(0.15, 0, 0)
+			p.RightShoulder = A(1.6, 0, 0.9); p.LeftShoulder = A(1.6, 0, -0.9); p.RightElbow = A(0.2, 0, 0); p.LeftElbow = A(0.2, 0, 0)
+			p.RightHip = A(-0.3, 0, 0.3); p.LeftHip = A(-0.3, 0, -0.3)
+		end
 	elseif ab == "ringmaster" then -- the Ringmaster
 		if phase == "wind" then
 			-- the whip arm drawn back over his shoulder

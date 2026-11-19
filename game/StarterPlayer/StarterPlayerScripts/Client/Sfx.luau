@@ -32,6 +32,18 @@ local VOICES = {
 	Caller = { Spawn = "DemonLaugh", WindUp = "PirateSwing", Claw = "PirateSwing", Hurt = "PirateHurt", Death = "GhostDeath" },
 	Rat = { Spawn = "RatSpawn", WindUp = "RatSqueal", Claw = "RatSqueal", Hurt = "RatHurt", Death = "RatDeath" },
 	Conqueror = { Spawn = "DemonRoar", WindUp = "DemonGrowl", Claw = "DemonHit", Hurt = "DemonHurt", Death = "DemonDeath" },
+	-- (every monster since Camp Hollowmere: its own voice, Shared/Sounds V_<id>_<role>)
+	Antlered = { Spawn = "V_Antlered_Spawn", WindUp = "V_Antlered_WindUp", Claw = "V_Antlered_Claw", Hurt = "V_Antlered_Hurt", Death = "V_Antlered_Death" },
+	LakeWitch = { Spawn = "V_LakeWitch_Spawn", WindUp = "V_LakeWitch_WindUp", Claw = "V_LakeWitch_Claw", Hurt = "V_LakeWitch_Hurt", Death = "V_LakeWitch_Death" },
+	Counselor = { Spawn = "V_Counselor_Spawn", WindUp = "V_Counselor_WindUp", Claw = "V_Counselor_Claw", Hurt = "V_Counselor_Hurt", Death = "V_Counselor_Death" },
+	Scarecrow = { Spawn = "V_Scarecrow_Spawn", WindUp = "V_Scarecrow_WindUp", Claw = "V_Scarecrow_Claw", Hurt = "V_Scarecrow_Hurt", Death = "V_Scarecrow_Death" },
+	Clown = { Spawn = "V_Clown_Spawn", WindUp = "V_Clown_WindUp", Claw = "V_Clown_Claw", Hurt = "V_Clown_Hurt", Death = "V_Clown_Death" },
+	Strongman = { Spawn = "V_Strongman_Spawn", WindUp = "V_Strongman_WindUp", Claw = "V_Strongman_Claw", Hurt = "V_Strongman_Hurt", Death = "V_Strongman_Death" },
+	Fortune = { Spawn = "V_Fortune_Spawn", WindUp = "V_Fortune_WindUp", Claw = "V_Fortune_Claw", Hurt = "V_Fortune_Hurt", Death = "V_Fortune_Death" },
+	Ringmaster = { Spawn = "V_Ringmaster_Spawn", WindUp = "V_Ringmaster_WindUp", Claw = "V_Ringmaster_Claw", Hurt = "V_Ringmaster_Hurt", Death = "V_Ringmaster_Death" },
+	DeepOne = { Spawn = "V_DeepOne_Spawn", WindUp = "V_DeepOne_WindUp", Claw = "V_DeepOne_Claw", Hurt = "V_DeepOne_Hurt", Death = "V_DeepOne_Death" },
+	Keeper = { Spawn = "V_Keeper_Spawn", WindUp = "V_Keeper_WindUp", Claw = "V_Keeper_Claw", Hurt = "V_Keeper_Hurt", Death = "V_Keeper_Death" },
+	Netman = { Spawn = "V_Netman_Spawn", WindUp = "V_Netman_WindUp", Claw = "V_Netman_Claw", Hurt = "V_Netman_Hurt", Death = "V_Netman_Death" },
 }
 local lastMonster = "Woman"
 function Sfx.voice(role: string, monsterId: string?): string

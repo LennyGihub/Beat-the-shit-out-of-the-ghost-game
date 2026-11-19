@@ -466,6 +466,11 @@ end
 
 -- the pose and the see-through amount (0 = solid, 1 = gone) of monster `id`, s seconds into its entrance
 -- (t = the clock, for shakes; H = the monster's height in studs). nil = this monster has no entrance pose.
+-- Blackwater Harbor's monsters use a fitting entrance of another monster (Shared/Entrances)
+EP.T.DeepOne = EP.T.LakeWitch; POSES.DeepOne = POSES.LakeWitch
+EP.T.Keeper = EP.T.Counselor; POSES.Keeper = POSES.Counselor
+EP.T.Netman = EP.T.Pirate; POSES.Netman = POSES.Pirate
+
 function EP.pose(id: string, evolved: boolean, s: number, t: number, H: number): (Pose?, number)
 	local f = POSES[id]
 	if not f then return nil, 0 end

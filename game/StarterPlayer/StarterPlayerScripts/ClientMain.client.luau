@@ -72,6 +72,7 @@ local OfflineOpen = require(Client.OfflineOpen) -- jars / potions opening by the
 local FormTutorial = require(Client.FormTutorial) -- after the intro: how to get jars and potions
 local CampFx = require(Client.CampFx) -- Camp Hollowmere's monsters' moves (rafter drop, hook, flood, torch, straw)
 local CarnivalFx = require(Client.CarnivalFx) -- the Moonlight Carnival's monsters' moves (crates, shockwave, curse, whip)
+local HarborFx = require(Client.HarborFx) -- Blackwater Harbor's monsters' moves (ink, dive, beam, flash, net, anchor)
 
 Platform.init()
 -- the server is told which controls this player uses: touch players reach further, lift from far and face a weaker
@@ -126,6 +127,7 @@ OfflineOpen.init(function() return FormCine.busy() end)
 FormTutorial.init(SellerUI, FormCine, Intro)
 CampFx.init(Fx)
 CarnivalFx.init(Fx)
+HarborFx.init(Fx, HUD)
 -- lobby screen: PLAY (create / join lobbies) and SHOP buttons, friend booster
 QuestUI.init(function(open)
 	Input.setShopOpen(open)
@@ -159,6 +161,7 @@ end
 
 for _, k in CampFx.KINDS do FIGHT[k] = true end -- (Camp Hollowmere's monsters' moves: fight-only too)
 for _, k in CarnivalFx.KINDS do FIGHT[k] = true end
+for _, k in HarborFx.KINDS do FIGHT[k] = true end
 
 Remotes.Fx.OnClientEvent:Connect(function(kind: string, ...)
 	if FIGHT[kind] and not lp:GetAttribute("InMatch") then return end
@@ -243,6 +246,8 @@ Remotes.Fx.OnClientEvent:Connect(function(kind: string, ...)
 		CampFx.handle(kind, ...)
 	elseif CarnivalFx.handles(kind) then
 		CarnivalFx.handle(kind, ...)
+	elseif HarborFx.handles(kind) then
+		HarborFx.handle(kind, ...)
 	elseif MonsterFx.handles(kind) then
 		MonsterFx.handle(kind, ...)
 	else

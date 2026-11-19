@@ -15,6 +15,7 @@ local Caller = require(script.Parent.Caller) -- the Caller's "ambush" (and his f
 local Knight = require(script.Parent.Knight) -- the Void Knight's "forcePush"
 local CampMonsters = require(script.Parent.CampMonsters) -- Camp Hollowmere: rafterDrop, hookPull, firebrand, scareSwap
 local CarnivalMonsters = require(script.Parent.CarnivalMonsters) -- the Moonlight Carnival: popClown, strongman, fortune, ringmaster
+local HarborMonsters = require(script.Parent.HarborMonsters) -- Blackwater Harbor: deepOne, keeper, netman
 
 local Abilities = {}
 local rng = Random.new()
@@ -99,6 +100,7 @@ function Abilities.interrupt(g)
 	if g.ab.kind == "forcePush" then Knight.interrupt(g) end
 	if CampMonsters.KINDS[g.ab.kind] then CampMonsters.interrupt(g) end
 	if CarnivalMonsters.KINDS[g.ab.kind] then CarnivalMonsters.interrupt(g) end
+	if HarborMonsters.KINDS[g.ab.kind] then HarborMonsters.interrupt(g) end
 	if g.ab.kind == "steal" then Remotes.Fx:FireAllClients("GoblinUse", g.model, "", "stop", 0) end
 	if g.ab.kind == "levitateThrow" and g.ab.obj then Abilities.dropLevitated(g.ab) end
 	g.ab = nil
@@ -171,6 +173,8 @@ function Abilities.try(g, G, now: number, target: Player?, thrp: BasePart?, dist
 		return CampMonsters.try(g, G, now, a, target, thrp, dist)
 	elseif CarnivalMonsters.KINDS[k] then
 		return CarnivalMonsters.try(g, G, now, a, target, thrp, dist)
+	elseif HarborMonsters.KINDS[k] then
+		return HarborMonsters.try(g, G, now, a, target, thrp, dist)
 	elseif k == "shieldBash" then
 		if dist < a.min or dist > a.max or warded(target) then return false end
 		start(g, G, "brace", a.brace, {})
@@ -486,6 +490,7 @@ function Abilities.step(g, G, dt: number, now: number, target: Player?, thrp: Ba
 	if k == "forcePush" then return Knight.step(g, G, dt, now, target, thrp, hoverY) end
 	if CampMonsters.KINDS[k] then return CampMonsters.step(g, G, dt, now, target, thrp, hoverY) end
 	if CarnivalMonsters.KINDS[k] then return CarnivalMonsters.step(g, G, dt, now, target, thrp, hoverY) end
+	if HarborMonsters.KINDS[k] then return HarborMonsters.step(g, G, dt, now, target, thrp, hoverY) end
 	local function face(p: Vector3)
 		local f = Vector3.new(p.X, pos.Y, p.Z)
 		if (f - pos).Magnitude > 0.1 then g.ao.CFrame = CFrame.lookAt(pos, f).Rotation end
@@ -1046,6 +1051,7 @@ function Abilities.tick(G, dt: number, now: number)
 	Loot.tick(G, dt, now)
 	CampMonsters.tick(G, now) -- (the Lake Witch's flood)
 	CarnivalMonsters.tick(G, now) -- (Madame Fortune's curses and crystal ball)
+	HarborMonsters.tick(G, now) -- (ink, flash and net marks wear off)
 	-- TIME STOP (Ghost.timeStop) holds everything the monster sent out too: the Captain's crew, the Widow's doubles,
 	-- gas clouds and hellfire marks wait where they are until time moves again
 	local cur = G.current
@@ -1225,6 +1231,7 @@ function Abilities.clear()
 	Caller.clear()
 	CampMonsters.clear()
 	CarnivalMonsters.clear()
+	HarborMonsters.clear()
 	flyers = {}
 	for _, h in hurled do if h.obj.Parent then smashHurled(h.obj, Vector3.zero, 20) end end
 	hurled = {}
@@ -1266,6 +1273,10 @@ CarnivalMonsters.init({
 	setPhase = setPhase, start = start, finish = finish, hover = hover, flat = flat, warded = warded,
 	hrpOf = hrpOf, matchPlayers = matchPlayers, fx = fx, dmgScale = dmgScale, spawnClones = Abilities.spawnClones,
 	clones = function() return clones end, hurl = Abilities.hurl, ungrip = ungrip,
+})
+HarborMonsters.init({
+	setPhase = setPhase, start = start, finish = finish, hover = hover, flat = flat, warded = warded,
+	hrpOf = hrpOf, matchPlayers = matchPlayers, fx = fx, dmgScale = dmgScale,
 })
 -- the Scarecrow holds still while he is watched (Ghost's Chase state asks this first)
 Abilities.chaseHold = CampMonsters.chaseHold

@@ -72,6 +72,17 @@ local List: { Map } = {
 		light = light(C(255, 226, 180), C(28, 22, 18), -0.3, 0.26, 1.25, -0.1) },
 	{ id = "Carn_GhostTrain", name = "The Ghost Train", price = 0, campaign = true, desc = "A dark ride to the Party Bear's stage.", color = C(90, 200, 120),
 		light = light(C(200, 230, 220), C(16, 20, 22), -0.35, 0.3, 1.05, -0.25) },
+	-- BLACKWATER HARBOR (Shared/Campaign map 3; tools/build/maps/harbor_lib.luau + harb_<building>.luau)
+	{ id = "Harb_Market", name = "The Fish Market", price = 0, campaign = true, desc = "Slabs of ice, crates and a drain into the harbor.", color = C(90, 170, 160),
+		light = light(C(210, 236, 240), C(22, 30, 34), -0.3, 0.26, 1.2, -0.1) },
+	{ id = "Harb_Cannery", name = "The Cannery", price = 0, campaign = true, desc = "Conveyor belts, boilers and towers of tins.", color = C(170, 140, 90),
+		light = light(C(240, 230, 200), C(28, 26, 22), -0.3, 0.26, 1.2, -0.1) },
+	{ id = "Harb_Lighthouse", name = "The Lighthouse", price = 0, campaign = true, desc = "The keeper's house at the foot of the tower.", color = C(240, 210, 120),
+		light = light(C(255, 236, 200), C(26, 26, 30), -0.3, 0.26, 1.2, -0.1) },
+	{ id = "Harb_NetLoft", name = "The Net Loft", price = 0, campaign = true, desc = "Nets on every beam, floats, ropes and barrels.", color = C(200, 110, 60),
+		light = light(C(240, 220, 200), C(26, 22, 20), -0.3, 0.26, 1.2, -0.1) },
+	{ id = "Harb_Ship", name = "The Ghost Ship", price = 0, campaign = true, desc = "The captain's ship, moored at the end of the pier.", color = C(80, 130, 170),
+		light = light(C(200, 220, 255), C(20, 26, 34), -0.3, 0.28, 1.15, -0.15) },
 }
 
 local Difficulties: { Difficulty } = {

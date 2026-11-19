@@ -395,7 +395,8 @@ function UI.init()
 	end
 	-- one tab per map with a set (each map brings 4 new jars and 4 new potions)
 	for i, set in Forms.sets do
-		local t = button(panel, set, { Position = UDim2.fromScale(0.04 + (i - 1) * 0.285, 0.172), Size = UDim2.fromScale(0.27, 0.058), ZIndex = 12, Rotation = (i % 2 == 0) and 1 or -1 }, DARK)
+		local tw = math.min(0.27, 0.56 / #Forms.sets - 0.012) -- (the tabs share the left half: the right is the worn form)
+		local t = button(panel, set, { Position = UDim2.fromScale(0.04 + (i - 1) * (tw + 0.012), 0.172), Size = UDim2.fromScale(tw, 0.058), ZIndex = 12, Rotation = (i % 2 == 0) and 1 or -1 }, DARK)
 		local lab = t:FindFirstChild("Label") :: TextLabel?
 		if lab then lab.Font = Grunge.TYPE end
 		t.Activated:Connect(function()

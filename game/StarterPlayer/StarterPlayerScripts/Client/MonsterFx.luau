@@ -650,7 +650,7 @@ function MonsterFx.handle(kind: string, ...)
 			hum.PlatformStand = true
 			HUD.flash(Color3.fromRGB(120, 0, 0), 0.6)
 			HUD.toast("GRABBED!")
-			Sfx.play("GhostScream", { Volume = 0.8, PlaybackSpeed = 0.7 })
+			Sfx.play(Sfx.voice("Claw"), { Volume = 0.9 })
 			local untilT = os.clock() + (t or 0.9) + 0.25 -- the server's throw (Fling) ends it sooner
 			-- The fist can be up through a ceiling or a wall (the Flayed Giant is taller than the upstairs rooms):
 			-- the held player stays inside the room the monster stands in, or the throw would start in the roof.
@@ -689,7 +689,7 @@ function MonsterFx.handle(kind: string, ...)
 	elseif kind == "Released" then
 		release()
 	elseif kind == "Pounce" then
-		Sfx.at("GhostScream", a[1], { PlaybackSpeed = 1.4, Volume = 1 })
+		Sfx.at(Sfx.voice("WindUp"), a[1], { PlaybackSpeed = 1.15, Volume = 1.2 })
 	elseif kind == "Wail" then
 		local pos, r = a[1], a[2]
 		Sfx.at("GhostWail", pos, { PlaybackSpeed = 1.2, Volume = 2 })
@@ -911,7 +911,7 @@ function MonsterFx.handle(kind: string, ...)
 	elseif kind == "Charge" then
 		local pos = a[1]
 		Sfx.at("Whoosh", pos, { PlaybackSpeed = 0.4, Volume = 2 })
-		Sfx.at("GhostScream", pos, { PlaybackSpeed = 0.5, Volume = 1.2 })
+		Sfx.at(Sfx.voice("Spawn"), pos, { PlaybackSpeed = 0.8, Volume = 1.3 })
 		Fx.shake(0.3 * near(pos, 60))
 	elseif kind == "AmbushBreath" then
 		-- the Caller, asleep in his corner: a slow breath you can only just hear, and only from close

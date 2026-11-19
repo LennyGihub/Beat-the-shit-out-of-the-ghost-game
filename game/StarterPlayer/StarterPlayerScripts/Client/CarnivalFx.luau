@@ -178,7 +178,7 @@ local function ballSmash(pos: Vector3)
 	end
 	burst(pos, VIOLET, 30, 0.5, 20, SPARK, 1)
 	Sfx.at("GlassBreak", pos, { Volume = 1.4 })
-	Sfx.at("GhostScream", pos, { Volume = 1, PlaybackSpeed = 1.15 })
+	Sfx.at(Sfx.voice("Hurt", "Fortune"), pos, { Volume = 1.3 })
 	shakeNear(pos, 80, 0.5)
 end
 
@@ -318,7 +318,7 @@ function CF.handle(kind: string, ...)
 		end
 	elseif kind == "CurseHit" then
 		burst(a[1], VIOLET, 30, 0.6, 14, SPARK, 1)
-		Sfx.at("GhostScream", a[1], { Volume = 0.7, PlaybackSpeed = 1.4 })
+		Sfx.at(Sfx.voice("Claw", "Fortune"), a[1], { Volume = 1 })
 	elseif kind == "CurseFizzle" then
 		burst(a[1], VIOLET, 12, 0.5, 6, SPARK, 1)
 	elseif kind == "CardsWind" then

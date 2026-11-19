@@ -24,6 +24,10 @@ local TIME: { [string]: number } = {
 	Strongman = 5.0, -- crouched over a giant barbell: he lifts it over his head, roars, and drops it (a shockwave)
 	Fortune = 5.4, -- a crystal ball glows on a little table in the dark, her eyes in it; she fades in behind it, cards fly
 	Ringmaster = 5.6, -- one spotlight in the dark: head bowed, then arms wide, the whip cracks, the crowd roars, lights
+	-- Blackwater Harbor (Client/Entrance plays a fitting entrance of another monster for each)
+	DeepOne = 5.4, -- rises out of a pool of black water and slams down (the Lake Witch's)
+	Keeper = 5.2, -- the room goes dark, his lamp catches, held up by his face; a flare (the Counselor's)
+	Netman = 5.0, -- walks out of the sea fog and bangs his fists together (the Pirate's)
 }
 return {
 	time = TIME,

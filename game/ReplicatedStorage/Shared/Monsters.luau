@@ -138,6 +138,28 @@ local List: { Monster } = {
 		ability = { kind = "ringmaster", cd = 9, whip = { min = 8, max = 34, wind = 0.65, width = 3.2, dmg = 18 },
 			crowd = { max = 90, wind = 1.0, count = 4, life = 16, speed = 13, dmg = 12 } },
 		desc = "The show must go on. His whip pulls you in, and when it cracks overhead the mannequins in the stands come down for you." }),
+	-- BLACKWATER HARBOR (Server/HarborMonsters; models: tools/build/harbor_monsters.luau)
+	-- THE DEEP ONE (the Fish Market): ink - a blob of ink spat at you (INKED: black ink over your screen); dive - he
+	-- sinks into the floor, a ripple follows you, stops, and he bursts up out of it (get out of the ring), then gasps.
+	m({ id = "DeepOne", name = "The Deep One", title = "THE DEEP ONE", rarity = 1, template = "DeepOne", color = C(90, 190, 160),
+		hp = 1.3, speed = 1.05, dmg = 1.1, reward = 1.7, hover = 4.85, walker = true, scale = 1.15, solid = false,
+		ability = { kind = "deepOne", cd = 7.5, ink = { min = 9, max = 60, wind = 0.75, speed = 52, radius = 4.2, life = 2.2, dmg = 14, blind = 4 },
+			dive = { max = 75, sink = 0.7, swim = 1.7, rise = 0.65, radius = 8, dmg = 26, power = 28, up = 62, gasp = 1.3 } },
+		desc = "It spits black ink in your eyes. When it sinks into the floor, a ripple follows you: when it stops, run." }),
+	-- THE KEEPER (the Lighthouse): beam - his lantern's beam sweeps the room (burns and slows; walls and cover stop
+	-- it); flash - the lamp goes white hot: whoever is looking at him is blinded, and he lunges at them.
+	m({ id = "Keeper", name = "The Keeper", title = "THE KEEPER", rarity = 1, template = "Keeper", color = C(255, 220, 120),
+		hp = 1.35, speed = 1.0, dmg = 1.15, reward = 1.7, hover = 5.05, walker = true, scale = 1.15, solid = false,
+		ability = { kind = "keeper", cd = 8, beam = { max = 80, raise = 0.85, sweep = 2.6, arc = 1.1, width = 0.14, tick = 0.3, dmg = 7, slow = 0.5 },
+			flash = { max = 70, charge = 1.1, blind = 2.6, dot = 0.55, lunge = 0.9, speed = 62, dmg = 24 } },
+		desc = "His lamp still turns. Hide from the beam behind something solid - and when the lamp goes white, LOOK AWAY." }),
+	-- THE NETMAN (the Net Loft): net - a weighted net thrown at you (held in place, hurt); anchor - he whirls his
+	-- anchor round him on its chain along the floor: jump over it, or stay right under him.
+	m({ id = "Netman", name = "The Netman", title = "THE NETMAN", rarity = 1, template = "Netman", color = C(200, 100, 60),
+		hp = 1.5, speed = 0.95, dmg = 1.25, reward = 1.8, hover = 5.45, walker = true, scale = 1.15, solid = false, reach = 1.25,
+		ability = { kind = "netman", cd = 8, net = { min = 8, max = 55, wind = 0.65, speed = 58, radius = 4, life = 1.6, hold = 2.2, dmg = 12 },
+			anchor = { max = 20, wind = 0.85, spin = 1.6, turns = 1.5, radius = 15, dmg = 26, power = 55 } },
+		desc = "He nets you where you stand, then swings his anchor round the room. Jump it - or hug him." }),
 	-- THE SEWER RAT (hand-built: tools/build/rat.luau): a rat the size of a car. ratRush = two moves (Server/Abilities):
 	-- the CHARGE (wind seconds of warning along a red line, then dashSpeed studs/s in a straight line for dashTime
 	-- seconds: furniture, inside walls and players in the way are all sent flying, and he is dizzy for a moment after)

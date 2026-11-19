@@ -252,7 +252,7 @@ function Fx.handle(kind: string, ...)
 	elseif kind == "Jumpscare" then
 		jumpscare()
 	elseif kind == "GhostScream" then
-		Sfx.at("GhostScream", args[1], { Volume = 0.3 })
+		Sfx.at(Sfx.voice("Spawn"), args[1], { Volume = 0.5 })
 	elseif kind == "GhostWindUp" then
 		local w = Sfx.voice("WindUp")
 		Sfx.at(w, args[1], { PlaybackSpeed = w == "GhostWail" and 1.4 or 1, Volume = 0.8 })

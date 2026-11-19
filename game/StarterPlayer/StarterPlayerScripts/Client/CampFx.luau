@@ -365,7 +365,7 @@ end
 local function counselorScream(model: Model?, t: number)
 	local h = hrpOf(model)
 	if not h then return end
-	Sfx.at("GhostScream", h.Position, { Volume = 1.1, PlaybackSpeed = 0.7 })
+	Sfx.at(Sfx.voice("Spawn", "Counselor"), h.Position, { Volume = 1.3 })
 	local tip = torchTip(model)
 	if tip then
 		burst(tip, Color3.fromRGB(255, 140, 40), 30, 0.45, 16, "rbxasset://textures/particles/sparkles_main.dds")
@@ -634,7 +634,7 @@ function CF.handle(kind: string, ...)
 	elseif kind == "FloodCall" then
 		local h = hrpOf(a[1])
 		if h then
-			Sfx.at("GhostWail", h.Position, { Volume = 1, PlaybackSpeed = 0.6 })
+			Sfx.at(Sfx.voice("WindUp", "LakeWitch"), h.Position, { Volume = 1.2 })
 			Sfx.at("Bubbles", h.Position, { Volume = 1 })
 		end
 	elseif kind == "GraspWarn" then graspWarn(a[1], a[2], a[3], a[4])
