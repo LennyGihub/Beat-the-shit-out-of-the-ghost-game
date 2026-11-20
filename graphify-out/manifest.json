@@ -1,752 +1,758 @@
 {
   "game/ReplicatedStorage/Shared/Config.luau": {
-    "mtime": 1795125544.3467102,
-    "seen": 1795125585.415091,
+    "mtime": 1795133761.3294437,
+    "seen": 1795133808.523544,
     "ast_hash": "1a5229afa5d4acfa70669a472826e124",
     "semantic_hash": ""
   },
   "game/ReplicatedStorage/Shared/Items.luau": {
-    "mtime": 1795125545.7481403,
-    "seen": 1795125585.4150987,
+    "mtime": 1795133762.8401926,
+    "seen": 1795133808.5235505,
     "ast_hash": "d3d511dcaf283d8a80891afe31d3d057",
     "semantic_hash": ""
   },
   "game/ReplicatedStorage/Shared/Sounds.luau": {
-    "mtime": 1795125548.0236306,
-    "seen": 1795125585.4151142,
+    "mtime": 1795133765.0841582,
+    "seen": 1795133808.523561,
     "ast_hash": "049dd4776efa28142f64f737a424226b",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Main.server.luau": {
-    "mtime": 1795125548.6445262,
-    "seen": 1795125585.415118,
+    "mtime": 1795133765.7166584,
+    "seen": 1795133808.523564,
     "ast_hash": "20ed7582d284da8e966736e320489532",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/Combat.luau": {
-    "mtime": 1795125551.9291778,
-    "seen": 1795125585.4151351,
+    "mtime": 1795133768.955979,
+    "seen": 1795133808.523579,
     "ast_hash": "836cbd7dff475ddebd2f140b6f203633",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/Data.luau": {
-    "mtime": 1795125552.2055848,
-    "seen": 1795125585.4151373,
+    "mtime": 1795133769.247172,
+    "seen": 1795133808.52358,
     "ast_hash": "44825a67be2d5f9b3f59a862accc22f4",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/Furniture.luau": {
-    "mtime": 1795125554.2126288,
-    "seen": 1795125585.4151483,
+    "mtime": 1795133771.0406296,
+    "seen": 1795133808.5235884,
     "ast_hash": "2bee59f8368d7ede1e8068eb434de0ea",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/Ghost.luau": {
-    "mtime": 1795125554.8671145,
-    "seen": 1795125585.415152,
+    "mtime": 1795133771.8447058,
+    "seen": 1795133808.5235906,
     "ast_hash": "b89c0fea86fba71376503d681db6c9e1",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/Remotes.luau": {
-    "mtime": 1795125559.7597144,
-    "seen": 1795125585.4151766,
+    "mtime": 1795133776.665504,
+    "seen": 1795133808.5236094,
     "ast_hash": "8cd4aafdb4bd26d6a3ccadd1199713b7",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/Fx.luau": {
-    "mtime": 1795125568.7425277,
-    "seen": 1795125585.4152226,
+    "mtime": 1795133787.0696146,
+    "seen": 1795133808.523647,
     "ast_hash": "febd5685644261aaa01feb19f0684fe7",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/GhostAnim.luau": {
-    "mtime": 1795125569.6291113,
-    "seen": 1795125585.4152255,
+    "mtime": 1795133787.9677005,
+    "seen": 1795133808.5236492,
     "ast_hash": "8e608c98b4b0a6b7af37234054c18584",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/Grunge.luau": {
-    "mtime": 1795125569.8758183,
-    "seen": 1795125585.4152274,
+    "mtime": 1795133788.3025665,
+    "seen": 1795133808.5236506,
     "ast_hash": "a75b0604cad2721e3e6d2a1cb64fd53f",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/HUD.luau": {
-    "mtime": 1795125570.1824467,
-    "seen": 1795125585.415229,
+    "mtime": 1795133788.6943073,
+    "seen": 1795133808.523652,
     "ast_hash": "4faa74c15f3aac1ade99a25a2a324037",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/Input.luau": {
-    "mtime": 1795125571.005116,
-    "seen": 1795125585.415234,
+    "mtime": 1795133789.7439647,
+    "seen": 1795133808.523656,
     "ast_hash": "6dab5d885dce42ebf1741c1ee53fa2eb",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/PlaneFx.luau": {
-    "mtime": 1795125574.9948509,
-    "seen": 1795125585.4152524,
+    "mtime": 1795133794.5989778,
+    "seen": 1795133808.5236683,
     "ast_hash": "2b92e6645a3ddb4fc20c7c952345ae44",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/Sfx.luau": {
-    "mtime": 1795125578.2266312,
-    "seen": 1795125585.4152703,
+    "mtime": 1795133798.0199628,
+    "seen": 1795133808.5236807,
     "ast_hash": "765464a94825bc214cff7d4a3e742e28",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/Viewmodel.luau": {
-    "mtime": 1795125582.6112726,
-    "seen": 1795125585.415294,
+    "mtime": 1795133802.8800385,
+    "seen": 1795133808.5236983,
     "ast_hash": "1b01d581f77742b132bcb51f3fc18b18",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/ClientMain.client.luau": {
-    "mtime": 1795125583.4251213,
-    "seen": 1795125585.4152997,
+    "mtime": 1795133804.3652074,
+    "seen": 1795133808.5237017,
     "ast_hash": "023ba26a3709ebd7626079297a352c80",
     "semantic_hash": ""
   },
   "game/ReplicatedStorage/Shared/Ultimates.luau": {
-    "mtime": 1795125548.3349695,
-    "seen": 1795125585.415116,
+    "mtime": 1795133765.4478574,
+    "seen": 1795133808.5235624,
     "ast_hash": "84004b20ca9cbdf937ffa42c6ad3943a",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/Lobby.luau": {
-    "mtime": 1795125557.0316024,
-    "seen": 1795125585.4151642,
-    "ast_hash": "f6c05efb99245d044305a36f43814140",
+    "mtime": 1795133774.3769705,
+    "seen": 1795133808.5236003,
+    "ast_hash": "c4233a4964d3d7217d6f976303fd6ca9",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/UltRunner.luau": {
-    "mtime": 1795125562.3288317,
-    "seen": 1795125585.4151902,
+    "mtime": 1795133779.419697,
+    "seen": 1795133808.52362,
     "ast_hash": "aaf95b6d604c94e9a5734eb535a693fc",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/UltFx.luau": {
-    "mtime": 1795125581.2411213,
-    "seen": 1795125585.415286,
+    "mtime": 1795133801.2279794,
+    "seen": 1795133808.5236928,
     "ast_hash": "e795464ec5dc427f2bb6788a674dd6b3",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/UltShopUI.luau": {
-    "mtime": 1795125582.1086419,
-    "seen": 1795125585.4152908,
-    "ast_hash": "76e053f3311eea2897a7131191f38de0",
+    "mtime": 1795133802.140067,
+    "seen": 1795133808.5236962,
+    "ast_hash": "7158336d11fdc39b916555c2313e5ea1",
     "semantic_hash": ""
   },
   "game/ReplicatedStorage/Shared/ItemModels.luau": {
-    "mtime": 1795125545.455726,
-    "seen": 1795125585.4150965,
+    "mtime": 1795133762.519255,
+    "seen": 1795133808.5235486,
     "ast_hash": "31782ce6ce6aa5e4b1a9532c01f731ec",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/Events.luau": {
-    "mtime": 1795125552.531521,
-    "seen": 1795125585.4151394,
+    "mtime": 1795133769.5606036,
+    "seen": 1795133808.5235815,
     "ast_hash": "2023ea834af284b261be1f6fccb7addc",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/Inventory.luau": {
-    "mtime": 1795125555.859937,
-    "seen": 1795125585.4151576,
+    "mtime": 1795133773.0041606,
+    "seen": 1795133808.5235949,
     "ast_hash": "6ab65a0c8eb9aff13d261300543c7e53",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/Run.luau": {
-    "mtime": 1795125560.1777806,
-    "seen": 1795125585.4151783,
+    "mtime": 1795133777.1033926,
+    "seen": 1795133808.5236104,
     "ast_hash": "787cd0108ec95172c6acd886d559ea7a",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/EventFx.luau": {
-    "mtime": 1795125567.5255158,
-    "seen": 1795125585.4152162,
+    "mtime": 1795133785.1066346,
+    "seen": 1795133808.5236404,
     "ast_hash": "8e6286ac1df0dabfd44e799cccd3efd5",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/Hotbar.luau": {
-    "mtime": 1795125570.7118149,
-    "seen": 1795125585.4152322,
+    "mtime": 1795133789.375442,
+    "seen": 1795133808.5236547,
     "ast_hash": "b6456cac84cef205d297202c8f0c0985",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/Prompts.luau": {
-    "mtime": 1795125575.6099684,
-    "seen": 1795125585.415256,
+    "mtime": 1795133795.141994,
+    "seen": 1795133808.5236704,
     "ast_hash": "098c960a493692a512a88ec95615f3db",
     "semantic_hash": ""
   },
   "game/ReplicatedStorage/Shared/Maps.luau": {
-    "mtime": 1795125546.3296885,
-    "seen": 1795125585.4151032,
+    "mtime": 1795133763.3995652,
+    "seen": 1795133808.5235536,
     "ast_hash": "67a9f1ea813be76e54d647d71073df71",
     "semantic_hash": ""
   },
   "game/ReplicatedStorage/Shared/Monsters.luau": {
-    "mtime": 1795125546.7604883,
-    "seen": 1795125585.4151056,
+    "mtime": 1795133763.7958,
+    "seen": 1795133808.523555,
     "ast_hash": "104937b6f922d8db0943ba429e069566",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/Abilities.luau": {
-    "mtime": 1795125549.5451882,
-    "seen": 1795125585.4151213,
+    "mtime": 1795133766.586023,
+    "seen": 1795133808.5235672,
     "ast_hash": "720d0bfb1122e4894ecc45e543cf558b",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/MapLoader.luau": {
-    "mtime": 1795125557.2939823,
-    "seen": 1795125585.415166,
+    "mtime": 1795133774.6556404,
+    "seen": 1795133808.5236013,
     "ast_hash": "4b3d0ae2cbf1ff60652af8035d32396f",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/MonsterFx.luau": {
-    "mtime": 1795125573.8616717,
-    "seen": 1795125585.4152462,
+    "mtime": 1795133793.339745,
+    "seen": 1795133808.5236635,
     "ast_hash": "8e4b2c6a170d1e8cfbbbf7f3450a2a1f",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/RoomPickUI.luau": {
-    "mtime": 1795125576.5760648,
-    "seen": 1795125585.415261,
+    "mtime": 1795133796.0988972,
+    "seen": 1795133808.523674,
     "ast_hash": "c9e3801574bff14391103d96635f6bc6",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/ThirdPersonItems.luau": {
-    "mtime": 1795125579.0426605,
-    "seen": 1795125585.415275,
+    "mtime": 1795133799.027305,
+    "seen": 1795133808.5236845,
     "ast_hash": "8e3f1e6bfb19449ce51a59975a1b6d91",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/Admin.luau": {
-    "mtime": 1795125549.8432367,
-    "seen": 1795125585.4151235,
+    "mtime": 1795133766.8804576,
+    "seen": 1795133808.5235686,
     "ast_hash": "9c2c91af0ebae72542b5909591c1fae6",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/AdminPanel.luau": {
-    "mtime": 1795125563.5128877,
-    "seen": 1795125585.4151967,
+    "mtime": 1795133780.829732,
+    "seen": 1795133808.5236247,
     "ast_hash": "9e7a855de5781c63a54ab6c45c2a1448",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/SawAudio.luau": {
-    "mtime": 1795125577.0972168,
-    "seen": 1795125585.4152637,
+    "mtime": 1795133796.6947048,
+    "seen": 1795133808.5236762,
     "ast_hash": "c9b8c5522f82ea81a5e31399e68f0666",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/Ragdoll.luau": {
-    "mtime": 1795125559.4596722,
-    "seen": 1795125585.415175,
+    "mtime": 1795133776.2790716,
+    "seen": 1795133808.523608,
     "ast_hash": "e63cc82bf18c9d6f413795758ca91461",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/Fire.luau": {
-    "mtime": 1795125553.212653,
-    "seen": 1795125585.4151428,
+    "mtime": 1795133770.1689618,
+    "seen": 1795133808.5235846,
     "ast_hash": "95cbb894cde13db1603e2a4ad8dc98e9",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/Friends.luau": {
-    "mtime": 1795125553.8438084,
-    "seen": 1795125585.4151464,
+    "mtime": 1795133770.7561219,
+    "seen": 1795133808.5235872,
     "ast_hash": "7b1343b7c11ecb117d40ed10b392fa66",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/LobbyUI.luau": {
-    "mtime": 1795125572.5448587,
-    "seen": 1795125585.4152403,
-    "ast_hash": "45ad72e01fde67fc2a0dde8cf42ea381",
+    "mtime": 1795133791.9516397,
+    "seen": 1795133808.5236602,
+    "ast_hash": "e4de41c8da709bbf03cbec3ddbe0a2bf",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/Monetization.luau": {
-    "mtime": 1795125557.9304342,
-    "seen": 1795125585.4151692,
+    "mtime": 1795133775.281353,
+    "seen": 1795133808.5236042,
     "ast_hash": "1428608fa07f0a63b6af9fe023a86d96",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/ReviveUI.luau": {
-    "mtime": 1795125576.3146374,
-    "seen": 1795125585.4152591,
+    "mtime": 1795133795.7841115,
+    "seen": 1795133808.5236728,
     "ast_hash": "b8c7ed1ad06ddaec76235d3f3efc8c94",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/GoblinLoot.luau": {
-    "mtime": 1795125555.215354,
-    "seen": 1795125585.415154,
+    "mtime": 1795133772.1902251,
+    "seen": 1795133808.5235922,
     "ast_hash": "846e8e48a8cda995f54a8cfce6ea7901",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/Platform.luau": {
-    "mtime": 1795125575.294621,
-    "seen": 1795125585.4152544,
+    "mtime": 1795133794.8741617,
+    "seen": 1795133808.5236692,
     "ast_hash": "534c1d591d1397f1e36f16bb5c77c482",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/Settings.luau": {
-    "mtime": 1795125577.701445,
-    "seen": 1795125585.4152672,
+    "mtime": 1795133797.3637936,
+    "seen": 1795133808.5236785,
     "ast_hash": "cf34e981e627e4a364050f4965542324",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/SettingsUI.luau": {
-    "mtime": 1795125577.9590988,
-    "seen": 1795125585.415269,
+    "mtime": 1795133797.7309656,
+    "seen": 1795133808.5236795,
     "ast_hash": "6a711116f8425d46f1f78b00ffcdbe1b",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/TouchControls.luau": {
-    "mtime": 1795125579.6102033,
-    "seen": 1795125585.4152784,
+    "mtime": 1795133799.624008,
+    "seen": 1795133808.523687,
     "ast_hash": "1033df45dfa8bd1be8c083959cf582ed",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/Charge.luau": {
-    "mtime": 1795125565.2606542,
-    "seen": 1795125585.4152064,
+    "mtime": 1795133782.8311503,
+    "seen": 1795133808.5236323,
     "ast_hash": "2f71f3358c45b82638908f7cbee793c8",
     "semantic_hash": ""
   },
   "game/ReplicatedStorage/Shared/Quests.luau": {
-    "mtime": 1795125547.3495164,
-    "seen": 1795125585.41511,
+    "mtime": 1795133764.3738873,
+    "seen": 1795133808.5235577,
     "ast_hash": "5a1bed6f8ae1abc2c7623e4b9d94f503",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/Quests.luau": {
-    "mtime": 1795125559.0966206,
-    "seen": 1795125585.4151728,
+    "mtime": 1795133775.86273,
+    "seen": 1795133808.523607,
     "ast_hash": "83d610058c3f6f36051640681cabf574",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/QuestUI.luau": {
-    "mtime": 1795125575.977129,
-    "seen": 1795125585.4152577,
+    "mtime": 1795133795.4551945,
+    "seen": 1795133808.5236719,
     "ast_hash": "63f325b63f7192a72e84f080d3f5a455",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/Spectate.luau": {
-    "mtime": 1795125578.4965382,
-    "seen": 1795125585.4152718,
+    "mtime": 1795133798.485857,
+    "seen": 1795133808.523682,
     "ast_hash": "5795443b9cceb4364d8d2a9e9efd66ef",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/Fury.luau": {
-    "mtime": 1795125554.4861271,
-    "seen": 1795125585.4151504,
+    "mtime": 1795133771.427737,
+    "seen": 1795133808.5235896,
     "ast_hash": "77c889c1259d8a7bc5852f4092fb9c1f",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterCharacterScripts/Health.server.luau": {
-    "mtime": 1795125562.8762174,
-    "seen": 1795125585.4151936,
+    "mtime": 1795133779.9801211,
+    "seen": 1795133808.5236225,
     "ast_hash": "71e25680c29030b8a44dd98506c76b29",
     "semantic_hash": ""
   },
   "game/ReplicatedStorage/Shared/ShopArt.luau": {
-    "mtime": 1795125547.651713,
-    "seen": 1795125585.4151125,
+    "mtime": 1795133764.7009575,
+    "seen": 1795133808.52356,
     "ast_hash": "e88412fbba680ee190c70e41a61a07f9",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/Evolved.luau": {
-    "mtime": 1795125552.9122643,
-    "seen": 1795125585.415141,
+    "mtime": 1795133769.8516648,
+    "seen": 1795133808.523583,
     "ast_hash": "8bcb005950cffd4d3b7b90f1090301d0",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/CineKit.luau": {
-    "mtime": 1795125565.5778873,
-    "seen": 1795125585.4152079,
+    "mtime": 1795133783.1162348,
+    "seen": 1795133808.5236335,
     "ast_hash": "5e3a18f360277e404c85ce8f5548fc76",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/CrewAnim.luau": {
-    "mtime": 1795125565.8763328,
-    "seen": 1795125585.4152098,
+    "mtime": 1795133783.4164321,
+    "seen": 1795133808.5236347,
     "ast_hash": "25b98212c9e6cf9a70536925ea3bb2ea",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/KeyHints.luau": {
-    "mtime": 1795125571.9159422,
-    "seen": 1795125585.4152372,
+    "mtime": 1795133790.7326655,
+    "seen": 1795133808.523658,
     "ast_hash": "9d030cc6eef128e4ba71db4a389d67b1",
     "semantic_hash": ""
   },
   "game/ReplicatedStorage/Shared/Passes.luau": {
-    "mtime": 1795125547.0482774,
-    "seen": 1795125585.4151077,
+    "mtime": 1795133764.062308,
+    "seen": 1795133808.5235565,
     "ast_hash": "3cf5092e3d67e7d5d7bd226e1cc6cd14",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/Vip.luau": {
-    "mtime": 1795125562.6094348,
-    "seen": 1795125585.415192,
+    "mtime": 1795133779.718822,
+    "seen": 1795133808.523621,
     "ast_hash": "cfcfe56fe412adbd6d1b8f8046f3dc7e",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/Vip.luau": {
-    "mtime": 1795125582.8649845,
-    "seen": 1795125585.4152956,
+    "mtime": 1795133803.2028139,
+    "seen": 1795133808.5236995,
     "ast_hash": "7274cf85488ddc53948f692c0cd1e750",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/Caller.luau": {
-    "mtime": 1795125550.5821087,
-    "seen": 1795125585.4151275,
+    "mtime": 1795133767.4737577,
+    "seen": 1795133808.5235722,
     "ast_hash": "a0175234f066f6bf5e9a15450ab5a530",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/CallerUI.luau": {
-    "mtime": 1795125564.3816578,
-    "seen": 1795125585.4152014,
+    "mtime": 1795133781.8917348,
+    "seen": 1795133808.5236285,
     "ast_hash": "3f2a4e1eed1ecb942f25aa3cf08a53a6",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/Sandbox.luau": {
-    "mtime": 1795125560.4430633,
-    "seen": 1795125585.4151802,
+    "mtime": 1795133777.4034524,
+    "seen": 1795133808.5236115,
     "ast_hash": "7c557a9006042d2959a2cb852b3a3f13",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/SandboxUI.luau": {
-    "mtime": 1795125576.826182,
-    "seen": 1795125585.4152622,
+    "mtime": 1795133796.4327214,
+    "seen": 1795133808.5236752,
     "ast_hash": "0ed063b10edc3db2bd512f954ef32bdd",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/UltActs.luau": {
-    "mtime": 1795125580.910277,
-    "seen": 1795125585.4152842,
+    "mtime": 1795133800.9557638,
+    "seen": 1795133808.5236914,
     "ast_hash": "114ea1d72d4071c025ae17c78b6cf5b3",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/UltKit.luau": {
-    "mtime": 1795125581.5261414,
-    "seen": 1795125585.4152875,
+    "mtime": 1795133801.496596,
+    "seen": 1795133808.5236938,
     "ast_hash": "cf02121b604ecf4466be72c05a29d0fd",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/UltPose.luau": {
-    "mtime": 1795125581.8432498,
-    "seen": 1795125585.4152894,
+    "mtime": 1795133801.8041537,
+    "seen": 1795133808.523695,
     "ast_hash": "c7c0ff1677ccd8c3a3823ef18fe8efc8",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/LockOn.luau": {
-    "mtime": 1795125572.8199818,
-    "seen": 1795125585.4152424,
+    "mtime": 1795133792.231055,
+    "seen": 1795133808.5236616,
     "ast_hash": "3ec8e389827516495bc9738f33879e16",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/CallerMarks.luau": {
-    "mtime": 1795125564.0957975,
-    "seen": 1795125585.4152,
+    "mtime": 1795133781.5443747,
+    "seen": 1795133808.5236273,
     "ast_hash": "0545bf9f9cb89198eba50aa3889b8658",
     "semantic_hash": ""
   },
   "game/ReplicatedFirst/Loading.luau": {
-    "mtime": 1795125543.1447597,
-    "seen": 1795125585.4150703,
+    "mtime": 1795133759.9444304,
+    "seen": 1795133808.5235279,
     "ast_hash": "22ef3cce67394fff317f22fe385f4771",
     "semantic_hash": ""
   },
   "game/ReplicatedFirst/LoadingBoot.client.luau": {
-    "mtime": 1795125543.4446814,
-    "seen": 1795125585.4150805,
+    "mtime": 1795133760.2615488,
+    "seen": 1795133808.523536,
     "ast_hash": "d2b4b25d192b47597f040a2e4c7353fb",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/Leaderboards.luau": {
-    "mtime": 1795125556.6876414,
-    "seen": 1795125585.415162,
+    "mtime": 1795133774.0254016,
+    "seen": 1795133808.5235991,
     "ast_hash": "2483d37b5298f963a8df82c8202774f3",
     "semantic_hash": ""
   },
   "game/ReplicatedStorage/Shared/Badges.luau": {
-    "mtime": 1795125543.7314804,
-    "seen": 1795125585.415085,
+    "mtime": 1795133760.6191187,
+    "seen": 1795133808.52354,
     "ast_hash": "3c280c23c95433b033df7f8b35626ee6",
     "semantic_hash": ""
   },
   "game/ReplicatedStorage/Shared/Entrances.luau": {
-    "mtime": 1795125544.6447957,
-    "seen": 1795125585.4150927,
+    "mtime": 1795133761.6477199,
+    "seen": 1795133808.5235455,
     "ast_hash": "ca68abd716a8bd1282f5dd355bce87cd",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/Bestiary.luau": {
-    "mtime": 1795125550.1789253,
-    "seen": 1795125585.4151251,
+    "mtime": 1795133767.146954,
+    "seen": 1795133808.5235705,
     "ast_hash": "84a4bc928bb7baf70003a50093714c77",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/BestiaryUI.luau": {
-    "mtime": 1795125563.77812,
-    "seen": 1795125585.4151986,
+    "mtime": 1795133781.263777,
+    "seen": 1795133808.523626,
     "ast_hash": "acbbeed3360fa0ce0d1b6633af885919",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/Entrance.luau": {
-    "mtime": 1795125566.96737,
-    "seen": 1795125585.4152126,
+    "mtime": 1795133784.496717,
+    "seen": 1795133808.5236375,
     "ast_hash": "d63bb5c0343b88b6f021e25a8bb6c370",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/EntrancePose.luau": {
-    "mtime": 1795125567.2275662,
-    "seen": 1795125585.415214,
+    "mtime": 1795133784.7659867,
+    "seen": 1795133808.523639,
     "ast_hash": "eb4b34fd97fc2816f4bff7ebb42c0931",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/Staff.luau": {
-    "mtime": 1795125561.0419028,
-    "seen": 1795125585.4151835,
+    "mtime": 1795133778.0502143,
+    "seen": 1795133808.5236144,
     "ast_hash": "c95a90648564301dc0500dd70e86e186",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/NameTags.luau": {
-    "mtime": 1795125574.4101076,
-    "seen": 1795125585.4152496,
+    "mtime": 1795133794.0708961,
+    "seen": 1795133808.523666,
     "ast_hash": "1f1bfa8223277df0c97ba00ed6e91781",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/Mobile.luau": {
-    "mtime": 1795125557.6558633,
-    "seen": 1795125585.4151676,
+    "mtime": 1795133774.958808,
+    "seen": 1795133808.5236032,
     "ast_hash": "e8953b66374448e360ac0d0fc20d0638",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/CallerSpots.luau": {
-    "mtime": 1795125550.8859575,
-    "seen": 1795125585.4151294,
+    "mtime": 1795133767.7692628,
+    "seen": 1795133808.523574,
     "ast_hash": "542e10095e1b8e85a758a2704ce743c2",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/Tutorial.luau": {
-    "mtime": 1795125562.0300703,
-    "seen": 1795125585.4151886,
+    "mtime": 1795133779.1343212,
+    "seen": 1795133808.5236182,
     "ast_hash": "80c2605949b8e50b24563366ce961a50",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/TutorialUI.luau": {
-    "mtime": 1795125580.5450249,
-    "seen": 1795125585.4152827,
+    "mtime": 1795133800.5990188,
+    "seen": 1795133808.5236902,
     "ast_hash": "9a2b87ab31414c72599934c9ba4f66ae",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/Supplies.luau": {
-    "mtime": 1795125561.2980459,
-    "seen": 1795125585.4151852,
+    "mtime": 1795133778.313979,
+    "seen": 1795133808.5236158,
     "ast_hash": "d89ff285442fd7e092ad56aa8c1ddc42",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/Knight.luau": {
-    "mtime": 1795125556.1284955,
-    "seen": 1795125585.415159,
+    "mtime": 1795133773.3427014,
+    "seen": 1795133808.5235958,
     "ast_hash": "fda19128c90b82c8310588fa9ff77e64",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/KnightDoor.luau": {
-    "mtime": 1795125556.3960562,
-    "seen": 1795125585.4151607,
+    "mtime": 1795133773.6328144,
+    "seen": 1795133808.523597,
     "ast_hash": "6b07c44393e5869fbc0845c84bdf4f37",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/MaskBreath.luau": {
-    "mtime": 1795125573.1293235,
-    "seen": 1795125585.4152443,
+    "mtime": 1795133792.549326,
+    "seen": 1795133808.5236626,
     "ast_hash": "b3f318d6c65ba8bafdd06f190adf9e48",
     "semantic_hash": ""
   },
   "game/ReplicatedStorage/Shared/Levels.luau": {
-    "mtime": 1795125546.0623403,
-    "seen": 1795125585.4151013,
+    "mtime": 1795133763.1254091,
+    "seen": 1795133808.523552,
     "ast_hash": "774d7957c5e808b7056d9eff88c87167",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/LevelUI.luau": {
-    "mtime": 1795125572.215943,
-    "seen": 1795125585.4152386,
+    "mtime": 1795133791.510482,
+    "seen": 1795133808.5236592,
     "ast_hash": "eb6c05c7d317aae07fa09519179c6b92",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/Intro.luau": {
-    "mtime": 1795125571.6093702,
-    "seen": 1795125585.4152355,
+    "mtime": 1795133790.451753,
+    "seen": 1795133808.5236568,
     "ast_hash": "4b6ff1ecf3c9e432b8f3120974e338f4",
     "semantic_hash": ""
   },
   "game/ReplicatedStorage/Shared/Campaign.luau": {
-    "mtime": 1795125544.0145726,
-    "seen": 1795125585.415088,
+    "mtime": 1795133761.0013525,
+    "seen": 1795133808.5235422,
     "ast_hash": "86f32a37c83ff8dfc877d60a7d1f86f6",
     "semantic_hash": ""
   },
   "game/ReplicatedStorage/Shared/Forms.luau": {
-    "mtime": 1795125545.0668921,
-    "seen": 1795125585.4150946,
+    "mtime": 1795133762.1674154,
+    "seen": 1795133808.523547,
     "ast_hash": "878be5789d24baea6d18cf432ac5e48f",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/Forms.luau": {
-    "mtime": 1795125553.5276933,
-    "seen": 1795125585.4151447,
+    "mtime": 1795133770.4523196,
+    "seen": 1795133808.523586,
     "ast_hash": "209cbcb6f29c36b1df12cb514a3d6e65",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/FormCine.luau": {
-    "mtime": 1795125567.8159559,
-    "seen": 1795125585.4152176,
+    "mtime": 1795133785.5073607,
+    "seen": 1795133808.5236413,
     "ast_hash": "f248ca001b0fb968547560c01912cc9b",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/FormLook.luau": {
-    "mtime": 1795125568.0843167,
-    "seen": 1795125585.4152195,
-    "ast_hash": "145040a6cd2038b654f09b2e5c9a39e4",
+    "mtime": 1795133786.337232,
+    "seen": 1795133808.5236444,
+    "ast_hash": "4bcbf6dc80e4ec0cb8d5a12a294cf03e",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/SellerUI.luau": {
-    "mtime": 1795125577.4427063,
-    "seen": 1795125585.415265,
+    "mtime": 1795133797.075587,
+    "seen": 1795133808.5236773,
     "ast_hash": "aca7ce2d9a890a404ed0342658b55aba",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/StageUI.luau": {
-    "mtime": 1795125578.7613714,
-    "seen": 1795125585.4152734,
+    "mtime": 1795133798.7551599,
+    "seen": 1795133808.5236833,
     "ast_hash": "7c5549face112efd8710dfb8d8bd3e11",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/TrainRide.luau": {
-    "mtime": 1795125580.2482686,
-    "seen": 1795125585.415281,
-    "ast_hash": "8943d2fe46acfc682b74ec421ab48c94",
+    "mtime": 1795133800.3350787,
+    "seen": 1795133808.5236893,
+    "ast_hash": "3686dbfaf9f246a6f11a0eeb46a34b0d",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/CampMonsters.luau": {
-    "mtime": 1795125551.2458203,
-    "seen": 1795125585.4151313,
+    "mtime": 1795133768.1717126,
+    "seen": 1795133808.523576,
     "ast_hash": "d58baddf74daa867e0464b8e2ce3cf48",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/CampFx.luau": {
-    "mtime": 1795125564.7247732,
-    "seen": 1795125585.4152033,
+    "mtime": 1795133782.2418263,
+    "seen": 1795133808.52363,
     "ast_hash": "3a86a30caae5655ecf8f369277238c4c",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/Cursor.luau": {
-    "mtime": 1795125566.1768482,
-    "seen": 1795125585.4152112,
+    "mtime": 1795133783.702708,
+    "seen": 1795133808.5236356,
     "ast_hash": "f413d32c5c0c856f764b7012062af38b",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/Secrets.luau": {
-    "mtime": 1795125560.721466,
-    "seen": 1795125585.415182,
+    "mtime": 1795133777.76371,
+    "seen": 1795133808.523613,
     "ast_hash": "bedf4aa25bafa47cc03b8fd0de5a5c82",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/CarnivalMonsters.luau": {
-    "mtime": 1795125551.6685076,
-    "seen": 1795125585.4151332,
+    "mtime": 1795133768.5748224,
+    "seen": 1795133808.5235777,
     "ast_hash": "fadfcfedbcd6070998c938dcb74c1f13",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/CarnivalFx.luau": {
-    "mtime": 1795125564.9776552,
-    "seen": 1795125585.4152045,
+    "mtime": 1795133782.5635386,
+    "seen": 1795133808.5236309,
     "ast_hash": "bcab8369a1ae2d9ee06b0f57adf56a3b",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/OfflineOpen.luau": {
-    "mtime": 1795125574.6947544,
-    "seen": 1795125585.415251,
+    "mtime": 1795133794.3318326,
+    "seen": 1795133808.523667,
     "ast_hash": "6e14acadd767a14ab7d23e9ad7d2ee73",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/VialArt.luau": {
-    "mtime": 1795125582.359952,
-    "seen": 1795125585.4152925,
+    "mtime": 1795133802.4242413,
+    "seen": 1795133808.5236971,
     "ast_hash": "296426d492994b3cfc7d8b8f4f757a42",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/FormTutorial.luau": {
-    "mtime": 1795125568.3881257,
-    "seen": 1795125585.415221,
+    "mtime": 1795133786.6913583,
+    "seen": 1795133808.5236456,
     "ast_hash": "50e671bce64e6283a75f3f63a301705b",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/HarborMonsters.luau": {
-    "mtime": 1795125555.479148,
-    "seen": 1795125585.4151554,
+    "mtime": 1795133772.598015,
+    "seen": 1795133808.5235934,
     "ast_hash": "fe53db865a53b4512277d101c9e6027e",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/HarborFx.luau": {
-    "mtime": 1795125570.4458272,
-    "seen": 1795125585.4152308,
+    "mtime": 1795133789.083216,
+    "seen": 1795133808.5236533,
     "ast_hash": "7e9c3e71a360507684c46bf6d90a0bb0",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/TicketShop.luau": {
-    "mtime": 1795125579.2939653,
-    "seen": 1795125585.4152765,
+    "mtime": 1795133799.332175,
+    "seen": 1795133808.5236857,
     "ast_hash": "356cc161f6f67fdb0d57a61796c4220b",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/AbbeyMonsters.luau": {
-    "mtime": 1795125549.0629444,
-    "seen": 1795125585.4151196,
+    "mtime": 1795133766.1210327,
+    "seen": 1795133808.5235655,
     "ast_hash": "f07a44e48538783bc13c6d1d1151bd4c",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/MoonMonsters.luau": {
-    "mtime": 1795125558.8075428,
-    "seen": 1795125585.4151711,
+    "mtime": 1795133775.573654,
+    "seen": 1795133808.5236058,
     "ast_hash": "507ed4e111ed4b6d7f7a774f61196b6f",
     "semantic_hash": ""
   },
   "game/ServerScriptService/Server/Trade.luau": {
-    "mtime": 1795125561.6943808,
-    "seen": 1795125585.4151866,
+    "mtime": 1795133778.6790152,
+    "seen": 1795133808.5236168,
     "ast_hash": "6e015f4327639515d3a4c9d91f3684f0",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/AbbeyFx.luau": {
-    "mtime": 1795125563.2272806,
-    "seen": 1795125585.4151952,
+    "mtime": 1795133780.342821,
+    "seen": 1795133808.5236237,
     "ast_hash": "3fccbbe5163e79ddd2571d7f4cea9b05",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/FxTier.luau": {
-    "mtime": 1795125568.9944398,
-    "seen": 1795125585.4152238,
+    "mtime": 1795133787.337406,
+    "seen": 1795133808.523648,
     "ast_hash": "28816095a9c047ed5c747b7d7e6f3a5f",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/MoonFx.luau": {
-    "mtime": 1795125574.1605453,
-    "seen": 1795125585.415248,
+    "mtime": 1795133793.7288463,
+    "seen": 1795133808.523665,
     "ast_hash": "3f7bfadf95c4f9703f6fcaa3a3b609df",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/TradeUI.luau": {
-    "mtime": 1795125579.9435244,
-    "seen": 1795125585.4152796,
+    "mtime": 1795133800.0123065,
+    "seen": 1795133808.523688,
     "ast_hash": "aed3953a8a25854a81a600f968013be3",
     "semantic_hash": ""
   },
   "game/StarterPlayer/StarterPlayerScripts/Client/WorldSpin.luau": {
-    "mtime": 1795125583.1251814,
-    "seen": 1795125585.4152973,
+    "mtime": 1795133803.5233164,
+    "seen": 1795133808.5237005,
     "ast_hash": "dea01a3ea076a7441feabb5e9670e36d",
+    "semantic_hash": ""
+  },
+  "game/StarterPlayer/StarterPlayerScripts/Client/FormGiant.luau": {
+    "mtime": 1795133785.917146,
+    "seen": 1795133808.5236428,
+    "ast_hash": "308fd854766a6e80953cf29761ab89eb",
     "semantic_hash": ""
   }
 }

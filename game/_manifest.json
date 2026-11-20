@@ -299,8 +299,8 @@
    "file": "ServerScriptService/Server/Lobby.luau",
    "instance": "game.ServerScriptService.Server.Lobby",
    "class": "ModuleScript",
-   "bytes": 20088,
-   "sha1": "e615fb96c7c02c2f1afd6661216c841cdbeb9649"
+   "bytes": 21003,
+   "sha1": "8dd075563b434f2fae7bbdac927dc3a4b5cbd336"
   },
   {
    "file": "ServerScriptService/Server/MapLoader.luau",
@@ -527,11 +527,18 @@
    "sha1": "d5a70bac440262b3d8a2e4768d638803db67d098"
   },
   {
+   "file": "StarterPlayer/StarterPlayerScripts/Client/FormGiant.luau",
+   "instance": "game.StarterPlayer.StarterPlayerScripts.Client.FormGiant",
+   "class": "ModuleScript",
+   "bytes": 27896,
+   "sha1": "18ff169d3cb1864214601266f69450090cbf7ffb"
+  },
+  {
    "file": "StarterPlayer/StarterPlayerScripts/Client/FormLook.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.FormLook",
    "class": "ModuleScript",
-   "bytes": 28953,
-   "sha1": "e1018a39b88d87095c04ec2855d108ca230597ef"
+   "bytes": 29845,
+   "sha1": "beb962955dabe79cd8c8f11a7c447ba0fb136628"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/FormTutorial.luau",
@@ -621,8 +628,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/LobbyUI.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.LobbyUI",
    "class": "ModuleScript",
-   "bytes": 34283,
-   "sha1": "2abe3994ea8acf830e0cbbf4272674067f0f2870"
+   "bytes": 38431,
+   "sha1": "1948ee1ea55317b6e05d59f1566fa43ad7c869cf"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/LockOn.luau",
@@ -796,8 +803,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/TrainRide.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.TrainRide",
    "class": "ModuleScript",
-   "bytes": 17176,
-   "sha1": "d1cacd4dcf298a9607b9f2c7d970ee15c72bf5ca"
+   "bytes": 17405,
+   "sha1": "410ae508d4de3d27f3c1c64a621f132dbcbea80e"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/TutorialUI.luau",
@@ -838,8 +845,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/UltShopUI.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.UltShopUI",
    "class": "ModuleScript",
-   "bytes": 20133,
-   "sha1": "cc978adffab59f27e43ae594c168ee62ea2a67af"
+   "bytes": 20270,
+   "sha1": "d109638c3958bb6b722f6f6f04804a7dda911a02"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/VialArt.luau",

@@ -3,6 +3,8 @@
 -- quests are ready to claim), the friend booster tag, and the
 -- PLAY panel: create a lobby (a campaign MAP and one of its BUILDINGS you have opened - Shared/Campaign -,
 -- difficulty, 1-4 players) or join an open one, then the host presses START: the party boards the train.
+-- ENDLESS (the switch at the top of the create side): pick one of the old HOUSES you own instead (the Mansion is
+-- free, the others are sold at the dealer: SHOP > HOUSES) and fight ghost after ghost until everyone is down.
 -- Lobbies live on the server (Lobby.luau, Remotes.Party); the list comes in the ReplicatedStorage attribute "Parties".
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
@@ -33,6 +35,14 @@ local pickMap, pickDiff, pickSize = "Camp_Bunkhouse", Maps.defaultDiff, 2 -- pic
 local pickCamp = "Camp" -- the campaign map shown
 local campBtns = {} :: { [string]: TextButton }
 local stageRows = {} :: { [string]: { b: TextButton, info: TextLabel } }
+local pickMode = "campaign" -- campaign | endless
+local pickHouse = "Mansion" -- the endless run's house
+local houseBtns = {} :: { [string]: TextButton }
+local modeBtns = {} :: { [string]: TextButton }
+local campPage: Frame
+local endPage: Frame
+local bestText: TextLabel
+local myMap: string? = nil -- the map of the lobby you are in
 local pickPrivate = false
 local pickFF = true -- friendly fire in the run you create
 local privBtn: TextButton
@@ -147,6 +157,24 @@ local function progress(): Campaign.Progress
 	return Campaign.clean(ok and t or {})
 end
 local function refreshPicks()
+	-- campaign / endless
+	if campPage then
+		campPage.Visible = pickMode == "campaign"
+		endPage.Visible = pickMode == "endless"
+	end
+	for id, b in modeBtns do paint(b, id == pickMode and RED or DARK) end
+	local om = ownedMaps()
+	if not om[pickHouse] then pickHouse = "Mansion" end
+	for id, b in houseBtns do
+		local m = Maps.byId[id]
+		local own = om[id] == true
+		paint(b, id == pickHouse and RED or (own and DARK or LOCKED))
+		setTextColor(b, own and Grunge.PAPER or Color3.fromRGB(150, 140, 125), own and 0 or 0.2)
+		setText(b, string.upper(m.name)) -- (a locked one says its price when pressed)
+	end
+	if bestText then
+		bestText.Text = "YOUR BEST: WAVE " .. math.max(0, (tonumber(lp:GetAttribute("GhostLevel")) or 1) - 1)
+	end
 	local prog = progress()
 	-- (the picked building must be open: else the furthest open one)
 	if not Campaign.stageOpen(prog, pickMap) then
@@ -205,7 +233,7 @@ local function refreshList()
 		local d = Maps.diffById[pt.diff]
 		Grunge.frame(row, { BackgroundTransparency = 0, BackgroundColor3 = m and m.color or RED, Position = UDim2.new(0, 4, 0.12, 0), Size = UDim2.new(0, 5, 0.76, 0), Rotation = 2, ZIndex = 12 })
 		Grunge.text(row, { Text = string.upper(pt.host) .. "'S LOBBY" .. (pt.private and "  [PRIVATE]" or ""), Position = UDim2.new(0, 14, 0.05, 0), Size = UDim2.new(0.62, 0, 0.5, 0), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 12 })
-		Grunge.text(row, { Text = string.upper((m and m.name or pt.map) .. " - " .. (d and d.name or pt.diff)) .. "   " .. #pt.names .. "/" .. pt.size .. (pt.ff == false and "   FF OFF" or ""), -- (m = the building)
+		Grunge.text(row, { Text = (Campaign.stage(pt.map) and "" or "ENDLESS: ") .. string.upper((m and m.name or pt.map) .. " - " .. (d and d.name or pt.diff)) .. "   " .. #pt.names .. "/" .. pt.size .. (pt.ff == false and "   FF OFF" or ""), -- (m = the building)
 			Font = Grunge.TYPE, Position = UDim2.new(0, 14, 0.56, 0), Size = UDim2.new(0.62, 0, 0.36, 0), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = d and d.color or Grunge.PAPER, ZIndex = 12 })
 		local full = #pt.names >= pt.size
 		local b = button(row, pt.id == myId and "YOURS" or (full and "FULL" or (invited and "JOIN!" or "JOIN")), { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -6, 0.5, 0), Size = UDim2.new(0.26, 0, 0.72, 0),
@@ -217,9 +245,10 @@ local function refreshList()
 	-- your own lobby (top right) or the create form
 	mine.Visible = myParty ~= nil
 	createPage.Visible = myParty == nil
+	myMap = myParty and myParty.map or nil
 	if myParty then
 		local m, d = Maps.byId[myParty.map], Maps.diffById[myParty.diff]
-		mineInfo.Text = string.upper((m and m.name or myParty.map) .. " - " .. (d and d.name or myParty.diff))
+		mineInfo.Text = (Campaign.stage(myParty.map) and "" or "ENDLESS: ") .. string.upper((m and m.name or myParty.map) .. " - " .. (d and d.name or myParty.diff))
 		mineNames.Text = table.concat(myParty.names, ", ") .. "   (" .. #myParty.names .. "/" .. myParty.size .. ")"
 		local host = myParty.hostId == lp.UserId
 		startBtn.Visible = host
@@ -312,7 +341,7 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 	side = Grunge.frame(gui, { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 28, 0.5, 0), Size = UDim2.fromScale(0.2, 0.54) })
 	local sar = Instance.new("UIAspectRatioConstraint"); sar.AspectRatio = 0.82; sar.Parent = side
 	bigButton("PLAY", "TAKE THE TRAIN", Color3.fromRGB(150, 18, 20), 0, -1.2, function() setOpen(not panel.Visible) end, 0.155)
-	bigButton("SHOP", "ULTIMATES", Color3.fromRGB(176, 150, 40), 0.165, 0.8, function()
+	bigButton("SHOP", "ULTS - HOUSES", Color3.fromRGB(176, 150, 40), 0.165, 0.8, function()
 		if panel.Visible then setOpen(false) end
 		if openShop then openShop() end
 	end, 0.155)
@@ -415,9 +444,22 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 
 	-- left half: create a lobby
 	createPage = Grunge.frame(panel, { Position = UDim2.fromScale(0.04, 0.14), Size = UDim2.fromScale(0.46, 0.82), ZIndex = 10 })
+	-- CAMPAIGN | ENDLESS (the top row); each mode has its own page above the shared difficulty / players / create
+	for i, md in { { "campaign", "CAMPAIGN" }, { "endless", "ENDLESS" } } do
+		local b = button(createPage, md[2], { Position = UDim2.fromScale((i - 1) * 0.33, 0), Size = UDim2.fromScale(0.31, 0.058), BackgroundColor3 = DARK, ZIndex = 12,
+			Rotation = (i - 1.5) * 1.2 })
+		b.Activated:Connect(function()
+			Sfx.play("Click")
+			pickMode = md[1]
+			status.Text = md[1] == "endless" and "ENDLESS: GHOST AFTER GHOST IN A HOUSE UNTIL EVERYONE IS DOWN. HOW FAR CAN YOU GO?" or "CAMPAIGN: BEAT EVERY BUILDING OF EVERY MAP"
+			refreshPicks()
+		end)
+		modeBtns[md[1]] = b
+	end
+	campPage = Grunge.frame(createPage, { Size = UDim2.fromScale(1, 1), ZIndex = 10 })
+	endPage = Grunge.frame(createPage, { Size = UDim2.fromScale(1, 1), ZIndex = 10, Visible = false })
 	-- the campaign: a row of maps, then the picked map's buildings (fought top to bottom)
-	heading(createPage, "PICK A MAP", 0, 0, 1, 11)
-	local mg = Grunge.frame(createPage, { Position = UDim2.fromScale(0, 0.065), Size = UDim2.fromScale(1, 0.085), ZIndex = 11 })
+	local mg = Grunge.frame(campPage, { Position = UDim2.fromScale(0, 0.065), Size = UDim2.fromScale(1, 0.085), ZIndex = 11 })
 	local ml = Instance.new("UIListLayout"); ml.FillDirection = Enum.FillDirection.Horizontal; ml.Padding = UDim.new(0.01, 0); ml.SortOrder = Enum.SortOrder.LayoutOrder; ml.Parent = mg
 	local stageList: Frame
 	local function buildStages()
@@ -458,10 +500,36 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 		end)
 		campBtns[cm.id] = b
 	end
-	heading(createPage, "PICK A BUILDING", 0, 0.165, 1, 11)
-	stageList = Grunge.frame(createPage, { Position = UDim2.fromScale(0, 0.225), Size = UDim2.fromScale(1, 0.34), ZIndex = 11 })
+	heading(campPage, "PICK A BUILDING", 0, 0.165, 1, 11)
+	stageList = Grunge.frame(campPage, { Position = UDim2.fromScale(0, 0.225), Size = UDim2.fromScale(1, 0.34), ZIndex = 11 })
 	local sll = Instance.new("UIListLayout"); sll.Padding = UDim.new(0.015, 0); sll.SortOrder = Enum.SortOrder.LayoutOrder; sll.Parent = stageList
 	buildStages()
+	-- ENDLESS: the old houses (owned ones; the others are sold at the dealer)
+	Grunge.text(endPage, { Text = "GHOST AFTER GHOST UNTIL YOU FALL - EVERY 3RD ONE IS A BOSS", Font = Grunge.TYPE, Position = UDim2.fromScale(0, 0.072),
+		Size = UDim2.fromScale(1, 0.036), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(200, 190, 170), ZIndex = 11 })
+	bestText = Grunge.text(endPage, { Text = "", Font = Grunge.FONT, Position = UDim2.fromScale(0, 0.112), Size = UDim2.fromScale(1, 0.042),
+		TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = ACCENT, ZIndex = 11, Rotation = -0.6 })
+	heading(endPage, "PICK A HOUSE", 0, 0.165, 1, 11)
+	local hg = Grunge.frame(endPage, { Position = UDim2.fromScale(0, 0.228), Size = UDim2.fromScale(1, 0.335), ZIndex = 11 })
+	local hgl = Instance.new("UIGridLayout"); hgl.CellSize = UDim2.fromScale(0.325, 0.178); hgl.CellPadding = UDim2.fromScale(0.0125, 0.027)
+	hgl.SortOrder = Enum.SortOrder.LayoutOrder; hgl.Parent = hg
+	local n = 0
+	for _, m in Maps.list do
+		if (m :: any).campaign then continue end
+		n += 1
+		local b = button(hg, string.upper(m.name), { LayoutOrder = n, ZIndex = 12, Font = Grunge.TYPE })
+		b.Activated:Connect(function()
+			Sfx.play("Click")
+			if ownedMaps()[m.id] then
+				pickHouse = m.id
+				status.Text = m.desc
+			else
+				status.Text = "BUY " .. string.upper(m.name) .. " AT THE DEALER FIRST (SHOP > HOUSES)  -  $" .. m.price
+			end
+			refreshPicks()
+		end)
+		houseBtns[m.id] = b
+	end
 	heading(createPage, "DIFFICULTY", 0, 0.57, 1, 11)
 	local dg = Grunge.frame(createPage, { Position = UDim2.fromScale(0, 0.635), Size = UDim2.fromScale(1, 0.09), ZIndex = 11 })
 	local dl = Instance.new("UIListLayout"); dl.FillDirection = Enum.FillDirection.Horizontal; dl.Padding = UDim.new(0.015, 0); dl.SortOrder = Enum.SortOrder.LayoutOrder; dl.Parent = dg
@@ -484,8 +552,9 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 	ffBtn.Activated:Connect(function() Sfx.play("Click"); pickFF = not pickFF; refreshPicks() end)
 	local create = button(createPage, "CREATE", { Position = UDim2.fromScale(0.58, 0.84), Size = UDim2.fromScale(0.42, 0.13), BackgroundColor3 = GREEN, ZIndex = 12, Rotation = -1.5 })
 	create.Activated:Connect(function()
-		if (ticketsNow()) <= 0 then showNoTicket(); return end
-		Sfx.play("Click"); Remotes.Party:FireServer("create", pickMap, pickDiff, pickSize, pickPrivate, pickFF)
+		local endless = pickMode == "endless"
+		if not endless and (ticketsNow()) <= 0 then showNoTicket(); return end -- (an endless run needs no ticket)
+		Sfx.play("Click"); Remotes.Party:FireServer("create", endless and pickHouse or pickMap, pickDiff, pickSize, pickPrivate, pickFF)
 	end)
 
 	-- left half when you are in a lobby: your lobby
@@ -511,7 +580,7 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 	mineNames = Grunge.text(mine, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0, 0.2), Size = UDim2.fromScale(1, 0.08), TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, ZIndex = 11 })
 	startBtn = button(mine, "START", { Position = UDim2.fromScale(0, 0.7), Size = UDim2.fromScale(0.55, 0.16), BackgroundColor3 = GREEN, ZIndex = 12, Rotation = -1.5 })
 	startBtn.Activated:Connect(function()
-		if (ticketsNow()) <= 0 then showNoTicket(); return end
+		if myMap and Campaign.stage(myMap) and (ticketsNow()) <= 0 then showNoTicket(); return end
 		Sfx.play("Click"); Remotes.Party:FireServer("start")
 	end)
 	local leave = button(mine, "LEAVE", { Position = UDim2.fromScale(0.6, 0.72), Size = UDim2.fromScale(0.4, 0.12), BackgroundColor3 = DARK, ZIndex = 12 })
@@ -540,7 +609,7 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 	Players.PlayerAdded:Connect(refreshList)
 	Players.PlayerRemoving:Connect(function() task.defer(refreshList) end)
 	RS:GetAttributeChangedSignal("Parties"):Connect(refreshList)
-	for _, a in { "PartyId", "Owned", "Campaign" } do lp:GetAttributeChangedSignal(a):Connect(function() refreshPicks(); refreshList() end) end
+	for _, a in { "PartyId", "Owned", "Campaign", "GhostLevel" } do lp:GetAttributeChangedSignal(a):Connect(function() refreshPicks(); refreshList() end) end
 	for _, a in { "InMatch", "FriendBoost", "FriendCount" } do lp:GetAttributeChangedSignal(a):Connect(refreshVisible) end
 	Platform.windowChanged:Connect(refreshVisible)
 	Platform.changed:Connect(refreshVisible)
@@ -548,6 +617,11 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 	-- Studio test hook: player attribute LobbyOpen = true opens the PLAY panel
 	if game:GetService("RunService"):IsStudio() then
 		lp:GetAttributeChangedSignal("LobbyOpen"):Connect(function() setOpen(lp:GetAttribute("LobbyOpen") == true) end)
+		-- DebugPlayMode = "campaign" | "endless" switches the create side
+		lp:GetAttributeChangedSignal("DebugPlayMode"):Connect(function()
+			local m = lp:GetAttribute("DebugPlayMode")
+			if m == "campaign" or m == "endless" then pickMode = m; refreshPicks() end
+		end)
 	end
 end
 

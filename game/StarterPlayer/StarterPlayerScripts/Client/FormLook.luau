@@ -13,6 +13,8 @@
 --     heartbeat glow in the chest; MYTHIC: a pillar of light from the ground up. (The arms are the fist form's: the
 --     body aura never covers them.)
 -- Putting a new form on: a burst (a ball of energy, rings, a sound) everyone near sees.
+-- THE LATEST SET (the Black Moon's jars / potions): on top of all this, a GIANT energy copy of the wearer, 3.5x to 10x
+-- their size, stands over them and copies their moves (Client/FormGiant; in the park only).
 -- Your own body in a fight is first person: the fist form glows on the first-person fists instead (Client/Viewmodel's
 -- parts). Nothing animates further than FAR studs from the camera; "low" effects (Settings) keep only the skins.
 local Players = game:GetService("Players")
@@ -22,6 +24,7 @@ local TweenService = game:GetService("TweenService")
 local Forms = require(RS.Shared.Forms)
 local Settings = require(script.Parent.Settings)
 local Sfx = require(script.Parent.Sfx)
+local Giant = require(script.Parent.FormGiant)
 
 local FL = {}
 local lp = Players.LocalPlayer
@@ -355,6 +358,7 @@ end
 
 ----------------------------------------------------------------------------------------------------------------------
 local function clear(p: Player)
+	Giant.clear(p)
 	local look = looks[p]
 	if look then
 		looks[p] = nil
@@ -391,6 +395,7 @@ local function apply(p: Player)
 	local level = fxLevel()
 	if stim then buildFist(look, ch, stim, level) end
 	if pot then buildBody(look, ch, pot, level, hrp) end
+	Giant.set(p, ch, hrp, stim, pot, level)
 end
 
 -- putting a new form on: a ball of energy, rings, a sound
@@ -422,6 +427,13 @@ local function burst(p: Player, kind: string)
 	})
 	sp:Emit(20 + fm.rarity * 10)
 	Sfx.at(fm.rarity >= 4 and "MagicBurst" or "FormMagic", hrp.Position, { Volume = 0.8 })
+	-- a giant form (the latest set): it rises out of the ground in a column of light, with thunder
+	local S = Giant.scaleOf(fm)
+	if S and not p:GetAttribute("InMatch") then
+		Giant.burst(p, hrp.Position - Vector3.new(0, 3, 0), fm.color, S)
+		Sfx.at("Thunder", hrp.Position, { Volume = 1 })
+		Sfx.at("FormRise", hrp.Position, { Volume = 1, PlaybackSpeed = 0.7 })
+	end
 	task.delay(1.6, function()
 		ball:Destroy(); flash:Destroy(); ring:Destroy()
 	end)
@@ -493,6 +505,7 @@ end
 ----------------------------------------------------------------------------------------------------------------------
 local arcT = 0
 local function step(dt: number)
+	Giant.step(dt)
 	local now = os.clock()
 	local camPos = cam.CFrame.Position
 	arcT += dt
@@ -565,6 +578,8 @@ local function watch(p: Player)
 			if type(v) == "string" and v ~= "" and type(old) == "string" and old ~= v then burst(p, a == "FormStim" and "stim" or "potion") end
 		end)
 	end
+	-- (a giant form shows in the park only: a wearer going into a fight / coming back)
+	if p ~= lp then p:GetAttributeChangedSignal("InMatch"):Connect(function() apply(p) end) end
 	p.CharacterAdded:Connect(function(ch)
 		ch:WaitForChild("HumanoidRootPart", 5)
 		task.wait(0.5)
@@ -577,7 +592,7 @@ function FL.init(hidden: (() -> boolean)?)
 	hideOwn = hidden
 	for _, p in Players:GetPlayers() do watch(p) end
 	Players.PlayerAdded:Connect(watch)
-	Players.PlayerRemoving:Connect(function(p) looks[p] = nil end)
+	Players.PlayerRemoving:Connect(function(p) looks[p] = nil; Giant.clear(p) end)
 	for _, a in { "InMatch", "Spectating" } do
 		lp:GetAttributeChangedSignal(a):Connect(function() apply(lp); applyVM() end)
 	end

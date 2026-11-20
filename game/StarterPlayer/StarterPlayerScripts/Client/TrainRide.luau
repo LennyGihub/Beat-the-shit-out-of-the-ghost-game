@@ -137,6 +137,7 @@ local function card(stageId: string, diffId: string, show: boolean, sub: string?
 	if not show then return end
 	local st = Campaign.stage(stageId)
 	local mp = st and Campaign.mapById[st.map]
+	local house = not st and Maps.byId[stageId] or nil -- (an ENDLESS run: one of the old houses)
 	local d = Maps.diffById[diffId] or Maps.diffById.Normal
 	local g = Instance.new("ScreenGui")
 	g.Name = "TrainCard"; g.IgnoreGuiInset = true; g.DisplayOrder = 40; g.ResetOnSpawn = false
@@ -144,14 +145,14 @@ local function card(stageId: string, diffId: string, show: boolean, sub: string?
 	cardGui = g
 	local bg = Grunge.frame(g, { BackgroundTransparency = 0, BackgroundColor3 = Color3.new(0, 0, 0), Size = UDim2.fromScale(1, 1), ZIndex = 1 })
 	bg.Name = "Black"
-	Grunge.text(g, { Text = mp and mp.name or "", Font = Grunge.TYPE, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.34),
-		Size = UDim2.fromScale(0.6, 0.05), TextColor3 = mp and mp.color or Grunge.PAPER, ZIndex = 3 })
-	local t = Grunge.text(g, { Text = st and st.name or "", Font = Grunge.HORROR, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.45),
+	Grunge.text(g, { Text = mp and mp.name or (house and "ENDLESS" or ""), Font = Grunge.TYPE, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.34),
+		Size = UDim2.fromScale(0.6, 0.05), TextColor3 = mp and mp.color or (house and house.color or Grunge.PAPER), ZIndex = 3 })
+	local t = Grunge.text(g, { Text = st and st.name or (house and string.upper(house.name) or ""), Font = Grunge.HORROR, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.45),
 		Size = UDim2.fromScale(0.8, 0.14), TextColor3 = Color3.fromRGB(235, 50, 35), TextStrokeTransparency = 0, ZIndex = 3 })
 	local sc = Instance.new("UIScale"); sc.Scale = 1.4; sc.Parent = t
 	TweenService:Create(sc, TweenInfo.new(0.45, Enum.EasingStyle.Back), { Scale = 1 }):Play()
 	local total = mp and #mp.stages or 0
-	Grunge.text(g, { Text = (st and ("BUILDING " .. st.index .. " OF " .. total .. "   -   ") or "") .. d.name, Font = Grunge.FONT, AnchorPoint = Vector2.new(0.5, 0.5),
+	Grunge.text(g, { Text = (st and ("BUILDING " .. st.index .. " OF " .. total .. "   -   ") or (house and "GHOST AFTER GHOST   -   " or "")) .. d.name, Font = Grunge.FONT, AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.56), Size = UDim2.fromScale(0.6, 0.05), TextColor3 = d.color, ZIndex = 3 })
 	if sub and sub ~= "" then
 		Grunge.text(g, { Text = sub, Font = Grunge.TYPE, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.64),
