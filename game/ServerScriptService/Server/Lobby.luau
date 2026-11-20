@@ -5,6 +5,10 @@
 -- have that building open. Every trip goes by TRAIN: the party boards the train waiting at the park's station
 -- (Fx "TrainDepart" plays the ride out, Client/TrainRide), then the match starts / the teleport goes. The old
 -- queue pads in the cabins are off (the train is the only way out of the park).
+-- ENDLESS (the run like before the campaign, 2026-11-19 back by the user's request): the party picks one of the old
+-- HOUSES (Shared/Maps entries without `campaign`: the Mansion is free, the others are bought at the dealer, Data.ownsMap)
+-- and fights ghost after ghost there until everyone is down (Server/Run with no stage). It leaves by the same train
+-- (no ticket needed).
 -- TRAIN TICKETS (Campaign.TRIPS: 5 trips in 3 hours): every rider uses one when the train leaves; who has none stays
 -- in the park (a toast says when they come back); a failed teleport gives them back.
 local Players = game:GetService("Players")
@@ -87,23 +91,24 @@ local function launch(room, members: { Player })
 	room.countdownStart = nil
 	-- all aboard: the train pulls out of the park's station (each client rides it), then the trip itself
 	local st = Campaign.stage(room.map)
-	if st then
-		-- a ticket each (who has none stays in the park)
+	local house = not st and Maps.byId[room.map] or nil -- an ENDLESS run's house
+	if st or house then
+		-- a ticket each for a building (who has none stays in the park); an endless run needs none
 		local riders = {}
 		for _, p in members do
-			if Data.useTrip(p) then table.insert(riders, p) else noTicket(p) end
+			if not st or Data.useTrip(p) then table.insert(riders, p) else noTicket(p) end
 		end
 		members = riders
 		if #members == 0 then return end
 		for _, p in members do
 			p:SetAttribute("Boarding", true)
-			Remotes.Fx:FireClient(p, "TrainDepart", st.id, room.diff, nil, true)
+			Remotes.Fx:FireClient(p, "TrainDepart", room.map, room.diff, nil, true)
 		end
 		task.wait(TRAIN_DEPART)
 		local still = {}
 		for _, p in members do
 			p:SetAttribute("Boarding", nil)
-			if p.Parent and not p:GetAttribute("InMatch") then table.insert(still, p) elseif p.Parent then Data.refundTrip(p) end
+			if p.Parent and not p:GetAttribute("InMatch") then table.insert(still, p) elseif p.Parent and st then Data.refundTrip(p) end
 		end
 		members = still
 		if #members == 0 then return end
@@ -124,12 +129,12 @@ local function launch(room, members: { Player })
 			end
 			return
 		end
-		loading(st and ("TO " .. st.name .. "...") or "LOADING THE HOUSE...")
+		loading(st and ("TO " .. st.name .. "...") or (house and ("TO " .. string.upper(house.name) .. "...") or "LOADING THE HOUSE..."))
 		task.wait(0.4) -- (the card is up before the map is built)
 		Run.beginMatch(members, room.map, room.diff, room.ff ~= false)
 		return
 	end
-	loading(st and ("TO " .. st.name .. "...") or "TELEPORTING TO THE HOUSE...")
+	loading(st and ("TO " .. st.name .. "...") or (house and ("TO " .. string.upper(house.name) .. "...") or "TELEPORTING TO THE HOUSE..."))
 	setSign(room, room.size .. " PLAYER" .. (room.size > 1 and "S" or ""), "TELEPORTING...", Color3.fromRGB(150, 220, 110))
 	local ok, code = pcall(function() return TeleportService:ReserveServer(game.PlaceId) end)
 	if not ok then
@@ -234,10 +239,14 @@ local function onParty(p: Player, action: any, a: any, b: any, c: any, d: any, e
 		local private = d == true
 		local m, dd = Maps.byId[a], Maps.diffById[b]
 		if not m or not dd then return end
-		-- a campaign building the host has opened (the old houses are gone from the lobby)
+		-- a campaign building the host has opened, or (ENDLESS) an old house the host owns
 		local stg = Campaign.stage(m.id)
-		if not stg then return end
-		if not Campaign.stageOpen(Data.campaign(p), stg.id) then Remotes.Fx:FireClient(p, "Toast", "Clear the building before " .. stg.name .. " first"); return end
+		if stg then
+			if not Campaign.stageOpen(Data.campaign(p), stg.id) then Remotes.Fx:FireClient(p, "Toast", "Clear the building before " .. stg.name .. " first"); return end
+		else
+			if m.campaign then return end
+			if not Data.ownsMap(p, m.id) then Remotes.Fx:FireClient(p, "Toast", "Buy " .. m.name .. " at the dealer first (SHOP > HOUSES)"); return end
+		end
 		leaveParty(p)
 		local id = tostring(p.UserId)
 		parties[id] = { id = id, host = p, members = { p }, map = m.id, diff = dd.id, size = math.clamp(math.floor(c), 1, 4), private = private, invited = {},
@@ -278,7 +287,7 @@ local function onParty(p: Player, action: any, a: any, b: any, c: any, d: any, e
 	elseif action == "start" then
 		local pt = partyOf(p)
 		if not pt or pt.host ~= p then return end
-		if Data.tripsLeft(p) <= 0 then noTicket(p); return end
+		if Campaign.stage(pt.map) and Data.tripsLeft(p) <= 0 then noTicket(p); return end
 		local members = {}
 		for _, m in pt.members do if m.Parent and not m:GetAttribute("InMatch") then table.insert(members, m) end end
 		for _, m in pt.members do m:SetAttribute("PartyId", nil) end
@@ -406,12 +415,12 @@ function Lobby.start()
 	-- buy a map at the dealer
 	Remotes.BuyMap.OnServerEvent:Connect(function(p, mapId)
 		local m = type(mapId) == "string" and Maps.byId[mapId]
-		if not m then return end
+		if not m or m.campaign then return end -- (the campaign's buildings are never sold)
 		if Data.ownsMap(p, m.id) then Remotes.Fx:FireClient(p, "UltResult", true, "You already own " .. m.name); return end
 		if not Data.spend(p, m.price) then Remotes.Fx:FireClient(p, "UltResult", false, "Not enough cash for " .. m.name); return end
 		Data.own(p, "Map_" .. m.id)
 		task.spawn(Data.save, p)
-		Remotes.Fx:FireClient(p, "UltResult", true, "Bought " .. m.name .. " - pick it on a room pad")
+		Remotes.Fx:FireClient(p, "UltResult", true, "Bought " .. m.name .. " - pick it in PLAY > ENDLESS")
 	end)
 	-- slot 2 = the second ultimate of the Double Ultimate pass
 	Remotes.EquipUlt.OnServerEvent:Connect(function(p, id, slot)

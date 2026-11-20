@@ -1,4 +1,4 @@
--- Lobby shop at the Hooded Dealer, picture first: three tabs (ULTIMATES, MAPS, ROBUX: cash packs and the Game
+-- Lobby shop at the Hooded Dealer, picture first: three tabs (ULTIMATES, HOUSES: the old maps for ENDLESS runs, ROBUX: cash packs and the Game
 -- Passes of Shared/Passes), each a grid of cards
 -- (a PS2-style picture from Shared/ShopArt, a short name, a price tag). Click a card to select it: the strip at the
 -- bottom shows its one-line description and the BUY / EQUIP button. Same look as the lobby panel and the fight HUD.
@@ -230,8 +230,8 @@ function Shop.init(toggle: (boolean) -> ())
 	local close = button(panel, "CLOSE", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(0.96, 0.03), Size = UDim2.fromScale(0.15, 0.065), ZIndex = 12, Rotation = 1.5, Modal = true }, DARK)
 	close.Activated:Connect(function() Sfx.play("Click"); Shop.close() end)
 	-- tabs
-	-- (no MAPS tab any more: maps open by beating their buildings, Shared/Campaign; the maps grid stays hidden)
-	for i, t in { { "ults", "ULTIMATES" }, { "robux", "ROBUX" } } do
+	-- HOUSES: the old maps, for ENDLESS runs (the campaign's buildings are never sold: they open by beating them)
+	for i, t in { { "ults", "ULTIMATES" }, { "maps", "HOUSES" }, { "robux", "ROBUX" } } do
 		local b = button(panel, t[2], { Position = UDim2.fromScale(0.04 + (i - 1) * 0.2, 0.128), Size = UDim2.fromScale(0.19, 0.058), ZIndex = 12, Rotation = (i - 2) * 0.6 }, DARK)
 		b.Activated:Connect(function() Sfx.play("Click"); tab = t[1]; selected = nil; refresh() end)
 		tabBtns[t[1]] = b
@@ -279,6 +279,7 @@ function Shop.init(toggle: (boolean) -> ())
 	entries.maps = {}
 	local gm = grid("maps", 3, 0.86)
 	for i, m in Maps.list do
+		if (m :: any).campaign then continue end
 		local e: Entry = {
 			key = "map_" .. m.id, name = m.name, desc = m.desc, color = m.color,
 			state = function()
@@ -368,7 +369,7 @@ function Shop.init(toggle: (boolean) -> ())
 	if game:GetService("RunService"):IsStudio() then
 		lp:GetAttributeChangedSignal("ShopTab"):Connect(function()
 			local t = lp:GetAttribute("ShopTab")
-			if t == "robux" then tab = "robux" elseif t == "all" then tab = "ults" else return end
+			if t == "robux" then tab = "robux" elseif t == "maps" then tab = "maps" elseif t == "all" then tab = "ults" else return end
 			selected = nil
 			Shop.open()
 		end)
