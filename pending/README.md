@@ -41,10 +41,24 @@ Added on 2026-11-21 (bridge still off, 404; **not playtested either**):
   Curse / Soldier of Death. Moon: Exoplanet, Black Hole, Artificial Armageddon A, Parallel World, Extreme Speed /
   Black Plague. Check in a playtest that each one loads and that the volumes sit well against the fight sounds.
 
+- **WEAK: lift and throw the monster** (the user: "the monster can get weak at some point and the player can lift him and
+  throw him around, when the player does a X5 combo; introduce it into the cinematic tutorial too"). `Shared/Config`
+  Weak; `Server/Ghost` states `Weak` (5 s slumped, stars, no attacks, hits hurt but don't move it; once every 18 s)
+  and `Carried` (welded over the carrier's head like furniture, breaks free after 4.5 s), `Ghost.weaken / lift /
+  throwMonster / dropMonster` (thrown = ragdoll through the inside walls; the landing deals 7% of its max health or the
+  thrower's throw damage); `Server/Combat` (the 5th combo hit weakens it, the lift key lifts it, the throw throws it,
+  slower walk while carrying, dropped on death); `Client/Input` (E lifts the weak monster first, hint "LIFT THE
+  MONSTER!"), `Client/GhostAnim` (kneeling Weak pose, struggling Carried pose, stars), new `Client/WeakFx` (gold
+  outline + "WEAK! [E] LIFT IT" tag, banner, slam shake / dust / "SLAM! n DAMAGE"), `ClientMain` wiring. Admin
+  `weak` makes it weak now. THE INTRO: a new lesson after the armchair throw: COMBO x5 (the last hits land by
+  themselves if the player is slow) -> LIFT HER -> THROW HER at the TV's wall (Server/Tutorial "combo"; she is only
+  allowed to go weak from that lesson on; thrown far in a lesson she floats back faster).
+
 Test when the bridge is back: clear `Camp_Lodge` (admin `start Camp_Lodge Normal`, kill) and check the result screen;
 `form Nebula` + `form DarkMatter` then `start Moon_Gate Normal` (should be easy); admin `monster pirate|conqueror|
 astronaut|antlered|specimen|caller` with `DebugEntranceFreezeAt` photos; `DebugFormTut` through the train step;
-`xp` below / above level 10 for the ENDLESS switch.
+`xp` below / above level 10 for the ENDLESS switch. WEAK: punch any monster x5 (or admin `weak`), lift it (E), walk,
+throw it at a wall; let one break free; check the intro's COMBO lesson with `DebugIntro` + `DebugIntroAct` Punch / Lift.
 
 When the bridge is back: playtest them (admin `form <id>` with one form of each map), fix what looks off, run
 `tools/save_game.sh`, then delete `pending/`.
