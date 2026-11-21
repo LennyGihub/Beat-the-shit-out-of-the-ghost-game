@@ -32,6 +32,15 @@ Added on 2026-11-21 (bridge still off, 404; **not playtested either**):
 - **ENDLESS opens at level 10** (`Campaign.ENDLESS_LEVEL`): the PLAY panel's switch says "ENDLESS  LV 10" and stays
   on CAMPAIGN below it; `Server/Lobby` refuses creating / joining an endless lobby below level 10.
 
+- **Rock fight music** (`Shared/Sounds`, the user picked it after listening to the list): every campaign building gets a
+  rock / metal track, each map from its lightest (building 1, volume 1.3) to its heaviest (the boss, 1.7; its phase 2
+  1.8). Camp: Avalanche Addict A, Breaking Bones A, Deep Earth Grinder A, Fight Hard or Die, Get Ready for the
+  Onslaught / From Alpha to Omega. Carnival: Dark Circus A, Lucid Dream, Fighting Heart, Dysteria, Troll / Soul Banger,
+  Machine Gun Toy / Chain Reaction. Harbor: Ominous Doom A, Infectious, Down in the Maelstrom, Metal Storm Breaks,
+  Sword and Shield / The Speed of Light. Abbey: Lost In Eternity, Soulbound Crypt, Occult Forces, Repulsion, Divine
+  Curse / Soldier of Death. Moon: Exoplanet, Black Hole, Artificial Armageddon A, Parallel World, Extreme Speed /
+  Black Plague. Check in a playtest that each one loads and that the volumes sit well against the fight sounds.
+
 Test when the bridge is back: clear `Camp_Lodge` (admin `start Camp_Lodge Normal`, kill) and check the result screen;
 `form Nebula` + `form DarkMatter` then `start Moon_Gate Normal` (should be easy); admin `monster pirate|conqueror|
 astronaut|antlered|specimen|caller` with `DebugEntranceFreezeAt` photos; `DebugFormTut` through the train step;
