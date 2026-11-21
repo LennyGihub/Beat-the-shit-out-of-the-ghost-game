@@ -5,7 +5,10 @@
 --                                along the ground, her stall outlined) -> PRESS F TO TALK -> PRESS OPEN on the Pale
 --                                Ectoplasm (a bouncing arrow and a ring ON the button) -> watch, PRESS OK
 --   STEP 2  MOTHER MOTH'S POTION the same for her hut and the Murky Potion
---   STEP 3  a tip (OPEN OFFLINE!, X10 / X100, the later maps' jars), GOT IT or it closes by itself
+--   then    a tip (OPEN OFFLINE!, X10 / X100, the later maps' jars) for a few seconds (GOT IT skips it)
+--   STEP 3  THE TRAIN (the user, 2026-11-21: "show how to launch a game from the train"): walk to the parked train at
+--           the station (arrow, gold line, the train outlined) -> PRESS F TO BOARD -> the PLAY panel: CREATE (ringed)
+--           -> START (ringed) -> done once the party boards (player attribute Boarding)
 -- Wrong panel open: CLOSE IT. It starts for a player in the park who has never done it and owns no form yet (player
 -- attribute FormTutDone, Server/Data), gives $20 of starter cash once (Remotes.Forms "tutorial" "start") and is saved
 -- as done at the end or on SKIP ("tutorial" "done"). Studio hook: player attribute DebugFormTut = true starts it.
@@ -27,6 +30,7 @@ local NEAR = 13 -- studs from the stall's counter where its prompt shows
 local SellerUI: any = nil
 local FormCine: any = nil
 local Intro: any = nil
+local LobbyUI: any = nil
 local running = false
 
 type Stage = { kind: string, seller: string, who: string, vial: string, vialName: string, verb: string, why: string }
@@ -51,6 +55,19 @@ local function talkKey(): string
 	if m == "touch" then return "TAP THE TALK BUTTON" end
 	if m == "gamepad" then return "PRESS X" end
 	return "PRESS F"
+end
+local function boardKey(): string
+	local m = Platform.mode()
+	if m == "touch" then return "TAP BOARD THE TRAIN" end
+	if m == "gamepad" then return "PRESS X TO BOARD THE TRAIN" end
+	return "PRESS F TO BOARD THE TRAIN"
+end
+-- the parked train at the park's station (Server/Lobby puts the "Board the train" prompt on its BoardPrompt part)
+local function trainModel(): Model?
+	local lobby = workspace:FindFirstChild("Lobby")
+	local st = lobby and lobby:FindFirstChild("Station")
+	local m = st and st:FindFirstChild("ParkedTrain")
+	return (m and m:IsA("Model")) and m or nil
 end
 local function sellerModel(name: string): Model?
 	local lobby = workspace:FindFirstChild("Lobby")
@@ -180,7 +197,7 @@ function FT.play()
 		task.delay(0.3, function() gui:Destroy() end)
 	end
 	skip.Activated:Connect(function() Sfx.play("Click"); finish() end)
-	got.Activated:Connect(function() Sfx.play("Click"); finish() end)
+	got.Activated:Connect(function() Sfx.play("Click") end) -- (the tip: on to the train step, below)
 
 	-- dist = studs to the stall (its own label); the box only pops when the thing to do changes (no sound: the user
 	-- found the sound on every step weird, 2026-11-20)
@@ -205,6 +222,8 @@ function FT.play()
 
 	local stage = 1
 	local tipAt = 0
+	local phase = "vials" -- vials -> tip -> train
+	got.Activated:Connect(function() if phase == "tip" then tipAt = -math.huge end end)
 	task.spawn(function()
 		while not finished do
 			local now = os.clock()
@@ -212,10 +231,13 @@ function FT.play()
 			local away = lp:GetAttribute("InMatch") == true
 			box.Visible = not away
 			border.Transparency = 0.15 + (math.sin(now * 5) * 0.5 + 0.5) * 0.5
-			local target: BasePart? = nil -- (the stall to walk to)
+			local target: BasePart? = nil -- (the stall / the train to walk to)
 			local button: GuiObject? = nil -- (the button to press)
+			local outline: Model? = nil -- (what to outline)
+			local whoLabel = ""
 			local st = STAGES[stage]
 			if st then
+				whoLabel = st.who
 				-- this stage is done once its form is owned and the cinematic is over
 				if owns(st.kind) and not FormCine.busy() then
 					stage += 1
@@ -249,23 +271,60 @@ function FT.play()
 						local d = (prompt and hrp) and math.floor((hrp.Position - prompt.Position).Magnitude) or 0
 						say(stepName, "WALK TO " .. st.who, "FOLLOW THE ARROW AND THE GOLD LINE.  " .. st.why, d)
 					end
-					-- the stall's outline
-					if m and (not glow or glow.Adornee ~= m) then
-						if glow then glow:Destroy() end
-						local h = Instance.new("Highlight")
-						h.Adornee = m; h.FillTransparency = 0.85; h.FillColor = GOLD; h.OutlineColor = GOLD; h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-						h.Parent = gui
-						glow = h
-					end
+					outline = m
 				end
+			elseif phase == "vials" then
+				phase = "tip"
 			end
-			if not STAGES[stage] then
-				-- THE TIP, then done
-				if glow then glow:Destroy(); glow = nil end
+			if phase == "tip" then
+				-- THE TIP for a few seconds (GOT IT skips it), then the train
 				got.Visible = true
 				say("YOU'RE STRONGER - AND EVERYONE CAN SEE IT", "OPEN OFFLINE! OPENS THEM BY ITSELF, EVEN WHILE YOU FIGHT",
 					"X10 / X100 OPEN LOTS AT ONCE.  THE NEXT MAPS SELL STRONGER JARS AND POTIONS.  YOUR FORMS SHOW ON YOUR BODY AND FISTS.")
-				if now - tipAt > 12 then finish(); break end
+				if now - tipAt > 9 then phase = "train"; got.Visible = false end
+			end
+			if phase == "train" then
+				-- STEP 3: THE TRAIN takes you to the monsters' buildings
+				local stepName = "LAUNCH A GAME  -  STEP 3 / 3"
+				local tm = trainModel()
+				local prompt = tm and (tm:FindFirstChild("BoardPrompt", true) :: BasePart?)
+				whoLabel = "THE TRAIN"
+				if lp:GetAttribute("Boarding") or lp:GetAttribute("InMatch") then
+					finish(); break -- (on board: the tutorial is over)
+				elseif LobbyUI and LobbyUI.isOpen() then
+					if LobbyUI.inParty() then
+						local sb = LobbyUI.startButton()
+						button = sb
+						if sb then
+							say(stepName, "PRESS START - THE TRAIN LEAVES WITH YOUR LOBBY", "FRIENDS CAN JOIN YOUR LOBBY BEFORE YOU START.  EVERY BUILDING HAS ONE MONSTER TO BEAT")
+						else
+							say(stepName, "WAIT FOR THE HOST TO PRESS START", "THE TRAIN LEAVES WHEN THE LOBBY'S HOST STARTS IT")
+						end
+					else
+						button = LobbyUI.createButton()
+						say(stepName, "PRESS CREATE TO MAKE YOUR LOBBY", "THE BUILDING AND THE DIFFICULTY ARE PICKED ABOVE: START WITH THE BUNKHOUSE ON NORMAL")
+					end
+				elseif SellerUI.kind() ~= nil or Platform.windowOpen() then
+					say(stepName, "CLOSE THIS PANEL - THE TRAIN IS WAITING", "THE TRAIN AT THE STATION TAKES YOU TO THE MONSTERS")
+				elseif prompt and hrp and (hrp.Position - prompt.Position).Magnitude <= NEAR then
+					target = prompt
+					say(stepName, boardKey(), "THE TRAIN TAKES YOU TO THE MONSTERS' BUILDINGS")
+				else
+					target = prompt
+					local d = (prompt and hrp) and math.floor((hrp.Position - prompt.Position).Magnitude) or 0
+					say(stepName, "WALK TO THE TRAIN", "FOLLOW THE ARROW AND THE GOLD LINE (OR PRESS PLAY ON THE LEFT).  THE TRAIN TAKES YOU TO THE MONSTERS", d)
+				end
+				outline = tm
+			end
+			-- the outline (the stall or the train)
+			if outline ~= (glow and glow.Adornee) then
+				if glow then glow:Destroy(); glow = nil end
+				if outline then
+					local h = Instance.new("Highlight")
+					h.Adornee = outline; h.FillTransparency = 0.85; h.FillColor = GOLD; h.OutlineColor = GOLD; h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+					h.Parent = gui
+					glow = h
+				end
 			end
 			if glow then glow.OutlineTransparency = 0.1 + (math.sin(now * 5) * 0.5 + 0.5) * 0.4; glow.Enabled = not away and SellerUI.kind() == nil and not Platform.windowOpen() end
 			-- the ring and the arrow on the button
@@ -276,7 +335,7 @@ function FT.play()
 				if s then s.Transparency = math.sin(now * 6) * 0.3 + 0.3 end
 			end
 			-- the guide line and the screen arrow to the stall
-			local showWay = target ~= nil and hrp ~= nil and not away and SellerUI.kind() == nil and not FormCine.busy()
+			local showWay = target ~= nil and hrp ~= nil and not away and SellerUI.kind() == nil and not FormCine.busy() and not (LobbyUI and LobbyUI.isOpen())
 			beam.Enabled = showWay
 			sArrow.Visible = showWay; sLabel.Visible = showWay
 			if showWay and target and hrp then
@@ -300,7 +359,7 @@ function FT.play()
 					rot = math.deg(math.atan2(dir.X, -dir.Y))
 				end
 				sArrow.Position = UDim2.fromOffset(x, y); sArrow.Rotation = rot
-				sLabel.Text = STAGES[stage] and STAGES[stage].who or ""
+				sLabel.Text = whoLabel
 				sLabel.Position = UDim2.fromOffset(x, y + (rot == 180 and -46 or 44))
 			end
 			task.wait(1 / 30)
@@ -308,8 +367,8 @@ function FT.play()
 	end)
 end
 
-function FT.init(sellerUI: any, formCine: any, intro: any)
-	SellerUI = sellerUI; FormCine = formCine; Intro = intro
+function FT.init(sellerUI: any, formCine: any, intro: any, lobbyUI: any?)
+	SellerUI = sellerUI; FormCine = formCine; Intro = intro; LobbyUI = lobbyUI
 	-- start: in the park, after the intro, never done, no form owned yet
 	task.spawn(function()
 		while true do
