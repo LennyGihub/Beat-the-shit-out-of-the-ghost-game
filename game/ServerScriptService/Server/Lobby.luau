@@ -245,6 +245,9 @@ local function onParty(p: Player, action: any, a: any, b: any, c: any, d: any, e
 			if not Campaign.stageOpen(Data.campaign(p), stg.id) then Remotes.Fx:FireClient(p, "Toast", "Clear the building before " .. stg.name .. " first"); return end
 		else
 			if m.campaign then return end
+			if not Campaign.endlessOpen(p:GetAttribute("Level")) then
+				Remotes.Fx:FireClient(p, "Toast", "Endless opens at level " .. Campaign.ENDLESS_LEVEL); return
+			end
 			if not Data.ownsMap(p, m.id) then Remotes.Fx:FireClient(p, "Toast", "Buy " .. m.name .. " at the dealer first (SHOP > HOUSES)"); return end
 		end
 		leaveParty(p)
@@ -258,6 +261,9 @@ local function onParty(p: Player, action: any, a: any, b: any, c: any, d: any, e
 		if not pt then Remotes.Fx:FireClient(p, "Toast", "That lobby is gone"); return end
 		if #pt.members >= pt.size then Remotes.Fx:FireClient(p, "Toast", "That lobby is full"); return end
 		if pt.private and not pt.invited[p.UserId] then Remotes.Fx:FireClient(p, "Toast", "That lobby is private - ask for an invite"); return end
+		if not Campaign.stage(pt.map) and not Campaign.endlessOpen(p:GetAttribute("Level")) then
+			Remotes.Fx:FireClient(p, "Toast", "Endless opens at level " .. Campaign.ENDLESS_LEVEL); return
+		end
 		leaveParty(p)
 		table.insert(pt.members, p)
 		p:SetAttribute("PartyId", pt.id)

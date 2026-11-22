@@ -305,6 +305,15 @@ CMD.ragdoll = function(p, a)
 	return true, "BONK! She is flying"
 end
 
+-- the monster goes WEAK now, as after a x5 combo (Config.Weak; its cooldown is skipped): lift it (E), throw it
+CMD.weak = function(p)
+	local g = Ghost.current
+	if not g or not Ghost.alive() then return false, "No ghost alive" end
+	g.weakReady = 0
+	if Ghost.weaken(p) then return true, "The monster is WEAK: lift it (E) and throw it" end
+	return false, "It can't go weak right now (state " .. tostring(g.state) .. ")"
+end
+
 -- evolved on | off | <tier 1-3>: every ghost is an EVOLVED monster (combine with 'monster <id>')
 CMD.evolved = function(_p, a)
 	if a == "off" then

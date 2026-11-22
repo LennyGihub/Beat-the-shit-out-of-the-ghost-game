@@ -6,7 +6,8 @@
 -- inside), fights the building's one monster (its last building's monster comes back EVOLVED as phase 2), and
 -- the building is CLEARED (saved per player: Data.clearStage, best difficulty): cash + XP paid, Fx "StageClear",
 -- state "Cleared". Then Remotes.Stage: "next" (the next building), "again" (same one) - the train leaves
--- (Fx "TrainDepart") and comes back to the other building in this same server - or "lobby".
+-- (Fx "TrainDepart") and comes back to the other building in this same server - or "lobby". A map's LAST building
+-- (Campaign.isLast) only offers "lobby": the party goes back to the park (new jars / potions, the next map's train).
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -399,6 +400,8 @@ function Run.stageCleared()
 	setWaypoint(nil)
 	local rank = Campaign.diffRank[diff.id] or 2
 	local nxt = Campaign.nextStage(s0.id)
+	-- a map's last building: only the way back to the park (Campaign.isLast)
+	local final = Campaign.isLast(s0.id)
 	for _, p in Run.matchPlayers() do
 		local first = false
 		if Campaign.stageOpen(Data.campaign(p), s0.id) then first = Data.clearStage(p, s0.id, rank) end
@@ -416,12 +419,13 @@ function Run.stageCleared()
 		Quests.add(p, "stage")
 		Remotes.Fx:FireClient(p, "StageClear", {
 			stage = s0.id, diff = diff.id, first = first, cash = cash, xp = xp, before = before, after = after, kills = kills0,
-			nextId = (nxt and Campaign.stageOpen(prog, nxt.id)) and nxt.id or nil,
+			nextId = (not final and nxt and Campaign.stageOpen(prog, nxt.id)) and nxt.id or nil,
+			nextMap = (final and nxt and Campaign.mapOpen(prog, nxt.map)) and nxt.map or nil, final = final,
 			done = done, total = total, mapDone = Campaign.mapDone(prog, s0.map), goal = goal and goal.id or nil,
-			best = prog[s0.id] or rank, choice = 60,
+			best = prog[s0.id] or rank, choice = final and 30 or 60,
 		})
 	end
-	choiceUntil = os.clock() + 60
+	choiceUntil = os.clock() + (final and 30 or 60)
 end
 
 -- the result screen's buttons (Remotes.Stage): "next" / "again" take everyone still here; "lobby" only you
@@ -429,6 +433,7 @@ local function onStageChoice(p: Player, choice: any)
 	if state ~= "Cleared" or not stage or not p:GetAttribute("InMatch") then return end
 	if choice == "lobby" then Run.leave(p, "left"); return end
 	if choice ~= "next" and choice ~= "again" then return end
+	if Campaign.isLast(stage.id) then return end -- (a map's last building: the park only)
 	local target = choice == "again" and stage or Campaign.nextStage(stage.id)
 	if not target then return end
 	if choice == "next" and not Campaign.stageOpen(Data.campaign(p), target.id) then return end

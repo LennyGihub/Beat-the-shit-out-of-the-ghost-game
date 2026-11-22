@@ -5,6 +5,7 @@
 -- difficulty, 1-4 players) or join an open one, then the host presses START: the party boards the train.
 -- ENDLESS (the switch at the top of the create side): pick one of the old HOUSES you own instead (the Mansion is
 -- free, the others are sold at the dealer: SHOP > HOUSES) and fight ghost after ghost until everyone is down.
+-- ENDLESS opens at level 10 (Campaign.ENDLESS_LEVEL): below it the switch says so and stays on CAMPAIGN.
 -- Lobbies live on the server (Lobby.luau, Remotes.Party); the list comes in the ReplicatedStorage attribute "Parties".
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
@@ -57,6 +58,7 @@ local mapBtns = {} :: { [string]: TextButton }
 local diffBtns = {} :: { [string]: TextButton }
 local sizeBtns = {} :: { [number]: TextButton }
 local openShop: (() -> ())? = nil
+local createBtn: TextButton? = nil -- (the create side's CREATE: Client/FormTutorial points at it)
 local onToggle: ((boolean) -> ())? = nil
 
 -- the fight HUD's palette: health red, stamina mustard, brutality orange, cash green, ink
@@ -162,7 +164,19 @@ local function refreshPicks()
 		campPage.Visible = pickMode == "campaign"
 		endPage.Visible = pickMode == "endless"
 	end
-	for id, b in modeBtns do paint(b, id == pickMode and RED or DARK) end
+	-- (ENDLESS is locked below Campaign.ENDLESS_LEVEL)
+	local endlessOk = Campaign.endlessOpen(lp:GetAttribute("Level"))
+	if not endlessOk and pickMode == "endless" then
+		pickMode = "campaign"
+		if campPage then campPage.Visible = true; endPage.Visible = false end
+	end
+	for id, b in modeBtns do
+		paint(b, id == pickMode and RED or DARK)
+		if id == "endless" then
+			setText(b, endlessOk and "ENDLESS" or ("ENDLESS  LV " .. Campaign.ENDLESS_LEVEL))
+			setTextColor(b, Grunge.PAPER, endlessOk and 0 or 0.45)
+		end
+	end
 	local om = ownedMaps()
 	if not om[pickHouse] then pickHouse = "Mansion" end
 	for id, b in houseBtns do
@@ -305,6 +319,12 @@ end
 function LobbyUI.openPlay()
 	if panel and not lp:GetAttribute("InMatch") and not panel.Visible then setOpen(true) end
 end
+
+-- for Client/FormTutorial's train step: is the PLAY panel up, are you in a lobby, the button to press now
+function LobbyUI.isOpen(): boolean return panel ~= nil and panel.Visible end
+function LobbyUI.inParty(): boolean return mine ~= nil and mine.Visible end
+function LobbyUI.createButton(): GuiObject? return (createPage ~= nil and createPage.Visible) and createBtn or nil end
+function LobbyUI.startButton(): GuiObject? return (mine ~= nil and mine.Visible and startBtn ~= nil and startBtn.Visible) and startBtn or nil end
 
 local function refreshVisible()
 	local inMatch = lp:GetAttribute("InMatch") == true
@@ -449,6 +469,12 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 		local b = button(createPage, md[2], { Position = UDim2.fromScale((i - 1) * 0.33, 0), Size = UDim2.fromScale(0.31, 0.058), BackgroundColor3 = DARK, ZIndex = 12,
 			Rotation = (i - 1.5) * 1.2 })
 		b.Activated:Connect(function()
+			if md[1] == "endless" and not Campaign.endlessOpen(lp:GetAttribute("Level")) then
+				Sfx.play("Click", { PlaybackSpeed = 0.6 })
+				status.Text = "ENDLESS OPENS AT LEVEL " .. Campaign.ENDLESS_LEVEL .. " - YOU ARE LEVEL " .. (tonumber(lp:GetAttribute("Level")) or 1)
+					.. ". PLAY THE CAMPAIGN TO LEVEL UP"
+				return
+			end
 			Sfx.play("Click")
 			pickMode = md[1]
 			status.Text = md[1] == "endless" and "ENDLESS: GHOST AFTER GHOST IN A HOUSE UNTIL EVERYONE IS DOWN. HOW FAR CAN YOU GO?" or "CAMPAIGN: BEAT EVERY BUILDING OF EVERY MAP"
@@ -551,8 +577,10 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 	ffBtn = button(createPage, "FRIENDLY FIRE: ON", { Position = UDim2.fromScale(0, 0.922), Size = UDim2.fromScale(0.55, 0.07), BackgroundColor3 = DARK, ZIndex = 12, Font = Grunge.TYPE })
 	ffBtn.Activated:Connect(function() Sfx.play("Click"); pickFF = not pickFF; refreshPicks() end)
 	local create = button(createPage, "CREATE", { Position = UDim2.fromScale(0.58, 0.84), Size = UDim2.fromScale(0.42, 0.13), BackgroundColor3 = GREEN, ZIndex = 12, Rotation = -1.5 })
+	createBtn = create
 	create.Activated:Connect(function()
 		local endless = pickMode == "endless"
+		if endless and not Campaign.endlessOpen(lp:GetAttribute("Level")) then pickMode = "campaign"; refreshPicks(); return end
 		if not endless and (ticketsNow()) <= 0 then showNoTicket(); return end -- (an endless run needs no ticket)
 		Sfx.play("Click"); Remotes.Party:FireServer("create", endless and pickHouse or pickMap, pickDiff, pickSize, pickPrivate, pickFF)
 	end)
@@ -609,7 +637,7 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 	Players.PlayerAdded:Connect(refreshList)
 	Players.PlayerRemoving:Connect(function() task.defer(refreshList) end)
 	RS:GetAttributeChangedSignal("Parties"):Connect(refreshList)
-	for _, a in { "PartyId", "Owned", "Campaign", "GhostLevel" } do lp:GetAttributeChangedSignal(a):Connect(function() refreshPicks(); refreshList() end) end
+	for _, a in { "PartyId", "Owned", "Campaign", "GhostLevel", "Level" } do lp:GetAttributeChangedSignal(a):Connect(function() refreshPicks(); refreshList() end) end
 	for _, a in { "InMatch", "FriendBoost", "FriendCount" } do lp:GetAttributeChangedSignal(a):Connect(refreshVisible) end
 	Platform.windowChanged:Connect(refreshVisible)
 	Platform.changed:Connect(refreshVisible)

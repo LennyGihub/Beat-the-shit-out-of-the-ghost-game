@@ -121,6 +121,14 @@ local Config = {
 		{ attr = "CashPack3Id", cash = 6000, name = "BRIEFCASE" },
 		{ attr = "CashPack4Id", cash = 15000, name = "VAULT" },
 	},
+	-- WEAK (Server/Ghost.weaken, the user 2026-11-21: "the monster can get weak at some point and the player can lift him
+	-- and throw him around, when the player does a X5 combo"): the Combo-th hit of a combo wears the monster out. For Time
+	-- seconds it slumps where it is (stars round its head; no moves, no attacks; hits hurt it but don't move it) and
+	-- anyone close can LIFT it over their head with the lift key (Server/Combat onGrab -> Ghost.lift), walking slower
+	-- (CarrySlow), and THROW it: it flies as a ragdoll at ThrowSpeed, through the inside walls, and the landing hurts it
+	-- (ThrowShare of its max health, or the thrower's throw damage if that is more). Held longer than CarryTime it
+	-- breaks free. It can only go weak once every Cooldown seconds (counted from the moment it went weak).
+	Weak = { Combo = 5, Time = 5, CarryTime = 4.5, Cooldown = 18, ThrowShare = 0.07, ThrowSpeed = 95, CarrySlow = 0.6 },
 	Reward = { Base = 200, PerLevel = 120 }, -- RUN cash per ghost (spent on items, lost after the run)
 	Payout = { PerKill = 55, PerLevel = 22, DamageDiv = 30 }, -- real cash paid when you die or leave the run (x difficulty reward)
 	-- WILDFIRE (the flamethrower): what it sets alight keeps spreading through the whole house: across floors, up the

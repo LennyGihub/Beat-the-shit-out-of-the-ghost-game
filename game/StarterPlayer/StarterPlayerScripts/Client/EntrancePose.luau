@@ -3,7 +3,11 @@
 -- it is at `s` seconds into the entrance. Client/GhostAnim plays it while the monster is in its "Spawn" state;
 -- Client/Entrance plays the camera, effects and sounds on the same clock (the beats below, EntrancePose.T).
 -- The "Root" joint also carries the body's offset from where the monster really stands (rising out of the floor,
--- falling from the ceiling, walking up): the server-side monster never moves during its entrance.
+-- falling from the ceiling): the server-side monster never moves during its entrance.
+-- (2026-11-21, the user: too many monsters walked up to the camera. None does now except the Void Knight, who steps
+-- out through the wall he cut: the Pirate / Netman turn round in the fog, the Conqueror takes shape in front of his
+-- portal, the Astronaut steps out of his airlock, the Antlered One / Specimen hang right above, the Caller's flashes
+-- show him left, right, then in the middle.)
 -- Joint signs (same rig for every monster): Shoulder +X = arm forward / up, +Z (right arm) = out to the side;
 -- Elbow +X bends; Hip +X = thigh forward; Knee -X bends; Root / Waist / Neck +X = lean back, -X = forward.
 local EP = {}
@@ -112,19 +116,22 @@ POSES.Demon = function(p, s, t, H)
 	return s < T.pillar and 1 or 0
 end
 
--- THE PIRATE: strides out of the fog, bangs his cutlass on his shield twice, then holds it high
+-- THE PIRATE: stands in the fog with his back to you, looks over his shoulder, turns round with two heavy steps on
+-- the spot, bangs his cutlass on his shield twice, then holds it high (he never walks at the camera)
 POSES.Pirate = function(p, s, t, H)
 	local T = EP.T.Pirate
-	local walk = seg(s, T.walk0, T.walk1)
-	local am = seg(s, T.walk0, T.walk0 + 0.3) * (1 - seg(s, T.walk1 - 0.25, T.walk1))
-	local ph = s * 8
-	stride(p, ph, am)
+	local t0 = T.walk1 - 1.1 -- (the turn: t0 .. walk1)
+	local turn = ss(seg(s, t0, T.walk1))
+	local am = seg(s, t0, t0 + 0.2) * (1 - seg(s, T.walk1 - 0.2, T.walk1))
+	local ph = (s - t0) * 5.7 -- (one stride cycle = two steps over the turn)
+	stride(p, ph, am * 0.45)
+	local glance = seg(s, 0.7, 1.0) * (1 - seg(s, t0, t0 + 0.4))
 	local bang = math.min(1, pulse(s, T.bang1, 0.07) + pulse(s, T.bang2, 0.07))
 	local ready = seg(s, T.walk1 - 0.1, T.bang1 - 0.12)
 	local raise = ss(seg(s, T.raise, T.raise + 0.3)) * (1 - seg(s, T.calm, T.calm + 0.5))
-	p.Root = CFrame.new(0, math.abs(sin(ph)) * 0.25 * am, 10 * EP.clock.back * (1 - walk)) * A(-0.1 * am + 0.16 * raise, 0, 0)
+	p.Root = CFrame.new(0, math.abs(sin(ph)) * 0.12 * am, 0) * A(0, pi * (1 - turn), 0) * A(-0.05 * am + 0.16 * raise, 0, 0)
 	p.Waist = A(0.18 * (1 - raise), -0.25 * bang, 0)
-	p.Neck = A(-0.15 + 0.35 * raise, sin(t * 1.1) * 0.15 * (1 - raise), 0)
+	p.Neck = A(-0.15 + 0.35 * raise, sin(t * 1.1) * 0.15 * (1 - raise) * turn + 0.75 * glance, 0)
 	p.LeftShoulder = A(0.15 + 0.5 * ready, 0.25, -0.25); p.LeftElbow = A(1.35, 0, 0)
 	local swing = A(0.9 * ready + 0.25 * bang, 0, -0.35 * ready - 0.55 * bang)
 	p.RightShoulder = swing:Lerp(A(2.95, 0, 0.18), raise)
@@ -195,14 +202,14 @@ POSES.Goblin = function(p, s, t, H)
 	return s < T.flip and 1 or 0
 end
 
--- THE CALLER: only seen in three flashes of light, each time closer; then he tilts his head and lifts the knife
--- (the Last Call racks his shotgun)
+-- THE CALLER: only seen in three flashes of light, each time somewhere else (to one side, the other side, then
+-- right in front: never closer); then he tilts his head and lifts the knife (the Last Call racks his shotgun)
 POSES.Caller = function(p, s, t, H, evolved)
 	local T = EP.T.Caller
-	local z = s < (T.flash1 + T.flash2) / 2 and 17 or (s < (T.flash2 + T.flash3) / 2 and 8.5 or 0)
+	local x = s < (T.flash1 + T.flash2) / 2 and 4 or (s < (T.flash2 + T.flash3) / 2 and -4 or 0)
 	local tilt = ss(seg(s, T.raise - 0.1, T.raise + 0.5))
 	local raise = ss(seg(s, T.raise, T.raise + 0.6))
-	p.Root = CFrame.new(0, 0, z * EP.clock.back)
+	p.Root = CFrame.new(x, 0, 0)
 	p.Waist = A(0.1 * raise, 0, 0)
 	p.Neck = A(-0.12, 0, 0.5 * tilt)
 	p.RightShoulder = A(1.35 * raise, 0, 0.3 * raise); p.RightElbow = A(1.55 * raise, 0, 0); p.RightWrist = A(0.15 * raise, 0, 0)
@@ -216,22 +223,43 @@ POSES.Caller = function(p, s, t, H, evolved)
 	return seen and 0 or 1
 end
 
--- THE CONQUEROR: walks out of his portal with heavy steps, then lifts his gauntlet and closes the fist
+-- THE CONQUEROR: takes shape in front of his portal, bowed; straightens up, stamps once, then lifts his gauntlet and
+-- closes the fist (he no longer walks at the camera)
 POSES.Conqueror = function(p, s, t, H)
 	local T = EP.T.Conqueror
-	local walk = seg(s, T.step0, T.step1)
-	local am = seg(s, T.step0, T.step0 + 0.2) * (1 - seg(s, T.step1 - 0.2, T.step1))
-	local ph = (s - T.step0) * 2 * pi
-	stride(p, ph, am * 0.8)
+	local form = ss(seg(s, T.step0, T.step1 - 0.5))
+	local up = ss(seg(s, T.step1 - 1.0, T.step1 - 0.2))
+	local lift = ss(seg(s, T.step1 - 0.55, T.step1 - 0.2)) * (1 - seg(s, T.step1 - 0.2, T.step1 - 0.08)) -- (the stamp)
 	local fist = ss(seg(s, T.fist, T.clench - 0.1)) * (1 - seg(s, T.calm, T.calm + 0.4))
 	local clench = seg(s, T.clench - 0.05, T.clench + 0.05)
-	p.Root = CFrame.new(0, math.abs(sin(ph)) * 0.18 * am, 7.5 * EP.clock.back * (1 - walk)) * A(-0.05 + 0.1 * fist, 0, 0)
-	p.Waist = A(0.15 * fist, 0, 0)
-	p.Neck = A(-0.1 + 0.3 * fist, 0, 0)
-	p.RightShoulder = A(2.9 * fist + sin(ph + pi) * 0.25 * am, 0, 0.15 * fist); p.RightElbow = A(0.2 + 0.6 * fist * (1 - clench) + 0.35 * clench, 0, 0)
+	p.Root = A(-0.05 - 0.3 * (1 - up) + 0.1 * fist, 0, 0)
+	p.Waist = A(-0.25 * (1 - up) + 0.15 * fist, 0, 0)
+	p.Neck = A(-0.45 * (1 - up) - 0.1 + 0.3 * fist, 0, 0)
+	p.RightHip = A(0.85 * lift, 0, 0.05); p.RightKnee = A(-1.1 * lift, 0, 0)
+	p.RightShoulder = A(2.9 * fist + 0.2 * (1 - up), 0, 0.15 * fist + 0.1); p.RightElbow = A(0.2 + 0.6 * fist * (1 - clench) + 0.35 * clench, 0, 0)
 	p.RightWrist = A(0.5 * clench * fist, 0, 0)
-	p.LeftShoulder = A(-0.2 * fist + sin(ph) * 0.25 * am, 0, -0.3 * fist); p.LeftElbow = A(0.2 + 0.8 * fist, 0, 0)
-	return s < T.step0 and 1 or 0
+	p.LeftShoulder = A(-0.2 * fist + 0.2 * (1 - up), 0, -0.3 * fist - 0.1); p.LeftElbow = A(0.2 + 0.8 * fist, 0, 0)
+	return 1 - form
+end
+
+-- THE LOST ASTRONAUT: the airlock right behind him opens in a cloud of steam and he is standing in it; he looks round,
+-- his jetpack fires a short hop, he lands and lifts his fist (Conqueror beats)
+POSES.Astronaut = function(p, s, t, H)
+	local T = EP.T.Conqueror
+	local seen = ss(seg(s, T.step0 - 0.3, T.step0 + 0.5))
+	local look = seg(s, T.step0, T.step0 + 0.3) * (1 - seg(s, T.close - 0.3, T.close))
+	local hop = seg(s, T.fist - 0.05, T.fist + 0.55)
+	local crouchK = pulse(s, T.fist - 0.15, 0.1) + exp(-math.max(0, s - (T.fist + 0.55)) / 0.15) * (s > T.fist + 0.55 and 0.6 or 0)
+	local fist = ss(seg(s, T.fist + 0.6, T.fist + 0.95)) * (1 - seg(s, T.calm, T.calm + 0.4))
+	local clench = seg(s, T.fist + 0.95, T.fist + 1.05)
+	crouch(p, math.min(1, crouchK) * 0.5)
+	p.Root = CFrame.new(0, 3 * sin(pi * hop) - H * 0.06 * math.min(1, crouchK), 0) * A(-0.05 + 0.1 * fist, 0, 0)
+	p.Waist = A(0.1 * fist, sin((s - T.step0) * 2.2) * 0.35 * look, 0)
+	p.Neck = A(-0.1 + 0.25 * fist, sin((s - T.step0) * 2.2 + 0.6) * 0.5 * look, 0)
+	p.RightShoulder = A(2.9 * fist + 0.4 * sin(pi * hop), 0, 0.15 * fist + 0.5 * sin(pi * hop)); p.RightElbow = A(0.2 + 0.6 * fist * (1 - clench) + 0.35 * clench, 0, 0)
+	p.RightWrist = A(0.5 * clench * fist, 0, 0)
+	p.LeftShoulder = A(-0.2 * fist + 0.4 * sin(pi * hop), 0, -0.3 * fist - 0.5 * sin(pi * hop)); p.LeftElbow = A(0.2 + 0.8 * fist, 0, 0)
+	return 1 - seen
 end
 
 -- THE SEWER RAT: bursts up out of the floor, lands on all fours, sniffs left and right, then rears up and shrieks
@@ -275,8 +303,9 @@ POSES.Knight = function(p, s, t, H)
 	return s < T.kick and 1 or 0
 end
 
--- THE ANTLERED ONE: upside down on the ceiling, crawling toward you; he lets go, rolls upright as he falls, lands in
--- a crouch, stands up tall and bellows with his arms thrown wide
+-- THE ANTLERED ONE: upside down on the ceiling right above, his limbs shifting their grip and his skull turning to
+-- look at you; he lets go, rolls upright as he falls, lands in a crouch, stands up tall and bellows with his arms
+-- thrown wide (he no longer crawls toward the camera)
 POSES.Antlered = function(p, s, t, H)
 	local T = EP.T.Antlered
 	local m = EP.clock.model
@@ -290,13 +319,12 @@ POSES.Antlered = function(p, s, t, H)
 	local squash = landed and exp(-(s - T.land) / 0.2) or 0
 	local roar = seg(s, T.roar, T.roar + 0.25) * (1 - seg(s, T.calm, T.calm + 0.4))
 	local y = (s < T.fall and top or top * (1 - fall * fall)) - H * 0.18 * k - H * 0.05 * squash
-	local z = 9 * EP.clock.back * (1 - crawl)
-	p.Root = CFrame.new(0, y, z) * A(0, 0, pi * (1 - flip)) * A(-0.5 * k + 0.35 * roar, 0, 0)
+	p.Root = CFrame.new(0, y, 0) * A(0, 0, pi * (1 - flip)) * A(-0.5 * k + 0.35 * roar, 0, 0)
 	if not landed then
-		-- on the ceiling: a slow spider crawl, the skull hanging down and turning to look at you
-		local am = (1 - flip) * seg(s, T.crawl0, T.crawl0 + 0.2) * (1 - seg(s, T.crawl1 - 0.2, T.crawl1))
-		local ph = s * 7
-		stride(p, ph, am * 1.2)
+		-- on the ceiling: shifting his grip on the spot, the skull hanging down and turning to look at you
+		local am = (1 - flip) * seg(s, T.crawl0, T.crawl0 + 0.2) * (1 - seg(s, T.crawl1 - 0.2, T.crawl1)) * (0.6 + 0.4 * crawl)
+		local ph = s * 5
+		stride(p, ph, am * 0.7)
 		p.RightShoulder = A(0.4 + sin(ph) * 0.7 * am, 0, 0.5); p.LeftShoulder = A(0.4 - sin(ph) * 0.7 * am, 0, -0.5)
 		p.RightElbow = A(0.6, 0, 0); p.LeftElbow = A(0.6, 0, 0)
 		p.Neck = A(0.7 * (1 - flip), sin(t * 1.7) * 0.5 * (1 - seg(s, T.crawl1, T.fall)), sin(t * 23) * 0.05)
@@ -474,7 +502,7 @@ EP.T.Netman = EP.T.Pirate; POSES.Netman = POSES.Pirate
 EP.T.Nun = EP.T.Woman; POSES.Nun = POSES.Woman
 EP.T.Gravedigger = EP.T.Rat; POSES.Gravedigger = POSES.Rat
 EP.T.Ringer = EP.T.Titan; POSES.Ringer = POSES.Titan
-EP.T.Astronaut = EP.T.Conqueror; POSES.Astronaut = POSES.Conqueror
+EP.T.Astronaut = EP.T.Conqueror -- (its own pose above, on the Conqueror's beats)
 EP.T.Specimen = EP.T.Antlered; POSES.Specimen = POSES.Antlered
 EP.T.Sentinel = EP.T.Ringmaster; POSES.Sentinel = POSES.Ringmaster
 

@@ -899,6 +899,29 @@ local function target(state: string, t: number, sinceState: number): { [string]:
 		p.RightHip = A(-0.2 + s(w) * 0.1, 0, 0.12); p.LeftHip = A(-0.1 - s(w) * 0.1, 0, -0.12)
 		p.RightKnee = A(-0.5, 0, 0); p.LeftKnee = A(-0.4, 0, 0)
 		p.RightAnkle = A(-0.5, 0, 0); p.LeftAnkle = A(-0.5, 0, 0)
+	elseif state == "Weak" then
+		-- WEAK (a x5 combo, Config.Weak): knocked down to its knees, slumped forward, swaying, head lolling, arms hanging
+		local j = math.max(0, 1 - sinceState / 0.35) -- (the hit that broke it)
+		local w = t * 2.1
+		p.Root = CFrame.new(0, -1.3, 0) * A(-0.32 + 0.4 * j + s(w * 0.5) * 0.05, s(w * 0.6) * 0.08, s(w) * 0.12)
+		p.Waist = A(-0.38, 0, -s(w) * 0.1)
+		p.Neck = A(-0.65 + s(w * 1.3) * 0.18, s(w * 0.8) * 0.32, s(w * 1.1) * 0.3)
+		p.RightShoulder = A(-0.15 + s(w + 0.5) * 0.1, 0, 0.14); p.LeftShoulder = A(-0.15 + s(w + 1.3) * 0.1, 0, -0.14)
+		p.RightElbow = A(0.2, 0, 0); p.LeftElbow = A(0.25, 0, 0)
+		p.RightWrist = A(0.5, 0, 0); p.LeftWrist = A(0.5, 0, 0)
+		p.RightHip = A(0.25, 0, 0.12); p.LeftHip = A(0.2, 0, -0.12)
+		p.RightKnee = A(-1.5, 0, 0); p.LeftKnee = A(-1.45, 0, 0)
+		p.RightAnkle = A(0.4, 0, 0); p.LeftAnkle = A(0.4, 0, 0)
+	elseif state == "Carried" then
+		-- held over a player's head (Server/Ghost.lift): limp, then kicking and clawing at the air to get free
+		local k = math.min(1, sinceState / 2.5) -- (struggles harder the longer it is held)
+		local w = t * (5 + 8 * k)
+		p.Waist = A(0.25 + s(w) * 0.12 * k, s(w * 0.7) * 0.2 * k, 0)
+		p.Neck = A(0.55 + s(w * 1.1) * 0.2, s(w * 0.9) * 0.35, 0)
+		p.RightShoulder = A(0.4 + s(w) * 0.7 * k, 0, 1.2 + s(w * 1.3) * 0.3); p.LeftShoulder = A(0.4 - s(w) * 0.7 * k, 0, -1.2 - s(w * 1.2) * 0.3)
+		p.RightElbow = A(0.6 + s(w * 1.5) * 0.3 * k, 0, 0); p.LeftElbow = A(0.6 - s(w * 1.5) * 0.3 * k, 0, 0)
+		p.RightHip = A(0.3 + s(w * 1.2) * 0.6 * k, 0, 0.3); p.LeftHip = A(0.3 - s(w * 1.2) * 0.6 * k, 0, -0.3)
+		p.RightKnee = A(-0.6 - math.max(0, s(w * 1.2)) * 0.6 * k, 0, 0); p.LeftKnee = A(-0.6 - math.max(0, -s(w * 1.2)) * 0.6 * k, 0, 0)
 	elseif state == "Scare" then
 		p.Root = A(-0.25, 0, 0)
 		p.Neck = A(-0.25 + s(t * 50) * 0.06, s(t * 43) * 0.12, s(t * 37) * 0.15)
@@ -1072,7 +1095,8 @@ function GA.update(dt: number)
 			current = nil
 		end
 	end
-	starStep(current, current ~= nil and current.Parent ~= nil and current:GetAttribute("State") == "Stunned", os.clock())
+	local st0 = current ~= nil and current.Parent ~= nil and current:GetAttribute("State") or ""
+	starStep(current, st0 == "Stunned" or st0 == "Weak" or st0 == "Carried", os.clock()) -- (dazed, worn out, held up)
 	if not current or not current.Parent then return end
 	if current:GetAttribute("Held") == true then heldTotal += dt end
 	local t = os.clock() - heldTotal

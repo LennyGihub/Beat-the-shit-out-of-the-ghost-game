@@ -172,7 +172,7 @@ function Runner.run(player: Player, def, center: Vector3)
 			elseif t == "slow" then
 				Ghost.slow(a.mult, a.t)
 			elseif t == "heal" then
-				Combat.heal(player, a.hp)
+				Combat.heal(player, a.hp * Combat.healthMult(player))
 			elseif t == "stamina" then
 				Combat.refillStamina(player)
 			elseif t == "giant" then

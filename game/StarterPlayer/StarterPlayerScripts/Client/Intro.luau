@@ -11,7 +11,8 @@
 --   2 THE LESSONS, each one frozen (the world stops, the colour drains, the music sinks; one word and the key), on
 --     the real Woman with the game's own moves: BLOCK (frozen on her lunge: the press is when the game begins, her
 --     claws coming down on the guard), ATTACK (and a few more punches), LIFT (the armchair you sat in), THROW (it
---     can't miss: the server steers it onto her), ULTIMATE (the bar fills with the screen shaking harder and
+--     can't miss: the server steers it onto her), COMBO x5 (five hits in a row: she goes WEAK, Config.Weak; then LIFT
+--     HER over your head and THROW HER - the camera follows her flight), ULTIMATE (the bar fills with the screen shaking harder and
 --     harder, going red: the anger building; the Rage Shockwave: this once it only stuns her).
 --   3 THE FIGHT: a short real fight (she swings, waits, swings again): charged hits knock her out and smash her
 --     through the walls (the ragdoll). It ends when she is beaten (or after a while).
@@ -67,8 +68,10 @@ local function jerks(t: number): number
 end
 local RAGE = (Ultimates.byId.Rage and Ultimates.byId.Rage.color) or Color3.fromRGB(255, 70, 30)
 local GAMEPAD = { Punch = Enum.KeyCode.ButtonR2, Block = Enum.KeyCode.ButtonB, Lift = Enum.KeyCode.ButtonL2, Ultimate = Enum.KeyCode.ButtonY }
-local WORDS = { Block = "BLOCK!", Punch = "ATTACK!", Lift = "LIFT IT!", Throw = "THROW IT!", Ultimate = "ULTIMATE!" }
-local TOUCH = { Block = "TAP TO BLOCK", Punch = "TAP TO HIT", Lift = "TAP TO LIFT", Throw = "TAP TO THROW", Ultimate = "TAP FOR YOUR ULTIMATE" }
+local WORDS = { Block = "BLOCK!", Punch = "ATTACK!", Lift = "LIFT IT!", Throw = "THROW IT!", Ultimate = "ULTIMATE!",
+	Combo = "COMBO x5!", LiftHer = "LIFT HER!", ThrowHer = "THROW HER!" }
+local TOUCH = { Block = "TAP TO BLOCK", Punch = "TAP TO HIT", Lift = "TAP TO LIFT", Throw = "TAP TO THROW", Ultimate = "TAP FOR YOUR ULTIMATE",
+	Combo = "TAP 5 TIMES FAST", LiftHer = "TAP TO LIFT HER", ThrowHer = "TAP TO THROW HER" }
 
 -- THE WOMAN'S POSES (the copy in the TV; joint -> rotation). Her front is her -Z; +X on a shoulder lifts the arm
 -- forward, +Z the right arm out to the side (-Z the left); -X on the waist bends her forward.
@@ -849,6 +852,66 @@ function Intro.play(onDone: (() -> ())?)
 				task.wait(0.05)
 				rem:FireServer("release")
 				sleep(1.4)
+			end
+		end
+		-- COMBO x5 (Config.Weak): five hits in a row and she goes WEAK; LIFT her over your head and THROW her
+		local function herState(): string
+			local g = real()
+			return g and (g:GetAttribute("State") or "") or ""
+		end
+		rem:FireServer("combo") -- (Server/Tutorial: from now on a x5 combo makes her weak, at once)
+		-- (she floats in close, well in punch reach, before the lesson freezes: Server/Ghost COMBO_GAP)
+		local n0 = os.clock()
+		while os.clock() - n0 < 2.5 and not ended do
+			local g = real()
+			local r = g and g:FindFirstChild("HumanoidRootPart") :: BasePart?
+			local flat = r and (r.Position - standEye) * Vector3.new(1, 0, 1)
+			if flat and flat.Magnitude < 6.2 and g and g:GetAttribute("State") == "Chase" then break end
+			task.wait(0.05)
+		end
+		rem:FireServer("hold")
+		waitHeld(2)
+		camRate = 5
+		camFn = eyesOn(herChest)
+		sleep(0.6)
+		freeze("Punch", "Combo")
+		rem:FireServer("release")
+		punch()
+		onFree = function(a) if a == "Punch" then punch() end end
+		local c0 = os.clock()
+		while herState() ~= "Weak" and os.clock() - c0 < 4.5 and not ended do task.wait(0.05) end
+		-- (not quick enough: the last hits land by themselves)
+		local extra = 0
+		while herState() ~= "Weak" and extra < 7 and not ended do
+			extra += 1
+			punch()
+			task.wait(0.26)
+		end
+		onFree = nil
+		if herState() == "Weak" then
+			sleep(0.5)
+			rem:FireServer("hold")
+			freeze("Lift", "LiftHer")
+			local wg = real()
+			if wg then R.Grab:FireServer(wg) end
+			local l0 = os.clock()
+			while not lp:GetAttribute("Carrying") and os.clock() - l0 < 1.5 do task.wait() end
+			sleep(0.8) -- (the camera looks up at her, held over your head)
+			if lp:GetAttribute("Carrying") then
+				freeze("Punch", "ThrowHer")
+				R.Throw:FireServer((-look + UP * 0.25).Unit) -- (back the way she came: at the TV's wall)
+				VM.slam()
+				task.wait(0.05)
+				rem:FireServer("release")
+				sleep(1.6)
+				-- (she floats back in front of you before the next lesson)
+				local b0 = os.clock()
+				while os.clock() - b0 < 3 and not ended do
+					local g = real()
+					local r = g and g:FindFirstChild("HumanoidRootPart") :: BasePart?
+					if r and (r.Position - standEye).Magnitude < 13 and herState() ~= "Ragdoll" then break end
+					task.wait(0.1)
+				end
 			end
 		end
 		-- ULTIMATE: the bar fills and the anger builds - the screen shakes harder and harder, the picture goes red, the

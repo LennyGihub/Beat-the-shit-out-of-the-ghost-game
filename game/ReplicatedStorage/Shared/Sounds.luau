@@ -38,29 +38,35 @@ return {
 	-- to change one, put another audio id here (at least 1:30 long: a short one loops too often in a fight; the tracks
 	-- under 1:30 were replaced on 2026-11-19). Volume 1.6: these recordings are much quieter than the sound effects
 	-- (at 0.5 the fight drowned them out); the MUSIC slider in the settings still scales them.
+	-- ROCK (2026-11-21, the user: "5 music (rock prefered) that get progressively louder and louder for each monster of
+	-- the map"): every campaign building has a rock / metal track, each map going from its lightest on the first building
+	-- to its heaviest on the boss, and louder too (volume 1.3 on building 1 .. 1.7 on the boss, 1.8 for its phase 2). All
+	-- licensed APM albums (Fuzz Machine, Epic Metal, Speed Metal, Death Metal, Nu Metal, Cezame Action Sport Metal), picked
+	-- by album / genre / title: nobody had listened to them in the game yet. The endless-only forms (Music_Woman / _E,
+	-- Music_Rat_E, Music_Knight_E, Music_Titan_E) kept theirs.
 	Music_Woman = { ids = { 94597327890629 }, volume = 1.6 }, -- Ghost Stalker
 	Music_Woman_E = { ids = { 109753218180637 }, volume = 1.6 }, -- Wailing Walls (the Violet Widow)
-	Music_Demon = { ids = { 1837853076 }, volume = 1.6 }, -- See You In Hell
-	Music_Demon_E = { ids = { 1837246602 }, volume = 1.6 }, -- Demonic Torment (the Demon Lord: metal, like Black Plague)
-	Music_Pirate = { ids = { 1845219835 }, volume = 1.6 }, -- Pirate Chase (2:03; Pirate Battle was 1:11)
-	Music_Pirate_E = { ids = { 1835322563 }, volume = 1.6 }, -- Pirate King
-	Music_Animatronic = { ids = { 1837432993 }, volume = 1.6 }, -- Freak Circus
-	Music_Animatronic_E = { ids = { 9044887799 }, volume = 1.6 }, -- Psycho Clown
-	Music_Titan = { ids = { 9039352479 }, volume = 1.6 }, -- The Heroic Battle of Giants
+	Music_Demon = { ids = { 1837318958 }, volume = 1.7 }, -- Divine Curse, Death Metal (death metal, 2:05) - Abbey 5
+	Music_Demon_E = { ids = { 1837318773 }, volume = 1.8 }, -- Soldier of Death, Death Metal (death metal, 4:18) - Abbey 5, phase 2
+	Music_Pirate = { ids = { 1837247052 }, volume = 1.7 }, -- Sword and Shield, Epic Metal (epic metal, 2:49) - Harbor 5
+	Music_Pirate_E = { ids = { 1837247400 }, volume = 1.8 }, -- The Speed of Light, Speed Metal (speed metal, 3:25) - Harbor 5, phase 2
+	Music_Animatronic = { ids = { 1837247094 }, volume = 1.7 }, -- Machine Gun Toy, Epic Metal (epic metal, 4:10) - Carnival 6
+	Music_Animatronic_E = { ids = { 1837247692 }, volume = 1.8 }, -- Chain Reaction, Speed Metal (speed metal, 3:38) - Carnival 6, phase 2
+	Music_Titan = { ids = { 1837318812 }, volume = 1.6 }, -- Repulsion, Death Metal (death metal, 3:05) - Abbey 4
 	-- Camp Hollowmere's monsters (licensed production music)
-	Music_Antlered = { ids = { 9046674561 }, volume = 1.4 }, -- Taiko Thunderstorm ALT. 1 (war drums for the hunt, 2:27)
-	Music_LakeWitch = { ids = { 1837840805 }, volume = 1.4 }, -- Vanquish the Darkness (Mus) (dark epic orchestra, 2:53)
-	Music_Counselor = { ids = { 9038254416 }, volume = 1.3 }, -- Fight Hard or Die (metal for the burning slasher, 3:34)
-	Music_Scarecrow = { ids = { 1839538604 }, volume = 1.4 }, -- Menacing Forces (trailer action for the cornfield chase, 2:41)
-	Music_Clown = { ids = { 1847690202 }, volume = 1.6 }, -- Evil Clown Clan A (2:40)
-	Music_Strongman = { ids = { 1837078128 }, volume = 1.5 }, -- Brutal Power (2:14)
-	Music_Fortune = { ids = { 1836697907 }, volume = 1.6 }, -- Theatre Macabre (2:18)
-	Music_Ringmaster = { ids = { 1845844372 }, volume = 1.5 }, -- Dark Circus A (2:21)
+	Music_Antlered = { ids = { 1845844557 }, volume = 1.3 }, -- Avalanche Addict A, Fuzz Machine (classic / stoner rock, 1:54) - Camp 1
+	Music_LakeWitch = { ids = { 1845844667 }, volume = 1.4 }, -- Breaking Bones A, Fuzz Machine (gothic rock, 2:12) - Camp 2
+	Music_Counselor = { ids = { 1845844753 }, volume = 1.5 }, -- Deep Earth Grinder A, Fuzz Machine (heavy metal, 2:08) - Camp 3
+	Music_Scarecrow = { ids = { 9038254416 }, volume = 1.6 }, -- Fight Hard or Die, Cezame Metal Factory (metal, 3:34) - Camp 4
+	Music_Clown = { ids = { 1837246882 }, volume = 1.5 }, -- Dysteria, Epic Metal (epic metal, 3:51) - Carnival 4
+	Music_Strongman = { ids = { 1837246678 }, volume = 1.45 }, -- Fighting Heart, Epic Metal (epic metal, 3:11) - Carnival 3
+	Music_Fortune = { ids = { 1837247811 }, volume = 1.35 }, -- Lucid Dream, Nu Metal (nu metal, 4:22) - Carnival 2
+	Music_Ringmaster = { ids = { 1845844372 }, volume = 1.3 }, -- Dark Circus A, Fuzz Machine (heavy metal, 2:21) - Carnival 1
 	Music_Titan_E = { ids = { 9039352746 }, volume = 1.6 }, -- The Fall of the Titans
 	-- Blackwater Harbor
-	Music_DeepOne = { ids = { 1837865409 }, volume = 1.4 }, -- Paving the Road to Hell (dark hybrid action, 2:28)
-	Music_Keeper = { ids = { 1838617255 }, volume = 1.4 }, -- Final Destruction (trailer action, 2:19)
-	Music_Netman = { ids = { 9038254566 }, volume = 1.3 }, -- Metal Storm Breaks (metal, 3:16)
+	Music_DeepOne = { ids = { 1845844491 }, volume = 1.3 }, -- Ominous Doom A, Fuzz Machine (doom metal, 2:08) - Harbor 1
+	Music_Keeper = { ids = { 1837247131 }, volume = 1.5 }, -- Down in the Maelstrom, Epic Metal (epic metal, 2:47) - Harbor 3
+	Music_Netman = { ids = { 9038254566 }, volume = 1.6 }, -- Metal Storm Breaks, Cezame Metal Factory (metal, 3:16) - Harbor 4
 	-- MONSTER VOICES (Client/Sfx VOICES): each monster since Camp Hollowmere has its own (Pro Sound Effects; speed = its pitch)
 	V_Antlered_Spawn = { ids = { 9120048117 }, volume = 1.4, speed = 0.75 },
 	V_Antlered_WindUp = { ids = { 9113630346 }, volume = 1.3, speed = 0.8 },
@@ -118,12 +124,12 @@ return {
 	V_Netman_Hurt = { ids = { 9114628598 }, volume = 1.2 },
 	V_Netman_Death = { ids = { 9114628113 }, volume = 1.4, speed = 0.7 },
 	-- THE ASHEN ABBEY + THE BLACK MOON (2026-11-19): MUSIC (licensed production library, instrumental, all checked: load OK; backup id in the comment)
-	Music_Nun = { ids = { 9045950824 }, volume = 1.5 }, -- Darkness Incarnate, Liquid Cinema (2:30; dark orchestral + choir) | backup 9042037851 Banshee, Kosinus Trailers (2:14)
-	Music_Gravedigger = { ids = { 9043457632 }, volume = 1.4 }, -- Just Beyond The Catacombs, Kingdom 2 (2:25; horror trailer) | backup 9038840089 Army Of The Undead A, Sonoton Vanguard (2:19)
-	Music_Ringer = { ids = { 1837316077 }, volume = 1.4 }, -- The Death Toll, Cezame (2:09; orchestral-hybrid with bells) | backup 1835335592 Death Toll, Ryan Andrews (1:44; has a church bell)
-	Music_Astronaut = { ids = { 1835943821 }, volume = 1.4 }, -- Space Battlefield, Eddy David Abidi (2:34; orchestral-hybrid sci-fi) | backup 9040159960 Alien Invasion, Kosinus Trailers (3:19)
-	Music_Specimen = { ids = { 1842445160 }, volume = 1.5 }, -- Alien Aboard (a), Peter James Crossman (2:22; sci-fi horror film score) | backup 1842433643 Biohazard (a), Josh Powell (2:21)
-	Music_Sentinel = { ids = { 1846493282 }, volume = 1.4 }, -- Industrial Combat A, Lars Kurz (2:13; industrial rock) | backup 9043458995 Machine Wars, Kingdom 2 (2:25)
+	Music_Nun = { ids = { 1837247756 }, volume = 1.3 }, -- Lost In Eternity, Nu Metal (nu metal, 4:26) - Abbey 1
+	Music_Gravedigger = { ids = { 1837247012 }, volume = 1.4 }, -- Soulbound Crypt, Epic Metal (epic metal, 4:08) - Abbey 2
+	Music_Ringer = { ids = { 1837246729 }, volume = 1.5 }, -- Occult Forces, Epic Metal (epic metal, 3:25) - Abbey 3
+	Music_Astronaut = { ids = { 1837247825 }, volume = 1.3 }, -- Exoplanet, Nu Metal (nu metal, 3:45) - Moon 1
+	Music_Specimen = { ids = { 1837247773 }, volume = 1.4 }, -- Black Hole, Nu Metal (nu metal, 2:17) - Moon 2
+	Music_Sentinel = { ids = { 1845844255 }, volume = 1.5 }, -- Artificial Armageddon A, Fuzz Machine (industrial metal, 3:20) - Moon 3
 
 	-- MONSTER VOICES (Pro Sound Effects)
 	V_Nun_Spawn = { ids = { 9114569607 }, volume = 1.3, speed = 0.95 }, -- Ghastly Screams 15 (4.3 s)
@@ -173,17 +179,17 @@ return {
 	AcidSizzle = { ids = { 9119991629 }, volume = 1.0 }, -- Termite Sprays Acid Hissing Bursts 1 (2.6 s)
 	AlienScreech = { ids = { 9113090147 }, volume = 1.2 }, -- Alien Creature 2 (1.9 s)
 	RobotServo = { ids = { 9118329008 }, volume = 1.0 }, -- Robot Servo 1 (2.2 s)
-	Music_Goblin = { ids = { 1841594035 }, volume = 1.6 }, -- Mischievous Elves (sneaky, not epic)
-	Music_Goblin_E = { ids = { 1839900676 }, volume = 1.6 }, -- In the Hall of the Mountain King
-	Music_Caller = { ids = { 1837463370 }, volume = 1.6 }, -- Catching a Killer
-	Music_Caller_E = { ids = { 117622854482826 }, volume = 1.6 }, -- Maniac (underscore)
-	Music_Conqueror = { ids = { 9039352752 }, volume = 1.6 }, -- Soul Conqueror
-	Music_Conqueror_E = { ids = { 1844309360 }, volume = 1.6 }, -- Requiem: Dies Irae
-	Music_Rat = { ids = { 1837247400 }, volume = 1.6 }, -- The Speed of Light (the Sewer Rat: speed metal, like Black Plague)
+	Music_Goblin = { ids = { 1837246932 }, volume = 1.6 }, -- Troll, Epic Metal (epic metal, 3:44) - Carnival 5
+	Music_Goblin_E = { ids = { 1837246806 }, volume = 1.7 }, -- Soul Banger, Epic Metal (epic metal, 3:43) - Carnival 5, phase 2
+	Music_Caller = { ids = { 9038254696 }, volume = 1.7 }, -- Get Ready for the Onslaught, Cezame Metal Factory (metalcore, 3:26) - Camp 5
+	Music_Caller_E = { ids = { 9038254571 }, volume = 1.8 }, -- From Alpha to Omega, Cezame Metal Factory (heavy metal climax, 3:45) - Camp 5, phase 2
+	Music_Conqueror = { ids = { 1837247591 }, volume = 1.7 }, -- Extreme Speed, Speed Metal (speed metal, 3:48) - Moon 5
+	Music_Conqueror_E = { ids = { 1837318901 }, volume = 1.8 }, -- Black Plague, Death Metal (death metal, 3:30; the intro's song comes back for the last fight) - Moon 5, phase 2
+	Music_Rat = { ids = { 1837246665 }, volume = 1.4 }, -- Infectious, Epic Metal (epic metal, 3:33) - Harbor 2
 	Music_Rat_E = { ids = { 1837318901 }, volume = 1.6 }, -- Black Plague
 	-- the intro's way out (Client/Intro): Black Plague gives way to this once she is beaten
 	IntroOutro = { ids = { 9039353950 }, volume = 1.6 }, -- Strength of Will (Cezame Original Scores)
-	Music_Knight = { ids = { 9044584201 }, volume = 1.6 }, -- Evil Overlord (the Void Knight)
+	Music_Knight = { ids = { 1837247146 }, volume = 1.6 }, -- Parallel World, Epic Metal (epic metal, 3:53) - Moon 4
 	Music_Knight_E = { ids = { 80139755347360 }, volume = 1.6 }, -- Litany of Shadows (the Hollow Emperor)
 	-- the Sewer Rat's voice (real rat squeals, slowed down: speed) and its digging
 	RatSpawn = { ids = { 9118053340 }, volume = 1, speed = 0.55 },

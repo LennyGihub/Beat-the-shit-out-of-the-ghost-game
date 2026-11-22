@@ -106,6 +106,10 @@ local Campaign = { list = List, mapById = mapById, stageById = stageById, diffRa
 -- user: "disable the train tickets for now but dont remove the script"): every trip is free, nothing is used, the ticket
 -- lines and REFILL buttons are hidden. All the code stays; set it back to true to bring tickets back.
 Campaign.TRIPS = { enabled = false, max = 5, window = 3 * 3600 }
+-- ENDLESS (the old houses' wave runs) opens at this player level (the user, 2026-11-21): below it the PLAY panel's
+-- ENDLESS switch is locked and Server/Lobby refuses to create or join an endless lobby
+Campaign.ENDLESS_LEVEL = 10
+function Campaign.endlessOpen(level: any): boolean return (tonumber(level) or 1) >= Campaign.ENDLESS_LEVEL end
 -- "2:41:07" / "41:07"
 function Campaign.clock(sec: number): string
 	sec = math.max(0, math.floor(sec))
@@ -168,6 +172,14 @@ function Campaign.nextStage(stageId: string): Stage?
 		end
 	end
 	return nil
+end
+
+-- the map's last building (its boss): once it is cleared the run always ends in the park (the result screen offers
+-- no NEXT BUILDING / FIGHT AGAIN: the player goes back to buy the next map's jars and potions)
+function Campaign.isLast(stageId: string?): boolean
+	local s = stageId and stageById[stageId]
+	if not s then return false end
+	return s.index == #mapById[s.map].stages
 end
 
 -- the first building of the player's furthest open map that is not cleared yet (the "next goal"), or nil

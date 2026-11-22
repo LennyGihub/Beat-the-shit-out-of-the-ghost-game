@@ -1,4 +1,6 @@
 -- Player combat: escalating punch combos, stamina, brutality + equipped ultimate, lifting and throwing furniture.
+-- A x5 combo makes the monster WEAK (Config.Weak, Ghost.weaken): then the lift key picks IT up (Ghost.lift) and the
+-- throw throws it (Ghost.throwMonster); s.carryingMonster while it is over the player's head.
 -- Everything is validated here; the client only sends intents (punch, grab, throw, ult, sprint).
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
@@ -39,6 +41,11 @@ function Combat.stat(player: Player, key: string): number
 	end
 	return 1
 end
+-- how much tougher the body form makes you (max health / the base health): a block's stamina cost per damage and
+-- the heals / shields of items and ultimates follow it, so a later map's bigger blows and bigger health stay in step
+function Combat.healthMult(player: Player): number
+	return (Config.Player.MaxHealth + Combat.stat(player, "health")) / Config.Player.MaxHealth
+end
 local function maxSt(player: Player): number return ST.Max * Combat.stat(player, "staminaMax") end
 Combat.maxStamina = maxSt
 
@@ -46,7 +53,7 @@ local function st(player: Player)
 	local s = state[player]
 	if not s then
 		s = { stamina = ST.Max, lastUse = 0, brut = 0, ultUntil = 0, ultDur = 1, buff = {}, ultColor = Color3.new(1, 0.3, 0.1),
-			combo = 0, lastHit = 0, lastPunch = 0, carrying = nil, sprinting = false, lastSync = 0, onePunch = false, giantUntil = 0,
+			combo = 0, lastHit = 0, lastPunch = 0, carrying = nil, carryingMonster = false, sprinting = false, lastSync = 0, onePunch = false, giantUntil = 0,
 			speedMult = 1, speedUntil = 0, shield = 0 }
 		state[player] = s
 	end
@@ -94,12 +101,19 @@ local function setWalk(player: Player, s)
 	if s.carrying and s.carrying.Parent then
 		base = math.max(8, base - Furniture.weight(s.carrying) * CA.SlowPerWeight * (ult(s) and 0.3 or 1))
 	end
+	if s.carryingMonster then base = math.max(8, base * Config.Weak.CarrySlow) end -- (the monster over your head)
 	if s.blocking then base = math.min(base, Config.Player.WalkSpeed * Config.Block.WalkMult) end
 	if os.clock() < (s.rootUntil or 0) then base = 0 end
 	hum.WalkSpeed = base
 end
 
 local function dropCarried(player: Player, s)
+	if s.carryingMonster then
+		-- (the monster over the head: it drops - Ghost lets go and tells us back through Ghost.onCarryEnd)
+		s.carryingMonster = false
+		player:SetAttribute("Carrying", false)
+		Ghost.dropMonster(player)
+	end
 	local m = s.carrying
 	s.carrying = nil
 	player:SetAttribute("Carrying", false)
@@ -129,7 +143,7 @@ local function guard(player: Player, s, amount: number, from: Vector3?): number
 		local look = Vector3.new(hrp.CFrame.LookVector.X, 0, hrp.CFrame.LookVector.Z)
 		if to.Magnitude > 0.1 and look.Magnitude > 0.1 and look.Unit:Dot(to.Unit) < BL.FrontDot then return 1 end -- from behind
 	end
-	local cost = BL.Cost + amount * BL.PerDamage
+	local cost = BL.Cost + amount * BL.PerDamage / Combat.healthMult(player)
 	s.lastUse = os.clock()
 	if s.stamina >= cost then
 		s.stamina -= cost
@@ -252,7 +266,7 @@ end
 -- let go of the furniture in the hands (leaving the sandbox)
 function Combat.release(player: Player)
 	local s = st(player)
-	if s.carrying then dropCarried(player, s) end
+	if s.carrying or s.carryingMonster then dropCarried(player, s) end
 end
 
 -- empty the brutality bar (leaving the sandbox: its free refills are not carried into a run)
@@ -370,6 +384,8 @@ function Combat.registerHit(player: Player, dir: Vector3, hitPos: Vector3, baseD
 		knock *= 1 + c * CH.KnockBonus
 	end
 	Ghost.hit(player, dir, knock, dmg, obj, c >= 0.6, noRagdoll)
+	-- x5 COMBO: the monster goes WEAK (Config.Weak; Ghost.weaken has its own cooldown and exceptions)
+	if s.combo >= Config.Weak.Combo then Ghost.weaken(player) end
 	local ls = (buff(s, "lifesteal") :: number?) or 0
 	if ls > 0 then heal(player, dmg * ls) end
 	local burn = buff(s, "burnOnHit")
@@ -457,7 +473,19 @@ local function onGrab(player: Player, m: any)
 	local hum, hrp = alive(player)
 	if not hum or not hrp then return end
 	local s = st(player)
-	if s.carrying then return end
+	if s.carrying or s.carryingMonster then return end
+	-- the WEAK monster (Config.Weak): lifted over the head
+	local g = Ghost.current
+	if g and m == g.model then
+		if Ghost.lift(player, Mobile.liftRange(player) + 5) then
+			s.carryingMonster = true
+			player:SetAttribute("Carrying", true)
+			player:SetAttribute("CarryWeight", 6)
+			Remotes.Fx:FireAllClients("Lift", hrp.Position, player)
+			setWalk(player, s)
+		end
+		return
+	end
 	if not Furniture.isValid(m) or m:GetAttribute("CarriedBy") then return end
 	local cf, size = m:GetBoundingBox()
 	if (cf.Position - hrp.Position).Magnitude > Mobile.liftRange(player) + size.Magnitude / 2 then return end -- (far for a mobile player)
@@ -475,6 +503,22 @@ local function onThrow(player: Player, look: any)
 	local hum, hrp = alive(player)
 	if not dir or not hum or not hrp then return end
 	local s = st(player)
+	-- the monster over the head (Config.Weak): thrown along the look; the landing hurts it (Ghost.throwMonster)
+	if s.carryingMonster then
+		s.carryingMonster = false
+		player:SetAttribute("Carrying", false)
+		local mpow = Config.Weak.ThrowSpeed * math.min(1.4, Combat.stat(player, "throw") * bmul(s, "throw"))
+		if s.stamina < ST.ThrowCost and not buff(s, "staminaFree") then mpow *= 0.75 end
+		if not buff(s, "staminaFree") then s.stamina = math.max(0, s.stamina - ST.ThrowCost) end
+		s.lastUse = os.clock()
+		local dmg = (CA.BaseDamage + 6 * CA.DamagePerWeight) * Combat.stat(player, "damage") * Combat.stat(player, "throw") * bmul(s, "throw")
+		Ghost.throwMonster(player, dir, mpow, dmg)
+		Remotes.Fx:FireAllClients("Throw", hrp.Position, player)
+		Quests.add(player, "throws")
+		setWalk(player, s)
+		sync(player, s, true)
+		return
+	end
 	local m = s.carrying
 	if not m or not m.Parent then
 		s.carrying = nil; player:SetAttribute("Carrying", false); return
@@ -635,7 +679,7 @@ local function setupCharacter(player: Player, ch: Model)
 	for _, p in ch:GetDescendants() do if p:IsA("BasePart") then p.CollisionGroup = "Players" end end
 	ch.DescendantAdded:Connect(function(p) if p:IsA("BasePart") then p.CollisionGroup = "Players" end end)
 	hum.Died:Connect(function()
-		if s.carrying then dropCarried(player, s) end
+		if s.carrying or s.carryingMonster then dropCarried(player, s) end
 		s.ultUntil = 0
 		s.brut = math.floor(s.brut * 0.5)
 		sync(player, s, true)
@@ -664,6 +708,14 @@ function Combat.healAll(list: { Player }?)
 end
 
 function Combat.start()
+	-- the monster left the player's hands (thrown, dropped, broke free, died, gone): hands free again
+	Ghost.onCarryEnd = function(p: Player)
+		local s = st(p)
+		if not s.carryingMonster then return end
+		s.carryingMonster = false
+		p:SetAttribute("Carrying", false)
+		setWalk(p, s)
+	end
 	Ghost.damagePlayer = Combat.damagePlayer
 	Ghost.hitPlayer = Combat.hitPlayer
 	Ghost.slowPlayer = Combat.speedBuff

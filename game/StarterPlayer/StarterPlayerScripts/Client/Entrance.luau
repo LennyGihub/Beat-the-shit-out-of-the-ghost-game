@@ -355,10 +355,9 @@ SCRIPTS.Pirate = function(x)
 	for _, t in { 0.15, 1.25 } do
 		at(x, t, function() Sfx.play("ShieldBlock", { Volume = 0.9, PlaybackSpeed = 0.42 }) end) -- a ship's bell, far off
 	end
-	for i = 0, 5 do
-		at(x, T.walk0 + 0.25 + i * 0.39, function()
-			if x.s < T.walk1 then Sfx.play("PunchLight", { Volume = 0.45, PlaybackSpeed = 0.5 }); shake(0.08) end
-		end)
+	-- (two heavy steps as he turns round on the spot: EntrancePose)
+	for _, t in { T.walk1 - 0.85, T.walk1 - 0.3 } do
+		at(x, t, function() Sfx.play("PunchLight", { Volume = 0.55, PlaybackSpeed = 0.45 }); shake(0.1) end)
 	end
 	for _, t in { T.bang1, T.bang2 } do
 		at(x, t, function()
@@ -379,8 +378,7 @@ SCRIPTS.Pirate = function(x)
 	end)
 	x.camera = function(s)
 		local k = ss(seg(s, 0, T.raise))
-		local walk = seg(s, T.walk0, T.walk1)
-		return spot(x, lerp(13, 9.5, k), lerp(6, 2.5, k), x.H * lerp(0.5, 0.62, k)), body(x, 10 * (1 - walk), x.H * 0.62)
+		return spot(x, lerp(13, 9.5, k), lerp(6, 2.5, k), x.H * lerp(0.5, 0.62, k)), body(x, 0, x.H * 0.62)
 	end
 end
 
@@ -633,12 +631,13 @@ SCRIPTS.Caller = function(x)
 	end
 end
 
--- THE CONQUEROR: a portal tears open behind where he will stand; he walks out of it and closes his fist
+-- THE CONQUEROR: a portal tears open right behind where he stands; he takes shape in front of it, stamps once and
+-- closes his fist
 SCRIPTS.Conqueror = function(x)
 	local T = EP.T.Conqueror
 	local f = x.floor
 	local R = math.clamp(x.H * 0.72, 5, x.ceil * 0.5 - 0.3)
-	local center = body(x, 6, R + 0.3)
+	local center = f - x.look * 3.2 + UP * (R + 0.3)
 	local rimCol = x.evolved and x.c1 or x.c2
 	local core = x.evolved and x.c2 or x.c1
 	at(x, T.portal, function()
@@ -669,14 +668,18 @@ SCRIPTS.Conqueror = function(x)
 	end)
 	stream(x, T.portal + 0.2, T.close, center, { Texture = SPARK, Color = ColorSequence.new(core, rimCol), LightEmission = 1, Size = NumberSequence.new(1.1, 0.1), Lifetime = NumberRange.new(0.5, 0.8),
 		Speed = NumberRange.new(-16, -9), Shape = Enum.ParticleEmitterShape.Sphere, ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface, RotSpeed = NumberRange.new(200, 400) }, 70)
-	for i = 0, 2 do
-		at(x, T.step0 + 0.3 + i * 0.5, function()
-			Sfx.play("Crash", { Volume = 0.6, PlaybackSpeed = 0.6 })
-			shake(0.45)
-			local z = 7.5 * (1 - seg(x.s, T.step0, T.step1))
-			ring(x, body(x, z, 0), x.c2, 1, 9, 0.45)
+	-- (he takes shape: two pulses round his feet, then his stamp: EntrancePose)
+	for i = 0, 1 do
+		at(x, T.step0 + 0.25 + i * 0.5, function()
+			Sfx.play("Whoosh", { Volume = 0.6, PlaybackSpeed = 0.5 + i * 0.1 })
+			ring(x, f, x.c2, 1, 7, 0.45)
 		end)
 	end
+	at(x, T.step1 - 0.2, function()
+		Sfx.play("Crash", { Volume = 0.8, PlaybackSpeed = 0.55 })
+		shake(0.55)
+		ring(x, f, x.c2, 1, 11, 0.5)
+	end)
 	at(x, T.close, function()
 		Sfx.play("Whoosh", { Volume = 1.1, PlaybackSpeed = 0.6 })
 		flash(x, core, 0.25, 0.3)
@@ -707,8 +710,7 @@ SCRIPTS.Conqueror = function(x)
 	end)
 	x.camera = function(s)
 		local k = ss(seg(s, 0, x.D))
-		local walk = seg(s, T.step0, T.step1)
-		return spot(x, lerp(16, 11.5, k), lerp(-3.5, -1.5, k), lerp(2, x.H * 0.42, k)), body(x, lerp(6, 0, walk), x.H * lerp(0.5, 0.66, ss(seg(s, T.fist, T.clench))))
+		return spot(x, lerp(16, 11.5, k), lerp(-3.5, -1.5, k), lerp(2, x.H * 0.42, k)), body(x, 0, x.H * lerp(0.5, 0.66, ss(seg(s, T.fist, T.clench))))
 	end
 end
 
@@ -1016,7 +1018,7 @@ SCRIPTS.Antlered = function(x)
 	local hv = tonumber(x.model:GetAttribute("Hover")) or 7
 	local yRoot = math.max(0, cl - 2 * hv)
 	local chestUp = math.max(2, hv + yRoot - (x.H - hv) * 0.45) -- (his chest while upside down)
-	local function zAt(s: number): number return 9 * (1 - ss(seg(s, T.crawl0, T.crawl1))) end
+	local function zAt(_s: number): number return 0 end -- (right above: no crawl toward the camera any more)
 	local dust = { Color = ColorSequence.new(C(150, 132, 110), C(80, 66, 52)), Size = NumberSequence.new(0.6, 2), Transparency = NumberSequence.new(0.4, 1),
 		Lifetime = NumberRange.new(1, 1.8), Acceleration = Vector3.new(0, -22, 0), Speed = NumberRange.new(1, 4), SpreadAngle = Vector2.new(40, 40), EmissionDirection = Enum.NormalId.Bottom }
 	at(x, 0, function()
@@ -1830,7 +1832,7 @@ SCRIPTS.Astronaut = function(x)
 		darkness(x, 0.5, 0.3)
 		Sfx.play("Klaxon", { Volume = 1.2 })
 		-- the airlock behind him: a frame and two doors sliding apart
-		local back = f - x.look * (7.5 * x.back + 2.5)
+		local back = f - x.look * 2.6 -- (right behind him: he is standing in the steam when the doors open)
 		local cf = CFrame.lookAt(back, back + x.look)
 		part(x, { Material = Enum.Material.Metal, Color = C(90, 94, 104), Size = Vector3.new(9, 0.8, 0.8), CFrame = cf * CFrame.new(0, 9.5, 0) })
 		for _, sx in { -1, 1 } do
@@ -1850,9 +1852,14 @@ SCRIPTS.Astronaut = function(x)
 		each(x, function(s) al.CFrame = cf * CFrame.new(0, 11, 1) * CFrame.Angles(0, s * 6, -0.6); sp.Brightness = 4 * (1 - seg(s, x.D - 0.8, x.D - 0.2)) end)
 		task.delay(T.portal + 0.3, function() if x.alive() then Sfx.play("Airlock", { Volume = 1.5 }) end end)
 	end)
-	stream(x, T.portal + 0.3, T.step1, f - x.look * (7.5 * x.back + 1), with(SMOKE_FLOOR, { Color = ColorSequence.new(C(220, 230, 245), C(120, 130, 150)),
+	stream(x, T.portal + 0.3, T.step1, f - x.look * 1.4, with(SMOKE_FLOOR, { Color = ColorSequence.new(C(220, 230, 245), C(120, 130, 150)),
 		Speed = NumberRange.new(6, 12), EmissionDirection = Enum.NormalId.Front }), 40)
-	for i = 0, 3 do at(x, T.step0 + i * 0.45, function() Sfx.play("PunchHeavy", { Volume = 0.5, PlaybackSpeed = 0.5 }); shake(0.08) end) end
+	-- (the jetpack hop at T.fist: EntrancePose.Astronaut; he lands 0.55 s later)
+	at(x, T.fist + 0.55, function()
+		Sfx.play("Crash", { Volume = 0.7, PlaybackSpeed = 0.7 })
+		shake(0.5)
+		ring(x, f, C(255, 150, 60), 1, 12, 0.5)
+	end)
 	at(x, T.fist, function()
 		Sfx.play(Sfx.voice("Spawn", x.id), { Volume = 1.4 })
 		Sfx.play("Jetpack", { Volume = 1.5 })
@@ -1867,8 +1874,7 @@ SCRIPTS.Astronaut = function(x)
 	end)
 	x.camera = function(s)
 		local k = ss(seg(s, 0, x.D))
-		local walk = seg(s, T.step0, T.step1)
-		return spot(x, lerp(16, 11.5, k), lerp(3.5, 1.5, k), lerp(2, x.H * 0.42, k)), body(x, lerp(6, 0, walk), x.H * lerp(0.5, 0.66, ss(seg(s, T.fist, T.clench))))
+		return spot(x, lerp(16, 11.5, k), lerp(3.5, 1.5, k), lerp(2, x.H * 0.42, k)), body(x, 0, x.H * lerp(0.5, 0.66, ss(seg(s, T.fist, T.clench))))
 	end
 end
 
@@ -1882,7 +1888,7 @@ SCRIPTS.Specimen = function(x)
 	local hv = tonumber(x.model:GetAttribute("Hover")) or 6
 	local yRoot = math.max(0, cl - 2 * hv)
 	local chestUp = math.max(2, hv + yRoot - (x.H - hv) * 0.45)
-	local function zAt(s: number): number return 9 * (1 - ss(seg(s, T.crawl0, T.crawl1))) end
+	local function zAt(_s: number): number return 0 end -- (right above: no crawl toward the camera any more)
 	at(x, 0, function()
 		darkness(x, 0.45, 0.4)
 		Sfx.play(Sfx.voice("WindUp", x.id), { Volume = 1.2 })

@@ -26,29 +26,29 @@
    "file": "ReplicatedStorage/Shared/Campaign.luau",
    "instance": "game.ReplicatedStorage.Shared.Campaign",
    "class": "ModuleScript",
-   "bytes": 12061,
-   "sha1": "1a17dfb8526b60fbf26add62d9823584b4c8507d"
+   "bytes": 12789,
+   "sha1": "86b7710566eddcc501ebb56f8097b1c7bda483d9"
   },
   {
    "file": "ReplicatedStorage/Shared/Config.luau",
    "instance": "game.ReplicatedStorage.Shared.Config",
    "class": "ModuleScript",
-   "bytes": 8821,
-   "sha1": "93af4afe65366e88fab997b0e53a5659a1e60dee"
+   "bytes": 9748,
+   "sha1": "1643f280a431c4cdda0827c07b3fdb57ddaf846c"
   },
   {
    "file": "ReplicatedStorage/Shared/Entrances.luau",
    "instance": "game.ReplicatedStorage.Shared.Entrances",
    "class": "ModuleScript",
-   "bytes": 3635,
-   "sha1": "dacc702639b894027f70f6d3bf719676f584d5b7"
+   "bytes": 3726,
+   "sha1": "431296c788be6a60bcfb8c84f4523f00afb75c34"
   },
   {
    "file": "ReplicatedStorage/Shared/Forms.luau",
    "instance": "game.ReplicatedStorage.Shared.Forms",
    "class": "ModuleScript",
-   "bytes": 35918,
-   "sha1": "198d6fb3db25832d667f47f22bdae1005b1f25e1"
+   "bytes": 37121,
+   "sha1": "772c0de7fcdaab65bfd7c01b112669529f743fa5"
   },
   {
    "file": "ReplicatedStorage/Shared/ItemModels.luau",
@@ -110,8 +110,8 @@
    "file": "ReplicatedStorage/Shared/Sounds.luau",
    "instance": "game.ReplicatedStorage.Shared.Sounds",
    "class": "ModuleScript",
-   "bytes": 23077,
-   "sha1": "a7870c59e89b3c993a78b9e0277a8c62153c4305"
+   "bytes": 24121,
+   "sha1": "159dd52eb5e0fd7ba7f697c7cd547829e79d6b1a"
   },
   {
    "file": "ReplicatedStorage/Shared/Ultimates.luau",
@@ -145,8 +145,8 @@
    "file": "ServerScriptService/Server/Admin.luau",
    "instance": "game.ServerScriptService.Server.Admin",
    "class": "ModuleScript",
-   "bytes": 19424,
-   "sha1": "e4c8258813515d329115e96b6806c8bd7893b1f0"
+   "bytes": 19847,
+   "sha1": "bfb4fbcd05b7175be9786a451a3e4c1deb5c3cbf"
   },
   {
    "file": "ServerScriptService/Server/Bestiary.luau",
@@ -187,8 +187,8 @@
    "file": "ServerScriptService/Server/Combat.luau",
    "instance": "game.ServerScriptService.Server.Combat",
    "class": "ModuleScript",
-   "bytes": 31128,
-   "sha1": "bc67cd704c23faca25589b488ba060ac6f6e275c"
+   "bytes": 33846,
+   "sha1": "f01e0427f1db6f2892fb5da246d116b24d972cd9"
   },
   {
    "file": "ServerScriptService/Server/Data.luau",
@@ -250,8 +250,8 @@
    "file": "ServerScriptService/Server/Ghost.luau",
    "instance": "game.ServerScriptService.Server.Ghost",
    "class": "ModuleScript",
-   "bytes": 47145,
-   "sha1": "27a63b26e6a918220c14b571adf46cbfca3b7fc7"
+   "bytes": 56711,
+   "sha1": "fef6c4b8c7091ee76ac4c7fc9cbd5368bead754b"
   },
   {
    "file": "ServerScriptService/Server/GoblinLoot.luau",
@@ -271,8 +271,8 @@
    "file": "ServerScriptService/Server/Inventory.luau",
    "instance": "game.ServerScriptService.Server.Inventory",
    "class": "ModuleScript",
-   "bytes": 21623,
-   "sha1": "e7ea2819df13b63ceb945e7867ec7262ca4d1fa4"
+   "bytes": 21704,
+   "sha1": "3c15a269ad52e9ac953ce348e0a16a0b6e51a6be"
   },
   {
    "file": "ServerScriptService/Server/Knight.luau",
@@ -299,8 +299,8 @@
    "file": "ServerScriptService/Server/Lobby.luau",
    "instance": "game.ServerScriptService.Server.Lobby",
    "class": "ModuleScript",
-   "bytes": 21003,
-   "sha1": "8dd075563b434f2fae7bbdac927dc3a4b5cbd336"
+   "bytes": 21365,
+   "sha1": "858353d9c5da355cd766e215a9c9a1f6a3ab39da"
   },
   {
    "file": "ServerScriptService/Server/MapLoader.luau",
@@ -355,8 +355,8 @@
    "file": "ServerScriptService/Server/Run.luau",
    "instance": "game.ServerScriptService.Server.Run",
    "class": "ModuleScript",
-   "bytes": 35914,
-   "sha1": "da0a5232d54916e7dceb09172142283225c2d48d"
+   "bytes": 36403,
+   "sha1": "f0302fa52be83f0705bb00a633c32585263150b3"
   },
   {
    "file": "ServerScriptService/Server/Sandbox.luau",
@@ -397,15 +397,15 @@
    "file": "ServerScriptService/Server/Tutorial.luau",
    "instance": "game.ServerScriptService.Server.Tutorial",
    "class": "ModuleScript",
-   "bytes": 9948,
-   "sha1": "1eff2cfa23178f8760ba4bd1ecaa444d7bd19dd0"
+   "bytes": 10546,
+   "sha1": "24975232df0a9ec3b610069c7682fe892abf1579"
   },
   {
    "file": "ServerScriptService/Server/UltRunner.luau",
    "instance": "game.ServerScriptService.Server.UltRunner",
    "class": "ModuleScript",
-   "bytes": 7463,
-   "sha1": "aef3e35a8fef51735b9efa43e23898b5f1852b3c"
+   "bytes": 7491,
+   "sha1": "d08eb8c60dc4a3633970e81bd864d44b5e2d232b"
   },
   {
    "file": "ServerScriptService/Server/Vip.luau",
@@ -502,15 +502,15 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/Entrance.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.Entrance",
    "class": "ModuleScript",
-   "bytes": 116832,
-   "sha1": "9fb9c3752f0add5484e755ad6534d86e9d0c2d46"
+   "bytes": 117075,
+   "sha1": "b042ed44b90b3c66876aaeb1fcf8311f54fc321a"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/EntrancePose.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.EntrancePose",
    "class": "ModuleScript",
-   "bytes": 28264,
-   "sha1": "cdd8bd12e455c26bab0aba21078646bd0475011d"
+   "bytes": 30647,
+   "sha1": "508a4005c7078e615e16b6be9ed583c69c42c5bd"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/EventFx.luau",
@@ -537,15 +537,22 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/FormLook.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.FormLook",
    "class": "ModuleScript",
-   "bytes": 29845,
-   "sha1": "beb962955dabe79cd8c8f11a7c447ba0fb136628"
+   "bytes": 31111,
+   "sha1": "a375d20611a271136e473dc91b997e5687a99562"
+  },
+  {
+   "file": "StarterPlayer/StarterPlayerScripts/Client/FormSets.luau",
+   "instance": "game.StarterPlayer.StarterPlayerScripts.Client.FormSets",
+   "class": "ModuleScript",
+   "bytes": 24842,
+   "sha1": "477ecf677a5eb82ad627265b22d1ed9c68cde1de"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/FormTutorial.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.FormTutorial",
    "class": "ModuleScript",
-   "bytes": 16900,
-   "sha1": "ef462f105486a850e4fdd10c23f85b07638408e8"
+   "bytes": 20923,
+   "sha1": "74def4079c039f3e1bfc14f2a966850ae2b075b8"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/Fx.luau",
@@ -565,8 +572,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/GhostAnim.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.GhostAnim",
    "class": "ModuleScript",
-   "bytes": 72830,
-   "sha1": "8fb63872068959a8fcefa5cce24da7c00d681595"
+   "bytes": 74646,
+   "sha1": "84efefa4e980f6e78c6282bc54d2f071d80e7de5"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/Grunge.luau",
@@ -600,15 +607,15 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/Input.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.Input",
    "class": "ModuleScript",
-   "bytes": 13652,
-   "sha1": "1fec080d534043f9accc90efa11a7efe99613ade"
+   "bytes": 14610,
+   "sha1": "b39e591d1a1d3e08825fdaefcb23ac7e6c33cff5"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/Intro.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.Intro",
    "class": "ModuleScript",
-   "bytes": 70310,
-   "sha1": "88392b2cbc133e28c811282bdee233fccab8d9df"
+   "bytes": 72861,
+   "sha1": "ea76d5436cd5d3afc312ad5d2aae566584984913"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/KeyHints.luau",
@@ -628,8 +635,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/LobbyUI.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.LobbyUI",
    "class": "ModuleScript",
-   "bytes": 38431,
-   "sha1": "1948ee1ea55317b6e05d59f1566fa43ad7c869cf"
+   "bytes": 40091,
+   "sha1": "26e2400afdc9143b0258ce6e815c7d3e7655899d"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/LockOn.luau",
@@ -768,8 +775,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/StageUI.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.StageUI",
    "class": "ModuleScript",
-   "bytes": 13101,
-   "sha1": "94eb8158c248394579cb65b6106a52ecefd879a2"
+   "bytes": 14053,
+   "sha1": "90ffa1d79a846efd85920eb0e35a28e0c48cc207"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/ThirdPersonItems.luau",
@@ -810,8 +817,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/TutorialUI.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.TutorialUI",
    "class": "ModuleScript",
-   "bytes": 7923,
-   "sha1": "b82f0fc4312ae51163e6281158b78481447a92e5"
+   "bytes": 8143,
+   "sha1": "a5c472397b652de6de23419c9249f18f28a3ede0"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/UltActs.luau",
@@ -870,6 +877,13 @@
    "sha1": "728735e86ecd338378a43bebb1c572e22d39328f"
   },
   {
+   "file": "StarterPlayer/StarterPlayerScripts/Client/WeakFx.luau",
+   "instance": "game.StarterPlayer.StarterPlayerScripts.Client.WeakFx",
+   "class": "ModuleScript",
+   "bytes": 6807,
+   "sha1": "4ba2d8c54882e07248a6cf709de4608ecd5725d1"
+  },
+  {
    "file": "StarterPlayer/StarterPlayerScripts/Client/WorldSpin.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.WorldSpin",
    "class": "ModuleScript",
@@ -880,8 +894,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/ClientMain.client.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.ClientMain",
    "class": "LocalScript",
-   "bytes": 13484,
-   "sha1": "9ab0631ea3a63639b6df626ec86d919e02067e1b"
+   "bytes": 13718,
+   "sha1": "74f107439585d7a56727ef39ae3e2894a66e33b8"
   }
  ]
 }

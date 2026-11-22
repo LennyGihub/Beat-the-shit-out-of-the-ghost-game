@@ -97,7 +97,29 @@ end
 Ghost.pathPoint = pathPoint
 Ghost.blockWalls = blockWalls
 
+-- WEAK -> CARRIED (Config.Weak): while a player holds the monster over their head it is welded to them (Ghost.lift);
+-- this lets go of it (its parts as they were, its movers back on) and tells Combat the player's hands are free
+-- (Ghost.onCarryEnd). Called whenever it leaves the Carried state (setState) and when it is removed.
+Ghost.onCarryEnd = nil :: ((p: Player) -> ())?
+local function releaseCarry(g)
+	local c = g.carry
+	if not c then return end
+	g.carry = nil
+	if c.weld then c.weld:Destroy() end
+	for p, v in c.saved do
+		if p.Parent then p.CanCollide = v[1]; p.Massless = v[2] end
+	end
+	g.lv.Enabled = true
+	g.ao.Enabled = true
+	pcall(function() g.hrp:SetNetworkOwner(nil) end)
+	g.hrp.AssemblyLinearVelocity = Vector3.zero
+	g.model:SetAttribute("CarriedBy", nil)
+	if Ghost.onCarryEnd and c.by then task.spawn(Ghost.onCarryEnd, c.by) end
+end
+
 local function setState(g, s: string, dur: number?)
+	if g.state == "Carried" and s ~= "Carried" then releaseCarry(g) end
+	if s ~= "Ragdoll" then g.flung = nil end -- (a thrown monster's landing: Ghost.throwMonster)
 	if g.state == "Ability" and s ~= "Ability" and g.ab then Abilities.interrupt(g) end
 	if g.state == "Evo" and s ~= "Evo" and g.evo then Evolved.interrupt(g) end -- an evolved power cut short
 	if (g.state == "Roar" or g.state == "Lunge") and s ~= g.state then -- a fury move cut short
@@ -149,14 +171,18 @@ Ghost.passive = false
 -- lesson flows straight into the fight instead of her body flying round the room.
 -- In the lessons (minHp > 0) every knockback is small and never a knockout (LESSON_KNOCK), and knocked farther than
 -- LESSON_GAP from the player she floats back in front of them: never stuck in a wall, always in reach of the ultimate.
-Ghost.tutorial = nil :: { pause: number, nextAt: number, minHp: number, held: boolean?, holdWindup: boolean?, stunOnly: boolean? }?
+-- allowWeak = a x5 combo may make her WEAK (Config.Weak): only from the COMBO lesson on (not in the earlier lessons)
+-- noKnock = (from the COMBO lesson until the fight) hits never move her: she stays right in front of the player, in
+-- reach, so the five hits of the combo all land (the user: with the lessons' small knockback the combo broke)
+Ghost.tutorial = nil :: { pause: number, nextAt: number, minHp: number, held: boolean?, holdWindup: boolean?, stunOnly: boolean?, allowWeak: boolean?, noKnock: boolean? }?
 local STUN_TIME = 3.6
 local LESSON_KNOCK = 10
 local LESSON_GAP = 9
+local COMBO_GAP = 5 -- (the COMBO lesson, noKnock: she comes this close, well in punch reach, for the five hits)
 
 -- (Ghost.tutorial.stunOnly) dazed where she stands: a short stagger back along `dir`, then she shakes it off
 local function stun(g, dir: Vector3)
-	if g.state == "Dead" or g.state == "Stunned" then return end
+	if g.state == "Dead" or g.state == "Stunned" or g.state == "Carried" then return end
 	if g.state == "Ragdoll" then Ragdoll.stop(g) end
 	local flat = Vector3.new(dir.X, 0, dir.Z)
 	g.vel = flat.Magnitude > 0.01 and flat.Unit * 9 or Vector3.zero
@@ -304,6 +330,7 @@ end
 
 function Ghost.despawn()
 	local g = Ghost.current
+	if g and g.carry then releaseCarry(g) end
 	if g and g.loot then Abilities.dropLoot(g, Ghost) end
 	if g and g.model then g.model:Destroy() end
 	Ghost.current = nil
@@ -415,7 +442,7 @@ end
 
 function Ghost.launch(h: number, d: number, by: Player?)
 	local g = Ghost.current
-	if not g or g.state == "Dead" or g.state == "Spawn" or g.state == "Ragdoll" then return end
+	if not g or g.state == "Dead" or g.state == "Spawn" or g.state == "Ragdoll" or g.state == "Carried" then return end
 	if unstoppable(g) then return end
 	if Ghost.tutorial and Ghost.tutorial.stunOnly then -- (the tutorial's ultimate: stunned, not thrown up)
 		Ghost.damage(d, by)
@@ -520,8 +547,11 @@ function Ghost.hit(by: Player?, dir: Vector3, knock: number, damage: number, obj
 	if g.state == "Ability" and g.ab and g.ab.kind == "blackout" and g.def.ability.lightsOut then
 		setState(g, "Recover", 0.6)
 	end
+	-- WEAK or held over a player's head: the hits hurt it but don't move it (it stays there to be lifted / thrown)
+	if g.state == "Weak" or g.state == "Carried" then return end
 	if knock <= 0 then return end
 	if Ghost.tutorial and Ghost.tutorial.stunOnly then stun(g, dir); return end -- (the tutorial's ultimate)
+	if Ghost.tutorial and Ghost.tutorial.noKnock then return end -- (the COMBO lesson: she takes the hits standing still)
 	if Ghost.tutorial and Ghost.tutorial.minHp > 0 then -- (the tutorial's lessons: a small knock back only)
 		knock = math.min(knock, LESSON_KNOCK)
 		noRagdoll = true
@@ -576,6 +606,105 @@ function Ghost.hit(by: Player?, dir: Vector3, knock: number, damage: number, obj
 	setState(g, "Knocked", 0.12)
 	-- a small hit only delays its next swipe a little; once beaten up enough (Fury pressure) not at all
 	if Fury.pressure(g) < Config.Fury.ArmorPressure then g.nextAttack = math.max(g.nextAttack, os.clock() + 0.12) end
+end
+
+-- WEAK, LIFTED, THROWN (Config.Weak) ---------------------------------------------------------------------------------
+local W = Config.Weak
+-- a player's x5 combo (Combat.registerHit): it slumps, WEAK, for W.Time seconds. Not in the middle of a special or a
+-- roar, not while knocked out / thrown / held, not frozen in time, and once every W.Cooldown seconds. Returns true
+-- when it went weak.
+function Ghost.weaken(by: Player?): boolean
+	local g = Ghost.current
+	if not g then return false end
+	local s = g.state
+	if s == "Dead" or s == "Spawn" or s == "Weak" or s == "Carried" or s == "Ragdoll" or s == "Launched" or s == "Stunned" or s == "Roar" then return false end
+	if unstoppable(g) then return false end
+	local T = Ghost.tutorial
+	if T and not T.allowWeak then return false end -- (the tutorial: only from its COMBO lesson on)
+	local now = os.clock()
+	if now < (g.weakReady or 0) then return false end
+	if g.ts and now < g.ts.untilT then return false end
+	g.weakReady = now + W.Time + W.Cooldown
+	g.model:SetAttribute("Vanish", false)
+	g.comboLeft = 0
+	g.fury = nil
+	g.model:SetAttribute("FuryPhase", "")
+	g.pressure = 0 -- (it doesn't roar the beating off once it is back up)
+	g.vel = Vector3.zero
+	setState(g, "Weak", W.Time)
+	g.nextAttack = math.max(g.nextAttack, now + W.Time + 0.6)
+	Remotes.Fx:FireAllClients("GhostWeak", g.hrp.Position, by)
+	return true
+end
+
+-- range = how far from the player its root may be. Welded over the player's head, lying across their shoulders a
+-- little in front (in view of their own camera): state Carried for W.CarryTime seconds (no limit in the tutorial).
+function Ghost.lift(player: Player, range: number): boolean
+	local g = Ghost.current
+	if not g or g.state ~= "Weak" or g.carry then return false end
+	local ch = player.Character
+	local phrp = ch and ch:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local hum = ch and ch:FindFirstChildOfClass("Humanoid")
+	if not phrp or not hum or hum.Health <= 0 then return false end
+	if (g.hrp.Position - phrp.Position).Magnitude > range then return false end
+	local cf, size = g.model:GetBoundingBox()
+	local off = g.hrp.CFrame:PointToObjectSpace(cf.Position)
+	local depth = math.min(size.X, size.Z)
+	local saved = {} :: { [BasePart]: { boolean } }
+	for _, d in g.model:GetDescendants() do
+		if d:IsA("BasePart") then
+			saved[d] = { d.CanCollide, d.Massless }
+			d.CanCollide = false; d.Massless = true
+		end
+	end
+	g.lv.Enabled = false
+	g.ao.Enabled = false
+	g.vel = Vector3.zero
+	local w = Instance.new("Weld")
+	w.Name = "CarryWeld"
+	w.Part0 = phrp
+	w.Part1 = g.hrp
+	w.C0 = CFrame.new(0, 2.6 + depth * 0.5, -2.2) * CFrame.Angles(0, 0, math.pi / 2)
+	w.C1 = CFrame.new(off)
+	w.Parent = g.hrp
+	setState(g, "Carried", W.CarryTime)
+	g.carry = { by = player, weld = w, saved = saved }
+	g.model:SetAttribute("CarriedBy", player.UserId)
+	Remotes.Fx:FireAllClients("GhostLifted", g.hrp.Position, player)
+	return true
+end
+
+-- out of the carrier's hands with this velocity: limp (the ragdoll) for a moment, then it gets up
+local function dropIt(g, vel: Vector3, t: number)
+	setState(g, "Ragdoll", t) -- (setState lets go of the carry)
+	Ragdoll.start(g, vel)
+	g.nextAttack = math.max(g.nextAttack, os.clock() + 1.5)
+end
+
+-- the carrier lets go of it (died, left the run, dropped it)
+function Ghost.dropMonster(player: Player)
+	local g = Ghost.current
+	if not g or g.state ~= "Carried" or not g.carry or g.carry.by ~= player then return end
+	local ch = player.Character
+	local phrp = ch and ch:FindFirstChild("HumanoidRootPart") :: BasePart?
+	dropIt(g, (phrp and phrp.CFrame.LookVector * 12 or Vector3.zero) + Vector3.new(0, 8, 0), 2.5)
+end
+
+-- THROWN (Combat.onThrow): it flies as a ragdoll along the look of the thrower (flattened, a little up), smashing the
+-- inside walls on the way; its landing (a wall, the floor, or after a while) hurts it: dmg or W.ThrowShare of its
+-- max health, whichever is more (Ghost.step, g.flung)
+function Ghost.throwMonster(player: Player, dir: Vector3, power: number, dmg: number)
+	local g = Ghost.current
+	if not g or g.state ~= "Carried" or not g.carry or g.carry.by ~= player then return end
+	local flat = Vector3.new(dir.X, 0, dir.Z)
+	flat = flat.Magnitude > 0.05 and flat.Unit or Vector3.new(g.hrp.CFrame.LookVector.X, 0, g.hrp.CFrame.LookVector.Z).Unit
+	local vel = flat * power + Vector3.new(0, 24 + math.max(0, dir.Y) * 40, 0)
+	-- (the tutorial's lesson: a shorter throw, the TV room is small)
+	if Ghost.tutorial and Ghost.tutorial.minHp > 0 then vel *= 0.6 end
+	if g.loot then Abilities.dropLoot(g, Ghost) end -- (the Goblin lets go of what he stole)
+	dropIt(g, vel, 4.5)
+	g.flung = { by = player, dmg = math.max(dmg, g.maxHp * W.ThrowShare), t0 = os.clock(), speed = vel.Magnitude, hit = false, wall = false }
+	Remotes.Fx:FireAllClients("GhostRagdoll", g.hrp.Position)
 end
 
 local function stepKnocked(g, dt: number, now: number)
@@ -826,6 +955,22 @@ function Ghost.step(dt: number)
 		Ghost.damage(stored, nil)
 		if not Ghost.alive() then return end
 	end
+	-- held over a player's head (Ghost.lift): it goes where they go; it drops if they are gone, and breaks free when
+	-- held too long (not in the tutorial)
+	if s == "Carried" then
+		local c = g.carry
+		local by = c and c.by
+		local ch = by and by.Parent and by.Character
+		local hum = ch and ch:FindFirstChildOfClass("Humanoid")
+		local phrp = ch and ch:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if not c or not c.weld.Parent or not hum or hum.Health <= 0 or not phrp or not by:GetAttribute("InMatch") then
+			dropIt(g, Vector3.new(0, 8, 0), 2.5)
+		elseif now > g.stateUntil and not Ghost.tutorial then
+			dropIt(g, phrp.CFrame.LookVector * 30 + Vector3.new(0, 26, 0), 2.5)
+			Remotes.Fx:FireAllClients("GhostBreakFree", g.hrp.Position, by)
+		end
+		return
+	end
 	do
 		local body = (s == "Ragdoll" and g.model:FindFirstChild("UpperTorso") or g.hrp) :: BasePart
 		if outside(body.Position) then bringBack(g); return end
@@ -837,17 +982,39 @@ function Ghost.step(dt: number)
 	g.target = target
 	local pos = g.hrp.Position
 	if s == "Ragdoll" then
+		local fl = g.flung
 		local done = Ragdoll.step(g, dt, function(at: Vector3, speed: number)
 			Remotes.Fx:FireAllClients("WallSmash", at, speed)
 			Ghost.damage(speed * C.WallSlamFactor * 0.5, nil)
+			if fl then fl.wall = true end
 		end)
 		local torso = (g.model:FindFirstChild("UpperTorso") or g.hrp) :: BasePart
 		local v = torso.AssemblyLinearVelocity
 		if v.Magnitude > 14 then
 			for _, f in Furniture.near(torso.Position, 4.5) do Furniture.smash(f, v, v.Magnitude) end
 		end
+		-- thrown by a player (Ghost.throwMonster): the landing hurts - the first wall, or once it has slowed down
+		if fl and not fl.hit and Ghost.alive() then
+			local age = now - fl.t0
+			if fl.wall or (age > 0.35 and v.Magnitude < fl.speed * 0.4) or age > 1.6 then
+				fl.hit = true
+				Ghost.damage(fl.dmg, fl.by)
+				Remotes.Fx:FireAllClients("MonsterSlam", torso.Position, fl.dmg, fl.by)
+			end
+		end
 		if done and Ghost.alive() then
+			-- back on its feet FACING the one who threw it (or the player it is after), not wherever the tumble left it
+			local byCh = fl and fl.by and fl.by.Parent and fl.by.Character
+			local faceTo = (byCh and byCh:FindFirstChild("HumanoidRootPart") :: BasePart?) or thrp
 			Ragdoll.stop(g)
+			if faceTo then
+				local at = g.hrp.Position
+				local to = Vector3.new(faceTo.Position.X - at.X, 0, faceTo.Position.Z - at.Z)
+				if to.Magnitude > 0.1 then
+					g.model:PivotTo(CFrame.lookAt(at, at + to.Unit))
+					g.ao.CFrame = CFrame.lookAt(Vector3.zero, to.Unit)
+				end
+			end
 			Fury.wake(g)
 			setState(g, "Recover", 0.9)
 		end
@@ -858,6 +1025,11 @@ function Ghost.step(dt: number)
 	if Ghost.tutorial and Ghost.tutorial.held then
 		g.pauseFrom = g.pauseFrom or now
 		g.lv.VectorVelocity = Vector3.zero
+		-- (turned toward the player, so a lesson never freezes her with her back to them)
+		if thrp and s ~= "WindUp" and s ~= "Swipe" then
+			local to = Vector3.new(thrp.Position.X - pos.X, 0, thrp.Position.Z - pos.Z)
+			if to.Magnitude > 0.1 then g.ao.CFrame = CFrame.lookAt(Vector3.zero, to.Unit) end
+		end
 		return
 	end
 	-- Fury: a long beating doesn't stunlock it: it roars or swipes back straight out of a stagger
@@ -875,6 +1047,20 @@ function Ghost.step(dt: number)
 		-- a paused special picks up where it stopped
 		shiftTimers(g, now - g.pauseFrom)
 		g.pauseFrom = nil
+	end
+	-- WEAK (Ghost.weaken): slumped where it is, no moves, no attacks - until someone lifts it or it gets its breath back
+	if s == "Weak" then
+		local fy = floorBelow(pos, g.rp)
+		g.lv.VectorVelocity = Vector3.new(0, (fy + g.hover - pos.Y) * 4, 0)
+		if thrp then
+			local to = Vector3.new(thrp.Position.X - pos.X, 0, thrp.Position.Z - pos.Z)
+			if to.Magnitude > 0.1 then g.ao.CFrame = CFrame.lookAt(Vector3.zero, to.Unit) end
+		end
+		if now > g.stateUntil then
+			setState(g, "Recover", 0.5)
+			Remotes.Fx:FireAllClients("GhostWeakEnd", pos)
+		end
+		return
 	end
 
 	local floorY = floorBelow((thrp and not g.def.solid) and thrp.Position or pos, g.rp)
@@ -905,6 +1091,7 @@ function Ghost.step(dt: number)
 		if now > g.stateUntil then setState(g, "Chase") end
 	elseif s == "Recover" then
 		g.lv.VectorVelocity = Vector3.new(0, (hoverY - pos.Y) * 4, 0)
+		if thrp then face(thrp.Position) end -- (getting up: it turns to the player it is after)
 		if now > g.stateUntil then setState(g, "Chase") end
 	elseif s == "Stunned" then
 		-- (the tutorial's ultimate) dazed: the stagger back dies out, she sways where she stands, then goes on
@@ -926,8 +1113,9 @@ function Ghost.step(dt: number)
 			-- the tutorial: between her swings she stands still and takes the hits, then comes at you for one swing
 			if now < T.nextAt then
 				-- (the lessons: knocked too far back, she floats back in front of the player)
-				if T.minHp > 0 and dist > LESSON_GAP then
-					moveToward(thrp.Position, 6)
+				local gap = T.noKnock and COMBO_GAP or LESSON_GAP
+				if T.minHp > 0 and dist > gap then
+					moveToward(thrp.Position, math.clamp(dist - gap, 6, 24)) -- (thrown far in the COMBO lesson: back quickly)
 				else
 					g.lv.VectorVelocity = Vector3.new(0, (hoverY - pos.Y) * 4, 0)
 				end

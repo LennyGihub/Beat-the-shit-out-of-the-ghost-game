@@ -3,6 +3,7 @@
 -- the building's name and CLEARED, cash and XP, the XP bar to the next level, the map's buildings (cleared ones
 -- lit), "NEXT: THE BOATHOUSE", a new vial unlocked at the sellers, then the buttons: NEXT BUILDING (the train takes
 -- the whole party there), FIGHT AGAIN (same building), BACK TO THE PARK (only you). Remotes.Stage sends the pick.
+-- A map's LAST building (info.final, Campaign.isLast) shows only BACK TO THE PARK: the next map starts from the park.
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -125,7 +126,12 @@ function UI.show(info: { [string]: any })
 	-- the next goal
 	local goalText = ""
 	local nxt = info.nextId and Campaign.stage(info.nextId)
-	if info.mapDone and not nxt then
+	local final = info.final == true
+	local nextMap = info.nextMap and Campaign.mapById[info.nextMap]
+	if final then
+		goalText = mp.name .. " CLEARED!  " .. (nextMap and ("NEXT MAP: " .. nextMap.name .. " - TAKE THE TRAIN IN THE PARK")
+			or "REPLAY IT ON A HARDER DIFFICULTY")
+	elseif info.mapDone and not nxt then
 		goalText = mp.name .. " CLEARED!  THE NEXT MAP IS COMING SOON - REPLAY IT ON A HARDER DIFFICULTY"
 	elseif nxt then
 		goalText = "NEXT: " .. nxt.name .. (nxt.map ~= st.map and ("  (" .. Campaign.mapById[nxt.map].name .. ")") or "")
@@ -140,9 +146,10 @@ function UI.show(info: { [string]: any })
 			newText, newColor = "NEW AT " .. Forms.SELLER[v.kind].name .. ": " .. v.name, v.color
 		end
 	end
-	if nxt and nxt.map ~= st.map and table.find(Forms.sets, nxt.map) then
-		newText = "NEW AT THE SELLERS: " .. Campaign.mapById[nxt.map].name .. " JARS AND POTIONS"
-		newColor = Campaign.mapById[nxt.map].color
+	local newMap = nextMap or (nxt and nxt.map ~= st.map and Campaign.mapById[nxt.map]) or nil
+	if newMap and table.find(Forms.sets, newMap.id) then
+		newText = "NEW AT THE SELLERS: " .. newMap.name .. " JARS AND POTIONS"
+		newColor = newMap.color
 	end
 	if newText then
 		Grunge.text(panel, { Text = newText, Font = Grunge.TYPE, Position = UDim2.fromScale(0.05, 0.69), Size = UDim2.fromScale(0.9, 0.04),
@@ -162,19 +169,27 @@ function UI.show(info: { [string]: any })
 		if choice == "lobby" then UI.close() end
 	end
 	local x = 0.05
-	if nxt then
+	if final then
+		-- the map is done: back to the park only (one big button)
+		local park = button(panel, "BACK TO THE PARK", { Position = UDim2.fromScale(0.2, 0.765), Size = UDim2.fromScale(0.6, 0.12), ZIndex = 8, Rotation = -1, Modal = true }, GREEN, 133)
+		park.Name = "ParkBtn"
+		park.Activated:Connect(function() pick("lobby") end)
+	end
+	if nxt and not final then
 		local b = button(panel, "NEXT BUILDING", { Position = UDim2.fromScale(x, 0.77), Size = UDim2.fromScale(0.34, 0.11), ZIndex = 8, Rotation = -1.5 }, GREEN, 131)
 		b.Name = "NextBtn"
 		b.Activated:Connect(function() pick("next") end)
 		x += 0.36
 	end
-	local again = button(panel, "FIGHT AGAIN", { Position = UDim2.fromScale(x, 0.775), Size = UDim2.fromScale(0.27, 0.1), ZIndex = 8, Rotation = 1 }, nxt and DARK or GREEN, 132)
-	again.Name = "AgainBtn"
-	again.Activated:Connect(function() pick("again") end)
-	x += 0.29
-	-- (Modal: the mouse is free while this screen is up, even in first person)
-	local park = button(panel, "THE PARK", { Position = UDim2.fromScale(x, 0.78), Size = UDim2.fromScale(0.95 - x, 0.095), ZIndex = 8, Modal = true }, DARK, 133)
-	park.Activated:Connect(function() pick("lobby") end)
+	if not final then
+		local again = button(panel, "FIGHT AGAIN", { Position = UDim2.fromScale(x, 0.775), Size = UDim2.fromScale(0.27, 0.1), ZIndex = 8, Rotation = 1 }, nxt and DARK or GREEN, 132)
+		again.Name = "AgainBtn"
+		again.Activated:Connect(function() pick("again") end)
+		x += 0.29
+		-- (Modal: the mouse is free while this screen is up, even in first person)
+		local park = button(panel, "THE PARK", { Position = UDim2.fromScale(x, 0.78), Size = UDim2.fromScale(0.95 - x, 0.095), ZIndex = 8, Modal = true }, DARK, 133)
+		park.Activated:Connect(function() pick("lobby") end)
+	end
 	local timer = Grunge.text(panel, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0.05, 0.9), Size = UDim2.fromScale(0.9, 0.04),
 		TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(170, 160, 145), ZIndex = 5 })
 	local ticketT = Grunge.text(panel, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0.05, 0.733), Size = UDim2.fromScale(0.9, 0.033),
@@ -187,7 +202,12 @@ function UI.show(info: { [string]: any })
 	refillB.Activated:Connect(function() Sfx.play("Click"); TicketShop.buy() end)
 	task.spawn(function()
 		while gui == g do
-			timer.Text = picked and "WAITING FOR THE TRAIN..." or ("BACK TO THE PARK IN " .. math.max(0, math.ceil(untilT - os.clock())) .. "  -  ANYONE CAN PICK THE NEXT TRIP")
+			local secs = math.max(0, math.ceil(untilT - os.clock()))
+			if final then
+				timer.Text = "BACK TO THE PARK IN " .. secs
+			else
+				timer.Text = picked and "WAITING FOR THE TRAIN..." or ("BACK TO THE PARK IN " .. secs .. "  -  ANYONE CAN PICK THE NEXT TRIP")
+			end
 			local left = tickets()
 			if left > 0 then
 				ticketT.Text = "TRAIN TICKETS  " .. left .. " / " .. Campaign.TRIPS.max .. "  -  A TRIP USES ONE"
@@ -199,8 +219,8 @@ function UI.show(info: { [string]: any })
 			for _, b in { panel:FindFirstChild("NextBtn"), panel:FindFirstChild("AgainBtn") } do
 				if b then (b :: GuiObject).Visible = left > 0 end
 			end
-			refillB.Visible = left <= 0
-			ticketT.Visible = Campaign.TRIPS.enabled
+			refillB.Visible = left <= 0 and not final
+			ticketT.Visible = Campaign.TRIPS.enabled and not final
 			local lbl = refillB:FindFirstChild("Label") :: TextLabel?
 			if lbl and refillB.Visible then lbl.Text = TicketShop.label() end
 			task.wait(0.25)

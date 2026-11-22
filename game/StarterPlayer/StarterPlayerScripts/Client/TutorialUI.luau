@@ -5,7 +5,8 @@
 --     (the park never shows) and, once the loading screen is gone, a READY button waits in the middle of it; READY
 --     (click, tap, Enter, a controller's A / Start) starts the intro, which opens on black too. In Studio (where the
 --     save never loads) only with the ReplicatedStorage attribute DebugAutoTutorial = true.
---   * HOW TO PLAY: a small button under the lobby's header line plays it again (it has SKIP).
+--   * HOW TO PLAY: a small button under the lobby's header line plays it; it is gone for good once the player has
+--     played the tutorial (player attribute TutorialSeen = true: the user, 2026-11-21).
 -- Lobby servers only (ReplicatedStorage attribute TutorialOn, set by Server/Tutorial).
 -- Studio test hooks: player attribute DebugIntro = true starts it; DebugReady = true shows the READY screen,
 -- DebugReady = "press" presses READY.
@@ -54,8 +55,10 @@ function UI.init()
 		play()
 	end)
 	local function refresh()
-		howBtn.Visible = RS:GetAttribute("TutorialOn") == true and not lp:GetAttribute("InMatch") and not Platform.windowOpen() and not Intro.running()
+		howBtn.Visible = RS:GetAttribute("TutorialOn") == true and lp:GetAttribute("TutorialSeen") == false and not lp:GetAttribute("InMatch")
+			and not Platform.windowOpen() and not Intro.running()
 	end
+	lp:GetAttributeChangedSignal("TutorialSeen"):Connect(refresh)
 	lp:GetAttributeChangedSignal("InMatch"):Connect(refresh)
 	lp:GetAttributeChangedSignal("IntroPhase"):Connect(refresh)
 	RS:GetAttributeChangedSignal("TutorialOn"):Connect(refresh)

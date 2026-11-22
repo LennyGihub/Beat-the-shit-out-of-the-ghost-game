@@ -13,8 +13,11 @@
 --     heartbeat glow in the chest; MYTHIC: a pillar of light from the ground up. (The arms are the fist form's: the
 --     body aura never covers them.)
 -- Putting a new form on: a burst (a ball of energy, rings, a sound) everyone near sees.
--- THE LATEST SET (the Black Moon's jars / potions): on top of all this, a GIANT energy copy of the wearer, 3.5x to 10x
--- their size, stands over them and copies their moves (Client/FormGiant; in the park only).
+-- MAP AFTER MAP (the user, 2026-11-20: "progressive better visual for EVERY potion / jar, for each map"): a later
+-- map's form is stronger here too (tierBoost: bigger particles, more of them, wider lights, a bigger burst), and each
+-- map adds its own layer in the park (Client/FormSets: Camp fireflies / embers, Carnival marquee lights, Harbor water
+-- vortex, Abbey wings of light); the LATEST set (the Black Moon) raises a GIANT energy copy of the wearer, 3.5x to 10x
+-- their size, that copies their moves (Client/FormGiant).
 -- Your own body in a fight is first person: the fist form glows on the first-person fists instead (Client/Viewmodel's
 -- parts). Nothing animates further than FAR studs from the camera; "low" effects (Settings) keep only the skins.
 local Players = game:GetService("Players")
@@ -25,6 +28,7 @@ local Forms = require(RS.Shared.Forms)
 local Settings = require(script.Parent.Settings)
 local Sfx = require(script.Parent.Sfx)
 local Giant = require(script.Parent.FormGiant)
+local Sets = require(script.Parent.FormSets)
 
 local FL = {}
 local lp = Players.LocalPlayer
@@ -98,11 +102,23 @@ local function shell(folder: Instance, limb: BasePart, grow: number, color: Colo
 	return sh
 end
 
+-- how much stronger a form's look is for its map (1 = Camp Hollowmere ... 1.88 = the Black Moon), set while it is built
+local curBoost = 1
+local function tierBoost(fm: any): number
+	return fm and (1 + 0.22 * (Sets.tierOf(fm) - 1)) or 1
+end
 local function emitter(parent: Instance, props: { [string]: any }): ParticleEmitter
 	local e = Instance.new("ParticleEmitter")
 	e.Name = TAG
 	e.LightInfluence = 0
 	for k, v in props do (e :: any)[k] = v end
+	if curBoost ~= 1 then
+		local kps = {}
+		for _, kp in e.Size.Keypoints do table.insert(kps, NumberSequenceKeypoint.new(kp.Time, kp.Value * curBoost, kp.Envelope * curBoost)) end
+		e.Size = NumberSequence.new(kps)
+		e.Rate = e.Rate * (0.5 + 0.5 * curBoost)
+		e.Speed = NumberRange.new(e.Speed.Min * (0.6 + 0.4 * curBoost), e.Speed.Max * (0.6 + 0.4 * curBoost))
+	end
 	e.Parent = parent
 	return e
 end
@@ -181,7 +197,7 @@ local function buildFist(look: Look, ch: Model, fm: Forms.Form, level: string)
 			if skinned[hand] then g.Size = hand.Size * 1.1 + Vector3.one * 0.04 end
 			table.insert(look.pulses, { part = g, lo = 0.35, hi = 0.85, speed = 2 + r * 0.6, phase = i })
 			local l = Instance.new("PointLight")
-			l.Name = TAG; l.Color = col; l.Range = 5 + r * 1.5; l.Brightness = 1 + r * 0.2; l.Shadows = false
+			l.Name = TAG; l.Color = col; l.Range = (5 + r * 1.5) * curBoost; l.Brightness = 1 + r * 0.2; l.Shadows = false
 			l.Parent = hand
 		end
 		-- sparks off the knuckles
@@ -311,7 +327,7 @@ local function buildBody(look: Look, ch: Model, fm: Forms.Form, level: string, h
 			Rate = 0.5 + r * 0.15, LockedToPart = false,
 		})
 		local l = Instance.new("PointLight")
-		l.Name = TAG; l.Color = col; l.Range = 8 + r * 1.5; l.Brightness = 0.9 + r * 0.15; l.Shadows = false
+		l.Name = TAG; l.Color = col; l.Range = (8 + r * 1.5) * curBoost; l.Brightness = 0.9 + r * 0.15; l.Shadows = false
 		l.Parent = chest
 	end
 	-- sparkles spiralling up round the body
@@ -343,7 +359,7 @@ local function buildBody(look: Look, ch: Model, fm: Forms.Form, level: string, h
 	-- a pillar of light from the ground up
 	if r >= 6 then
 		local a0 = Instance.new("Attachment"); a0.Name = TAG; a0.Position = Vector3.new(0, feetY, 0); a0.Parent = hrp
-		local a1 = Instance.new("Attachment"); a1.Name = TAG; a1.Position = Vector3.new(0, feetY + 16, 0); a1.Parent = hrp
+		local a1 = Instance.new("Attachment"); a1.Name = TAG; a1.Position = Vector3.new(0, feetY + 16 * curBoost, 0); a1.Parent = hrp
 		local b = Instance.new("Beam")
 		b.Name = TAG; b.Attachment0 = a0; b.Attachment1 = a1; b.FaceCamera = true
 		b.Width0 = 5; b.Width1 = 2; b.LightEmission = 1; b.LightInfluence = 0; b.Segments = 1
@@ -359,6 +375,7 @@ end
 ----------------------------------------------------------------------------------------------------------------------
 local function clear(p: Player)
 	Giant.clear(p)
+	Sets.clear(p)
 	local look = looks[p]
 	if look then
 		looks[p] = nil
@@ -393,9 +410,13 @@ local function apply(p: Player)
 	local look: Look = { folder = folder, ref = hrp, pulses = {}, orbits = {}, arcs = {}, beams = {} }
 	looks[p] = look
 	local level = fxLevel()
+	curBoost = tierBoost(stim)
 	if stim then buildFist(look, ch, stim, level) end
+	curBoost = tierBoost(pot)
 	if pot then buildBody(look, ch, pot, level, hrp) end
+	curBoost = 1
 	Giant.set(p, ch, hrp, stim, pot, level)
+	Sets.set(p, ch, hrp, stim, pot, level)
 end
 
 -- putting a new form on: a ball of energy, rings, a sound
@@ -407,17 +428,18 @@ local function burst(p: Player, kind: string)
 	if (hrp.Position - cam.CFrame.Position).Magnitude > FAR then return end
 	local ball = newPart(workspace, Vector3.one * 2, bright(fm.color, 0.2), Enum.Material.ForceField, 0, Enum.PartType.Ball)
 	ball.CFrame = hrp.CFrame
-	local big = 10 + fm.rarity * 2.5
+	local tb = tierBoost(fm) -- (a later map's form: a bigger burst)
+	local big = (10 + fm.rarity * 2.5) * tb
 	TweenService:Create(ball, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.one * big, Transparency = 1 }):Play()
 	local flash = newPart(workspace, Vector3.one * 3, fm.color, Enum.Material.Neon, 0.2, Enum.PartType.Ball)
 	flash.CFrame = hrp.CFrame
 	TweenService:Create(flash, TweenInfo.new(0.35), { Size = Vector3.one * 6, Transparency = 1 }):Play()
-	local l = Instance.new("PointLight"); l.Color = fm.color; l.Range = 22; l.Brightness = 4; l.Parent = flash
+	local l = Instance.new("PointLight"); l.Color = fm.color; l.Range = 22 * tb; l.Brightness = 4; l.Parent = flash
 	local ring = Instance.new("Attachment"); ring.Parent = hrp
 	local e = emitter(ring, {
 		Texture = TEX .. "explosion01_shockwave_main.dds", Color = ColorSequence.new(bright(fm.color, 0.3)), LightEmission = 1,
 		Orientation = Enum.ParticleOrientation.VelocityPerpendicular, EmissionDirection = Enum.NormalId.Top, Speed = NumberRange.new(0.01),
-		Size = numSeq(2, 18 + fm.rarity * 2), Transparency = numSeq(0, 1), Lifetime = NumberRange.new(0.8), Rate = 0,
+		Size = numSeq(2, (18 + fm.rarity * 2) * tb), Transparency = numSeq(0, 1), Lifetime = NumberRange.new(0.8), Rate = 0,
 	})
 	e:Emit(3)
 	local sp = emitter(ring, {
@@ -425,7 +447,7 @@ local function burst(p: Player, kind: string)
 		Speed = NumberRange.new(12, 22), SpreadAngle = Vector2.new(180, 180), Size = numSeq(0.6, 0), Transparency = numSeq(0, 1),
 		Lifetime = NumberRange.new(0.5, 0.9), Rate = 0, Drag = 4,
 	})
-	sp:Emit(20 + fm.rarity * 10)
+	sp:Emit(math.floor((20 + fm.rarity * 10) * tb))
 	Sfx.at(fm.rarity >= 4 and "MagicBurst" or "FormMagic", hrp.Position, { Volume = 0.8 })
 	-- a giant form (the latest set): it rises out of the ground in a column of light, with thunder
 	local S = Giant.scaleOf(fm)
@@ -506,6 +528,7 @@ end
 local arcT = 0
 local function step(dt: number)
 	Giant.step(dt)
+	Sets.step(dt)
 	local now = os.clock()
 	local camPos = cam.CFrame.Position
 	arcT += dt
@@ -592,7 +615,7 @@ function FL.init(hidden: (() -> boolean)?)
 	hideOwn = hidden
 	for _, p in Players:GetPlayers() do watch(p) end
 	Players.PlayerAdded:Connect(watch)
-	Players.PlayerRemoving:Connect(function(p) looks[p] = nil; Giant.clear(p) end)
+	Players.PlayerRemoving:Connect(function(p) looks[p] = nil; Giant.clear(p); Sets.clear(p) end)
 	for _, a in { "InMatch", "Spectating" } do
 		lp:GetAttributeChangedSignal(a):Connect(function() apply(lp); applyVM() end)
 	end

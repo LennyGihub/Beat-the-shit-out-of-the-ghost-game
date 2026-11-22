@@ -1,4 +1,4 @@
--- Controls: click = punch (or throw while carrying), E = lift / throw furniture, Q = ultimate, Shift = sprint, X = drop,
+-- Controls: click = punch (or throw while carrying), E = lift / throw furniture (or the WEAK monster: a x5 combo), Q = ultimate, Shift = sprint, X = drop,
 -- R = swap ultimate (Double Ultimate pass), P = settings (keyboard keys are rebindable in Settings). Controller: R2 / L2 / Y / L3, L1-R1 items, D-pad down drop,
 -- D-pad left settings, D-pad up PLAY in the lobby. Phones: TouchControls buttons.
 local Players = game:GetService("Players")
@@ -80,6 +80,18 @@ local function aimedFurniture(): Model?
 		end
 	end
 	return best or far
+end
+
+-- the monster, when it is WEAK (a x5 combo: Config.Weak) and close enough to lift (the server checks again)
+local function weakMonster(): Model?
+	local g = workspace:FindFirstChild("Ghost")
+	if not g or not g:IsA("Model") or g:GetAttribute("State") ~= "Weak" then return nil end
+	local r = g:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local hrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not r or not hrp then return nil end
+	local reach = (Platform.mode() == "touch" and Config.Mobile.LiftRange or Config.Carry.Range) + 4
+	if (r.Position - hrp.Position).Magnitude > reach then return nil end
+	return g
 end
 
 local triggerHeld = false -- the hit button / key / trigger is held down (keep hitting, keep spraying)
@@ -172,6 +184,9 @@ local function grab()
 		VM.slam()
 		return
 	end
+	-- the WEAK monster first (a x5 combo), then the furniture you look at
+	local wm = weakMonster()
+	if wm then Remotes.Grab:FireServer(wm); return end
 	local m = aimedFurniture()
 	if m then Remotes.Grab:FireServer(m) end
 end
@@ -316,8 +331,9 @@ function Input.init()
 		local now = os.clock()
 		if now - lastHint < 0.15 then return end
 		lastHint = now
-		local m = not shopOpen and not lp:GetAttribute("Carrying") and aimedFurniture()
-		HUD.hint(liftHint(m and string.upper(m:GetAttribute("Kind") or m.Name) or nil))
+		local wm = not shopOpen and not lp:GetAttribute("Carrying") and weakMonster()
+		local m = not wm and not shopOpen and not lp:GetAttribute("Carrying") and aimedFurniture()
+		HUD.hint(liftHint(wm and "THE MONSTER!" or (m and string.upper(m:GetAttribute("Kind") or m.Name) or nil)))
 	end)
 end
 

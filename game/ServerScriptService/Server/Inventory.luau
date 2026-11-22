@@ -400,10 +400,10 @@ local function useSelf(p: Player, n: number, it)
 	local hum = alive(p)
 	if not hum then return end
 	consume(p, n)
-	if it.heal then Combat.heal(p, it.heal) end
+	if it.heal then Combat.heal(p, it.heal * Combat.healthMult(p)) end -- (heals grow with the body form)
 	if it.stamina then Combat.refillStamina(p) end
 	if it.speed then Combat.speedBuff(p, it.speed, it.speedT or 8) end
-	if it.shield then Combat.addShield(p, it.shield) end
+	if it.shield then Combat.addShield(p, it.shield * Combat.healthMult(p)) end
 	if it.brut then Combat.fillBrutality(p) end
 	if it.ward then
 		p:SetAttribute("Warded", true)

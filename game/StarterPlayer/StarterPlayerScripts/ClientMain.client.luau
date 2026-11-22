@@ -76,6 +76,7 @@ local HarborFx = require(Client.HarborFx) -- Blackwater Harbor's monsters' moves
 local AbbeyFx = require(Client.AbbeyFx) -- the Ashen Abbey's monsters' moves (veil, hymn, hands, coffin, bell, toll)
 local MoonFx = require(Client.MoonFx) -- the Black Moon's monsters' moves (breach, jetpack, acid, brood, missiles, overload)
 local FxTier = require(Client.FxTier) -- the further the map, the bigger the effects
+local WeakFx = require(Client.WeakFx) -- a x5 combo: the monster goes WEAK (lift it, throw it)
 local TradeUI = require(Client.TradeUI) -- trading cash, jar forms and potion forms with other players
 
 Platform.init()
@@ -129,8 +130,9 @@ SellerUI.init()
 FormCine.init(Fx, HUD)
 FormLook.init(function() return FormCine.busy() end) -- (your own look hides during the jar / potion cinematic)
 OfflineOpen.init(function() return FormCine.busy() end)
-FormTutorial.init(SellerUI, FormCine, Intro)
+FormTutorial.init(SellerUI, FormCine, Intro, LobbyUI)
 CampFx.init(Fx)
+WeakFx.init(Fx, HUD)
 CarnivalFx.init(Fx)
 HarborFx.init(Fx, HUD)
 AbbeyFx.init(Fx, HUD)
@@ -169,6 +171,7 @@ for _, k in { "ForceWind", "ForceGrab", "ForceHold", "ForcePush", "ForceMiss", "
 end
 
 for _, k in CampFx.KINDS do FIGHT[k] = true end -- (Camp Hollowmere's monsters' moves: fight-only too)
+for _, k in WeakFx.KINDS do FIGHT[k] = true end
 for _, k in CarnivalFx.KINDS do FIGHT[k] = true end
 for _, k in HarborFx.KINDS do FIGHT[k] = true end
 for _, k in AbbeyFx.KINDS do FIGHT[k] = true end
@@ -253,6 +256,8 @@ Remotes.Fx.OnClientEvent:Connect(function(kind: string, ...)
 		local Forms = require(RS.Shared.Forms)
 		local fm = Forms.byId[select(2, ...)]
 		if fm then Fx.handle("Toast", "NOW WEARING " .. fm.name, true) end
+	elseif WeakFx.handles(kind) then
+		WeakFx.handle(kind, ...)
 	elseif CampFx.handles(kind) then
 		CampFx.handle(kind, ...)
 	elseif CarnivalFx.handles(kind) then
