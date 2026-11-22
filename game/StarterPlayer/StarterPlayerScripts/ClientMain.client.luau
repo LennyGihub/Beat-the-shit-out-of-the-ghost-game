@@ -9,7 +9,12 @@ local shopOpen = false
 local function camMode()
 	local fp = lp:GetAttribute("InMatch") == true and not shopOpen and not lp:GetAttribute("Spectating")
 	lp.CameraMode = fp and Enum.CameraMode.LockFirstPerson or Enum.CameraMode.Classic
-	if not fp then lp.CameraMaxZoomDistance = 14; lp.CameraMinZoomDistance = 6 else lp.CameraMinZoomDistance = 0.5 end
+	-- (in the park the camera zooms out very far: the user, 2026-11-22; third person in a house - a shop open,
+	-- spectating - stays close, the walls would be in the way)
+	if not fp then
+		lp.CameraMaxZoomDistance = lp:GetAttribute("InMatch") == true and 14 or 400
+		lp.CameraMinZoomDistance = 6
+	else lp.CameraMinZoomDistance = 0.5 end
 end
 camMode()
 lp:GetAttributeChangedSignal("InMatch"):Connect(camMode)
@@ -79,6 +84,7 @@ local FxTier = require(Client.FxTier) -- the further the map, the bigger the eff
 local WeakFx = require(Client.WeakFx) -- a x5 combo: the monster goes WEAK (lift it, throw it)
 local TradeUI = require(Client.TradeUI) -- trading cash, jar forms and potion forms with other players
 local CodesUI = require(Client.CodesUI) -- the lobby's CODES window (redeemable codes: Server/Codes)
+local FreeCam = require(Client.FreeCam) -- admins: SHIFT + C free camera
 
 Platform.init()
 -- the server is told which controls this player uses: touch players reach further, lift from far and face a weaker
@@ -156,6 +162,7 @@ LobbyUI.init(function() UltShop.open() end, function(open) Input.setShopOpen(ope
 	function() BestiaryUI.open() end, function() TradeUI.openPicker() end, function() CodesUI.open() end)
 TradeUI.init(function(open) Input.setShopOpen(open) end)
 CodesUI.init(function(open) Input.setShopOpen(open) end)
+FreeCam.init(function(off) Input.setShopOpen(off) end)
 Input.openPlay = LobbyUI.togglePlay
 Intro.init(Fx, HUD) -- the new player's intro (the TV, the Woman, the frozen lessons, the way out)
 TutorialUI.init() -- starts it on the first join; HOW TO PLAY in the lobby

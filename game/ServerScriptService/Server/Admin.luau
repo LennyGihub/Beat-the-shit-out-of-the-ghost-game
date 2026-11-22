@@ -432,6 +432,38 @@ function Admin.start()
 		n.Parent = folder
 		rf = n
 	end
+	-- FREECAM (Client/FreeCam, SHIFT + C): the world round an admin's free camera is streamed to them (ReplicationFocus
+	-- on an invisible anchored part there); "off" gives the focus back to their character
+	local camFocus = {} :: { [Player]: BasePart }
+	local camLast = {} :: { [Player]: number }
+	local function camOff(p: Player)
+		local part = camFocus[p]
+		camFocus[p] = nil
+		camLast[p] = nil
+		if p.Parent then p.ReplicationFocus = nil end
+		if part then part:Destroy() end
+	end
+	Remotes.FreeCam.OnServerEvent:Connect(function(p: Player, action: any, pos: any)
+		if action == "off" then camOff(p); return end
+		if action ~= "focus" or not isAdmin(p) or typeof(pos) ~= "Vector3" then return end
+		if pos.X ~= pos.X or pos.Y ~= pos.Y or pos.Z ~= pos.Z or pos.Magnitude > 1e5 then return end
+		if os.clock() - (camLast[p] or 0) < 0.25 then return end
+		camLast[p] = os.clock()
+		local part = camFocus[p]
+		if not part or not part.Parent then
+			local folder = workspace:FindFirstChild("FreeCamFocus") or Instance.new("Folder")
+			folder.Name = "FreeCamFocus"; folder.Parent = workspace
+			local np = Instance.new("Part")
+			np.Name = tostring(p.UserId); np.Anchored = true; np.CanCollide = false; np.CanQuery = false; np.CanTouch = false
+			np.Transparency = 1; np.Size = Vector3.one; np.CastShadow = false
+			np.Parent = folder
+			camFocus[p] = np
+			part = np
+		end
+		;(part :: BasePart).Position = pos
+		p.ReplicationFocus = part
+	end)
+	Players.PlayerRemoving:Connect(camOff)
 	local last = {} :: { [Player]: number }
 	;(rf :: RemoteFunction).OnServerInvoke = function(p: Player, line: any)
 		if not isAdmin(p) then return false, "Not an admin" end

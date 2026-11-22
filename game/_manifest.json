@@ -145,8 +145,8 @@
    "file": "ServerScriptService/Server/Admin.luau",
    "instance": "game.ServerScriptService.Server.Admin",
    "class": "ModuleScript",
-   "bytes": 20568,
-   "sha1": "6b22b6f59404d816b01370ebec8a31cc028aaae9"
+   "bytes": 22049,
+   "sha1": "26907614699b933da785d056b5f66c1af161ed02"
   },
   {
    "file": "ServerScriptService/Server/Bestiary.luau",
@@ -355,8 +355,8 @@
    "file": "ServerScriptService/Server/Remotes.luau",
    "instance": "game.ServerScriptService.Server.Remotes",
    "class": "ModuleScript",
-   "bytes": 813,
-   "sha1": "c239a2e175efa29b25176b957185101f8bb54288"
+   "bytes": 824,
+   "sha1": "3c129a3ebfcb1423ded26d8c8bdc7a837614394f"
   },
   {
    "file": "ServerScriptService/Server/Run.luau",
@@ -581,6 +581,13 @@
    "class": "ModuleScript",
    "bytes": 14769,
    "sha1": "f8598614f071f3250e8b22df1f1b1430f16aafc7"
+  },
+  {
+   "file": "StarterPlayer/StarterPlayerScripts/Client/FreeCam.luau",
+   "instance": "game.StarterPlayer.StarterPlayerScripts.Client.FreeCam",
+   "class": "ModuleScript",
+   "bytes": 10540,
+   "sha1": "6d8adc2d84d6a7aec52072fe44a04707f8bc99e0"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/Fx.luau",
@@ -922,8 +929,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/ClientMain.client.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.ClientMain",
    "class": "LocalScript",
-   "bytes": 14642,
-   "sha1": "81e7a02336c40b7acc1c7f15606a206b047c0b54"
+   "bytes": 14990,
+   "sha1": "a50bfdd3cf5909549a80adfe4faf858aca289dc8"
   }
  ]
 }
