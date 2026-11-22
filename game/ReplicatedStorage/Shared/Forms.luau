@@ -16,7 +16,7 @@
 -- (player attributes FormStim / FormPotion), the rest wait in the collection. Server/Forms rolls, saves and applies
 -- them (Combat.stat); Client/FormCine plays the first-person jar / drink and shows what you got.
 export type Form = { id: string, kind: string, set: string, name: string, rarity: number, color: Color3, desc: string,
-	dmg: number?, knock: number?, hp: number?, sta: number? }
+	dmg: number?, knock: number?, hp: number?, sta: number?, exclusive: boolean?, color2: Color3? }
 export type Vial = { id: string, kind: string, set: string, tier: number, name: string, level: number, price: number, odds: { number }, color: Color3, desc: string }
 
 local function C(r, g, b) return Color3.fromRGB(r, g, b) end
@@ -292,6 +292,16 @@ for _, x in {
 		desc = "Nothing can hurt nothing." }),
 } do table.insert(List, x) end
 
+-- EXCLUSIVE FORMS: in no jar and no potion; only a CODE gives one (Server/Codes, the lobby's CODES button). Each has
+-- its own look (Client/FormExclusive) on top of its rarity's, shows as EXCLUSIVE (Forms.rarityOf) and can't be traded.
+SET = "Exclusive"
+for _, x in {
+	-- code ALPHA TESTER (2026-11-22, the user): the Camp LEGENDARY jar's buff (BANSHEE FISTS: +150% / +35%), a
+	-- holographic glitch look (cyan / magenta split images, pixels, scan lines, the colour drifting)
+	f({ id = "AlphaGlitch", kind = "stim", name = "ALPHA GLITCH", rarity = 5, exclusive = true, color = C(70, 235, 255), color2 = C(255, 60, 210),
+		dmg = 1.5, knock = 0.35, desc = "For the ones who played before the game was finished. Some of its bugs came with you." }),
+} do table.insert(List, x) end
+
 -- odds = weights for rarity 1..6, in % (the rare ones are very rare: the jars are cheap, open lots of them)
 local ODDS = {
 	{ 78, 18, 3.4, 0.5, 0.09, 0.01 },
@@ -445,6 +455,20 @@ function Forms.roll(v: Vial, rng: Random, minRarity: number?): Form
 	local pool = {}
 	for _, fm in List do if fm.kind == v.kind and fm.set == v.set and fm.rarity == rarity then table.insert(pool, fm) end end
 	return pool[rng:NextInteger(1, #pool)]
+end
+
+-- the rarity line of a form: its rarity, or EXCLUSIVE (a code's form)
+local EXCLUSIVE = { name = "EXCLUSIVE", color = C(70, 235, 255) }
+function Forms.rarityOf(fm: Form): { name: string, color: Color3 }
+	if fm.exclusive then return EXCLUSIVE end
+	return RARITY[fm.rarity]
+end
+
+-- the exclusive forms of a kind (none is in a jar / potion)
+function Forms.exclusives(kind: string): { Form }
+	local out = {}
+	for _, x in List do if x.exclusive and x.kind == kind then table.insert(out, x) end end
+	return out
 end
 
 -- a bonus as text: "+12%" below double, then a multiplier: "x2.5", "x58"

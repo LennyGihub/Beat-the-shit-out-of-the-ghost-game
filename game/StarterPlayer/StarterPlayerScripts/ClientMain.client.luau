@@ -78,6 +78,7 @@ local MoonFx = require(Client.MoonFx) -- the Black Moon's monsters' moves (breac
 local FxTier = require(Client.FxTier) -- the further the map, the bigger the effects
 local WeakFx = require(Client.WeakFx) -- a x5 combo: the monster goes WEAK (lift it, throw it)
 local TradeUI = require(Client.TradeUI) -- trading cash, jar forms and potion forms with other players
+local CodesUI = require(Client.CodesUI) -- the lobby's CODES window (redeemable codes: Server/Codes)
 
 Platform.init()
 -- the server is told which controls this player uses: touch players reach further, lift from far and face a weaker
@@ -152,8 +153,9 @@ BestiaryUI.init(function(open)
 end)
 Entrance.init(Fx, HUD) -- each monster's entrance cinematic
 LobbyUI.init(function() UltShop.open() end, function(open) Input.setShopOpen(open) end, function() QuestUI.open() end, QuestUI.claimable, QuestUI.changed,
-	function() BestiaryUI.open() end, function() TradeUI.openPicker() end)
+	function() BestiaryUI.open() end, function() TradeUI.openPicker() end, function() CodesUI.open() end)
 TradeUI.init(function(open) Input.setShopOpen(open) end)
+CodesUI.init(function(open) Input.setShopOpen(open) end)
 Input.openPlay = LobbyUI.togglePlay
 Intro.init(Fx, HUD) -- the new player's intro (the TV, the Woman, the frozen lessons, the way out)
 TutorialUI.init() -- starts it on the first join; HOW TO PLAY in the lobby
@@ -246,6 +248,15 @@ Remotes.Fx.OnClientEvent:Connect(function(kind: string, ...)
 		local k = SellerUI.rolled()
 		FormCine.onDone = function() if k and not lp:GetAttribute("InMatch") then SellerUI.open(k) end end
 		task.spawn(FormCine.play, args[1], args[2], args[3], args[4], args[5], args[6])
+	elseif kind == "CodeResult" then
+		CodesUI.result(...)
+	elseif kind == "CodeReward" then
+		-- a code gave a form: the jar cinematic (no seller, no vial), then WEAR IT / KEEP
+		local args = table.pack(...)
+		CodesUI.close()
+		SellerUI.close()
+		FormCine.onDone = nil
+		task.spawn(FormCine.play, args[1], "", args[2], args[3], args[4], args[5])
 	elseif kind == "FormMulti" then
 		SellerUI.multi(...)
 	elseif kind == "OfflineDone" then

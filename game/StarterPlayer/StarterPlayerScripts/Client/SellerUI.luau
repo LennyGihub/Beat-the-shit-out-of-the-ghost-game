@@ -244,6 +244,26 @@ local function refresh()
 			end)
 		end
 	end
+	-- the EXCLUSIVE forms you own of this kind (a code's: in no jar / potion), at the top of every tab
+	for i, fm in Forms.exclusives(kind) do
+		if own[fm.id] ~= true then continue end
+		local rr = Forms.rarityOf(fm)
+		seedN += 1
+		local row = Grunge.brush(list, { Size = UDim2.new(1, -8, 0, 46), LayoutOrder = -100 + i, ZIndex = 11 }, Color3.fromRGB(24, 30, 38), seedN, 18, false)
+		Grunge.frame(row, { BackgroundTransparency = 0, BackgroundColor3 = rr.color, Position = UDim2.new(0, 4, 0.14, 0), Size = UDim2.new(0, 5, 0.72, 0), ZIndex = 12 })
+		Grunge.text(row, { Text = fm.name, Font = Grunge.FONT, Position = UDim2.new(0, 14, 0.06, 0), Size = UDim2.new(0.62, 0, 0.5, 0),
+			TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = fm.color, ZIndex = 12 })
+		Grunge.text(row, { Text = rr.name .. "  " .. table.concat(Forms.lines(fm), "  "), Font = Grunge.TYPE, Position = UDim2.new(0, 14, 0.56, 0), Size = UDim2.new(0.62, 0, 0.36, 0),
+			TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(190, 180, 160), ZIndex = 12 })
+		local isWorn = fm.id == wornId
+		local b = button(row, isWorn and "WORN" or "WEAR", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -6, 0.5, 0), Size = UDim2.new(0.28, 0, 0.74, 0), ZIndex = 13 },
+			isWorn and DARK or GREEN)
+		b.Activated:Connect(function()
+			if isWorn then return end
+			Sfx.play("Click")
+			;(Remotes :: any).Forms:FireServer("equip", fm.id)
+		end)
+	end
 	collT.Text = "COLLECTION  " .. n .. " / " .. #all .. "  (" .. (Campaign.mapById[setShown] and Campaign.mapById[setShown].name or setShown) .. ")"
 end
 

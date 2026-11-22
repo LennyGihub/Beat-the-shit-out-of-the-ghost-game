@@ -12,6 +12,7 @@
 --     down the legs too and sparkles spiralling up round the body; LEGENDARY: a halo of lights over the head and a
 --     heartbeat glow in the chest; MYTHIC: a pillar of light from the ground up. (The arms are the fist form's: the
 --     body aura never covers them.)
+-- EXCLUSIVE forms (a code's: Server/Codes) add their own look on top (Client/FormExclusive: ALPHA GLITCH's hologram).
 -- Putting a new form on: a burst (a ball of energy, rings, a sound) everyone near sees.
 -- MAP AFTER MAP (the user, 2026-11-20: "progressive better visual for EVERY potion / jar, for each map"): a later
 -- map's form is stronger here too (tierBoost: bigger particles, more of them, wider lights, a bigger burst), and each
@@ -29,6 +30,7 @@ local Settings = require(script.Parent.Settings)
 local Sfx = require(script.Parent.Sfx)
 local Giant = require(script.Parent.FormGiant)
 local Sets = require(script.Parent.FormSets)
+local Excl = require(script.Parent.FormExclusive)
 
 local FL = {}
 local lp = Players.LocalPlayer
@@ -146,6 +148,7 @@ local function buildFist(look: Look, ch: Model, fm: Forms.Form, level: string)
 	local col = fm.color
 	local skin = SKIN[fm.id]
 	local rate = level == "high" and 1 or 0.6
+	local arms = {} :: { { BasePart } }
 	for i, side in { "Right", "Left" } do
 		local L = limbs(ch, side)
 		local hand = L.hand
@@ -153,6 +156,7 @@ local function buildFist(look: Look, ch: Model, fm: Forms.Form, level: string)
 		local covered = { hand }
 		if r >= 2 and L.lower then table.insert(covered, L.lower) end
 		if r >= 3 and L.upper then table.insert(covered, L.upper) end
+		table.insert(arms, covered)
 		-- a special skin under the energy (black / metal / glass)
 		local skinned = {} :: { [BasePart]: boolean }
 		if skin then
@@ -258,6 +262,8 @@ local function buildFist(look: Look, ch: Model, fm: Forms.Form, level: string)
 			end
 		end
 	end
+	-- an exclusive form's own look on top (Client/FormExclusive)
+	if fm.exclusive then Excl.build(look.folder, ch, look.ref, fm, level, arms) end
 end
 
 ----------------------------------------------------------------------------------------------------------------------
@@ -448,6 +454,7 @@ local function burst(p: Player, kind: string)
 		Lifetime = NumberRange.new(0.5, 0.9), Rate = 0, Drag = 4,
 	})
 	sp:Emit(math.floor((20 + fm.rarity * 10) * tb))
+	if fm.exclusive then Excl.burst(hrp.Position, fm) end
 	Sfx.at(fm.rarity >= 4 and "MagicBurst" or "FormMagic", hrp.Position, { Volume = 0.8 })
 	-- a giant form (the latest set): it rises out of the ground in a column of light, with thunder
 	local S = Giant.scaleOf(fm)
@@ -467,6 +474,7 @@ local function clearVM()
 	for _, s in vmShells do s.part:Destroy() end
 	vmShells = {}
 	vmEmit = {}
+	Excl.clearVM()
 	local vm = cam:FindFirstChild("Viewmodel")
 	if vm then
 		for _, d in vm:GetDescendants() do if d.Name == TAG then d:Destroy() end end
@@ -522,12 +530,22 @@ local function applyVM()
 			l.Parent = fist
 		end
 	end
+	-- an exclusive form: its split images round the fists too (Client/FormExclusive)
+	if fm.exclusive then
+		local shells, bases = {}, {}
+		for _, s in vmShells do
+			table.insert(shells, s.part)
+			if not table.find(bases, s.base) then table.insert(bases, s.base) end
+		end
+		Excl.buildVM(vm, fm, shells, bases)
+	end
 end
 
 ----------------------------------------------------------------------------------------------------------------------
 local arcT = 0
 local function step(dt: number)
 	Giant.step(dt)
+	Excl.step(dt)
 	Sets.step(dt)
 	local now = os.clock()
 	local camPos = cam.CFrame.Position
@@ -575,7 +593,7 @@ local function step(dt: number)
 end
 
 -- after Client/Viewmodel has placed the fists this frame
-local function stepVM()
+local function stepVM(dt: number)
 	if #vmShells == 0 then return end
 	local now = os.clock()
 	for i, s in vmShells do
@@ -586,6 +604,7 @@ local function stepVM()
 		end
 	end
 	for _, x in vmEmit do x.e.Enabled = x.base.LocalTransparencyModifier < 0.5 end
+	Excl.stepVM(dt)
 end
 
 local function watch(p: Player)

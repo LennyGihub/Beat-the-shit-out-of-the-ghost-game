@@ -411,7 +411,9 @@ local FIST = { campFist, carnFist, harbFist, abbFist }
 function FS.set(p: Player, ch: Model, hrp: BasePart, stim: any, pot: any, level: string)
 	FS.clear(p)
 	if p:GetAttribute("InMatch") then return end
-	local ts, tp = stim and FS.tierOf(stim) or 0, pot and FS.tierOf(pot) or 0
+	-- (an exclusive form has its own look instead: Client/FormExclusive)
+	local ts = (stim and not stim.exclusive) and FS.tierOf(stim) or 0
+	local tp = (pot and not pot.exclusive) and FS.tierOf(pot) or 0
 	local fb = FIST[ts]
 	local bb = BODY[tp]
 	if not fb and not bb then return end

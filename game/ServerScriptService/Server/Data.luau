@@ -7,6 +7,7 @@
 -- Mercy's ectoplasm and Mother Moth's potions (id -> true), FormStim / FormPotion = the ones worn (Shared/Forms).
 -- Offline: the jars / potions opening by themselves (Server/Forms: a queue of vial ids per kind + when the first one
 -- started, and the opening time towards the RARE+ guarantee). Trips: train tickets used ({ n, reset }: Campaign.TRIPS).
+-- Codes: the codes this player already redeemed (normalized code -> true; Server/Codes).
 -- A cleared map brings the player's level up to what that map's best jar / potion needs (Data.mapLevel).
 -- Never overwrites a save that failed to load; saves on leave, every 90 s and on shutdown.
 local DSS = game:GetService("DataStoreService")
@@ -31,6 +32,7 @@ local function fresh()
 		Tutorial = false, -- Tutorial = the tutorial was offered (taken or refused): the lobby's popup is not shown again
 		Trips = { n = 0, reset = 0 },
 		FormTut = false, FormTutCash = false, -- the jars / potions tutorial (Client/FormTutorial): done / its starter cash given
+		Codes = {} :: { [string]: boolean }, -- the codes already redeemed (Server/Codes)
 		Offline = { stim = { q = {} :: { string }, t = 0 }, potion = { q = {} :: { string }, t = 0 }, pity = 0 } }
 end
 local MAX_RECEIPTS = 100
@@ -168,6 +170,9 @@ function Data.load(player: Player)
 						if fm and prof.data.Forms[fm.id] and fm.kind == (key == "FormStim" and "stim" or "potion") then prof.data[key] = fm.id end
 					end
 					prof.data.FormTut = res.FormTut == true
+					if type(res.Codes) == "table" then
+						for code, v in res.Codes do if type(code) == "string" and #code <= 40 and v == true then prof.data.Codes[code] = true end end
+					end
 					prof.data.FormTutCash = res.FormTutCash == true
 					if type(res.Trips) == "table" then
 						prof.data.Trips.n = math.clamp(math.floor(tonumber(res.Trips.n) or 0), 0, Campaign.TRIPS.max)
@@ -213,6 +218,7 @@ function Data.save(player: Player): boolean
 		Campaign = table.clone(prof.data.Campaign), Forms = table.clone(prof.data.Forms), FormStim = prof.data.FormStim, FormPotion = prof.data.FormPotion,
 		FormN = table.clone(prof.data.FormN),
 		Trips = table.clone(prof.data.Trips), FormTut = prof.data.FormTut == true, FormTutCash = prof.data.FormTutCash == true,
+		Codes = table.clone(prof.data.Codes),
 		Offline = { stim = { q = table.clone(prof.data.Offline.stim.q), t = prof.data.Offline.stim.t },
 			potion = { q = table.clone(prof.data.Offline.potion.q), t = prof.data.Offline.potion.t }, pity = prof.data.Offline.pity },
 		Quests = prof.data.Quests and HttpService:JSONDecode(HttpService:JSONEncode(prof.data.Quests)) or nil }
@@ -437,6 +443,16 @@ function Data.formTutorial(player: Player, what: string): boolean
 		publish(player)
 	end
 	return false
+end
+
+-- CODES (Server/Codes): has this player redeemed that code (normalized) / mark it redeemed
+function Data.codeUsed(player: Player, code: string): boolean
+	local d = Data.get(player)
+	return d ~= nil and d.Codes[code] == true
+end
+function Data.useCode(player: Player, code: string)
+	local d = Data.get(player)
+	if d then d.Codes[code] = true end
 end
 
 -- the offline opening queues (Server/Forms changes them in place)

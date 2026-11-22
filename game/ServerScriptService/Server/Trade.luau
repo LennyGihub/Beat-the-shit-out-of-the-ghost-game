@@ -112,6 +112,7 @@ local function clean(side: Side, cash: any, forms: any): ({ cash: number, forms:
 	if type(forms) == "table" then
 		for id, k in forms do
 			if type(id) ~= "string" or not Forms.byId[id] then continue end
+			if Forms.byId[id].exclusive then return nil, Forms.byId[id].name .. " CAN'T BE TRADED (EXCLUSIVE)" end
 			local copies = tonumber(k) or 0
 			if copies ~= copies then continue end
 			copies = math.floor(copies)

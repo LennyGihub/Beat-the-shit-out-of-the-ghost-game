@@ -47,8 +47,8 @@
    "file": "ReplicatedStorage/Shared/Forms.luau",
    "instance": "game.ReplicatedStorage.Shared.Forms",
    "class": "ModuleScript",
-   "bytes": 37121,
-   "sha1": "772c0de7fcdaab65bfd7c01b112669529f743fa5"
+   "bytes": 38450,
+   "sha1": "4cc8d3017ae7067cc1b1203add7065361c6803e1"
   },
   {
    "file": "ReplicatedStorage/Shared/ItemModels.luau",
@@ -124,8 +124,8 @@
    "file": "ServerScriptService/Main.server.luau",
    "instance": "game.ServerScriptService.Main",
    "class": "Script",
-   "bytes": 5736,
-   "sha1": "ae12d3f5b3f371ee8f13dcb276cf5b7747a55ed2"
+   "bytes": 5833,
+   "sha1": "a0e93c3b9ecd232545dc819853ba9dfd440e1782"
   },
   {
    "file": "ServerScriptService/Server/AbbeyMonsters.luau",
@@ -145,8 +145,8 @@
    "file": "ServerScriptService/Server/Admin.luau",
    "instance": "game.ServerScriptService.Server.Admin",
    "class": "ModuleScript",
-   "bytes": 19847,
-   "sha1": "bfb4fbcd05b7175be9786a451a3e4c1deb5c3cbf"
+   "bytes": 20245,
+   "sha1": "8ce23d6b3f089934dbe031066f509543407dd1ff"
   },
   {
    "file": "ServerScriptService/Server/Bestiary.luau",
@@ -184,6 +184,13 @@
    "sha1": "2824997bb77878b7df0cdb622bf80b447d38468d"
   },
   {
+   "file": "ServerScriptService/Server/Codes.luau",
+   "instance": "game.ServerScriptService.Server.Codes",
+   "class": "ModuleScript",
+   "bytes": 5469,
+   "sha1": "3b1d046984326f04e05aa6b5b2244dbd7c7387ab"
+  },
+  {
    "file": "ServerScriptService/Server/Combat.luau",
    "instance": "game.ServerScriptService.Server.Combat",
    "class": "ModuleScript",
@@ -194,8 +201,8 @@
    "file": "ServerScriptService/Server/Data.luau",
    "instance": "game.ServerScriptService.Server.Data",
    "class": "ModuleScript",
-   "bytes": 25498,
-   "sha1": "6eee8f7ccfebf2e1d971f6bed0bf8f2f02fe78ea"
+   "bytes": 26243,
+   "sha1": "78149f23615a3950808b53e3083f064fe860d574"
   },
   {
    "file": "ServerScriptService/Server/Events.luau",
@@ -348,8 +355,8 @@
    "file": "ServerScriptService/Server/Remotes.luau",
    "instance": "game.ServerScriptService.Server.Remotes",
    "class": "ModuleScript",
-   "bytes": 804,
-   "sha1": "092236b6b294f9b5f8dc8d4a654988be4e118673"
+   "bytes": 813,
+   "sha1": "c239a2e175efa29b25176b957185101f8bb54288"
   },
   {
    "file": "ServerScriptService/Server/Run.luau",
@@ -390,8 +397,8 @@
    "file": "ServerScriptService/Server/Trade.luau",
    "instance": "game.ServerScriptService.Server.Trade",
    "class": "ModuleScript",
-   "bytes": 13752,
-   "sha1": "b7b564c9b98a66266dc54ee0bf24f42e08d08dea"
+   "bytes": 13858,
+   "sha1": "29fe4da31acfb04d3176aa8f1fef9643bf3d3333"
   },
   {
    "file": "ServerScriptService/Server/Tutorial.luau",
@@ -485,6 +492,13 @@
    "sha1": "e5e57d65749c3d958b0f50e1c36ca63583545f0b"
   },
   {
+   "file": "StarterPlayer/StarterPlayerScripts/Client/CodesUI.luau",
+   "instance": "game.StarterPlayer.StarterPlayerScripts.Client.CodesUI",
+   "class": "ModuleScript",
+   "bytes": 8194,
+   "sha1": "e58a389877663151918ab75b895f7f3bac09a59a"
+  },
+  {
    "file": "StarterPlayer/StarterPlayerScripts/Client/CrewAnim.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.CrewAnim",
    "class": "ModuleScript",
@@ -523,8 +537,15 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/FormCine.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.FormCine",
    "class": "ModuleScript",
-   "bytes": 32849,
-   "sha1": "d5a70bac440262b3d8a2e4768d638803db67d098"
+   "bytes": 33041,
+   "sha1": "213d4173c0d42a1b270553d604b4e680711dc1a1"
+  },
+  {
+   "file": "StarterPlayer/StarterPlayerScripts/Client/FormExclusive.luau",
+   "instance": "game.StarterPlayer.StarterPlayerScripts.Client.FormExclusive",
+   "class": "ModuleScript",
+   "bytes": 12416,
+   "sha1": "0a1b27815a636afe5191e5befd863cbacfbd7937"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/FormGiant.luau",
@@ -537,15 +558,15 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/FormLook.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.FormLook",
    "class": "ModuleScript",
-   "bytes": 31111,
-   "sha1": "a375d20611a271136e473dc91b997e5687a99562"
+   "bytes": 31920,
+   "sha1": "cc4e91f831d813e1679d0bf3008fa7a092d8ade4"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/FormSets.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.FormSets",
    "class": "ModuleScript",
-   "bytes": 24842,
-   "sha1": "477ecf677a5eb82ad627265b22d1ed9c68cde1de"
+   "bytes": 24969,
+   "sha1": "6c12d71de6eef03862a06199e644b258c33a753e"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/FormTutorial.luau",
@@ -635,8 +656,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/LobbyUI.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.LobbyUI",
    "class": "ModuleScript",
-   "bytes": 40091,
-   "sha1": "26e2400afdc9143b0258ce6e815c7d3e7655899d"
+   "bytes": 40490,
+   "sha1": "038643b35e5ba46afc5606ca50508199d9a2c8e9"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/LockOn.luau",
@@ -740,8 +761,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/SellerUI.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.SellerUI",
    "class": "ModuleScript",
-   "bytes": 27129,
-   "sha1": "475de1315cd8056df9503c2a81498c2ba9c0c7b9"
+   "bytes": 28559,
+   "sha1": "67bc3d9afdc19219058c9008207d0382bc02de40"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/Settings.luau",
@@ -803,8 +824,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/TradeUI.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.TradeUI",
    "class": "ModuleScript",
-   "bytes": 29441,
-   "sha1": "2628dcbc7ba9f7feb58af0130edc6ddb63262860"
+   "bytes": 29539,
+   "sha1": "2395e68d1dadd66c7672fb53f8737d5938461964"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/TrainRide.luau",
@@ -894,8 +915,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/ClientMain.client.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.ClientMain",
    "class": "LocalScript",
-   "bytes": 13718,
-   "sha1": "74f107439585d7a56727ef39ae3e2894a66e33b8"
+   "bytes": 14251,
+   "sha1": "ad96d3a1b2bde3b9d0f5cd47afa7c9b072a6220d"
   }
  ]
 }

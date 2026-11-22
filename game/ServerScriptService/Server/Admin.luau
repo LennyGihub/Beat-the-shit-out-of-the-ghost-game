@@ -59,7 +59,7 @@ local function find(list: { any }, word: string?): any
 	return nil
 end
 
-local HELP = "cash <n> | xp <n> | camp all|reset|<n> | trips reset|empty|<n> | form <id>|all|off|tutorial | offline finish | offline pity <h> | trade bot | runcash <n> | give <item> | clearitems | ult <id> | allults | allmaps | heal | brut | god | start [map] [diff] | "
+local HELP = "cash <n> | xp <n> | camp all|reset|<n> | trips reset|empty|<n> | form <id>|all|off|tutorial | code reset|<code> | offline finish | offline pity <h> | trade bot | runcash <n> | give <item> | clearitems | ult <id> | allults | allmaps | heal | brut | god | start [map] [diff] | "
 	.. "revive | money2 | glock | vip | doubleult | secondchance | next | killghost | bring | ragdoll [power] | monster <id|off> | boss <id> [tier 1-3] | evolved on|off|<tier> | event plane|van|train | leave | endrun"
 
 local CMD: { [string]: (p: Player, a: string?, b: string?) -> (boolean, string) } = {}
@@ -128,6 +128,13 @@ CMD.form = function(p, a)
 	Data.equipForm(p, fm.id)
 	Combat.refreshHealth(p)
 	return true, "Wearing " .. fm.name .. " (" .. Forms.rarity[fm.rarity].name .. ")"
+end
+-- codes (Server/Codes): "code reset" forgets your used codes and takes the code forms back, "code <code>" redeems one
+CMD.code = function(p, a, b)
+	local Codes = require(script.Parent.Codes)
+	if a == "reset" then return true, Codes.reset(p) end
+	if not a then return false, "Usage: code reset | code <code>" end
+	return Codes.redeem(p, a .. (b and (" " .. b) or ""), true)
 end
 -- trading: "trade bot" opens a trade with a test partner (Studio only, Server/Trade)
 CMD.trade = function(p, a)

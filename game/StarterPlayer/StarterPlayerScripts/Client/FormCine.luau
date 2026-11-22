@@ -11,6 +11,7 @@
 -- Then the REVEAL: rarity, the form's name in its colour, what it does, NEW! or ALREADY YOURS, and WEAR IT / KEEP
 -- (if another form of that kind was worn) or OK. Higher rarities shake harder and hold the change longer.
 -- The player is anchored, their body hidden and the camera scripted while it plays (it never runs in a fight).
+-- A CODE's form (Server/Codes, Fx "CodeReward") plays it too, with no vial (a jar of the form's own colour, no seller).
 -- Studio test hooks (player attributes): DebugFormCine = "<formId>" plays it for that form (no buy, nothing saved);
 -- DebugFormFreeze = seconds into the cinematic at which it stops (photos); DebugFormPick = "wear" | "keep" | "ok".
 local Players = game:GetService("Players")
@@ -240,7 +241,7 @@ end
 -- the REVEAL card; returns when a button is pressed: "wear" | "keep" | "ok"
 local function reveal(fm: Forms.Form, isNew: boolean, worn: boolean, prevId: string): string
 	local g = gui :: ScreenGui
-	local rar = Forms.rarity[fm.rarity]
+	local rar = Forms.rarityOf(fm)
 	local card = Grunge.slab(g, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.fromScale(1.4, 0.47), Size = UDim2.fromScale(0.36, 0.56), ZIndex = 22 },
 		Color3.fromRGB(21, 17, 15), 60 + fm.rarity, 6, false)
 	local ar = Instance.new("UIAspectRatioConstraint"); ar.AspectRatio = 0.95; ar.Parent = card
@@ -315,8 +316,8 @@ function FC.play(kind: string, vialId: string, formId: string, isNew: boolean, w
 	local rarity = fm.rarity
 	local big = rarity >= 4
 	local hold = big and (rarity >= 5 and 1.0 or 0.5) or 0 -- (a longer build-up for the rare ones)
-	-- face the seller
-	local lobby = workspace:FindFirstChild("Lobby")
+	-- face the seller (a code's reward: no vial, no seller: you stay facing where you were)
+	local lobby = v and workspace:FindFirstChild("Lobby")
 	local sellers = lobby and lobby:FindFirstChild("Sellers")
 	local sm = sellers and sellers:FindFirstChild(kind == "stim" and "DocMercy" or "MotherMoth")
 	local sp = sm and sm:FindFirstChild("Prompt", true) :: BasePart?

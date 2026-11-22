@@ -186,7 +186,8 @@ local function sortedIds(t: { [string]: number }, kind: string?): { string }
 	local out = {}
 	for id in t do
 		local fm = Forms.byId[id]
-		if fm and (kind == nil or fm.kind == kind) then table.insert(out, id) end
+		-- (an exclusive form, a code's, can't be traded: Server/Trade refuses it)
+		if fm and not fm.exclusive and (kind == nil or fm.kind == kind) then table.insert(out, id) end
 	end
 	table.sort(out, function(a, b)
 		local fa, fb = Forms.byId[a], Forms.byId[b]
