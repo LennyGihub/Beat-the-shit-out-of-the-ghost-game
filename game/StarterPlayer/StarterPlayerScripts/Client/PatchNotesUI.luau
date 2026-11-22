@@ -86,11 +86,13 @@ end
 -- the text sizes follow the screen (the rows grow with their text)
 local bodies = {} :: { TextLabel }
 local heads = {} :: { TextLabel }
+local sections = {} :: { TextLabel }
 local function fitText()
 	local h = workspace.CurrentCamera.ViewportSize.Y
 	local body = math.clamp(math.floor(h / 42), 12, 22)
 	for _, t in bodies do t.TextSize = body end
 	for _, t in heads do t.TextSize = math.floor(body * 1.35) end
+	for _, t in sections do t.TextSize = math.floor(body * 1.9) end
 end
 
 local function build()
@@ -101,7 +103,7 @@ local function build()
 		Rotation = -1, ZIndex = 12 })
 	local tb = Grunge.bar(panel, { size = UDim2.fromScale(0.42, 0.022), pos = UDim2.fromScale(0.06, 0.13), color = Color3.fromRGB(150, 18, 20), rot = 0.5, seed = 98, slices = 26, outline = false })
 	tb.root.ZIndex = 11
-	Grunge.text(panel, { Text = PatchNotes.title .. "   -   " .. PatchNotes.date, Font = Grunge.TYPE, TextColor3 = Color3.fromRGB(242, 200, 60), Position = UDim2.fromScale(0.06, 0.16),
+	Grunge.text(panel, { Text = PatchNotes.title .. "  -  EVERYTHING NEW SINCE THE LAST UPDATE", Font = Grunge.TYPE, TextColor3 = Color3.fromRGB(242, 200, 60), Position = UDim2.fromScale(0.06, 0.16),
 		Size = UDim2.fromScale(0.88, 0.045), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 12 })
 	local close = button(panel, "CLOSE", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(0.95, 0.035), Size = UDim2.fromScale(0.24, 0.075), BackgroundColor3 = DARK, ZIndex = 13, Rotation = 1.2 })
 	close.Activated:Connect(function() Sfx.play("Click"); UI.close() end)
@@ -116,6 +118,20 @@ local function build()
 	local pad = Instance.new("UIPadding"); pad.PaddingLeft = UDim.new(0, 10); pad.PaddingRight = UDim.new(0, 14); pad.PaddingTop = UDim.new(0, 10); pad.PaddingBottom = UDim.new(0, 10); pad.Parent = list
 	local ll = Instance.new("UIListLayout"); ll.Padding = UDim.new(0, 14); ll.SortOrder = Enum.SortOrder.LayoutOrder; ll.Parent = list
 	for i, e in PatchNotes.entries do
+		if e.section then
+			-- a heading: the section's name over a red brush line
+			local sec = Instance.new("Frame")
+			sec.BackgroundTransparency = 1; sec.BorderSizePixel = 0; sec.Size = UDim2.new(1, 0, 0, 0); sec.AutomaticSize = Enum.AutomaticSize.Y
+			sec.LayoutOrder = i; sec.ZIndex = 12; sec.Parent = list
+			local sp = Instance.new("UIPadding"); sp.PaddingTop = UDim.new(0, i > 1 and 12 or 0); sp.PaddingBottom = UDim.new(0, 6); sp.Parent = sec
+			local t = Grunge.text(sec, { Text = e.section, Font = Grunge.HORROR, TextScaled = false, AutomaticSize = Enum.AutomaticSize.XY, Size = UDim2.new(),
+				TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(255, 110, 60), ZIndex = 13 })
+			table.insert(sections, t)
+			local line = Grunge.frame(sec, { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 0, 1, 2), Size = UDim2.new(0.55, 0, 0, 3), BackgroundTransparency = 0,
+				BackgroundColor3 = Color3.fromRGB(150, 18, 20), ZIndex = 12 })
+			local _ = line
+			continue
+		end
 		local row = Instance.new("Frame")
 		row.BackgroundTransparency = 1; row.BorderSizePixel = 0; row.Size = UDim2.new(1, 0, 0, 0); row.AutomaticSize = Enum.AutomaticSize.Y
 		row.LayoutOrder = i; row.ZIndex = 12; row.Parent = list
@@ -127,15 +143,15 @@ local function build()
 		local hl = Instance.new("UIListLayout"); hl.FillDirection = Enum.FillDirection.Horizontal; hl.Padding = UDim.new(0, 10); hl.VerticalAlignment = Enum.VerticalAlignment.Center
 		hl.SortOrder = Enum.SortOrder.LayoutOrder; hl.Parent = head
 		local tag = Instance.new("TextLabel")
-		tag.BackgroundColor3 = TAGS[e.tag] or GREEN; tag.BorderSizePixel = 0; tag.Font = Grunge.FONT; tag.Text = e.tag; tag.TextColor3 = Grunge.PAPER
+		tag.BackgroundColor3 = TAGS[e.tag or "NEW"] or GREEN; tag.BorderSizePixel = 0; tag.Font = Grunge.FONT; tag.Text = e.tag or "NEW"; tag.TextColor3 = Grunge.PAPER
 		tag.TextStrokeTransparency = 0.3; tag.TextStrokeColor3 = Grunge.INK; tag.AutomaticSize = Enum.AutomaticSize.XY; tag.Size = UDim2.new(); tag.LayoutOrder = 1; tag.ZIndex = 13
 		local tp = Instance.new("UIPadding"); tp.PaddingLeft = UDim.new(0, 8); tp.PaddingRight = UDim.new(0, 8); tp.PaddingTop = UDim.new(0, 2); tp.PaddingBottom = UDim.new(0, 2); tp.Parent = tag
 		tag.Parent = head
 		table.insert(bodies, tag)
-		local title = Grunge.text(head, { Text = e.title, Font = Grunge.FONT, TextScaled = false, AutomaticSize = Enum.AutomaticSize.XY, Size = UDim2.new(),
+		local title = Grunge.text(head, { Text = e.title or "", Font = Grunge.FONT, TextScaled = false, AutomaticSize = Enum.AutomaticSize.XY, Size = UDim2.new(),
 			TextXAlignment = Enum.TextXAlignment.Left, LayoutOrder = 2, ZIndex = 13 })
 		table.insert(heads, title)
-		local body = Grunge.text(row, { Text = e.text, Font = Grunge.TYPE, TextScaled = false, TextWrapped = true, AutomaticSize = Enum.AutomaticSize.Y, Size = UDim2.new(1, 0, 0, 0),
+		local body = Grunge.text(row, { Text = e.text or "", Font = Grunge.TYPE, TextScaled = false, TextWrapped = true, AutomaticSize = Enum.AutomaticSize.Y, Size = UDim2.new(1, 0, 0, 0),
 			TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, TextColor3 = Color3.fromRGB(210, 200, 180), LayoutOrder = 2, ZIndex = 13 })
 		table.insert(bodies, body)
 	end

@@ -96,8 +96,8 @@
    "file": "ReplicatedStorage/Shared/PatchNotes.luau",
    "instance": "game.ReplicatedStorage.Shared.PatchNotes",
    "class": "ModuleScript",
-   "bytes": 1758,
-   "sha1": "13805529cca9f8295f0af063e64f31055628571a"
+   "bytes": 5323,
+   "sha1": "aa8489feed54c6273ec6d65c83730227e170847c"
   },
   {
    "file": "ReplicatedStorage/Shared/Quests.luau",
@@ -726,8 +726,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/PatchNotesUI.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.PatchNotesUI",
    "class": "ModuleScript",
-   "bytes": 12301,
-   "sha1": "38cb553aa69f8ddcdb791a15dcfde4571521562e"
+   "bytes": 13449,
+   "sha1": "6ee64b5d2d5848fe9478d059d7e049b5fec5707b"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/PlaneFx.luau",
