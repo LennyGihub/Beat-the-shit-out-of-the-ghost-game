@@ -53,6 +53,11 @@ Added on 2026-11-21 (bridge still off, 404; **not playtested either**):
   `weak` makes it weak now. THE INTRO: a new lesson after the armchair throw: COMBO x5 (the last hits land by
   themselves if the player is slow) -> LIFT HER -> THROW HER at the TV's wall (Server/Tutorial "combo"; she is only
   allowed to go weak from that lesson on; thrown far in a lesson she floats back faster).
+- **Fix after the user's test (2026-11-22):** in the COMBO lesson her small lesson knockback broke the combo. From
+  that lesson until the fight, hits no longer move her at all (`Ghost.tutorial.noKnock`, set by Server/Tutorial
+  "combo"). After being thrown (or any knock-out), she gets up FACING the thrower / her target (`Server/Ghost`:
+  turned when the ragdoll ends, and she keeps turning to her target while getting up, while WEAK, and while a lesson
+  holds her).
 
 Test when the bridge is back: clear `Camp_Lodge` (admin `start Camp_Lodge Normal`, kill) and check the result screen;
 `form Nebula` + `form DarkMatter` then `start Moon_Gate Normal` (should be easy); admin `monster pirate|conqueror|

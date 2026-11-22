@@ -13,7 +13,8 @@
 --     "windup"  she comes at the player and is held with her claws up, just before they come down
 --     "hold"    she is held where she is              "release"  she goes on (model attribute Held)
 --     "combo"   the COMBO lesson: from now on a x5 combo makes her WEAK (Config.Weak: Ghost.tutorial allowWeak), at
---               once (no cooldown left); the player lifts her over their head and throws her (Ghost.lift / throwMonster)
+--               once (no cooldown left), and hits no longer move her (noKnock, until "fight"), so all five land; the
+--               player lifts her over their head and throws her (Ghost.lift / throwMonster); she gets up facing them
 --     "ult"     the player's brutality bar is filled; until "fight" the ultimate only STUNS her (Ghost.tutorial
 --               stunOnly: no ragdoll, no flying body, she stays dazed in front of the player)
 --     "fight"   the short fight: she swings, waits, swings again, and can be beaten
@@ -211,6 +212,7 @@ function Tutorial.start(isLobby: boolean)
 			hold(false)
 		elseif action == "combo" and T then
 			T.allowWeak = true
+			T.noKnock = true -- (she stands still for the five hits: Ghost.tutorial noKnock)
 			local g = Ghost.current
 			if g then g.weakReady = 0 end
 		elseif action == "ult" then
@@ -225,6 +227,7 @@ function Tutorial.start(isLobby: boolean)
 			T.holdWindup = false
 			T.stunOnly = nil
 			T.allowWeak = true
+			T.noKnock = nil
 		elseif action == "exit" then
 			if Ghost.current then Ghost.despawn() end
 			local at = frontDoor()
