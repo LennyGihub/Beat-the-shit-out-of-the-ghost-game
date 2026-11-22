@@ -19,6 +19,11 @@ local Campaign = require(game:GetService("ReplicatedStorage").Shared.Campaign)
 local Forms = require(game:GetService("ReplicatedStorage").Shared.Forms)
 
 local Data = {}
+-- THE TUTORIAL'S VERSION: a player whose save has seen an older one (TutorialV below this) gets the current one once,
+-- from the black READY screen (Client/TutorialUI), even if they played the game before. 2 = the intro in the
+-- Mansion's TV room (2026-11-22, the user: "anyone playing the game from now on will get the new tutorial once").
+-- Raise it to show a new tutorial to everyone again.
+local TUTORIAL_VERSION = 2
 -- v2 (2026-11-17): every save was wiped before release (the testers' saves held gifted cash) by starting a new store.
 -- The old saves are still in "GhostBrawl_v1"; nothing reads them.
 local okStore, store = pcall(function() return DSS:GetDataStore("GhostBrawl_v2") end)
@@ -29,7 +34,8 @@ local function fresh()
 		Bestiary = {} :: { [string]: number }, Badges = {} :: { [string]: boolean }, Nightmare = 0, XP = 0,
 		Campaign = {} :: { [string]: number }, Forms = {} :: { [string]: boolean }, FormStim = nil :: string?, FormPotion = nil :: string?,
 		FormN = {} :: { [string]: number }, -- copies of each owned form (missing = 1): duplicates can be traded (Server/Trade)
-		Tutorial = false, -- Tutorial = the tutorial was offered (taken or refused): the lobby's popup is not shown again
+		Tutorial = false, -- Tutorial = a tutorial was offered once (taken or refused); TutorialV = the version of the last one (TUTORIAL_VERSION)
+		TutorialV = 0,
 		Trips = { n = 0, reset = 0 },
 		FormTut = false, FormTutCash = false, -- the jars / potions tutorial (Client/FormTutorial): done / its starter cash given
 		Codes = {} :: { [string]: boolean }, -- the codes already redeemed (Server/Codes)
@@ -89,7 +95,7 @@ local function publish(player)
 	player:SetAttribute("NightmareKills", p.data.Nightmare)
 	player:SetAttribute("XP", p.data.XP)
 	player:SetAttribute("Level", (Levels.of(p.data.XP))) -- (over the head in the lobby: Client/NameTags)
-	player:SetAttribute("TutorialSeen", p.data.Tutorial == true) -- false: Client/TutorialUI offers the tutorial
+	player:SetAttribute("TutorialSeen", (p.data.TutorialV or 0) >= TUTORIAL_VERSION) -- false: Client/TutorialUI starts the tutorial
 	-- the campaign (JSON: stage id -> best difficulty rank) and the forms (owned list, worn ones)
 	player:SetAttribute("Campaign", HttpService:JSONEncode(p.data.Campaign))
 	local forms = {}
@@ -154,6 +160,7 @@ function Data.load(player: Player)
 					prof.data.Nightmare = math.max(0, math.floor(tonumber(res.Nightmare) or 0))
 					prof.data.XP = math.max(0, math.floor(tonumber(res.XP) or 0))
 					prof.data.Tutorial = res.Tutorial == true
+					prof.data.TutorialV = math.max(0, math.floor(tonumber(res.TutorialV) or 0)) -- (older saves: 0, the new tutorial once)
 					prof.data.Campaign = Campaign.clean(res.Campaign)
 					if type(res.Forms) == "table" then
 						for id, v in res.Forms do if type(id) == "string" and Forms.byId[id] and v == true then prof.data.Forms[id] = true end end
@@ -214,7 +221,7 @@ function Data.save(player: Player): boolean
 	if not prof or not prof.loaded or not okStore then return false end
 	local snap = { Cash = prof.data.Cash, GhostLevel = prof.data.GhostLevel, Kills = prof.data.Kills, Owned = table.clone(prof.data.Owned), Ults = table.clone(prof.data.Ults), Equipped = prof.data.Equipped, Equipped2 = prof.data.Equipped2, Settings = prof.data.Settings, Receipts = table.clone(prof.data.Receipts),
 		Bestiary = table.clone(prof.data.Bestiary), Badges = table.clone(prof.data.Badges), Nightmare = prof.data.Nightmare, XP = prof.data.XP,
-		Tutorial = prof.data.Tutorial == true,
+		Tutorial = prof.data.Tutorial == true, TutorialV = prof.data.TutorialV or 0,
 		Campaign = table.clone(prof.data.Campaign), Forms = table.clone(prof.data.Forms), FormStim = prof.data.FormStim, FormPotion = prof.data.FormPotion,
 		FormN = table.clone(prof.data.FormN),
 		Trips = table.clone(prof.data.Trips), FormTut = prof.data.FormTut == true, FormTutCash = prof.data.FormTutCash == true,
@@ -328,10 +335,21 @@ function Data.equipped(player: Player): string
 	local d = Data.get(player); return d and d.Equipped or "Rage"
 end
 
--- the tutorial was offered to this player (taken or refused)
+-- the current tutorial was offered to this player (taken or refused): it never starts by itself again (saved at
+-- once, so leaving straight after READY still counts)
 function Data.setTutorialSeen(player: Player)
 	local d = Data.get(player)
-	if d and not d.Tutorial then d.Tutorial = true; publish(player) end
+	if d and (d.TutorialV or 0) < TUTORIAL_VERSION then
+		d.Tutorial = true
+		d.TutorialV = TUTORIAL_VERSION
+		publish(player)
+		task.spawn(Data.save, player)
+	end
+end
+-- admin "tutorial reset": as if the current tutorial had never been seen (it starts on the next join)
+function Data.resetTutorial(player: Player)
+	local d = Data.get(player)
+	if d then d.TutorialV = 0; publish(player) end
 end
 
 -- XP for a run (Server/Run.payout): returns the level before and after

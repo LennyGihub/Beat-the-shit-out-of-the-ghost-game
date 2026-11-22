@@ -145,8 +145,8 @@
    "file": "ServerScriptService/Server/Admin.luau",
    "instance": "game.ServerScriptService.Server.Admin",
    "class": "ModuleScript",
-   "bytes": 20245,
-   "sha1": "8ce23d6b3f089934dbe031066f509543407dd1ff"
+   "bytes": 20568,
+   "sha1": "6b22b6f59404d816b01370ebec8a31cc028aaae9"
   },
   {
    "file": "ServerScriptService/Server/Bestiary.luau",
@@ -201,8 +201,8 @@
    "file": "ServerScriptService/Server/Data.luau",
    "instance": "game.ServerScriptService.Server.Data",
    "class": "ModuleScript",
-   "bytes": 26243,
-   "sha1": "78149f23615a3950808b53e3083f064fe860d574"
+   "bytes": 27317,
+   "sha1": "24f9acf0d132bcd4f86b1798ee3dd43974633c7a"
   },
   {
    "file": "ServerScriptService/Server/Events.luau",
@@ -845,8 +845,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/TutorialUI.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.TutorialUI",
    "class": "ModuleScript",
-   "bytes": 8143,
-   "sha1": "a5c472397b652de6de23419c9249f18f28a3ede0"
+   "bytes": 8225,
+   "sha1": "f4ac2dfcfb8c37fd1b7abd7680e7a980aa5ff31e"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/UltActs.luau",

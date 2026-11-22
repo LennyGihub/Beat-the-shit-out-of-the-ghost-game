@@ -1,7 +1,8 @@
 --!strict
 -- THE TUTORIAL's door on the client: the intro itself is Client/Intro (the TV, the Woman, the frozen lessons, the
 -- way out); Server/Tutorial saves that it was played.
---   * A NEW PLAYER (player attribute TutorialSeen = false, set by Server/Data): the screen goes all black at once
+--   * A NEW PLAYER, or anyone whose save saw only an older tutorial (player attribute TutorialSeen = false, set by
+--     Server/Data from its TUTORIAL_VERSION): the screen goes all black at once
 --     (the park never shows) and, once the loading screen is gone, a READY button waits in the middle of it; READY
 --     (click, tap, Enter, a controller's A / Start) starts the intro, which opens on black too. In Studio (where the
 --     save never loads) only with the ReplicatedStorage attribute DebugAutoTutorial = true.

@@ -59,7 +59,7 @@ local function find(list: { any }, word: string?): any
 	return nil
 end
 
-local HELP = "cash <n> | xp <n> | camp all|reset|<n> | trips reset|empty|<n> | form <id>|all|off|tutorial | code reset|<code> | offline finish | offline pity <h> | trade bot | runcash <n> | give <item> | clearitems | ult <id> | allults | allmaps | heal | brut | god | start [map] [diff] | "
+local HELP = "cash <n> | xp <n> | camp all|reset|<n> | trips reset|empty|<n> | form <id>|all|off|tutorial | code reset|<code> | tutorial reset | offline finish | offline pity <h> | trade bot | runcash <n> | give <item> | clearitems | ult <id> | allults | allmaps | heal | brut | god | start [map] [diff] | "
 	.. "revive | money2 | glock | vip | doubleult | secondchance | next | killghost | bring | ragdoll [power] | monster <id|off> | boss <id> [tier 1-3] | evolved on|off|<tier> | event plane|van|train | leave | endrun"
 
 local CMD: { [string]: (p: Player, a: string?, b: string?) -> (boolean, string) } = {}
@@ -135,6 +135,12 @@ CMD.code = function(p, a, b)
 	if a == "reset" then return true, Codes.reset(p) end
 	if not a then return false, "Usage: code reset | code <code>" end
 	return Codes.redeem(p, a .. (b and (" " .. b) or ""), true)
+end
+-- "tutorial reset": the current tutorial counts as not seen (the READY screen comes back on the next join)
+CMD.tutorial = function(p, a)
+	if a ~= "reset" then return false, "Usage: tutorial reset" end
+	Data.resetTutorial(p)
+	return true, "Tutorial reset: rejoin to get the READY screen and the intro"
 end
 -- trading: "trade bot" opens a trade with a test partner (Studio only, Server/Trade)
 CMD.trade = function(p, a)
