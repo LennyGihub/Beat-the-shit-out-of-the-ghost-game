@@ -17,6 +17,7 @@ local Remotes = require(script.Parent.Remotes)
 local Levels = require(game:GetService("ReplicatedStorage").Shared.Levels)
 local Campaign = require(game:GetService("ReplicatedStorage").Shared.Campaign)
 local Forms = require(game:GetService("ReplicatedStorage").Shared.Forms)
+local PatchNotes = require(game:GetService("ReplicatedStorage").Shared.PatchNotes)
 
 local Data = {}
 -- THE TUTORIAL'S VERSION: a player whose save has seen an older one (TutorialV below this) gets the current one once,
@@ -36,6 +37,7 @@ local function fresh()
 		FormN = {} :: { [string]: number }, -- copies of each owned form (missing = 1): duplicates can be traded (Server/Trade)
 		Tutorial = false, -- Tutorial = a tutorial was offered once (taken or refused); TutorialV = the version of the last one (TUTORIAL_VERSION)
 		TutorialV = 0,
+		NotesV = PatchNotes.version, -- the last patch notes this player saw (a new save: the current ones, nothing to show)
 		Trips = { n = 0, reset = 0 },
 		FormTut = false, FormTutCash = false, -- the jars / potions tutorial (Client/FormTutorial): done / its starter cash given
 		Codes = {} :: { [string]: boolean }, -- the codes already redeemed (Server/Codes)
@@ -96,6 +98,7 @@ local function publish(player)
 	player:SetAttribute("XP", p.data.XP)
 	player:SetAttribute("Level", (Levels.of(p.data.XP))) -- (over the head in the lobby: Client/NameTags)
 	player:SetAttribute("TutorialSeen", (p.data.TutorialV or 0) >= TUTORIAL_VERSION) -- false: Client/TutorialUI starts the tutorial
+	player:SetAttribute("NotesV", p.data.NotesV or 0) -- below PatchNotes.version: Client/PatchNotesUI opens WHAT'S NEW once
 	-- the campaign (JSON: stage id -> best difficulty rank) and the forms (owned list, worn ones)
 	player:SetAttribute("Campaign", HttpService:JSONEncode(p.data.Campaign))
 	local forms = {}
@@ -161,6 +164,7 @@ function Data.load(player: Player)
 					prof.data.XP = math.max(0, math.floor(tonumber(res.XP) or 0))
 					prof.data.Tutorial = res.Tutorial == true
 					prof.data.TutorialV = math.max(0, math.floor(tonumber(res.TutorialV) or 0)) -- (older saves: 0, the new tutorial once)
+					prof.data.NotesV = math.max(0, math.floor(tonumber(res.NotesV) or 0)) -- (a save from before the patch notes: 0, they show once)
 					prof.data.Campaign = Campaign.clean(res.Campaign)
 					if type(res.Forms) == "table" then
 						for id, v in res.Forms do if type(id) == "string" and Forms.byId[id] and v == true then prof.data.Forms[id] = true end end
@@ -221,7 +225,7 @@ function Data.save(player: Player): boolean
 	if not prof or not prof.loaded or not okStore then return false end
 	local snap = { Cash = prof.data.Cash, GhostLevel = prof.data.GhostLevel, Kills = prof.data.Kills, Owned = table.clone(prof.data.Owned), Ults = table.clone(prof.data.Ults), Equipped = prof.data.Equipped, Equipped2 = prof.data.Equipped2, Settings = prof.data.Settings, Receipts = table.clone(prof.data.Receipts),
 		Bestiary = table.clone(prof.data.Bestiary), Badges = table.clone(prof.data.Badges), Nightmare = prof.data.Nightmare, XP = prof.data.XP,
-		Tutorial = prof.data.Tutorial == true, TutorialV = prof.data.TutorialV or 0,
+		Tutorial = prof.data.Tutorial == true, TutorialV = prof.data.TutorialV or 0, NotesV = prof.data.NotesV or 0,
 		Campaign = table.clone(prof.data.Campaign), Forms = table.clone(prof.data.Forms), FormStim = prof.data.FormStim, FormPotion = prof.data.FormPotion,
 		FormN = table.clone(prof.data.FormN),
 		Trips = table.clone(prof.data.Trips), FormTut = prof.data.FormTut == true, FormTutCash = prof.data.FormTutCash == true,
@@ -346,6 +350,20 @@ function Data.setTutorialSeen(player: Player)
 		task.spawn(Data.save, player)
 	end
 end
+-- the patch notes (Shared/PatchNotes): this player has read the current ones / admin "notes reset" shows them again
+function Data.notesSeen(player: Player)
+	local d = Data.get(player)
+	if d and (d.NotesV or 0) < PatchNotes.version then
+		d.NotesV = PatchNotes.version
+		publish(player)
+		task.spawn(Data.save, player)
+	end
+end
+function Data.resetNotes(player: Player)
+	local d = Data.get(player)
+	if d then d.NotesV = 0; publish(player) end
+end
+
 -- admin "tutorial reset": as if the current tutorial had never been seen (it starts on the next join)
 function Data.resetTutorial(player: Player)
 	local d = Data.get(player)

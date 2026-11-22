@@ -85,6 +85,7 @@ local WeakFx = require(Client.WeakFx) -- a x5 combo: the monster goes WEAK (lift
 local TradeUI = require(Client.TradeUI) -- trading cash, jar forms and potion forms with other players
 local CodesUI = require(Client.CodesUI) -- the lobby's CODES window (redeemable codes: Server/Codes)
 local FreeCam = require(Client.FreeCam) -- admins: SHIFT + C free camera
+local PatchNotesUI = require(Client.PatchNotesUI) -- WHAT'S NEW: the patch notes (Shared/PatchNotes)
 
 Platform.init()
 -- the server is told which controls this player uses: touch players reach further, lift from far and face a weaker
@@ -163,6 +164,9 @@ LobbyUI.init(function() UltShop.open() end, function(open) Input.setShopOpen(ope
 TradeUI.init(function(open) Input.setShopOpen(open) end)
 CodesUI.init(function(open) Input.setShopOpen(open) end)
 FreeCam.init(function(off) Input.setShopOpen(off) end)
+PatchNotesUI.init(function(open) Input.setShopOpen(open) end, function()
+	return FormCine.busy() or Intro.running() or Loading.isShown() or FreeCam.isOn()
+end)
 Input.openPlay = LobbyUI.togglePlay
 Intro.init(Fx, HUD) -- the new player's intro (the TV, the Woman, the frozen lessons, the way out)
 TutorialUI.init() -- starts it on the first join; HOW TO PLAY in the lobby
