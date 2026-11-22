@@ -371,13 +371,13 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 		if panel.Visible then setOpen(false) end
 		if questOpener then questOpener() end
 	end, BH)
-	-- long-term goals: the monsters you have beaten and the badges (Client/BestiaryUI)
-	bigButton("BESTIARY", "BADGES", Color3.fromRGB(96, 52, 150), STEP * 3, 0.7, function()
+	-- the INVENTORY: your forms, the monsters you have beaten and the badges (Client/BestiaryUI)
+	bigButton("INVENTORY", "FORMS", Color3.fromRGB(96, 52, 150), STEP * 3, 0.7, function()
 		if panel.Visible then setOpen(false) end
 		if bestiaryOpener then bestiaryOpener() end
 	end, BH)
 	-- trading with the other players here (Client/TradeUI)
-	bigButton("TRADE", "JARS, POTIONS, CASH", Color3.fromRGB(40, 110, 120), STEP * 4, -0.9, function()
+	bigButton("TRADE", "FORMS, CASH", Color3.fromRGB(40, 110, 120), STEP * 4, -0.9, function()
 		if panel.Visible then setOpen(false) end
 		if tradeOpener then tradeOpener() end
 	end, BH)

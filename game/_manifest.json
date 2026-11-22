@@ -47,8 +47,8 @@
    "file": "ReplicatedStorage/Shared/Forms.luau",
    "instance": "game.ReplicatedStorage.Shared.Forms",
    "class": "ModuleScript",
-   "bytes": 38812,
-   "sha1": "73be5883966d4df7069e7318849f3b79eaf6309e"
+   "bytes": 38847,
+   "sha1": "e1f92a4d20d3b53d6515d6ee81d0f423402e3120"
   },
   {
    "file": "ReplicatedStorage/Shared/ItemModels.luau",
@@ -187,8 +187,8 @@
    "file": "ServerScriptService/Server/Codes.luau",
    "instance": "game.ServerScriptService.Server.Codes",
    "class": "ModuleScript",
-   "bytes": 6068,
-   "sha1": "0131d13967096b14c999cc45ffba57bab98061ea"
+   "bytes": 6516,
+   "sha1": "808fb794494afa1c3792ff9a91b44ca0de8ef5cf"
   },
   {
    "file": "ServerScriptService/Server/Combat.luau",
@@ -397,8 +397,8 @@
    "file": "ServerScriptService/Server/Trade.luau",
    "instance": "game.ServerScriptService.Server.Trade",
    "class": "ModuleScript",
-   "bytes": 13858,
-   "sha1": "29fe4da31acfb04d3176aa8f1fef9643bf3d3333"
+   "bytes": 13752,
+   "sha1": "b7b564c9b98a66266dc54ee0bf24f42e08d08dea"
   },
   {
    "file": "ServerScriptService/Server/Tutorial.luau",
@@ -446,8 +446,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/BestiaryUI.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.BestiaryUI",
    "class": "ModuleScript",
-   "bytes": 25929,
-   "sha1": "7a5f2f784e16c17922e5d33f2d656bd8c5116614"
+   "bytes": 27282,
+   "sha1": "51425644a043d6260cdea390322029bf354f6129"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/CallerMarks.luau",
@@ -576,6 +576,13 @@
    "sha1": "74def4079c039f3e1bfc14f2a966850ae2b075b8"
   },
   {
+   "file": "StarterPlayer/StarterPlayerScripts/Client/FormsPage.luau",
+   "instance": "game.StarterPlayer.StarterPlayerScripts.Client.FormsPage",
+   "class": "ModuleScript",
+   "bytes": 14769,
+   "sha1": "f8598614f071f3250e8b22df1f1b1430f16aafc7"
+  },
+  {
    "file": "StarterPlayer/StarterPlayerScripts/Client/Fx.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.Fx",
    "class": "ModuleScript",
@@ -656,8 +663,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/LobbyUI.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.LobbyUI",
    "class": "ModuleScript",
-   "bytes": 40490,
-   "sha1": "038643b35e5ba46afc5606ca50508199d9a2c8e9"
+   "bytes": 40492,
+   "sha1": "c4ca41839daaffefbe3beeb689e7f137f31e5334"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/LockOn.luau",
@@ -824,8 +831,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/TradeUI.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.TradeUI",
    "class": "ModuleScript",
-   "bytes": 29539,
-   "sha1": "2395e68d1dadd66c7672fb53f8737d5938461964"
+   "bytes": 29599,
+   "sha1": "9be8ff93a2c7321e95c0a0344ab6433d817b3054"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/TrainRide.luau",

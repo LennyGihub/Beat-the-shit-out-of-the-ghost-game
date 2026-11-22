@@ -116,22 +116,25 @@ local function owned(): { [string]: number }
 	return out
 end
 
--- the jar / bottle a form comes out of (its set's first vial of that kind, in the form's colour)
+-- the jar / bottle a form comes out of (its set's first vial of that kind, in the form's colour; an exclusive form,
+-- which has no set of vials: the first one of its kind)
 local function vialFor(fm: Forms.Form): Forms.Vial
+	local pick: Forms.Vial? = nil
 	for _, v in Forms.vials do
-		if v.kind == fm.kind and v.set == fm.set then
-			local c = table.clone(v) :: any
-			c.color = fm.color
-			c.id = "_trade" -- (no picture: the drawn jar in the form's colour)
-			return c
+		if v.kind == fm.kind and (v.set == fm.set or pick == nil) then
+			pick = v
+			if v.set == fm.set then break end
 		end
 	end
-	return Forms.vials[1]
+	local c = table.clone(pick or Forms.vials[1]) :: any
+	c.color = fm.color
+	c.id = "_trade" -- (no picture: the drawn jar in the form's colour)
+	return c
 end
 
 -- one form tile: the jar / bottle, the name, the rarity, x copies. tag = small corner text ("OWNED")
 local function tile(parent: Instance, fm: Forms.Form, n: number, z: number, tag: string?, onClick: (() -> ())?): TextButton
-	local rr = Forms.rarity[fm.rarity]
+	local rr = Forms.rarityOf(fm)
 	local b = Instance.new("TextButton")
 	b.AutoButtonColor = false; b.BorderSizePixel = 0; b.BackgroundColor3 = Color3.fromRGB(26, 21, 18); b.Text = ""
 	b.ZIndex = z; b.Name = fm.id
@@ -186,8 +189,7 @@ local function sortedIds(t: { [string]: number }, kind: string?): { string }
 	local out = {}
 	for id in t do
 		local fm = Forms.byId[id]
-		-- (an exclusive form, a code's, can't be traded: Server/Trade refuses it)
-		if fm and not fm.exclusive and (kind == nil or fm.kind == kind) then table.insert(out, id) end
+		if fm and (kind == nil or fm.kind == kind) then table.insert(out, id) end
 	end
 	table.sort(out, function(a, b)
 		local fa, fb = Forms.byId[a], Forms.byId[b]

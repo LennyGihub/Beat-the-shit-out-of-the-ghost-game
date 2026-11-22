@@ -1,5 +1,7 @@
 --!strict
--- The lobby's BESTIARY panel (long-term goals; grunge, like the quests): two tabs.
+-- The lobby's INVENTORY window (the INVENTORY button; it was the BESTIARY until 2026-11-22, the user: "instead of
+-- having a bestiary we have an inventory where we can see our bestiary but also all of our forms"): three tabs.
+-- FORMS: every form you own, worn ones first, its details and WEAR IT (Client/FormsPage).
 -- MONSTERS: a card for every monster and every evolved form (16). One you have beaten shows its name, its mastery
 --   stars (Badges.starGoals) and, on the right, the monster itself turning in 3D with its story, its power and how
 --   often you beat it; one you have not is a black silhouette called "???".
@@ -24,7 +26,8 @@ local popGui: ScreenGui
 local panel: Frame
 local onToggle: ((boolean) -> ())? = nil
 local registered = false
-local tab = "monsters"
+local tab = "forms"
+local FormsPage = require(script.Parent.FormsPage)
 local selected = "Woman"
 
 local GOLD = Color3.fromRGB(240, 190, 60)
@@ -97,6 +100,8 @@ end
 type Card = { btn: TextButton, name: TextLabel, tag: TextLabel, count: TextLabel, stars: { Frame }, edge: Frame, stroke: UIStroke }
 local cards = {} :: { [string]: Card }
 local monstersPage: Frame
+local formsPage: Frame
+local tabBtns = {} :: { [string]: TextButton }
 local badgesPage: Frame
 local view: ViewportFrame
 local viewCam: Camera
@@ -223,9 +228,15 @@ local function refresh()
 	if not gui then return end
 	local seen = refreshMonsters()
 	local got = refreshBadges()
-	headCount.Text = string.format("%d / %d MONSTERS   -   %d / %d BADGES", seen, #Badges.entries, got, #Badges.list)
+	local nf, allF = FormsPage.refresh()
+	headCount.Text = string.format("%d / %d FORMS   -   %d / %d MONSTERS   -   %d / %d BADGES", nf, allF, seen, #Badges.entries, got, #Badges.list)
+	formsPage.Visible = tab == "forms"
 	monstersPage.Visible = tab == "monsters"
 	badgesPage.Visible = tab == "badges"
+	for k, b in tabBtns do
+		local st = b:FindFirstChildOfClass("UIStroke")
+		if st then st.Color = k == tab and Color3.fromRGB(255, 220, 160) or Grunge.INK end
+	end
 end
 
 local function buildMonsters(parent: Frame)
@@ -376,7 +387,7 @@ function BestiaryUI.init(toggle: (boolean) -> ())
 	gui.Parent = pg
 	panel = Grunge.panel(gui, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.52), Size = UDim2.fromScale(0.78, 0.86), Rotation = 0 }, 61)
 	local ar = Instance.new("UIAspectRatioConstraint"); ar.AspectRatio = 1.55; ar.Parent = panel
-	Grunge.text(panel, { Text = "BESTIARY", Font = Grunge.HORROR, Position = UDim2.fromScale(0.035, 0.02), Size = UDim2.fromScale(0.4, 0.09), TextXAlignment = Enum.TextXAlignment.Left,
+	Grunge.text(panel, { Text = "INVENTORY", Font = Grunge.HORROR, Position = UDim2.fromScale(0.035, 0.02), Size = UDim2.fromScale(0.4, 0.09), TextXAlignment = Enum.TextXAlignment.Left,
 		TextColor3 = Color3.fromRGB(255, 110, 60), ZIndex = 10 })
 	headCount = Grunge.text(panel, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0.035, 0.108), Size = UDim2.fromScale(0.6, 0.035), TextXAlignment = Enum.TextXAlignment.Left,
 		TextColor3 = Color3.fromRGB(190, 180, 160), ZIndex = 10 })
@@ -384,15 +395,18 @@ function BestiaryUI.init(toggle: (boolean) -> ())
 	close.MouseButton1Click:Connect(function() Sfx.play("Click"); BestiaryUI.close() end)
 	local tabs = Grunge.frame(panel, { Position = UDim2.fromScale(0.035, 0.158), Size = UDim2.fromScale(0.93, 0.06), ZIndex = 10 })
 	local tl = Instance.new("UIListLayout"); tl.FillDirection = Enum.FillDirection.Horizontal; tl.Padding = UDim.new(0.01, 0); tl.Parent = tabs
-	for i, t in { { "MONSTERS", "monsters", Color3.fromRGB(110, 30, 24) }, { "BADGES", "badges", Color3.fromRGB(120, 92, 26) } } do
-		local b = button(tabs, t[1] :: string, { Size = UDim2.fromScale(0.5 - 0.005, 1), BackgroundColor3 = t[3], ZIndex = 11, LayoutOrder = i })
+	for i, t in { { "FORMS", "forms", Color3.fromRGB(40, 110, 120) }, { "MONSTERS", "monsters", Color3.fromRGB(110, 30, 24) }, { "BADGES", "badges", Color3.fromRGB(120, 92, 26) } } do
+		local b = button(tabs, t[1] :: string, { Size = UDim2.fromScale(1 / 3 - 0.007, 1), BackgroundColor3 = t[3], ZIndex = 11, LayoutOrder = i })
 		b.MouseButton1Click:Connect(function() Sfx.play("Click"); tab = t[2] :: string; refresh() end)
+		tabBtns[t[2] :: string] = b
 	end
-	monstersPage = Grunge.frame(panel, { Position = UDim2.fromScale(0.035, 0.24), Size = UDim2.fromScale(0.93, 0.72), ZIndex = 10 })
+	formsPage = Grunge.frame(panel, { Position = UDim2.fromScale(0.035, 0.24), Size = UDim2.fromScale(0.93, 0.72), ZIndex = 10 })
+	FormsPage.build(formsPage)
+	monstersPage = Grunge.frame(panel, { Position = UDim2.fromScale(0.035, 0.24), Size = UDim2.fromScale(0.93, 0.72), ZIndex = 10, Visible = false })
 	badgesPage = Grunge.frame(panel, { Position = UDim2.fromScale(0.035, 0.24), Size = UDim2.fromScale(0.93, 0.72), ZIndex = 10, Visible = false })
 	buildMonsters(monstersPage)
 	buildBadges(badgesPage)
-	for _, a in { "Bestiary", "Badges", "Kills", "GhostLevel", "NightmareKills" } do
+	for _, a in { "Bestiary", "Badges", "Kills", "GhostLevel", "NightmareKills", "Forms", "FormN", "FormStim", "FormPotion" } do
 		lp:GetAttributeChangedSignal(a):Connect(function() if gui.Enabled then refresh() end end)
 	end
 	-- the monster turns slowly while the panel is open
@@ -402,12 +416,20 @@ function BestiaryUI.init(toggle: (boolean) -> ())
 		local eye = viewLook + Vector3.new(math.sin(a) * viewDist, viewDist * 0.12, math.cos(a) * viewDist)
 		viewCam.CFrame = CFrame.lookAt(eye, viewLook)
 	end)
-	-- Studio test hooks: player attribute BestiaryTab = "monsters" | "badges" opens the panel on that tab,
-	-- BestiarySelect = an entry's key shows that page
+	-- Studio test hooks: player attribute BestiaryTab = "forms" | "monsters" | "badges" opens the window on that tab,
+	-- BestiarySelect = an entry's key shows that page; InvSelect = a form id picks it, InvFilter = "all" | "stim" | "potion"
 	if RunService:IsStudio() then
 		lp:GetAttributeChangedSignal("BestiaryTab"):Connect(function()
 			local t = lp:GetAttribute("BestiaryTab")
-			if t == "monsters" or t == "badges" then tab = t; BestiaryUI.open() end
+			if t == "forms" or t == "monsters" or t == "badges" then tab = t; BestiaryUI.open() end
+		end)
+		lp:GetAttributeChangedSignal("InvSelect"):Connect(function()
+			local v = lp:GetAttribute("InvSelect")
+			if type(v) == "string" then FormsPage.select(v) end
+		end)
+		lp:GetAttributeChangedSignal("InvFilter"):Connect(function()
+			local v = lp:GetAttribute("InvFilter")
+			if type(v) == "string" then FormsPage.filter(v) end
 		end)
 		lp:GetAttributeChangedSignal("BestiarySelect"):Connect(function()
 			local k = lp:GetAttribute("BestiarySelect")

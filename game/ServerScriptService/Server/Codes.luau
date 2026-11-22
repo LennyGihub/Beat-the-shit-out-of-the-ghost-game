@@ -3,9 +3,10 @@
 -- (Client/CodesUI) sends Remotes.Codes ("redeem", text); the code is checked HERE (the list never goes to the client).
 -- A code is typed any way: case, spaces and dashes don't count ("alpha tester" = "ALPHA-TESTER" = "ALPHATESTER").
 -- Each player can use each code once (saved: Data "Codes"). A code gives FORMS (Shared/Forms, exclusive ones: in
--- no jar / potion, can't be traded), cash, or both; each form plays its first-person jar / potion cinematic on the
+-- no jar / potion; they can be traded like any form), cash, or both; each form plays its first-person jar / potion cinematic on the
 -- client, one after the other (Fx "CodeReward": kind, formId, isNew, worn, prevId; Client/FormCine, then WEAR IT /
--- KEEP). A code typed again after forms were added to it gives the ones the player doesn't have yet (no cash again).
+-- KEEP). A code typed again after forms were added to it gives the ones it has not given that player yet (no cash
+-- again). Every form a code gives is marked in Data "Codes" as "<CODE>/<formId>" (forms trade: never twice for one code).
 -- Answers: Fx "CodeResult" (ok, message). Codes are redeemed in the park only (not in a fight) and only once the save
 -- has loaded (else the reward could not be kept); a player typing wrong codes again and again is slowed down.
 -- Admin: "code reset" forgets your used codes and takes the code forms back (to test again), "code <text>" redeems.
@@ -80,13 +81,19 @@ function M.redeem(p: Player, text: any, force: boolean?): (boolean, string)
 	end
 	if not Data.get(p) then return false, "no save" end
 	local again = Data.codeUsed(p, key)
-	-- (used before: only the forms added to the code since, if any)
+	-- the forms this code has not given this player yet ("<CODE>/<formId>" marks; a code used before the marks
+	-- existed gave the forms they own: those are marked now, not given again)
 	local give = {} :: { Forms.Form }
+	local marked = false
 	for _, id in c.forms or {} do
 		local fm = Forms.byId[id]
-		if fm and not (again and Data.ownsForm(p, id)) then table.insert(give, fm) end
+		local mark = key .. "/" .. id
+		if not fm or Data.codeUsed(p, mark) then continue end
+		if again and Data.ownsForm(p, id) then Data.useCode(p, mark); marked = true; continue end
+		table.insert(give, fm)
 	end
 	if again and #give == 0 then
+		if marked then task.spawn(Data.save, p) end
 		answer(p, false, "YOU ALREADY USED THIS CODE")
 		return false, "already used"
 	end
@@ -98,8 +105,8 @@ function M.redeem(p: Player, text: any, force: boolean?): (boolean, string)
 	end
 	for _, fm in give do
 		local prev = Data.formOf(p, fm.kind)
-		local isNew = not Data.ownsForm(p, fm.id)
-		if isNew then Data.addForm(p, fm.id) end -- (an exclusive form: never a second copy)
+		local isNew = Data.addForm(p, fm.id) -- (already owned, e.g. from a trade: one more copy)
+		Data.useCode(p, key .. "/" .. fm.id)
 		local worn = prev == nil
 		if worn then Data.equipForm(p, fm.id) end
 		table.insert(got, fm.name)

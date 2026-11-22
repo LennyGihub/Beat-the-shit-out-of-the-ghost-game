@@ -293,7 +293,8 @@ for _, x in {
 } do table.insert(List, x) end
 
 -- EXCLUSIVE FORMS: in no jar and no potion; only a CODE gives one (Server/Codes, the lobby's CODES button). Each has
--- its own look (Client/FormExclusive) on top of its rarity's, shows as EXCLUSIVE (Forms.rarityOf) and can't be traded.
+-- its own look (Client/FormExclusive) on top of its rarity's and shows as EXCLUSIVE (Forms.rarityOf). They trade like
+-- any form (the user, 2026-11-22).
 SET = "Exclusive"
 for _, x in {
 	-- code ALPHA TESTER (2026-11-22, the user): a fist form with the Camp LEGENDARY jar's buff (BANSHEE FISTS: +150% /
