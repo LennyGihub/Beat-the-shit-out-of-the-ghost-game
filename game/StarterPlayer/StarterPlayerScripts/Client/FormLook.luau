@@ -263,7 +263,10 @@ local function buildFist(look: Look, ch: Model, fm: Forms.Form, level: string)
 		end
 	end
 	-- an exclusive form's own look on top (Client/FormExclusive)
-	if fm.exclusive then Excl.build(look.folder, ch, look.ref, fm, level, arms) end
+	if fm.exclusive then
+		local ok, err = pcall(Excl.build, look.folder, ch, look.ref, fm, level, arms)
+		if not ok then warn("[FormLook] exclusive look: " .. tostring(err)) end
+	end
 end
 
 ----------------------------------------------------------------------------------------------------------------------
@@ -419,7 +422,13 @@ local function apply(p: Player)
 	curBoost = tierBoost(stim)
 	if stim then buildFist(look, ch, stim, level) end
 	curBoost = tierBoost(pot)
+	local before = (pot and pot.exclusive) and Excl.snapshot(ch) or nil
 	if pot then buildBody(look, ch, pot, level, hrp) end
+	-- an exclusive body form's own look on top (Client/FormExclusive)
+	if pot and before then
+		local ok, err = pcall(Excl.buildBody, folder, ch, hrp, pot, level, before)
+		if not ok then warn("[FormLook] exclusive look: " .. tostring(err)) end
+	end
 	curBoost = 1
 	Giant.set(p, ch, hrp, stim, pot, level)
 	Sets.set(p, ch, hrp, stim, pot, level)

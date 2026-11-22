@@ -2,9 +2,10 @@
 -- REDEEMABLE CODES (2026-11-22, the user: "add redeemable codes to the game"). The lobby's CODES button
 -- (Client/CodesUI) sends Remotes.Codes ("redeem", text); the code is checked HERE (the list never goes to the client).
 -- A code is typed any way: case, spaces and dashes don't count ("alpha tester" = "ALPHA-TESTER" = "ALPHATESTER").
--- Each player can use each code once (saved: Data "Codes"). A code gives a FORM (Shared/Forms, an exclusive one:
--- in no jar / potion, can't be traded), cash, or both; the form's reward plays the first-person jar cinematic on the
--- client (Fx "CodeReward": kind, formId, isNew, worn, prevId; Client/FormCine, then WEAR IT / KEEP).
+-- Each player can use each code once (saved: Data "Codes"). A code gives FORMS (Shared/Forms, exclusive ones: in
+-- no jar / potion, can't be traded), cash, or both; each form plays its first-person jar / potion cinematic on the
+-- client, one after the other (Fx "CodeReward": kind, formId, isNew, worn, prevId; Client/FormCine, then WEAR IT /
+-- KEEP). A code typed again after forms were added to it gives the ones the player doesn't have yet (no cash again).
 -- Answers: Fx "CodeResult" (ok, message). Codes are redeemed in the park only (not in a fight) and only once the save
 -- has loaded (else the reward could not be kept); a player typing wrong codes again and again is slowed down.
 -- Admin: "code reset" forgets your used codes and takes the code forms back (to test again), "code <text>" redeems.
@@ -18,10 +19,12 @@ local Combat = require(script.Parent.Combat)
 
 local M = {}
 
-export type Code = { form: string?, cash: number?, ends: number? }
+export type Code = { forms: { string }?, cash: number?, ends: number? }
 -- key = the code without spaces / dashes, in capitals. ends = unix time after which it no longer works (nil = never)
 local CODES: { [string]: Code } = {
-	ALPHATESTER = { form = "AlphaGlitch" }, -- the first code: ALPHA GLITCH, an exclusive fist form (Camp LEGENDARY buff)
+	-- the first code: ALPHA GLITCH (fist) + ALPHA HOLOGRAM (body), exclusive, the Camp LEGENDARY jar's / potion's buffs
+	-- (the body form was added the same day: players who had used the code get it by typing it again)
+	ALPHATESTER = { forms = { "AlphaGlitch", "AlphaHolo" } },
 }
 M.CODES = CODES
 
@@ -76,29 +79,35 @@ function M.redeem(p: Player, text: any, force: boolean?): (boolean, string)
 		return false, "save not loaded"
 	end
 	if not Data.get(p) then return false, "no save" end
-	if Data.codeUsed(p, key) then
+	local again = Data.codeUsed(p, key)
+	-- (used before: only the forms added to the code since, if any)
+	local give = {} :: { Forms.Form }
+	for _, id in c.forms or {} do
+		local fm = Forms.byId[id]
+		if fm and not (again and Data.ownsForm(p, id)) then table.insert(give, fm) end
+	end
+	if again and #give == 0 then
 		answer(p, false, "YOU ALREADY USED THIS CODE")
 		return false, "already used"
 	end
 	Data.useCode(p, key)
 	local got = {}
-	if c.cash and c.cash > 0 then
+	if not again and c.cash and c.cash > 0 then
 		Data.addCash(p, c.cash)
 		table.insert(got, "$" .. c.cash)
 	end
-	local fm = c.form and Forms.byId[c.form] or nil
-	if fm then
+	for _, fm in give do
 		local prev = Data.formOf(p, fm.kind)
 		local isNew = not Data.ownsForm(p, fm.id)
 		if isNew then Data.addForm(p, fm.id) end -- (an exclusive form: never a second copy)
 		local worn = prev == nil
 		if worn then Data.equipForm(p, fm.id) end
-		Combat.refreshHealth(p)
 		table.insert(got, fm.name)
 		Remotes.Fx:FireClient(p, "CodeReward", fm.kind, fm.id, isNew, worn, prev or "")
 	end
+	Combat.refreshHealth(p)
 	task.spawn(Data.save, p)
-	local msg = "CODE REDEEMED!" .. (#got > 0 and (" YOU GOT " .. table.concat(got, " + ")) or "")
+	local msg = (again and "CODE UPDATED!" or "CODE REDEEMED!") .. (#got > 0 and (" YOU GOT " .. table.concat(got, " + ")) or "")
 	answer(p, true, msg)
 	print("[Codes] " .. p.Name .. " redeemed " .. key)
 	return true, msg
@@ -113,9 +122,11 @@ function M.reset(p: Player): string
 	d.Codes = {}
 	local took = 0
 	for _, c in CODES do
-		if c.form and Data.ownsForm(p, c.form) then
-			Data.takeForm(p, c.form, Data.formCount(p, c.form), true)
-			took += 1
+		for _, id in c.forms or {} do
+			if Data.ownsForm(p, id) then
+				Data.takeForm(p, id, Data.formCount(p, id), true)
+				took += 1
+			end
 		end
 	end
 	Data.refresh(p)

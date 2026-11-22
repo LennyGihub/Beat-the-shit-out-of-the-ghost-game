@@ -296,10 +296,13 @@ for _, x in {
 -- its own look (Client/FormExclusive) on top of its rarity's, shows as EXCLUSIVE (Forms.rarityOf) and can't be traded.
 SET = "Exclusive"
 for _, x in {
-	-- code ALPHA TESTER (2026-11-22, the user): the Camp LEGENDARY jar's buff (BANSHEE FISTS: +150% / +35%), a
-	-- holographic glitch look (cyan / magenta split images, pixels, scan lines, the colour drifting)
+	-- code ALPHA TESTER (2026-11-22, the user): a fist form with the Camp LEGENDARY jar's buff (BANSHEE FISTS: +150% /
+	-- +35%) and a body form with the Camp LEGENDARY potion's (UNDYING: +150% / +40%); a holographic glitch look (red /
+	-- cyan split images, pixels, scan lines, the colour drifting: Client/FormExclusive)
 	f({ id = "AlphaGlitch", kind = "stim", name = "ALPHA GLITCH", rarity = 5, exclusive = true, color = C(70, 235, 255), color2 = C(255, 60, 210),
 		dmg = 1.5, knock = 0.35, desc = "For the ones who played before the game was finished. Some of its bugs came with you." }),
+	f({ id = "AlphaHolo", kind = "potion", name = "ALPHA HOLOGRAM", rarity = 5, exclusive = true, color = C(170, 110, 255), color2 = C(70, 235, 255),
+		hp = 1.5, sta = 0.4, desc = "Half of you isn't really there. The ghosts keep hitting that half." }),
 } do table.insert(List, x) end
 
 -- odds = weights for rarity 1..6, in % (the rare ones are very rare: the jars are cheap, open lots of them)

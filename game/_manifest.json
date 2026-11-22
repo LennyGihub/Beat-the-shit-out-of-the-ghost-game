@@ -47,8 +47,8 @@
    "file": "ReplicatedStorage/Shared/Forms.luau",
    "instance": "game.ReplicatedStorage.Shared.Forms",
    "class": "ModuleScript",
-   "bytes": 38450,
-   "sha1": "4cc8d3017ae7067cc1b1203add7065361c6803e1"
+   "bytes": 38812,
+   "sha1": "73be5883966d4df7069e7318849f3b79eaf6309e"
   },
   {
    "file": "ReplicatedStorage/Shared/ItemModels.luau",
@@ -187,8 +187,8 @@
    "file": "ServerScriptService/Server/Codes.luau",
    "instance": "game.ServerScriptService.Server.Codes",
    "class": "ModuleScript",
-   "bytes": 5469,
-   "sha1": "3b1d046984326f04e05aa6b5b2244dbd7c7387ab"
+   "bytes": 6068,
+   "sha1": "0131d13967096b14c999cc45ffba57bab98061ea"
   },
   {
    "file": "ServerScriptService/Server/Combat.luau",
@@ -544,8 +544,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/FormExclusive.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.FormExclusive",
    "class": "ModuleScript",
-   "bytes": 12416,
-   "sha1": "0a1b27815a636afe5191e5befd863cbacfbd7937"
+   "bytes": 16954,
+   "sha1": "83a820cee21c22464451a01fc720140451895bb3"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/FormGiant.luau",
@@ -558,8 +558,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/FormLook.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.FormLook",
    "class": "ModuleScript",
-   "bytes": 31920,
-   "sha1": "cc4e91f831d813e1679d0bf3008fa7a092d8ade4"
+   "bytes": 32337,
+   "sha1": "fff34e4aee8da2605a618c57c61a1a46c5c1363e"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/FormSets.luau",
@@ -915,8 +915,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/ClientMain.client.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.ClientMain",
    "class": "LocalScript",
-   "bytes": 14251,
-   "sha1": "ad96d3a1b2bde3b9d0f5cd47afa7c9b072a6220d"
+   "bytes": 14642,
+   "sha1": "81e7a02336c40b7acc1c7f15606a206b047c0b54"
   }
  ]
 }

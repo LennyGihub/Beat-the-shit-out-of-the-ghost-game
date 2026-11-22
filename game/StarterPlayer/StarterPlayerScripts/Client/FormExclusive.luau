@@ -6,8 +6,11 @@
 --   and now and then jump away (a glitch, the pixels flare); square pixels blink in and out round the fists and the
 --   forearms; a scan line runs up each arm from the fist to the shoulder. Putting it on throws a cloud of pixels.
 --   In a fight your first-person fists get the split images and the colour drift too.
--- FormLook calls FX.build (from buildFist), FX.step (every frame), FX.burst (put on), FX.buildVM / FX.stepVM /
--- FX.clearVM (first-person fists). Everything here is named like FormLook's parts ("FormFx"), so its clean-up removes it.
+--   ALPHA HOLOGRAM (the same code, its body form): the same glitch on the body: the body look drifts with the same
+--   colours, red and cyan split images of the torso and legs, pixels blinking all round the body, and a scanning frame
+--   rising from the feet to the head.
+-- FormLook calls FX.build (from buildFist), FX.buildBody (after buildBody), FX.step (every frame), FX.burst (put on),
+-- FX.buildVM / FX.stepVM / FX.clearVM (first-person fists). Everything here is named like FormLook's parts ("FormFx"), so its clean-up removes it.
 local TweenService = game:GetService("TweenService")
 
 local FX = {}
@@ -17,19 +20,25 @@ local FAR = 160
 local WHITE = Color3.new(1, 1, 1)
 
 type Ghost = { weld: Weld, part: BasePart, sign: number }
-type Pixel = { part: BasePart, ref: BasePart, t: number, off: CFrame }
+-- (box / center: the space a pixel appears in round its ref, instead of the ref's own size)
+type Pixel = { part: BasePart, ref: BasePart, t: number, off: CFrame, box: Vector3?, center: Vector3? }
 type Scan = { part: BasePart, chain: { BasePart }, period: number, phase: number }
+-- a scanning frame round the body: 4 bars, rising from y0 to y1 (relative to the root part)
+type Frame = { bars: { BasePart }, y0: number, y1: number, w: number, d: number, period: number, phase: number }
 type Tint = { inst: Instance, orig: any }
 type Glitch = {
-	folder: Instance, ref: BasePart, c1: Color3, c2: Color3, ghosts: { Ghost }, pixels: { Pixel }, scans: { Scan },
-	tints: { Tint }, jitT: number, tintT: number, jumpAt: number, jumpUntil: number,
+	folder: Instance, ref: BasePart, c1: Color3, c2: Color3, base: number, ghosts: { Ghost }, pixels: { Pixel }, scans: { Scan },
+	frames: { Frame }, tints: { Tint }, jitT: number, tintT: number, jumpAt: number, jumpUntil: number,
 }
+-- the forms with this look
+local GLITCH = { AlphaGlitch = true, AlphaHolo = true } :: { [string]: boolean }
 local active = {} :: { Glitch }
 local rng = Random.new()
 
--- the colour drift: a hue offset that swings 0.08 .. 0.34 and back (blue -> violet -> magenta for a cyan form; never
--- the split images' own cyan / red, so they always stand out)
-local function drift(now: number): number return 0.08 + 0.13 * (1 - math.cos(now * 0.8)) end
+-- the colour drift: the look's hue swings 0.60 .. 0.86 and back (blue -> violet -> magenta; never the split images'
+-- own cyan / red, so they always stand out). Both forms drift together. Returns the hue offset for a form whose own
+-- colour has hue `base`.
+local function drift(now: number, base: number): number return 0.60 + 0.13 * (1 - math.cos(now * 0.8)) - base end
 function FX.shift(c: Color3, dh: number): Color3
 	local h, s, v = c:ToHSV()
 	return Color3.fromHSV((h + dh) % 1, s, v)
@@ -91,49 +100,108 @@ local function tintable(d: Instance): Tint?
 	return nil
 end
 
--- the glitch look on a character. arms = the covered limbs of each arm, fist first ({ hand, lower?, upper? })
-function FX.build(folder: Instance, ch: Model, hrp: BasePart, fm: any, level: string, arms: { { BasePart } })
-	if fm.id ~= "AlphaGlitch" then return end
+local function newGlitch(folder: Instance, hrp: BasePart, fm: any): Glitch
 	local c1, c2 = colors(fm)
-	local g: Glitch = { folder = folder, ref = hrp, c1 = c1, c2 = c2, ghosts = {}, pixels = {}, scans = {}, tints = {},
+	local base = c1:ToHSV()
+	return { folder = folder, ref = hrp, c1 = c1, c2 = c2, base = base, ghosts = {}, pixels = {}, scans = {}, frames = {}, tints = {},
 		jitT = 0, tintT = 0, jumpAt = os.clock() + rng:NextNumber(1, 2.5), jumpUntil = 0 }
-	-- (the fist look built so far: everything FormLook tagged on this character)
+end
+
+-- the split images: a cyan copy and a red copy of a limb, welded a little to each side
+local function splitImages(g: Glitch, folder: Instance, limb: BasePart)
+	for k, col in { SPLIT1, SPLIT2 } do
+		local gp = copyOf(limb)
+		gp.Size = limb.Size * 1.04 + Vector3.one * 0.02
+		gp.Color = col; gp.Material = Enum.Material.Neon; gp.Transparency = 0.62
+		gp.Anchored = false
+		gp.CFrame = limb.CFrame
+		local w = Instance.new("Weld")
+		w.Part0 = limb; w.Part1 = gp; w.C0 = CFrame.new(); w.Parent = gp
+		gp.Parent = folder
+		table.insert(g.ghosts, { weld = w, part = gp, sign = k == 1 and -1 or 1 })
+	end
+end
+
+-- everything FormLook tagged on this character (minus the ones in `except`) gets the colour drift
+local function collectTints(g: Glitch, ch: Model, except: { [Instance]: boolean }?)
 	for _, d in ch:GetDescendants() do
-		if d.Name == TAG then
+		if d.Name == TAG and not (except and except[d]) then
 			local t = tintable(d)
 			if t then table.insert(g.tints, t) end
 		end
 	end
+end
+
+-- what FormLook has tagged on a character now (FormLook takes it before building the body look)
+function FX.snapshot(ch: Model): { [Instance]: boolean }
+	local out = {} :: { [Instance]: boolean }
+	for _, d in ch:GetDescendants() do if d.Name == TAG then out[d] = true end end
+	return out
+end
+
+-- the glitch look on a character's arms. arms = the covered limbs of each arm, fist first ({ hand, lower?, upper? })
+function FX.build(folder: Instance, ch: Model, hrp: BasePart, fm: any, level: string, arms: { { BasePart } })
+	if not GLITCH[fm.id] or fm.kind ~= "stim" then return end
+	local g = newGlitch(folder, hrp, fm)
+	collectTints(g, ch, nil) -- (the fist look is the first thing FormLook builds)
 	for _, chain in arms do
-		-- the split images: a cyan copy and a magenta copy of every covered limb, welded a little to each side
-		for _, limb in chain do
-			for k, col in { SPLIT1, SPLIT2 } do
-				local gp = copyOf(limb)
-				gp.Size = limb.Size * 1.04 + Vector3.one * 0.02
-				gp.Color = col; gp.Material = Enum.Material.Neon; gp.Transparency = 0.62
-				gp.Anchored = false
-				gp.CFrame = limb.CFrame
-				local w = Instance.new("Weld")
-				w.Part0 = limb; w.Part1 = gp; w.C0 = CFrame.new(); w.Parent = gp
-				gp.Parent = folder
-				table.insert(g.ghosts, { weld = w, part = gp, sign = k == 1 and -1 or 1 })
-			end
-		end
+		for _, limb in chain do splitImages(g, folder, limb) end
 		if level == "low" then continue end
 		-- pixels blinking round the fist (10) and the forearm (4)
 		local hand, lower = chain[1], chain[2]
 		for k = 1, 14 do
 			local ref = (k > 10 and lower) or hand
-			local px = cube(folder, 0.2, c1, 1)
+			local px = cube(folder, 0.2, g.c1, 1)
 			table.insert(g.pixels, { part = px, ref = ref, t = 0, off = CFrame.new() })
 		end
 		-- the scan line up the arm
 		local sl = Instance.new("Part")
 		plain(sl)
-		sl.Material = Enum.Material.Neon; sl.Color = c1:Lerp(WHITE, 0.45); sl.Transparency = 0; sl.Anchored = true
+		sl.Material = Enum.Material.Neon; sl.Color = g.c1:Lerp(WHITE, 0.45); sl.Transparency = 0; sl.Anchored = true
 		sl.Size = Vector3.new(1, 0.06, 1)
 		sl.Parent = folder
 		table.insert(g.scans, { part = sl, chain = chain, period = 1.7, phase = rng:NextNumber(0, 1) })
+	end
+	table.insert(active, g)
+end
+
+-- the glitch look on the body (a body form). before = FX.snapshot taken before FormLook built the body look
+function FX.buildBody(folder: Instance, ch: Model, hrp: BasePart, fm: any, level: string, before: { [Instance]: boolean })
+	if not GLITCH[fm.id] or fm.kind ~= "potion" then return end
+	local g = newGlitch(folder, hrp, fm)
+	collectTints(g, ch, before)
+	local function bp(n: string): BasePart?
+		local x = ch:FindFirstChild(n)
+		return (x and x:IsA("BasePart")) and x or nil
+	end
+	for _, n in { "UpperTorso", "LowerTorso", "Torso", "RightUpperLeg", "RightLowerLeg", "LeftUpperLeg", "LeftLowerLeg", "Right Leg", "Left Leg" } do
+		local limb = bp(n)
+		if limb then splitImages(g, folder, limb) end
+	end
+	if level ~= "low" then
+		-- the body's height round the root part (feet .. top of the head)
+		local hum = ch:FindFirstChildOfClass("Humanoid")
+		local feet = -(hrp.Size.Y / 2 + (hum and hum.HipHeight or 2))
+		local head = bp("Head")
+		local top = head and (head.Position.Y + head.Size.Y / 2 - hrp.Position.Y) or 2.5
+		if top < 0.5 or top > 6 then top = 2.5 end
+		-- pixels blinking all round the body
+		for _ = 1, 18 do
+			local px = cube(folder, 0.2, g.c1, 1)
+			table.insert(g.pixels, { part = px, ref = hrp, t = 0, off = CFrame.new(), box = Vector3.new(3.4, top - feet, 2.2),
+				center = Vector3.new(0, (top + feet) / 2, 0) })
+		end
+		-- the scanning frame
+		local bars = {}
+		for _ = 1, 4 do
+			local b = Instance.new("Part")
+			plain(b)
+			b.Material = Enum.Material.Neon; b.Color = g.c1:Lerp(WHITE, 0.45); b.Transparency = 1; b.Anchored = true
+			b.Size = Vector3.new(0.07, 0.07, 0.07)
+			b.Parent = folder
+			table.insert(bars, b)
+		end
+		table.insert(g.frames, { bars = bars, y0 = feet + 0.05, y1 = top + 0.1, w = 3.2, d = 2, period = 2.4, phase = rng:NextNumber(0, 1) })
 	end
 	table.insert(active, g)
 end
@@ -143,9 +211,15 @@ local function reroll(g: Glitch, px: Pixel, now: number, burst: boolean)
 	local hide = not burst and rng:NextNumber() < 0.35
 	px.t = now + rng:NextNumber(0.06, burst and 0.12 or 0.3)
 	if hide then px.part.Transparency = 1; return end
-	local sz = px.ref.Size
-	local spread = burst and 2.4 or 1.7
-	px.off = CFrame.new((rng:NextNumber() - 0.5) * (sz.X * spread + 0.5), (rng:NextNumber() - 0.5) * (sz.Y * spread + 0.3), (rng:NextNumber() - 0.5) * (sz.Z * spread + 0.5))
+	if px.box then
+		local b, c = px.box :: Vector3, px.center or Vector3.zero
+		local k = burst and 1.35 or 1
+		px.off = CFrame.new(c + Vector3.new((rng:NextNumber() - 0.5) * b.X * k, (rng:NextNumber() - 0.5) * b.Y, (rng:NextNumber() - 0.5) * b.Z * k))
+	else
+		local sz = px.ref.Size
+		local spread = burst and 2.4 or 1.7
+		px.off = CFrame.new((rng:NextNumber() - 0.5) * (sz.X * spread + 0.5), (rng:NextNumber() - 0.5) * (sz.Y * spread + 0.3), (rng:NextNumber() - 0.5) * (sz.Z * spread + 0.5))
+	end
 	local s = rng:NextNumber(0.1, burst and 0.38 or 0.28)
 	px.part.Size = Vector3.one * s
 	local r = rng:NextNumber()
@@ -194,11 +268,25 @@ local function stepOne(g: Glitch, dt: number, now: number)
 			d -= limb.Size.Y
 		end
 	end
+	for _, fr in g.frames do
+		-- (up the body in 75% of the period, then a short rest; level, turning with the player)
+		local k = ((now / fr.period) + fr.phase) % 1
+		local on = k <= 0.75
+		local cf = g.ref.CFrame * CFrame.new(0, fr.y0 + (fr.y1 - fr.y0) * math.min(k / 0.75, 1), 0)
+		local tr = on and 0.45 * (k / 0.75) or 1
+		local w, d = fr.w, fr.d
+		local sizes = { Vector3.new(w, 0.07, 0.07), Vector3.new(w, 0.07, 0.07), Vector3.new(0.07, 0.07, d), Vector3.new(0.07, 0.07, d) }
+		local offs = { Vector3.new(0, 0, d / 2), Vector3.new(0, 0, -d / 2), Vector3.new(w / 2, 0, 0), Vector3.new(-w / 2, 0, 0) }
+		for i, b in fr.bars do
+			b.Transparency = tr
+			if on then b.Size = sizes[i]; b.CFrame = cf * CFrame.new(offs[i]) end
+		end
+	end
 	-- the colour drift (ten times a second is smooth enough: it is slow)
 	g.tintT += dt
 	if g.tintT > 0.1 then
 		g.tintT = 0
-		local dh = drift(now)
+		local dh = drift(now, g.base)
 		for _, t in g.tints do
 			local inst = t.inst
 			if typeof(t.orig) == "Color3" then (inst :: any).Color = FX.shift(t.orig, dh)
@@ -257,9 +345,11 @@ function FX.clearVM()
 end
 
 -- shells = FormLook's first-person shells (tinted), bases = the fists / arms the split images go round
+local vmBase = 0
 function FX.buildVM(vm: Instance, fm: any, shells: { BasePart }, bases: { BasePart })
 	FX.clearVM()
-	if not fm or fm.id ~= "AlphaGlitch" then return end
+	if not fm or not GLITCH[fm.id] then return end
+	vmBase = (fm.color :: Color3):ToHSV()
 	for _, s in shells do table.insert(vmTints, { inst = s, orig = s.Color }) end
 	for _, b in bases do
 		for k, col in { SPLIT1, SPLIT2 } do
@@ -298,7 +388,7 @@ function FX.stepVM(dt: number)
 	vmTint += dt
 	if vmTint > 0.1 then
 		vmTint = 0
-		local dh = drift(now)
+		local dh = drift(now, vmBase)
 		for _, t in vmTints do
 			if t.inst.Parent then (t.inst :: any).Color = FX.shift(t.orig, dh) end
 		end

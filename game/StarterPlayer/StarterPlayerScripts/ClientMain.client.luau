@@ -179,6 +179,7 @@ for _, k in HarborFx.KINDS do FIGHT[k] = true end
 for _, k in AbbeyFx.KINDS do FIGHT[k] = true end
 for _, k in MoonFx.KINDS do FIGHT[k] = true end
 
+local codeQueue, codeTurn = 0, 0 -- (a code's forms: their cinematics play one after the other)
 Remotes.Fx.OnClientEvent:Connect(function(kind: string, ...)
 	if FIGHT[kind] and not lp:GetAttribute("InMatch") then return end
 	if kind == "Released" then CampFx.released() end -- (the Lake Witch's pull stops too)
@@ -251,12 +252,20 @@ Remotes.Fx.OnClientEvent:Connect(function(kind: string, ...)
 	elseif kind == "CodeResult" then
 		CodesUI.result(...)
 	elseif kind == "CodeReward" then
-		-- a code gave a form: the jar cinematic (no seller, no vial), then WEAR IT / KEEP
+		-- a code gave a form: the jar / potion cinematic (no seller, no vial), then WEAR IT / KEEP. A code giving two
+		-- forms: the second one plays when the first is over (in the order they came)
 		local args = table.pack(...)
 		CodesUI.close()
 		SellerUI.close()
-		FormCine.onDone = nil
-		task.spawn(FormCine.play, args[1], "", args[2], args[3], args[4], args[5])
+		codeQueue += 1
+		local my = codeQueue
+		task.spawn(function()
+			while codeTurn < my - 1 or FormCine.busy() do task.wait(0.2) end
+			task.wait(codeTurn > 0 and 0.4 or 0)
+			FormCine.onDone = nil
+			codeTurn = my
+			FormCine.play(args[1], "", args[2], args[3], args[4], args[5])
+		end)
 	elseif kind == "FormMulti" then
 		SellerUI.multi(...)
 	elseif kind == "OfflineDone" then
