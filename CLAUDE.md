@@ -18,6 +18,7 @@
 ## Game loops
 
 - Before designing or changing a loop, progression, economy, rebirth, a tutorial or retention features, read `.claude/game-loops.md` (what makes a good Roblox game loop; the user asked for it to be learned, 2026-11-18).
+- Before planning an update's monetization (Robux, passes, subscriptions, ads), retention / first minute, marketing (thumbnails, Share Links, Moments, Ads Manager), performance budgets, saves / security, or anything touching paid randomness, trading, DevEx or tax, read `.claude/business-2026.md` (the user's 2026 Roblox business guide, learned 2026-11-23; its last section lists this game's gaps found in the code). The user said "don't modify the game yet": propose those fixes, don't make them unasked.
 
 ## 3D models: hand-built blocky PS2 parts only
 
