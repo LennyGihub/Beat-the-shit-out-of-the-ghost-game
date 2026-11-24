@@ -290,6 +290,21 @@ local function allPrompts()
 	for _, d in workspace:GetDescendants() do if d:IsA("ProximityPrompt") then promptKey(d) end end
 end
 
+-- STUDIO ONLY (2026-11-24, the TikTok clip maker's bot, Client/ClipCam): the real actions, as if the player pressed
+-- them - "down" / "up" = the hit button (a tap, or held = a charged hit), "grab" = lift (furniture aimed at / the WEAK
+-- monster) or throw, "ult", "block" / "unblock", "sprint" / "walk"
+function Input.act(a: string)
+	if not RunService:IsStudio() then return end
+	if a == "down" then hitDown()
+	elseif a == "up" then hitUp()
+	elseif a == "grab" then grab()
+	elseif a == "ult" then ult()
+	elseif a == "block" then setBlock(true)
+	elseif a == "unblock" then setBlock(false)
+	elseif a == "sprint" then setSprint(true)
+	elseif a == "walk" then setSprint(false) end
+end
+
 function Input.init()
 	bindAll()
 	Settings.changed:Connect(function(k) if k == "binds" then bindAll(); allPrompts() end end)

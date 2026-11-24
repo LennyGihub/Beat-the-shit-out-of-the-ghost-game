@@ -169,6 +169,8 @@ CodesUI.init(function(open) Input.setShopOpen(open) end)
 ShareUI.init(function(open) Input.setShopOpen(open) end)
 -- the login streak / welcome jar / free samples window (the lobby's DAILY bar; opens by itself when a reward waits)
 DailyUI.init(function(open) Input.setShopOpen(open) end, function() return FormCine.busy() end)
+-- the TikTok clip maker's film camera + bot (Studio only: roblox-mcp-bridge/clipper.js)
+require(Client.ClipCam).init()
 -- an EPIC+ form's reveal is a moment worth sharing (Client/ShareUI)
 FormCine.onReveal = function(fm: any)
 	if type(fm) == "table" and (tonumber(fm.rarity) or 0) >= 4 then ShareUI.moment(tostring(fm.name) .. "!") end

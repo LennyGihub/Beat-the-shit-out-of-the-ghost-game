@@ -1,17 +1,17 @@
 # Graph Report - Beat-the-shit-out-of-the-ghost-game  (2026-11-24)
 
 ## Corpus Check
-- 145 files · ~371,303 words
+- 146 files · ~373,511 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 3 file(s) not represented in the graph (top: (none) 3)
 
 ## Summary
-- 1958 nodes · 5439 edges · 97 communities (80 shown, 17 thin omitted)
-- Extraction: 79% EXTRACTED · 21% INFERRED · 0% AMBIGUOUS · INFERRED: 1156 edges (avg confidence: 0.85)
+- 1987 nodes · 5497 edges · 102 communities (84 shown, 18 thin omitted)
+- Extraction: 79% EXTRACTED · 21% INFERRED · 0% AMBIGUOUS · INFERRED: 1157 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `891970c1`
+- Built from commit: `8ed59710`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -32,7 +32,7 @@
 - Intro.luau
 - AdminPanel.luau
 - Evolved.luau
-- HarborFx.luau
+- ClipCam.luau
 - SawAudio.luau
 - Abilities.luau
 - FormsPage.luau
@@ -63,36 +63,40 @@
 - game/ServerScriptService/Server/Share.luau
 - FormGiant.luau
 - SellerUI.luau
-- script_parent_settings
+- Fire.luau
 - CampMonsters.luau
-- Main.server.luau
 - Cursor.luau
 - FreeCam.luau
 - A
 - Fury.luau
 - Events.luau
 - script_parent_grunge
-- LockOn.luau
+- Fx.luau
 - Platform.mode
 - game/ReplicatedStorage/Shared/Monsters.luau
 - AbbeyMonsters.luau
 - game/StarterPlayer/StarterPlayerScripts/Client/FormSets.luau
-- Fx.luau
+- HUD.luau
 - Hotbar.luau
 - TicketShop.luau
 - game/StarterPlayer/StarterPlayerScripts/Client/FormTutorial.luau
 - MoonMonsters.luau
 - Leaderboards.luau
 - GoblinLoot.luau
-- Ghost.spawn
+- rs_shared_ultimates
+- SandboxUI.luau
 - Caller.luau
 - game/ServerScriptService/Server/Tutorial.luau
 - game/ServerScriptService/Server/Run.luau
 - CodesUI.luau
 - script_parent_furniture
+- game/ServerScriptService/Server/Bestiary.luau
 - script_parent_remotes
 - game/StarterPlayer/StarterPlayerScripts/Client/ShareUI.luau
+- game/ServerScriptService/Server/Mobile.luau
 - Server/Quests.luau
+- Notify.luau
+- CrewAnim.luau
 - Levels.of
 - Furniture.smash
 - game/StarterPlayer/StarterPlayerScripts/Client/WeakFx.luau
@@ -112,6 +116,8 @@
 10. `A()` - 33 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `Input.init()` --calls--> `HUD.hint()`  [INFERRED]
+  game/StarterPlayer/StarterPlayerScripts/Client/Input.luau → game/StarterPlayer/StarterPlayerScripts/Client/HUD.luau
 - `Ghost.hit()` --calls--> `Ragdoll.kick()`  [INFERRED]
   game/ServerScriptService/Server/Ghost.luau → game/ServerScriptService/Server/Ragdoll.luau
 - `Ghost.step()` --calls--> `Fury.windUp()`  [INFERRED]
@@ -120,17 +126,15 @@
   game/ServerScriptService/Server/Ghost.luau → game/ServerScriptService/Server/Evolved.luau
 - `stepKnocked()` --calls--> `Furniture.weight()`  [INFERRED]
   game/ServerScriptService/Server/Ghost.luau → game/ServerScriptService/Server/Furniture.luau
-- `MapLoader.load()` --calls--> `Furniture.hasTemplate()`  [INFERRED]
-  game/ServerScriptService/Server/MapLoader.luau → game/ServerScriptService/Server/Furniture.luau
 
 ## Import Cycles
 - None detected.
 
-## Communities (97 total, 17 thin omitted)
+## Communities (102 total, 18 thin omitted)
 
 ### Community 0 - "Ghost.luau"
-Cohesion: 0.14
-Nodes (32): Admin.start(), bringBack(), claw(), die(), dropIt(), floorBelow(), Ghost.alive(), Ghost.damage() (+24 more)
+Cohesion: 0.11
+Nodes (39): Admin.start(), Evolved.onSpawn(), bringBack(), claw(), die(), dropIt(), floorBelow(), Ghost.alive() (+31 more)
 
 ### Community 1 - "GhostAnim.luau"
 Cohesion: 0.21
@@ -141,24 +145,24 @@ Cohesion: 0.19
 Nodes (57): at(), B.axe(), B.ball(), B.bat(), B.beartrap(), B.blower(), B.bottle(), B.brick() (+49 more)
 
 ### Community 4 - "Data.luau"
-Cohesion: 0.11
-Nodes (47): Analytics.cash(), M.reset(), cleanSettings(), Data.addCash(), Data.addForm(), Data.addForms(), Data.addXP(), Data.clearStage() (+39 more)
+Cohesion: 0.12
+Nodes (44): M.reset(), cleanSettings(), Data.addForm(), Data.addForms(), Data.addXP(), Data.clearStage(), Data.codeUsed(), Data.equipForm() (+36 more)
 
 ### Community 5 - "Input.luau"
 Cohesion: 0.18
-Nodes (20): Charge.active(), Charge.key(), aimedFurniture(), allPrompts(), bindAll(), chargeable(), grab(), hitDown() (+12 more)
+Nodes (22): Charge.active(), Charge.key(), Hotbar.drop(), aimedFurniture(), allPrompts(), bindAll(), chargeable(), grab() (+14 more)
 
 ### Community 6 - "Inventory.luau"
-Cohesion: 0.09
-Nodes (48): burningNear(), closestPoint(), Fire.blood(), Fire.clear(), Fire.flames(), Fire.ignite(), Fire.wildfire(), seq() (+40 more)
+Cohesion: 0.20
+Nodes (28): Ghost.vuln(), alive(), applyFx(), consume(), explode(), get(), ghostAlive(), Inventory.clear() (+20 more)
 
 ### Community 7 - "Sfx.at"
-Cohesion: 0.12
-Nodes (58): AF.handle(), AF.init(), bellDrop(), bellLock(), bellModel(), bellRise(), bellShadow(), burst() (+50 more)
+Cohesion: 0.08
+Nodes (86): AF.handle(), AF.init(), bellDrop(), bellLock(), bellModel(), bellRise(), bellShadow(), burst() (+78 more)
 
 ### Community 8 - "rs_shared_config"
 Cohesion: 0.14
-Nodes (29): Config.eventTime(), base(), Kit.boom(), Kit.burst(), Kit.debris(), Kit.dust(), Kit.emitter(), Kit.flat() (+21 more)
+Nodes (28): Config.eventTime(), base(), Kit.boom(), Kit.burst(), Kit.debris(), Kit.dust(), Kit.emitter(), Kit.flat() (+20 more)
 
 ### Community 12 - "CampFx.luau"
 Cohesion: 0.13
@@ -169,20 +173,20 @@ Cohesion: 0.21
 Nodes (16): KeyHints.init(), refresh(), toggle(), apply(), defaultFx(), load(), save(), Settings.bind() (+8 more)
 
 ### Community 15 - "CarnivalMonsters.luau"
-Cohesion: 0.17
-Nodes (25): armBall(), ball(), candidates(), clearCurses(), CM.clear(), CM.hitBall(), CM.interrupt(), CM.step() (+17 more)
+Cohesion: 0.16
+Nodes (26): armBall(), ball(), begin(), candidates(), clearCurses(), CM.clear(), CM.hitBall(), CM.interrupt() (+18 more)
 
 ### Community 16 - "FxTier.luau"
-Cohesion: 0.27
-Nodes (24): bolt(), buildAura(), burst(), clearAura(), emit(), flashLight(), floorRing(), floorUnder() (+16 more)
+Cohesion: 0.26
+Nodes (25): Campaign.stage(), bolt(), buildAura(), burst(), clearAura(), emit(), flashLight(), floorRing() (+17 more)
 
 ### Community 18 - "Sfx.at"
 Cohesion: 0.12
-Nodes (70): Kit.near(), HUD.banner(), HUD.flash(), Sfx.at(), Acts.burn(), Acts.fling(), Acts.freeze(), Acts.giant() (+62 more)
+Nodes (69): Kit.near(), HUD.banner(), HUD.flash(), Acts.burn(), Acts.fling(), Acts.freeze(), Acts.giant(), Acts.heal() (+61 more)
 
 ### Community 19 - "Intro.luau"
-Cohesion: 0.08
-Nodes (16): actionOf(), eyeAt(), eyesOn(), faceOf(), freeze(), groundAt(), jerks(), kick() (+8 more)
+Cohesion: 0.09
+Nodes (14): actionOf(), eyeAt(), eyesOn(), faceOf(), groundAt(), jerks(), kick(), lightsBack() (+6 more)
 
 ### Community 20 - "AdminPanel.luau"
 Cohesion: 0.27
@@ -190,22 +194,22 @@ Nodes (13): build(), button(), cmd(), corner(), grid(), heading(), label(), log(
 
 ### Community 21 - "Evolved.luau"
 Cohesion: 0.11
-Nodes (19): Abilities.cloneCount(), Abilities.spawnClones(), add(), begin(), cd(), close(), done(), Evolved.chase() (+11 more)
+Nodes (20): Abilities.cloneCount(), display(), add(), begin(), cd(), close(), done(), Evolved.chase() (+12 more)
 
-### Community 22 - "HarborFx.luau"
-Cohesion: 0.19
-Nodes (27): place(), anchorSpin(), anchorWarn(), beamSweep(), burst(), diveBurst(), diveLock(), diveRing() (+19 more)
+### Community 22 - "ClipCam.luau"
+Cohesion: 0.23
+Nodes (20): act(), alive(), botFight(), botStrut(), brutFull(), ClipCam.init(), hideUI(), lateStep() (+12 more)
 
 ### Community 23 - "SawAudio.luau"
-Cohesion: 0.35
+Cohesion: 0.40
 Nodes (9): oneShot(), SawAudio.attach(), SawAudio.hit(), SawAudio.init(), SawAudio.used(), selectedId(), sound(), step() (+1 more)
 
 ### Community 24 - "Abilities.luau"
-Cohesion: 0.12
-Nodes (30): Abilities.blocks(), Abilities.clear(), Abilities.dropLevitated(), Abilities.hitClone(), Abilities.hurl(), Abilities.interrupt(), Abilities.step(), Abilities.tick() (+22 more)
+Cohesion: 0.13
+Nodes (28): Abilities.blocks(), Abilities.clear(), Abilities.dropLevitated(), Abilities.hitClone(), Abilities.hurl(), Abilities.interrupt(), Abilities.spawnClones(), Abilities.step() (+20 more)
 
 ### Community 25 - "FormsPage.luau"
-Cohesion: 0.15
+Cohesion: 0.20
 Nodes (16): button(), FP.build(), FP.filter(), FP.refresh(), FP.select(), owned(), setIndex(), showDetail() (+8 more)
 
 ### Community 26 - "DailyUI.luau"
@@ -213,24 +217,24 @@ Cohesion: 0.14
 Nodes (19): Daily.cash(), Daily.current(), Daily.label(), Daily.next(), Daily.reward(), Daily.untilTomorrow(), button(), claim() (+11 more)
 
 ### Community 27 - "Ragdoll.luau"
-Cohesion: 0.36
-Nodes (11): breakable(), carve(), chunkFolder(), chunks(), freezeLater(), overlapping(), Ragdoll.breakWalls(), Ragdoll.cutDoor() (+3 more)
+Cohesion: 0.32
+Nodes (12): breakable(), carve(), chunkFolder(), chunks(), freezeLater(), overlapping(), Ragdoll.breakWalls(), Ragdoll.cutDoor() (+4 more)
 
 ### Community 29 - "game/ServerScriptService/Server/Lobby.luau"
-Cohesion: 0.25
-Nodes (17): Campaign.endlessOpen(), Campaign.stage(), Data.campaign(), Data.ownsMap(), hrpOf(), launch(), leaveParty(), Lobby.start() (+9 more)
+Cohesion: 0.30
+Nodes (15): Data.campaign(), Data.ownsMap(), hrpOf(), launch(), leaveParty(), Lobby.start(), noTicket(), onPad() (+7 more)
 
 ### Community 30 - "Grunge.text"
-Cohesion: 0.19
-Nodes (20): BestiaryUI.close(), BestiaryUI.discovered(), BestiaryUI.init(), BestiaryUI.open(), BestiaryUI.unlocked(), book(), buildBadges(), buildMonsters() (+12 more)
+Cohesion: 0.18
+Nodes (21): BestiaryUI.close(), BestiaryUI.discovered(), BestiaryUI.init(), BestiaryUI.open(), BestiaryUI.unlocked(), book(), buildBadges(), buildMonsters() (+13 more)
 
 ### Community 31 - "QuestUI.luau"
 Cohesion: 0.36
 Nodes (9): button(), data(), fillRow(), makeRow(), QuestUI.claimable(), QuestUI.close(), QuestUI.init(), QuestUI.open() (+1 more)
 
 ### Community 32 - "PatchNotesUI.luau"
-Cohesion: 0.36
-Nodes (8): build(), button(), fitText(), refreshButton(), UI.close(), UI.init(), UI.open(), Platform.windowOpen()
+Cohesion: 0.32
+Nodes (9): build(), button(), fitText(), refreshButton(), UI.close(), UI.init(), UI.open(), Platform.windowOpen() (+1 more)
 
 ### Community 34 - "FormExclusive.luau"
 Cohesion: 0.23
@@ -249,8 +253,8 @@ Cohesion: 0.07
 Nodes (24): bolt(), burst(), chunks(), darkness(), disc(), each(), emitter(), Entrance.play() (+16 more)
 
 ### Community 39 - "Grunge.brush"
-Cohesion: 0.31
-Nodes (13): Campaign.ticketsLeft(), frame(), Grunge.bar(), Grunge.brush(), Grunge.panel(), Grunge.slab(), Grunge.splat(), sketch() (+5 more)
+Cohesion: 0.28
+Nodes (16): Campaign.clean(), Campaign.clock(), Levels.title(), reveal(), frame(), Grunge.bar(), Grunge.brush(), Grunge.panel() (+8 more)
 
 ### Community 40 - "Spectate.init"
 Cohesion: 0.27
@@ -269,12 +273,12 @@ Cohesion: 0.13
 Nodes (16): beamOff(), beamTo(), blackout(), bladeSwoosh(), disc(), emitter(), forceRing(), hum() (+8 more)
 
 ### Community 44 - "TrainRide.luau"
-Cohesion: 0.14
-Nodes (29): grab(), Loading.build(), Loading.hide(), Loading.progress(), Loading.show(), Loading.teleport(), N(), playerGui() (+21 more)
+Cohesion: 0.09
+Nodes (40): grab(), Loading.build(), Loading.hide(), Loading.progress(), Loading.show(), Loading.teleport(), N(), playerGui() (+32 more)
 
 ### Community 46 - "game/StarterPlayer/StarterPlayerScripts/Client/FormCine.luau"
-Cohesion: 0.22
-Nodes (19): C(), back(), bottle(), doFlash(), embers(), FC.play(), hideItem(), jar() (+11 more)
+Cohesion: 0.23
+Nodes (18): C(), back(), bottle(), doFlash(), embers(), FC.play(), hideItem(), jar() (+10 more)
 
 ### Community 47 - "Server/Daily.luau"
 Cohesion: 0.32
@@ -289,8 +293,8 @@ Cohesion: 0.48
 Nodes (6): build(), Charge.begin(), Charge.cancel(), Charge.level(), Charge.release(), Charge.update()
 
 ### Community 50 - "LockOn.luau"
-Cohesion: 0.32
-Nodes (5): LockOn.isOn(), LockOn.tracking(), layout(), make(), TC.init()
+Cohesion: 0.20
+Nodes (11): isDecoy(), LockOn.init(), LockOn.isOn(), LockOn.set(), LockOn.toggle(), LockOn.tracking(), step(), target() (+3 more)
 
 ### Community 51 - "CallerMarks.luau"
 Cohesion: 0.53
@@ -301,31 +305,27 @@ Cohesion: 0.12
 Nodes (16): ROBLOX_API_KEY, jobs, send, name, on, schedule, workflow_dispatch, cron (+8 more)
 
 ### Community 54 - "game/ServerScriptService/Server/Share.luau"
-Cohesion: 0.17
-Nodes (19): Analytics.custom(), Analytics.joined(), Analytics.lesson(), Analytics.onboard(), Analytics.stage(), fields(), logStep(), send() (+11 more)
+Cohesion: 0.15
+Nodes (22): Analytics.cash(), Analytics.custom(), Analytics.joined(), Analytics.lesson(), Analytics.onboard(), Analytics.stage(), fields(), logStep() (+14 more)
 
 ### Community 56 - "FormGiant.luau"
 Cohesion: 0.25
 Nodes (17): bright(), copy(), dark(), decorate(), emitter(), FG.burst(), FG.clear(), FG.scaleOf() (+9 more)
 
 ### Community 57 - "SellerUI.luau"
-Cohesion: 0.22
-Nodes (13): before(), button(), clear(), level(), owned(), refresh(), setOpen(), UI.close() (+5 more)
+Cohesion: 0.21
+Nodes (14): before(), button(), clear(), level(), owned(), progress(), refresh(), setOpen() (+6 more)
 
-### Community 59 - "script_parent_settings"
-Cohesion: 0.26
-Nodes (9): maskBreath(), half(), MaskBreath.start(), pause(), sound(), bladeIgnite(), Settings.group(), make() (+1 more)
+### Community 59 - "Fire.luau"
+Cohesion: 0.23
+Nodes (14): burningNear(), closestPoint(), Fire.blood(), Fire.clear(), Fire.flames(), Fire.ignite(), Fire.wildfire(), seq() (+6 more)
 
 ### Community 60 - "CampMonsters.luau"
 Cohesion: 0.20
 Nodes (20): begin(), candidates(), CM.chaseHold(), CM.step(), CM.try(), face(), floorBelow(), getFire() (+12 more)
 
-### Community 61 - "Main.server.luau"
-Cohesion: 0.08
-Nodes (5): Notify.debug(), Notify.plan(), Notify.setup(), Notify.start(), write()
-
 ### Community 62 - "Cursor.luau"
-Cohesion: 0.60
+Cohesion: 0.48
 Nodes (4): Cursor.hold(), Cursor.init(), Cursor.toggle(), update()
 
 ### Community 63 - "FreeCam.luau"
@@ -333,28 +333,28 @@ Cohesion: 0.33
 Nodes (10): bindKeys(), FC.init(), FC.set(), makeHint(), playerControls(), refreshHint(), setUiHidden(), shiftDown() (+2 more)
 
 ### Community 64 - "A"
-Cohesion: 0.20
-Nodes (10): A(), about(), at(), drag(), idle(), reach(), scream(), scuttle() (+2 more)
+Cohesion: 0.14
+Nodes (14): A(), about(), at(), drag(), idle(), reach(), scream(), scuttle() (+6 more)
 
 ### Community 65 - "Fury.luau"
-Cohesion: 0.33
-Nodes (8): Fury.comboCount(), Fury.flung(), Fury.launch(), Fury.smashes(), Fury.smashPunch(), Fury.tick(), Fury.unragdollable(), Fury.windUp()
+Cohesion: 0.18
+Nodes (12): Fury.canFling(), Fury.comboCount(), Fury.flung(), Fury.launch(), Fury.smashes(), Fury.smashPunch(), Fury.tick(), Fury.unragdollable() (+4 more)
 
 ### Community 66 - "Events.luau"
-Cohesion: 0.08
-Nodes (40): ItemModels.isLong(), anchorAll(), blocked(), blockerParams(), board(), burn(), Events.prompt(), Events.restock() (+32 more)
+Cohesion: 0.22
+Nodes (26): ItemModels.isLong(), anchorAll(), blocked(), blockerParams(), board(), burn(), Events.prompt(), Events.restock() (+18 more)
 
 ### Community 67 - "script_parent_grunge"
-Cohesion: 0.12
-Nodes (7): Campaign.clean(), CallerUI.call(), buildStages(), progress(), show(), UI.close(), Shop.result()
+Cohesion: 0.11
+Nodes (4): CallerUI.call(), build(), Prompts.init(), Shop.result()
 
-### Community 68 - "LockOn.luau"
-Cohesion: 0.48
-Nodes (6): isDecoy(), LockOn.init(), LockOn.set(), LockOn.toggle(), step(), target()
+### Community 68 - "Fx.luau"
+Cohesion: 0.17
+Nodes (5): Fx.applyZone(), Fx.init(), clear(), selectedId(), step()
 
 ### Community 69 - "Platform.mode"
-Cohesion: 0.26
-Nodes (15): liftHint(), firstButton(), fit(), navStep(), openMenu(), Platform.compact(), Platform.init(), Platform.label() (+7 more)
+Cohesion: 0.24
+Nodes (16): liftHint(), freeze(), firstButton(), fit(), navStep(), openMenu(), Platform.compact(), Platform.init() (+8 more)
 
 ### Community 71 - "AbbeyMonsters.luau"
 Cohesion: 0.17
@@ -364,21 +364,21 @@ Nodes (20): airborne(), AM.interrupt(), AM.step(), AM.try(), begin(), behind(), 
 Cohesion: 0.27
 Nodes (25): abbBody(), abbFist(), att(), bp(), bright(), bulbs(), campBody(), campFist() (+17 more)
 
-### Community 74 - "Fx.luau"
-Cohesion: 0.12
-Nodes (7): Fx.applyZone(), Fx.init(), HUD.hint(), HUD.setVisible(), HUD.update(), layoutBars(), updateWaypoint()
+### Community 74 - "HUD.luau"
+Cohesion: 0.29
+Nodes (5): HUD.hint(), HUD.setVisible(), HUD.update(), layoutBars(), updateWaypoint()
 
 ### Community 76 - "Hotbar.luau"
-Cohesion: 0.28
-Nodes (12): Hotbar.confirmHit(), Hotbar.current(), Hotbar.cycle(), Hotbar.drop(), Hotbar.init(), Hotbar.primary(), Hotbar.select(), parse() (+4 more)
+Cohesion: 0.32
+Nodes (11): Hotbar.confirmHit(), Hotbar.current(), Hotbar.cycle(), Hotbar.init(), Hotbar.primary(), Hotbar.select(), parse(), playHit() (+3 more)
 
 ### Community 77 - "TicketShop.luau"
 Cohesion: 0.70
 Nodes (4): pid(), TS.buy(), TS.label(), TS.ready()
 
 ### Community 78 - "game/StarterPlayer/StarterPlayerScripts/Client/FormTutorial.luau"
-Cohesion: 0.18
-Nodes (14): arrowShape(), boardKey(), FT.init(), FT.play(), owns(), queued(), sellerModel(), talkKey() (+6 more)
+Cohesion: 0.33
+Nodes (9): arrowShape(), boardKey(), FT.init(), FT.play(), owns(), queued(), sellerModel(), talkKey() (+1 more)
 
 ### Community 79 - "MoonMonsters.luau"
 Cohesion: 0.20
@@ -389,52 +389,72 @@ Cohesion: 0.30
 Nodes (10): draw(), fmt(), isAdmin(), Leaderboards.start(), nameOf(), screen(), top(), write() (+2 more)
 
 ### Community 81 - "GoblinLoot.luau"
-Cohesion: 0.21
-Nodes (22): Fury.canFling(), attach(), clearLine(), detach(), grab(), hand(), knockVel(), Loot.arm() (+14 more)
+Cohesion: 0.20
+Nodes (23): attach(), clearLine(), detach(), grab(), hand(), knockVel(), land(), Loot.arm() (+15 more)
 
-### Community 83 - "Ghost.spawn"
+### Community 82 - "rs_shared_ultimates"
 Cohesion: 0.18
-Nodes (11): display(), Evolved.dress(), Evolved.onSpawn(), Ghost.spawn(), structParams(), teamSize(), template(), KnightDoor.open() (+3 more)
+Nodes (4): Kit.now(), apply(), Pose.init(), Pose.play()
+
+### Community 83 - "SandboxUI.luau"
+Cohesion: 0.49
+Nodes (9): button(), free(), inSandbox(), inTutorial(), refresh(), UI.init(), UI.leave(), UI.setShopOpen() (+1 more)
 
 ### Community 84 - "Caller.luau"
-Cohesion: 0.11
-Nodes (27): answer(), buildPhone(), Caller.clear(), Caller.interrupt(), Caller.step(), Caller.try(), cleanup(), hideSpot() (+19 more)
+Cohesion: 0.15
+Nodes (18): answer(), buildPhone(), Caller.clear(), Caller.interrupt(), Caller.step(), Caller.try(), cleanup(), hideSpot() (+10 more)
 
 ### Community 85 - "game/ServerScriptService/Server/Tutorial.luau"
 Cohesion: 0.18
 Nodes (17): M.start(), Data.setTutorialSeen(), drop(), Guard.int(), Guard.limit(), Guard.num(), Guard.ok(), Guard.vec() (+9 more)
 
 ### Community 86 - "game/ServerScriptService/Server/Run.luau"
-Cohesion: 0.05
-Nodes (81): Campaign.cleared(), Campaign.clock(), Campaign.goal(), Campaign.isLast(), Campaign.mapDone(), Campaign.mapOpen(), Campaign.nextStage(), Campaign.stageOpen() (+73 more)
+Cohesion: 0.06
+Nodes (73): Campaign.cleared(), Campaign.endlessOpen(), Campaign.goal(), Campaign.isLast(), Campaign.mapDone(), Campaign.mapOpen(), Campaign.nextStage(), Campaign.stageOpen() (+65 more)
 
 ### Community 87 - "CodesUI.luau"
 Cohesion: 0.29
 Nodes (9): button(), redeem(), say(), UI.close(), UI.init(), UI.open(), UI.result(), Platform.menu() (+1 more)
 
 ### Community 88 - "script_parent_furniture"
-Cohesion: 0.21
-Nodes (4): face(), Knight.step(), Knight.try(), sees()
+Cohesion: 0.36
+Nodes (5): face(), Knight.interrupt(), Knight.step(), Knight.try(), sees()
+
+### Community 89 - "game/ServerScriptService/Server/Bestiary.luau"
+Cohesion: 0.31
+Nodes (4): Bestiary.check(), Bestiary.record(), Bestiary.setup(), Data.refresh()
 
 ### Community 90 - "script_parent_remotes"
 Cohesion: 0.09
-Nodes (10): Admin.run(), isAdmin(), isFullAdmin(), passId(), Bestiary.check(), Bestiary.record(), Bestiary.setup(), Data.refresh() (+2 more)
+Nodes (14): Admin.run(), isAdmin(), isFullAdmin(), passId(), M.setup(), settleAndTell(), center(), enter() (+6 more)
 
 ### Community 91 - "game/StarterPlayer/StarterPlayerScripts/Client/ShareUI.luau"
 Cohesion: 0.23
 Nodes (15): button(), hideCard(), invite(), launchData(), refreshReward(), reward(), say(), shareLink() (+7 more)
 
+### Community 93 - "game/ServerScriptService/Server/Mobile.luau"
+Cohesion: 0.48
+Nodes (6): Mobile.cone(), Mobile.ease(), Mobile.is(), Mobile.liftRange(), Mobile.share(), Mobile.start()
+
 ### Community 94 - "Server/Quests.luau"
 Cohesion: 0.44
 Nodes (8): claim(), progress(), publish(), Quests.setup(), Quests.start(), state(), today(), untilReset()
 
+### Community 95 - "Notify.luau"
+Cohesion: 0.43
+Nodes (5): Notify.debug(), Notify.plan(), Notify.setup(), Notify.start(), write()
+
+### Community 96 - "CrewAnim.luau"
+Cohesion: 0.50
+Nodes (3): add(), CrewAnim.init(), joint()
+
 ### Community 97 - "Levels.of"
-Cohesion: 0.60
-Nodes (4): Levels.need(), Levels.of(), Levels.title(), Levels.total()
+Cohesion: 0.83
+Nodes (3): Levels.need(), Levels.of(), Levels.total()
 
 ### Community 101 - "Furniture.smash"
-Cohesion: 0.14
-Nodes (27): begin(), Furniture.conjure(), Furniture.flingAt(), Furniture.folder(), Furniture.grab(), Furniture.hasTemplate(), Furniture.isValid(), Furniture.near() (+19 more)
+Cohesion: 0.15
+Nodes (25): Furniture.conjure(), Furniture.flingAt(), Furniture.folder(), Furniture.grab(), Furniture.isValid(), Furniture.near(), Furniture.nearest(), Furniture.recapture() (+17 more)
 
 ### Community 107 - "game/StarterPlayer/StarterPlayerScripts/Client/WeakFx.luau"
 Cohesion: 0.36
@@ -445,26 +465,26 @@ Cohesion: 0.57
 Nodes (5): lookup(), remember(), store(), T.auto(), T.t()
 
 ### Community 115 - "Server/Vip.luau"
-Cohesion: 0.28
-Nodes (4): Vip.start(), build(), onPlayer(), refresh()
+Cohesion: 0.16
+Nodes (8): Vip.start(), Intro.play(), Intro.running(), onPlayer(), refresh(), play(), remote(), UI.init()
 
 ## Knowledge Gaps
-- **17 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **18 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Sfx.play()` connect `Sfx.play` to `Input.luau`, `Sfx.at`, `rs_shared_config`, `CampFx.luau`, `Sfx.at`, `Intro.luau`, `HarborFx.luau`, `FormsPage.luau`, `DailyUI.luau`, `Grunge.text`, `QuestUI.luau`, `PatchNotesUI.luau`, `Entrance.luau`, `Grunge.brush`, `Spectate.init`, `CarnivalFx.luau`, `MonsterFx.luau`, `TrainRide.luau`, `game/StarterPlayer/StarterPlayerScripts/Client/FormCine.luau`, `RoomPickUI.luau`, `Charge.luau`, `SellerUI.luau`, `script_parent_settings`, `script_parent_grunge`, `Hotbar.luau`, `game/StarterPlayer/StarterPlayerScripts/Client/FormTutorial.luau`, `Caller.luau`, `CodesUI.luau`, `game/StarterPlayer/StarterPlayerScripts/Client/ShareUI.luau`?**
-  _High betweenness centrality (0.075) - this node is a cross-community bridge._
+- **Why does `Sfx.play()` connect `Sfx.play` to `Input.luau`, `Sfx.at`, `rs_shared_config`, `CampFx.luau`, `Sfx.at`, `Intro.luau`, `FormsPage.luau`, `DailyUI.luau`, `Grunge.text`, `QuestUI.luau`, `PatchNotesUI.luau`, `Entrance.luau`, `Grunge.brush`, `Spectate.init`, `CarnivalFx.luau`, `MonsterFx.luau`, `TrainRide.luau`, `game/StarterPlayer/StarterPlayerScripts/Client/FormCine.luau`, `RoomPickUI.luau`, `Charge.luau`, `SellerUI.luau`, `script_parent_grunge`, `Platform.mode`, `Hotbar.luau`, `game/StarterPlayer/StarterPlayerScripts/Client/FormTutorial.luau`, `SandboxUI.luau`, `CodesUI.luau`, `game/StarterPlayer/StarterPlayerScripts/Client/ShareUI.luau`, `Server/Vip.luau`?**
+  _High betweenness centrality (0.080) - this node is a cross-community bridge._
 - **Are the 83 inferred relationships involving `Sfx.at()` (e.g. with `AF.handle()` and `bellDrop()`) actually correct?**
   _`Sfx.at()` has 83 INFERRED edges - model-reasoned connections that need verification._
 - **Should `Ghost.luau` be split into smaller, more focused modules?**
-  _Cohesion score 0.13663663663663664 - nodes in this community are weakly interconnected._
-- **Why does `A()` connect `A` to `GhostAnim.luau`, `ItemModels.luau`, `Events.luau`, `EntrancePose.luau`, `CampFx.luau`, `TrainRide.luau`, `game/StarterPlayer/StarterPlayerScripts/Client/FormCine.luau`, `Intro.luau`?**
-  _High betweenness centrality (0.049) - this node is a cross-community bridge._
+  _Cohesion score 0.1109936575052854 - nodes in this community are weakly interconnected._
+- **Why does `A()` connect `A` to `GhostAnim.luau`, `ItemModels.luau`, `EntrancePose.luau`, `CampFx.luau`, `TrainRide.luau`, `game/StarterPlayer/StarterPlayerScripts/Client/FormCine.luau`, `Intro.luau`?**
+  _High betweenness centrality (0.062) - this node is a cross-community bridge._
 - **Are the 72 inferred relationships involving `Sfx.play()` (e.g. with `bellShadow()` and `setRung()`) actually correct?**
   _`Sfx.play()` has 72 INFERRED edges - model-reasoned connections that need verification._
 - **Should `ClientMain.client.luau` be split into smaller, more focused modules?**
-  _Cohesion score 0.037037037037037035 - nodes in this community are weakly interconnected._
-- **Why does `Sfx.at()` connect `Sfx.at` to `Sfx.at`, `rs_shared_config`, `CarnivalFx.luau`, `MonsterFx.luau`, `CampFx.luau`, `TrainRide.luau`, `game/StarterPlayer/StarterPlayerScripts/Client/WeakFx.luau`, `FxTier.luau`, `HarborFx.luau`, `script_parent_settings`?**
-  _High betweenness centrality (0.035) - this node is a cross-community bridge._
+  _Cohesion score 0.03278688524590164 - nodes in this community are weakly interconnected._
+- **Why does `Sfx.at()` connect `Sfx.at` to `rs_shared_config`, `CarnivalFx.luau`, `MonsterFx.luau`, `CampFx.luau`, `TrainRide.luau`, `game/StarterPlayer/StarterPlayerScripts/Client/WeakFx.luau`, `FxTier.luau`, `Sfx.at`?**
+  _High betweenness centrality (0.047) - this node is a cross-community bridge._

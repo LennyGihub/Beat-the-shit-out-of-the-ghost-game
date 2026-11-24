@@ -28,6 +28,9 @@ local CODES: { [string]: Code } = {
 	-- the first code: ALPHA GLITCH (fist) + ALPHA HOLOGRAM (body), exclusive, the Camp LEGENDARY jar's / potion's buffs
 	-- (the body form was added the same day: players who had used the code get it by typing it again)
 	ALPHATESTER = { forms = { "AlphaGlitch", "AlphaHolo" } },
+	-- the TikTok clips' code (2026-11-24, roblox-mcp-bridge/clipper.js puts "CODE: TIKTOK" on every clip): its
+	-- redemptions in the analytics (CodeRedeemed, key TIKTOK) = the players who came from TikTok
+	TIKTOK = { cash = 500 },
 }
 M.CODES = CODES
 
