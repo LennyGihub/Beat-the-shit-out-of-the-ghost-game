@@ -1,0 +1,560 @@
+-- Run inventory: 5 hotbar slots of physical items (bought with run cash, gone when the run ends) and item use.
+-- Kinds: melee swing, gun hitscan, throw projectile, spray cone (held), use on self, trap on the floor.
+local Players = game:GetService("Players")
+local RS = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local Items = require(RS.Shared.Items)
+local Config = require(RS.Shared.Config)
+local Remotes = require(script.Parent.Remotes)
+local Guard = require(script.Parent.Guard)
+local Ghost = require(script.Parent.Ghost)
+local Combat = require(script.Parent.Combat)
+local Ragdoll = require(script.Parent.Ragdoll)
+local Fire = require(script.Parent.Fire)
+local Furniture = require(script.Parent.Furniture)
+local Mobile = require(script.Parent.Mobile)
+
+local Inventory = {}
+local SLOTS = 5
+local inv = {} :: { [Player]: { slots: { any }, sel: number, last: { [string]: number } } }
+local projectiles = {} :: { any }
+local traps = {} :: { any }
+local rng = Random.new()
+local FIRE = Color3.fromRGB(255, 110, 30)
+local BLOOD = Color3.fromRGB(150, 10, 10)
+
+local function get(p: Player)
+	local i = inv[p]
+	if not i then
+		i = { slots = {}, sel = 0, last = {} }
+		inv[p] = i
+	end
+	return i
+end
+
+local function publish(p: Player)
+	local i = get(p)
+	local parts = {}
+	for n = 1, SLOTS do
+		local s = i.slots[n]
+		parts[n] = s and (s.id .. ":" .. s.uses) or ""
+	end
+	p:SetAttribute("Inv", table.concat(parts, ","))
+	p:SetAttribute("Sel", i.sel)
+end
+
+function Inventory.clear(p: Player)
+	inv[p] = { slots = {}, sel = 0, last = {} }
+	publish(p)
+end
+
+-- add an item (stacks uses onto the same item). false = no free slot
+function Inventory.give(p: Player, id: string): boolean
+	local it = Items.byId[id]
+	if not it then return false end
+	local i = get(p)
+	for n = 1, SLOTS do
+		local s = i.slots[n]
+		if s and s.id == id then s.uses += it.uses; publish(p); return true end
+	end
+	for n = 1, SLOTS do
+		if not i.slots[n] then
+			i.slots[n] = { id = id, uses = it.uses }
+			i.sel = n
+			publish(p)
+			return true
+		end
+	end
+	return false
+end
+
+-- put slot n in the hand (0 = the fists)
+function Inventory.select(p: Player, n: number)
+	local i = get(p)
+	if n == 0 or (n >= 1 and n <= SLOTS and i.slots[n]) then i.sel = n; publish(p) end
+end
+
+-- the Goblin: can he steal something from p? (never the game-pass Glock)
+local function stealable(s): boolean
+	local it = s and Items.byId[s.id]
+	return it ~= nil and not it.exclusive
+end
+function Inventory.has(p: Player): boolean
+	local i = get(p)
+	for n = 1, SLOTS do if stealable(i.slots[n]) then return true end end
+	return false
+end
+
+-- he snatches the item in your hands (else a random one): returns its id and uses left
+function Inventory.take(p: Player): (string?, number?)
+	local i = get(p)
+	local pick = (i.sel > 0 and stealable(i.slots[i.sel])) and i.sel or nil
+	if not pick then
+		local c = {}
+		for n = 1, SLOTS do if stealable(i.slots[n]) then table.insert(c, n) end end
+		if #c == 0 then return nil, nil end
+		pick = c[rng:NextInteger(1, #c)]
+	end
+	local s = i.slots[pick]
+	i.slots[pick] = nil
+	if i.sel == pick then i.sel = 0 end
+	publish(p)
+	return s.id, s.uses
+end
+
+-- an item comes back with `uses` left (stacks on the same item). false = no free slot
+function Inventory.giveUses(p: Player, id: string, uses: number): boolean
+	if not Items.byId[id] or uses <= 0 then return false end
+	local i = get(p)
+	for n = 1, SLOTS do
+		local s = i.slots[n]
+		if s and s.id == id then s.uses += uses; publish(p); return true end
+	end
+	for n = 1, SLOTS do
+		if not i.slots[n] then
+			i.slots[n] = { id = id, uses = uses }
+			if i.sel == 0 then i.sel = n end
+			publish(p)
+			return true
+		end
+	end
+	return false
+end
+
+local function consume(p: Player, n: number, amount: number?)
+	local i = get(p)
+	local s = i.slots[n]
+	if not s then return end
+	s.uses -= (amount or 1)
+	if s.uses <= 0 then
+		i.slots[n] = nil
+		if i.sel == n then i.sel = 0 end
+		Remotes.Fx:FireClient(p, "ItemBroke", s.id)
+	end
+	publish(p)
+end
+
+local function alive(p: Player): (Humanoid?, BasePart?, BasePart?)
+	local ch = p.Character
+	local hum = ch and ch:FindFirstChildOfClass("Humanoid")
+	local hrp = ch and ch:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local head = ch and ch:FindFirstChild("Head") :: BasePart?
+	if hum and hum.Health > 0 and hrp then return hum, hrp, head or hrp end
+	return nil, nil, nil
+end
+
+local function ghostAlive()
+	local g = Ghost.current
+	return g and Ghost.alive() and g.state ~= "Spawn" and g or nil
+end
+
+-- item effects on the ghost
+local function applyFx(p: Player, it, dmg: number, dir: Vector3)
+	local fx = it.fx
+	if not fx or not ghostAlive() then return end
+	if fx.bleed then Ghost.burn(fx.bleed.dps, fx.bleed.t, BLOOD, p, true) end
+	if fx.burn then Ghost.burn(fx.burn.dps, fx.burn.t, fx.burn.color or FIRE, p) end
+	if fx.slow then Ghost.slow(fx.slow.mult, fx.slow.t) end
+	if fx.stun then
+		Ghost.freeze(fx.stun)
+		-- the taser: electric crackle and arcs on the monster while it is stunned (Client Fx "Tased")
+		if it.id == "Taser" then Remotes.Fx:FireAllClients("Tased", Ghost.current.model, fx.stun) end
+	end
+	if fx.freeze then
+		Ghost.freeze(fx.freeze)
+		Remotes.Fx:FireAllClients("UltFreeze", Ghost.current.hrp.Position, fx.freeze)
+	end
+	if fx.vuln then
+		Ghost.vuln(fx.vuln.mult, fx.vuln.t)
+		Remotes.Fx:FireAllClients("Toast", "SHE IS CURSED: DOUBLE DAMAGE")
+	end
+	if fx.lifesteal then Combat.heal(p, dmg * fx.lifesteal) end
+	if fx.lightning then
+		local g = Ghost.current
+		Remotes.Fx:FireAllClients("UltStrike", "lightning", g.hrp.Position, it.glow or Color3.fromRGB(170, 210, 255))
+		Ghost.damage(fx.lightning, p)
+	end
+	if fx.pull then
+		local _, hrp = alive(p)
+		local g = Ghost.current
+		if hrp and g then
+			local to = hrp.Position - g.hrp.Position
+			Ghost.shove(Vector3.new(to.X, 0, to.Z).Unit * math.min(110, to.Magnitude * 3.2))
+		end
+	end
+end
+
+local function useMelee(p: Player, n: number, it, dir: Vector3, charge: number)
+	if not Combat.useStamina(p, it.stamina * (1 + charge * Config.Charge.StaminaBonus)) then return end
+	consume(p, n)
+	local _, _, head = alive(p)
+	if head and Ghost.hitClone(head.Position, dir, it.range * Mobile.reach(p), charge) then
+		Remotes.Fx:FireAllClients("ItemSwing", p, it.id, true)
+		return
+	end
+	Combat.giantSmash(p, dir)
+	local hitPos = Combat.tryHit(p, dir, it.range)
+	Remotes.Fx:FireAllClients("ItemSwing", p, it.id, hitPos ~= nil)
+	if hitPos then
+		local dmg = Combat.registerHit(p, dir, hitPos, it.dmg, it.knock, math.max(1, it.knock / 5), it.cd >= 0.2 and 1 or 0, charge)
+		applyFx(p, it, dmg, dir)
+		if it.fx and it.fx.burn then Fire.ignite(hitPos, 7, p, 1) end -- burning bat: the wood around her catches fire
+	end
+end
+
+-- distance from a point to a ray (and how far along it)
+local function rayDist(o: Vector3, d: Vector3, pt: Vector3): (number, number)
+	local t = (pt - o):Dot(d)
+	return (pt - (o + d * t)).Magnitude, t
+end
+
+local function structure(): RaycastParams
+	local rp = RaycastParams.new()
+	rp.FilterType = Enum.RaycastFilterType.Include
+	local m = workspace:FindFirstChild("Mansion")
+	rp.FilterDescendantsInstances = { m and m:FindFirstChild("Structure") or workspace.Terrain }
+	return rp
+end
+
+-- stakes and harpoons stay stuck in the monster (welded to the body part they hit, max 10)
+local STICK = { StakeCrossbow = "stake", HarpoonGun = "harpoon" }
+local function stickIn(g, part: BasePart, at: Vector3, d: Vector3, kind: string)
+	local m = Instance.new("Model")
+	m.Name = "Stuck_" .. kind
+	local big = kind == "harpoon"
+	local len = big and 5.5 or 3.4
+	local function blk(size: Vector3, offset: number, color: Color3, mat: Enum.Material, y: number?)
+		local q = Instance.new("Part")
+		q.Size = size; q.Color = color; q.Material = mat
+		q.CanCollide = false; q.CanQuery = false; q.CanTouch = false; q.Massless = true; q.CastShadow = false
+		q.TopSurface = Enum.SurfaceType.Smooth; q.BottomSurface = Enum.SurfaceType.Smooth
+		-- the tip is buried 0.8 deep at `at`, the shaft sticks out back toward the shooter
+		q.CFrame = CFrame.lookAt(at, at + d) * CFrame.new(0, y or 0, -0.8 + offset)
+		q.Parent = m
+		return q
+	end
+	local shaft = big and Color3.fromRGB(80, 96, 110) or Color3.fromRGB(150, 110, 70)
+	local w = big and 0.32 or 0.22
+	local root = blk(Vector3.new(w, w, len), len / 2, shaft, big and Enum.Material.Metal or Enum.Material.Wood)
+	if big then
+		blk(Vector3.new(0.5, 0.5, 0.3), len - 0.2, Color3.fromRGB(50, 50, 52), Enum.Material.Metal) -- butt ring
+		blk(Vector3.new(0.12, 0.12, 2.4), len + 1.2, Color3.fromRGB(230, 220, 180), Enum.Material.Fabric, -0.3) -- rope end
+		for _, s in { -1, 1 } do -- barbs poking out of the body
+			local b = blk(Vector3.new(0.1, 0.1, 0.7), 0.6, Color3.fromRGB(190, 190, 186), Enum.Material.Metal)
+			b.CFrame = b.CFrame * CFrame.Angles(0, s * 0.6, 0)
+		end
+	else
+		for _, s in { -1, 1 } do blk(Vector3.new(0.04, 0.3, 0.5), len - 0.3, Color3.fromRGB(200, 40, 30), Enum.Material.SmoothPlastic) end -- fletching
+	end
+	for _, q in m:GetChildren() do
+		local wc = Instance.new("WeldConstraint"); wc.Part0 = part; wc.Part1 = q :: BasePart; wc.Parent = q
+	end
+	m.PrimaryPart = root
+	m.Parent = g.model
+	g.stuck = g.stuck or {}
+	table.insert(g.stuck, m)
+	if #g.stuck > 10 then (table.remove(g.stuck, 1) :: Model):Destroy() end
+end
+
+local function useGun(p: Player, n: number, it, dir: Vector3)
+	local _, _, head = alive(p)
+	if not head then return end
+	consume(p, n)
+	local o = (head :: BasePart).Position
+	local g = ghostAlive()
+	local total, hits = 0, 0
+	local range = it.range * Mobile.reach(p) -- (a mobile player's shots carry further)
+	local endPoints = {}
+	local firstHit: { part: BasePart, at: Vector3, d: Vector3 }? = nil
+	for _ = 1, it.pellets do
+		local d = (dir + Vector3.new(rng:NextNumber(-1, 1), rng:NextNumber(-1, 1), rng:NextNumber(-1, 1)) * it.spread).Unit
+		local endPt = o + d * range
+		local wall = workspace:Raycast(o, d * range, structure())
+		if wall then endPt = wall.Position end
+		if g then
+			for _, name in { "UpperTorso", "Head", "HumanoidRootPart", "LowerTorso" } do
+				local part = g.model:FindFirstChild(name) :: BasePart?
+				if part then
+					local dist, t = rayDist(o, d, part.Position)
+					if dist < 2.6 and t > 0 and t <= (endPt - o).Magnitude + 1 then
+						hits += 1
+						total += it.dmg
+						endPt = o + d * t
+						if not firstHit then firstHit = { part = part, at = part.Position - d * 0.6, d = d } end
+						break
+					end
+				end
+			end
+		end
+		table.insert(endPoints, endPt)
+	end
+	Remotes.Fx:FireAllClients("Tracer", o, endPoints, it.tracer or Color3.fromRGB(255, 230, 160), p, it.id)
+	if it.fx and it.fx.burn and endPoints[1] then Fire.ignite(endPoints[1], 4, p, 1) end -- flare: sets fire where it lands
+	if hits > 0 and g then
+		local dmg = Combat.registerHit(p, dir, g.hrp.Position, total, it.knock * math.sqrt(hits), 2, 1)
+		applyFx(p, it, dmg, dir)
+		local kind = STICK[it.id]
+		if kind and firstHit and g.model.Parent then pcall(stickIn, g, firstHit.part, firstHit.at, firstHit.d, kind) end
+	end
+end
+
+local function explode(p: Player, it, pos: Vector3, direct: Player?)
+	Remotes.Fx:FireAllClients("ItemBoom", pos, it.radius, it.color, it.boom == true, it.id)
+	if it.fx and it.fx.burn then Fire.ignite(pos, it.radius * 0.6, p, 3, true) end -- molotov: a patch of fire
+	-- explosives blow holes in the inside walls (pipe bomb big, firecrackers small)
+	if it.boom or it.id == "Firecrackers" then
+		local w = math.clamp(it.radius * (it.boom and 0.75 or 0.5), 4, 14)
+		if Ragdoll.breakWalls(pos, Vector3.zero, w, w * 0.6) > 0 then Remotes.Fx:FireAllClients("WallSmash", pos, 120) end
+	end
+	-- PvP: the player it hit takes the full hit, others caught in a blast take part of it (never the thrower)
+	for _, other in Players:GetPlayers() do
+		if other ~= p and other:GetAttribute("InMatch") then
+			local _, ohrp = alive(other)
+			if ohrp then
+				local d = (ohrp.Position - pos).Magnitude
+				local inBlast = (it.boom or it.smash) and d <= it.radius
+				if other == direct or inBlast then
+					local f = other == direct and 1 or math.clamp(1 - d / (it.radius + 1), 0.3, 1) * 0.7
+					local away = ohrp.Position - pos
+					away = Vector3.new(away.X, 0, away.Z)
+					Combat.hitPlayer(other, p, it.dmg * Combat.PVP_MULT * f, (away.Magnitude > 0.1 and away.Unit or Vector3.new(0, 0, 1)) * (40 + it.knock * 0.3), it.name)
+				end
+			end
+		end
+	end
+	local g = ghostAlive()
+	if g and (g.hrp.Position - pos).Magnitude <= it.radius + 3 then
+		local dir = g.hrp.Position - pos
+		dir = Vector3.new(dir.X, 0, dir.Z)
+		if dir.Magnitude < 0.1 then dir = Vector3.new(0, 0, 1) end
+		-- a thrown item (brick, bowling ball, pipe bomb...) knocks it back but never knocks it out (no ragdoll)
+		local dmg = Combat.registerHit(p, dir.Unit, g.hrp.Position, it.dmg, it.knock, 2, 1, nil, true, true)
+		applyFx(p, it, dmg, dir.Unit)
+	end
+	if it.smash or it.boom then
+		for _, f in Furniture.near(pos, it.smash and it.radius or it.radius * 0.5) do
+			local c = f:GetBoundingBox().Position
+			Furniture.smash(f, (c - pos).Unit * 70 + Vector3.new(0, 30, 0), 80)
+		end
+	end
+end
+
+local function useThrow(p: Player, n: number, it, dir: Vector3)
+	local _, _, head = alive(p)
+	if not head then return end
+	consume(p, n)
+	local proj = Instance.new("Part")
+	proj.Name = "Thrown_" .. it.id
+	proj.Size = it.shape == "ball" and Vector3.one * 1.4 or Vector3.new(0.6, 0.6, 1)
+	proj.Shape = it.shape == "ball" and Enum.PartType.Ball or Enum.PartType.Block
+	proj.Color = it.color
+	proj.Material = Enum.Material.SmoothPlastic
+	proj.Anchored = true; proj.CanCollide = false; proj.CanQuery = false; proj.CanTouch = false
+	local o = (head :: BasePart).Position + dir * 2
+	proj.CFrame = CFrame.new(o)
+	proj.Parent = workspace
+	table.insert(projectiles, { part = proj, pos = o, vel = dir * 95 + Vector3.new(0, 14, 0), it = it, by = p, t0 = os.clock() })
+	Remotes.Fx:FireAllClients("ItemSwing", p, it.id, false)
+end
+
+local lastFlame = {} :: { [Player]: number }
+local function useSpray(p: Player, n: number, it, dir: Vector3)
+	local _, _, head = alive(p)
+	if not head then return end
+	consume(p, n)
+	local range = it.range * Mobile.reach(p) -- (a mobile player's spray carries further and needs less aim)
+	-- flamethrower: the wood it is aimed at catches fire
+	if it.fx and it.fx.burn and os.clock() - (lastFlame[p] or 0) > 0.35 then
+		lastFlame[p] = os.clock()
+		local rp = RaycastParams.new()
+		rp.FilterType = Enum.RaycastFilterType.Exclude
+		local ex = { p.Character :: Instance }
+		local gm = workspace:FindFirstChild("Ghost")
+		if gm then table.insert(ex, gm) end
+		rp.FilterDescendantsInstances = ex
+		local r = workspace:Raycast((head :: BasePart).Position, dir.Unit * range, rp)
+		-- what the flamethrower hits catches a WILDFIRE that spreads through the whole house (Fire.wildfire)
+		if r and r.Instance:IsA("BasePart") then Fire.wildfire(r.Instance, r.Position, r.Normal, p) end
+	end
+	local g = ghostAlive()
+	if not g then return end
+	local o = (head :: BasePart).Position
+	local to = g.hrp.Position - o
+	if to.Magnitude > range or dir:Dot(to.Unit) < Mobile.cone(p, it.cone) then return end
+	if workspace:Raycast(o, to, structure()) then return end
+	Ghost.damage(it.dps * 0.1, p)
+	local fx = it.fx or {}
+	if fx.push then
+		local flat = Vector3.new(to.X, 0, to.Z).Unit
+		Ghost.shove(flat * fx.push * 3)
+	end
+	if fx.burn then Ghost.burn(fx.burn.dps, 0.6, FIRE, p) end
+	if fx.slow then Ghost.slow(fx.slow.mult, fx.slow.t) end
+	local s = Combat.state(p)
+	if os.clock() - (s.lastSprayHit or 0) > 0.5 then
+		s.lastSprayHit = os.clock()
+		Remotes.Fx:FireAllClients("Hit", g.hrp.Position, 1, it.dps * 0.5, false, p)
+	end
+end
+
+local function useSelf(p: Player, n: number, it)
+	local hum = alive(p)
+	if not hum then return end
+	consume(p, n)
+	if it.heal then Combat.heal(p, it.heal * Combat.healthMult(p)) end -- (heals grow with the body form)
+	if it.stamina then Combat.refillStamina(p) end
+	if it.speed then Combat.speedBuff(p, it.speed, it.speedT or 8) end
+	if it.shield then Combat.addShield(p, it.shield * Combat.healthMult(p)) end
+	if it.brut then Combat.fillBrutality(p) end
+	if it.ward then
+		p:SetAttribute("Warded", true)
+		task.delay(it.ward, function() if p.Parent then p:SetAttribute("Warded", false) end end)
+	end
+	if it.ghostFreeze and ghostAlive() then
+		Ghost.timeStop(it.ghostFreeze, 1.3)
+		Remotes.Fx:FireAllClients("TimeStop", it.ghostFreeze)
+	end
+	Remotes.Fx:FireClient(p, "ItemUsed", it.id)
+end
+
+local function useTrap(p: Player, n: number, it)
+	local _, hrp = alive(p)
+	if not hrp then return end
+	local r = workspace:Raycast(hrp.Position, Vector3.new(0, -8, 0), structure())
+	local floor = r and r.Position or (hrp.Position - Vector3.new(0, 3, 0))
+	consume(p, n)
+	local trap = Instance.new("Model"); trap.Name = "BearTrap"
+	local base = Instance.new("Part")
+	base.Size = Vector3.new(3, 0.3, 3); base.Shape = Enum.PartType.Cylinder
+	base.CFrame = CFrame.new(floor + Vector3.new(0, 0.15, 0)) * CFrame.Angles(0, 0, math.pi / 2)
+	base.Size = Vector3.new(0.3, 3, 3); base.Color = it.color; base.Material = Enum.Material.Metal
+	base.Anchored = true; base.CanCollide = false; base.Parent = trap
+	for k = 0, 7 do
+		local t = Instance.new("Part")
+		t.Size = Vector3.new(0.15, 0.6, 0.15); t.Color = Color3.fromRGB(200, 200, 200); t.Material = Enum.Material.Metal
+		t.CFrame = CFrame.new(floor) * CFrame.Angles(0, k * math.pi / 4, 0) * CFrame.new(0, 0.5, 1.3)
+		t.Anchored = true; t.CanCollide = false; t.Parent = trap
+	end
+	trap.Parent = workspace
+	table.insert(traps, { model = trap, pos = floor, it = it, by = p })
+	Remotes.Fx:FireAllClients("ItemSwing", p, it.id, false)
+end
+
+local function onUse(p: Player, slot: any, look: any, rawCharge: any)
+	-- (every component finite: a NaN in Y or Z used to pass the old X-only check)
+	if type(slot) ~= "number" or not Guard.vec(look, 2) or look.Magnitude < 0.5 then return end
+	if not p:GetAttribute("InMatch") or p:GetAttribute("Carrying") then return end
+	local i = get(p)
+	local s = i.slots[slot]
+	if not s then return end
+	local it = Items.byId[s.id]
+	if not it then return end
+	local now = os.clock()
+	local cd = it.kind == "spray" and 0.1 or (it.cd or 0.6)
+	if now - (i.last[s.id] or 0) < cd * 0.8 then return end
+	-- charged swing: melee weapons only (not the chainsaw's continuous cut)
+	if p:GetAttribute("Blocking") then return end -- no attacking while blocking
+	local charge = (it.kind == "melee" and cd >= 0.2) and Combat.validCharge(p, rawCharge) or 0
+	i.last[s.id] = now
+	local dir = look.Unit
+	if it.kind == "melee" then useMelee(p, slot, it, dir, charge)
+	elseif it.kind == "gun" then useGun(p, slot, it, dir)
+	elseif it.kind == "throw" then useThrow(p, slot, it, dir)
+	elseif it.kind == "spray" then useSpray(p, slot, it, dir)
+	elseif it.kind == "use" then useSelf(p, slot, it)
+	elseif it.kind == "trap" then useTrap(p, slot, it)
+	end
+end
+
+local function step(dt: number)
+	-- projectiles
+	local rp = structure()
+	local mansion = workspace:FindFirstChild("Mansion")
+	local f = mansion and mansion:FindFirstChild("Furniture")
+	if f then rp.FilterDescendantsInstances = { mansion.Structure, f, workspace:FindFirstChild("Baseplate") } end
+	for k = #projectiles, 1, -1 do
+		local pr = projectiles[k]
+		local g = ghostAlive()
+		local old = pr.pos
+		pr.vel += Vector3.new(0, -55 * dt, 0)
+		local new = old + pr.vel * dt
+		local hit = workspace:Raycast(old, new - old, rp)
+		local boomAt: Vector3? = nil
+		if hit then boomAt = hit.Position end
+		if g and (g.hrp.Position - new).Magnitude < 4 then boomAt = new end
+		-- PvP: a thrown item that reaches another player hits them
+		local victim = os.clock() - pr.t0 > 0.08 and Combat.friendlyFire() and Combat.playerNear(new, 3.2, pr.by) or nil
+		if victim then boomAt = new end
+		if os.clock() - pr.t0 > 4 then boomAt = new end
+		if boomAt then
+			pr.part:Destroy()
+			table.remove(projectiles, k)
+			if pr.by.Parent then explode(pr.by, pr.it, boomAt, victim) end
+		else
+			pr.pos = new
+			pr.part.CFrame = CFrame.lookAt(new, new + pr.vel) * CFrame.Angles(os.clock() * 12, 0, 0)
+		end
+	end
+	-- traps
+	local g = ghostAlive()
+	for k = #traps, 1, -1 do
+		local t = traps[k]
+		if not t.model.Parent then
+			table.remove(traps, k)
+		elseif g then
+			local gp = g.hrp.Position
+			if Vector3.new(gp.X - t.pos.X, 0, gp.Z - t.pos.Z).Magnitude < 5 and math.abs(gp.Y - t.pos.Y) < 9 then
+				Ghost.freeze(t.it.stun)
+				Ghost.damage(t.it.dmg, t.by)
+				Remotes.Fx:FireAllClients("TrapSnap", t.pos)
+				Remotes.Fx:FireAllClients("UltFreeze", gp, t.it.stun)
+				t.model:Destroy()
+				table.remove(traps, k)
+			end
+		end
+	end
+end
+
+function Inventory.clearWorld()
+	for _, pr in projectiles do pr.part:Destroy() end
+	projectiles = {}
+	for _, t in traps do t.model:Destroy() end
+	traps = {}
+end
+
+function Inventory.start()
+	Ghost.hasItem = Inventory.has
+	Ghost.takeItem = Inventory.take
+	Ghost.giveItem = Inventory.giveUses
+	Remotes.Use.OnServerEvent:Connect(Guard.limit("Use", onUse))
+	Remotes.Select.OnServerEvent:Connect(function(p, n) if not Guard.ok(p, "Select") then return end
+		if type(n) ~= "number" then return end
+		local i = get(p)
+		n = math.floor(n)
+		if n == 0 or (n >= 1 and n <= SLOTS and i.slots[n]) then i.sel = n; publish(p) end
+	end)
+	Remotes.Drop.OnServerEvent:Connect(function(p, n) if not Guard.ok(p, "Drop") then return end
+		if type(n) ~= "number" then return end
+		local i = get(p)
+		if i.slots[n] then
+			i.slots[n] = nil
+			if i.sel == n then i.sel = 0 end
+			publish(p)
+		end
+	end)
+	Players.PlayerRemoving:Connect(function(p) inv[p] = nil end)
+	if RunService:IsStudio() then
+		-- Studio test hook: set player attribute DebugGive = "<ItemId>" from a server test script
+		local function hook(p: Player)
+			p:GetAttributeChangedSignal("DebugGive"):Connect(function()
+				local id = p:GetAttribute("DebugGive")
+				if type(id) == "string" then Inventory.give(p, (string.gsub(id, "#.*", ""))) end
+			end)
+		end
+		Players.PlayerAdded:Connect(hook)
+		for _, p in Players:GetPlayers() do hook(p) end
+	end
+	RunService.Heartbeat:Connect(step)
+end
+
+return Inventory

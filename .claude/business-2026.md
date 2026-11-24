@@ -222,21 +222,26 @@ The user said "don't modify the game yet": this is a list for future updates, to
   path (cash packs hidden, or a fixed disclosed order / free path for jars and potions) and an
   `IsPaidItemTradingAllowed` check in trading. The odds are already shown in the seller panel (good).
 - **R15 for the US 18+ DevEx rate**: the scripts don't force a rig; Client/FormLook still handles R6 limbs. Check the
-  place's Game Settings > Avatar is R15 only (needs Studio).
+  place's Game Settings > Avatar is R15 only (needs Studio). Since 2026-11-24 Main warns + logs analytics `R6Avatar`
+  (RS attribute R6Seen) when anyone spawns as R6.
 - **Saves**: Server/Data writes a whole snapshot with UpdateAsync, no session lock. With trading and form copies,
   a server hop before the old server's save could duplicate forms or cash. Worth a session lock (ProfileStore-style)
   before trading gets busy. Cash-pack and train-ticket receipts are already correct (granted only after a saved
   write, PurchaseIds kept in the save).
-- **Analytics**: no AnalyticsService at all. The intro already has steps (player attribute IntroPhase: enter, tv,
-  freeze:<lesson>, lesson, fight, exit, arrive, done) that map straight onto an onboarding funnel; cash sources
-  (runs, codes, trades, packs) and sinks (jars, potions, houses, revives) onto economy events.
+- **Analytics**: DONE 2026-11-24 (Server/Analytics: onboarding funnel, campaign progression, every cash change,
+  first-minute custom events).
 - **Monetization not used yet**: subscriptions, rewarded video ads, Roblox Plus prompt, regional pricing (Creator Hub
   setting), selling UGC items. Money2PassId and TripsProductId are still 0. Prices are read with `GetProductInfo`
   (UltShopUI, ReviveUI): the guide names `GetProductInfoAsync`.
-- **Virality**: no Share Links / invites / Captures in the code. Natural capture moments: an ultimate, a boss kill,
-  a monster's entrance, the Moon giant form rising, a rare form roll.
-- **First 60 seconds**: a new player starts on an all-black READY screen, then the intro. The first-play bounce rate
-  is now a top ranking signal: worth measuring before anything else changes there.
+- **Virality**: DONE 2026-11-24 (Server/Share + Client/ShareUI: INVITE button, share links, the 10-minute friend
+  reward, SHARE THIS after a boss / a cleared building / an EPIC+ form). Not yet: video clips, the Moon giant rising.
+- **First 60 seconds**: a new player starts on an all-black READY screen, then the intro. MEASURED since 2026-11-24
+  (ReadySeconds, QuitBeforeReady, OnboardingQuit, IntroSkipped): change the screen only once the numbers say so.
 - **Live ops**: no weekly event rhythm yet; codes and patch notes exist and can carry one.
-- **Not checked yet**: the ~30 OnServerEvent handlers against the isfinite / bounds / rate-limit rules, draw calls on
-  a phone with the FX tier and form looks on, streaming settings, localization (none), gamepad navigation.
+- **Security**: DONE 2026-11-24 (Server/Guard on all 31 handlers; NaN holes fixed in Inventory.onUse, Tutorial
+  spawn, the party size).
+- **Performance**: phones start on LOW particles (Client/Settings); `tools/build/perf_pass.luau` (report / APPLY)
+  still has to be run in Studio; streaming settings undecided (the pass reports them).
+- **Languages**: Client/Translate + tools/localization; the user still has to switch on automatic capture +
+  translation and upload `patterns.csv`.
+- **Controller**: fights and windows already worked; SELECT now reaches the lobby column (2026-11-24).

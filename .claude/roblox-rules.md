@@ -22,7 +22,7 @@
 - Scale, not Offset; `UIAspectRatioConstraint`; `TextScaled` + `UITextSizeConstraint`; `UICorner`/`UIStroke`/`UIGradient`; touch targets >= 50 px; `ResetOnSpawn=false`.
 
 **3D**
-- Props: free Creator Store model (`search_asset` free + verified, `insert_asset`, then delete any scripts inside it) or `generate_mesh` (AI, set `size` + `maxTriangles`). Don't build detailed props from hundreds of parts in Luau code.
+- Props: hand-built from plain Parts (boxes, cylinders, wedges) in an Edit-mode build script under `tools/build/`, blocky PS2 look, `PS2_*` MaterialVariants, few parts, Neon only for small lights. **Never** Roblox's AI generators (`generate_mesh`, `generate_scene`, `generate_texture`, the Assistant's generation): the user banned them for this game. A free Creator Store model only if it is already blocky / low-poly in that style and the user saw it first; delete any scripts inside it.
 
 **Working as a subagent**
 - Only one agent edits Studio at a time. If your brief says read-only, don't edit.
