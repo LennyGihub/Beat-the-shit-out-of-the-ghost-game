@@ -145,10 +145,11 @@ local function fit(m: Menu)
 end
 
 local windowIsOpen = false
--- a dim layer behind an open window (rebrand 2026-11-24: one thing on screen at a time). DisplayOrder 4: over the
--- HUD and the level card, under every window (they are 5 and up).
+-- a dim layer behind an open window (2026-11-24: one thing on screen at a time). Its DisplayOrder follows the open
+-- window: 4 (over the HUD and the level card) or, for a window drawn lower than 5, just under that window - it never
+-- covers the window itself (the shop had DisplayOrder 0 and came out dark, 2026-11-24).
 local dim: Frame? = nil
-local function setDim(on: boolean)
+local function setDim(on: boolean, under: number?)
 	if not dim then
 		local pg = lp:FindFirstChildOfClass("PlayerGui")
 		if not pg then return end
@@ -160,6 +161,8 @@ local function setDim(on: boolean)
 		f.Parent = g
 		dim = f
 	end
+	local g = (dim :: Frame).Parent :: ScreenGui
+	if under then g.DisplayOrder = math.min(4, under - 1) end
 	(dim :: Frame).BackgroundTransparency = on and 0.45 or 1
 end
 function Platform.windowOpen(): boolean return windowIsOpen end
@@ -167,9 +170,19 @@ function Platform.windowOpen(): boolean return windowIsOpen end
 local function windowStep()
 	local m = openMenu()
 	if m then fit(m) end
+	local order = nil
+	if m then
+		local wg = m.root:FindFirstAncestorOfClass("ScreenGui")
+		order = wg and wg.DisplayOrder or 0
+		if dim and order then
+			local want = math.min(4, order - 1)
+			local g = (dim :: Frame).Parent :: ScreenGui
+			if g.DisplayOrder ~= want then g.DisplayOrder = want end
+		end
+	end
 	if (m ~= nil) ~= windowIsOpen then
 		windowIsOpen = m ~= nil
-		setDim(windowIsOpen)
+		setDim(windowIsOpen, order)
 		windowChanged:Fire(windowIsOpen)
 	end
 end

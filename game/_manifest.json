@@ -789,8 +789,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/Platform.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.Platform",
    "class": "ModuleScript",
-   "bytes": 8504,
-   "sha1": "4ea6eb1370c40a2bdb3a6e176884f0c7132f1904"
+   "bytes": 9081,
+   "sha1": "608bca2ed73f18c479cec9132517b77858075b17"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/Prompts.luau",
@@ -964,8 +964,8 @@
    "file": "StarterPlayer/StarterPlayerScripts/Client/UltShopUI.luau",
    "instance": "game.StarterPlayer.StarterPlayerScripts.Client.UltShopUI",
    "class": "ModuleScript",
-   "bytes": 20270,
-   "sha1": "d109638c3958bb6b722f6f6f04804a7dda911a02"
+   "bytes": 20341,
+   "sha1": "1f6629dfb7d2d83857a1c45ac5838b5aa55dd921"
   },
   {
    "file": "StarterPlayer/StarterPlayerScripts/Client/VialArt.luau",

@@ -218,7 +218,7 @@ end
 function Shop.init(toggle: (boolean) -> ())
 	onToggle = toggle
 	gui = Instance.new("ScreenGui")
-	gui.Name = "UltShop"; gui.ResetOnSpawn = false; gui.IgnoreGuiInset = true; gui.Enabled = false
+	gui.Name = "UltShop"; gui.ResetOnSpawn = false; gui.IgnoreGuiInset = true; gui.Enabled = false; gui.DisplayOrder = 7 -- (over Platform's dim, like the other windows)
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	gui.Parent = lp:WaitForChild("PlayerGui")
 	panel = Grunge.slab(gui, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.52), Size = UDim2.fromScale(0.74, 0.86), ZIndex = 8 }, Color3.fromRGB(21, 17, 15), 21, 6)
