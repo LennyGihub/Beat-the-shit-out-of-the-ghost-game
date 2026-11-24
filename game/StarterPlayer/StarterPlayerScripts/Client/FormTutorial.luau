@@ -20,6 +20,7 @@ local Forms = require(RS.Shared.Forms)
 local Grunge = require(script.Parent.Grunge)
 local Sfx = require(script.Parent.Sfx)
 local Platform = require(script.Parent.Platform)
+local Translate = require(script.Parent.Translate)
 local Remotes = RS:WaitForChild("Remotes")
 
 local FT = {}
@@ -204,12 +205,13 @@ function FT.play()
 	local lastDo = ""
 	local lastDist = -1
 	local function say(step: string, todo: string, why: string, dist: number?)
+		step, todo, why = Translate.auto(step), Translate.auto(todo), Translate.auto(why) -- (other languages: Client/Translate)
 		if stepT.Text ~= step then stepT.Text = step end
 		if whyT.Text ~= why then whyT.Text = why end
 		local dd = dist or -1
 		if dd ~= lastDist then
 			lastDist = dd
-			distT.Text = dist and (dd .. " STUDS") or ""
+			distT.Text = dist and Translate.auto(dd .. " STUDS") or ""
 			doT.Size = UDim2.fromScale(dist and 0.6 or 0.82, 0.44)
 		end
 		if todo ~= lastDo then

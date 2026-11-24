@@ -38,6 +38,8 @@ local Bestiary = require(Server.Bestiary)
 local FormShop = require(Server.Forms)
 local Trade = require(Server.Trade)
 local Codes = require(Server.Codes)
+local Share = require(Server.Share)
+local Analytics = require(Server.Analytics)
 
 local isMatchServer = game.PrivateServerId ~= "" and game.PrivateServerOwnerId == 0
 Run.mode = isMatchServer and "Match" or "Lobby"
@@ -57,6 +59,7 @@ Lobby.start()
 FormShop.start() -- Doc Mercy's ectoplasm, Mother Moth's potions (the park's two sellers)
 Trade.start() -- players trade cash, jar forms and potion forms in the park
 Codes.start() -- redeemable codes (the lobby's CODES button)
+Share.start() -- the INVITE button: friend invites, share links, the reward for friends who play 10 minutes
 Admin.start()
 Friends.start()
 Monetization.start()
@@ -100,6 +103,15 @@ local function onPlayer(p: Player)
 			end)
 		end
 		local hum = ch:WaitForChild("Humanoid") :: Humanoid
+		-- R15 ONLY (the DevEx US 18+ rate needs every player on R15: Game Settings > Avatar > R15). An R6 body here
+		-- means that setting is wrong: told once per player (output + analytics R6Avatar; RS attribute R6Seen counts)
+		if hum.RigType ~= Enum.HumanoidRigType.R15 and not p:GetAttribute("R6Told") then
+			p:SetAttribute("R6Told", true)
+			warn("[Main] " .. p.Name .. " spawned as R6: set Game Settings > Avatar > Avatar Type to R15 only")
+			Analytics.custom(p, "R6Avatar", 1)
+			local rs = game:GetService("ReplicatedStorage")
+			rs:SetAttribute("R6Seen", (rs:GetAttribute("R6Seen") or 0) + 1)
+		end
 		hum.Died:Once(function()
 			local wait = Run.onDied(p) -- the revive window can keep the body down longer
 			task.delay(wait, function() if p.Parent and p.Character == ch then p:LoadCharacter() end end)
@@ -107,6 +119,7 @@ local function onPlayer(p: Player)
 	end)
 	p:LoadCharacter()
 	Data.load(p)
+	Share.setup(p) -- (a brand-new save that came with a friend's invite / link is linked to them)
 	Quests.setup(p)
 	Bestiary.setup(p) -- badges already earned by an older save
 	FormShop.setup(p) -- the jars / potions that finished opening while the player was away

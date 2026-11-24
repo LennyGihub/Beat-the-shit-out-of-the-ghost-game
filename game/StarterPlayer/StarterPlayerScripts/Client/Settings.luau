@@ -37,7 +37,10 @@ Settings.DEFAULT_BINDS = { Punch = "MouseButton1", Block = "MouseButton2", Lift 
 local MUSIC = { FightMusic = true }
 
 -- hideKeys = the small controls reminder (KeyHints) was hidden with H
-local state = { sfx = 1, music = 1, binds = table.clone(Settings.DEFAULT_BINDS), hideKeys = false, fx = "medium" }
+-- fxSet = the player picked a particle level themselves. Until then a PHONE / TABLET (touch, no keyboard) starts on
+-- LOW (2026-11-24, the business guide's mobile budget: phones under 2-3 GB of memory choke on dense effects)
+local function defaultFx(): string return Platform.mode() == "touch" and "low" or "medium" end
+local state = { sfx = 1, music = 1, binds = table.clone(Settings.DEFAULT_BINDS), hideKeys = false, fx = defaultFx(), fxSet = false }
 local dirty = false -- changed here and not loaded over since
 
 local function group(name: string): SoundGroup
@@ -119,6 +122,7 @@ end
 function Settings.setFx(level: string)
 	if not FX[level] or state.fx == level then return end
 	state.fx = level
+	state.fxSet = true
 	changed:Fire("fx")
 	save()
 end
@@ -161,7 +165,9 @@ local function load()
 		for a, k in s.binds do if Settings.DEFAULT_BINDS[a] and type(k) == "string" then state.binds[a] = k end end
 	end
 	state.hideKeys = s.hideKeys == true
-	state.fx = (type(s.fx) == "string" and FX[s.fx]) and s.fx or "medium"
+	-- (a save from before fxSet: anything but the old default "medium" was the player's own pick)
+	state.fxSet = s.fxSet == true or (s.fxSet == nil and (s.fx == "low" or s.fx == "high"))
+	state.fx = (state.fxSet and type(s.fx) == "string" and FX[s.fx]) and s.fx or defaultFx()
 	apply()
 	changed:Fire("binds"); changed:Fire("sfx"); changed:Fire("music"); changed:Fire("hideKeys"); changed:Fire("fx")
 end

@@ -33,6 +33,7 @@ local Fx: any = nil
 local HUD: any = nil
 local playing = false
 FC.onDone = nil :: (() -> ())?
+FC.onReveal = nil :: ((any) -> ())? -- the burst is over, the reveal card comes (ClientMain: SHARE THIS for EPIC+)
 
 function FC.init(fx, hud) Fx = fx; HUD = hud end
 function FC.busy(): boolean return playing end
@@ -574,6 +575,7 @@ function FC.play(kind: string, vialId: string, formId: string, isNew: boolean, w
 	end)
 	-- wait for the burst, then the card
 	while not doneT do task.wait(0.05) end
+	if FC.onReveal then task.spawn(FC.onReveal :: (any) -> (), fm) end -- (ClientMain: an EPIC+ form is a moment to share)
 	local pick = reveal(fm, isNew, worn, prevId)
 	if pick == "wear" and not test then (Remotes :: any).Forms:FireServer("equip", fm.id) end
 	-- out: black, everything back

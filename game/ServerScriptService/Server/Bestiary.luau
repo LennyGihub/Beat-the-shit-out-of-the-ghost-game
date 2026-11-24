@@ -13,6 +13,7 @@ local Badges = require(RS.Shared.Badges)
 local Monsters = require(RS.Shared.Monsters)
 local Remotes = require(script.Parent.Remotes)
 local Data = require(script.Parent.Data)
+local Analytics = require(script.Parent.Analytics)
 local Evolved = require(script.Parent.Evolved)
 
 local Bestiary = {}
@@ -25,6 +26,7 @@ function Bestiary.check(p: Player)
 		if not d.Badges[badge.id] and Badges.value(badge.stat, d.Bestiary, d.Kills, d.GhostLevel - 1, d.Nightmare) >= badge.goal then
 			d.Badges[badge.id] = true
 			d.Cash += badge.reward
+			Analytics.cash(p, "Source", badge.reward, d.Cash, "Badge", badge.id)
 			changed = true
 			Remotes.Fx:FireClient(p, "BadgeUnlocked", badge.id)
 			if badge.robloxId > 0 then

@@ -44,6 +44,9 @@ local PatchNotes = {
 		E("NEW", "THE NEW TUTORIAL", "A ghost crawls out of the TV and teaches you to fight. Everyone plays it once, even if you played before. You can skip it."),
 		E("NEW", "CODES", "Press CODES in the lobby. The first code: ALPHA TESTER, for 2 exclusive forms: ALPHA GLITCH and ALPHA HOLOGRAM."),
 		E("CHANGED", "THE PARK", "A train station at the east end, the leaderboards by the fountain, and you can scroll the camera out much further."),
+		E("NEW", "INVITE FRIENDS", "Press INVITE in the lobby to invite friends or share a link. When a friend who never played joins with it and plays 10 minutes, you get cash (more the higher your level)."),
+		E("NEW", "SHARE YOUR BEST MOMENTS", "Beat a boss, clear a building or open an EPIC form: a SHARE THIS card pops up with a picture of the moment."),
+		E("NEW", "CONTROLLERS AND PHONES", "On a controller, press SELECT to use the lobby menu. Phones start with lighter effects for a smoother game (change it in the settings)."),
 	} :: { Entry },
 }
 

@@ -25,7 +25,9 @@
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local Remotes = require(script.Parent.Remotes)
+local Guard = require(script.Parent.Guard)
 local Data = require(script.Parent.Data)
+local Analytics = require(script.Parent.Analytics)
 local Sandbox = require(script.Parent.Sandbox)
 local Ghost = require(script.Parent.Ghost)
 local Combat = require(script.Parent.Combat)
@@ -130,9 +132,13 @@ local function enter(p: Player)
 	p:SetAttribute("IntroHouse", true)
 end
 
+local spawnedAt = {} :: { [Player]: number }
 local function spawnHer(p: Player, pos: any)
 	local tv = tvRoom()
-	if typeof(pos) ~= "Vector3" or not tv or (pos - tv:GetPivot().Position).Magnitude > 40 then return end
+	-- (a finite point near the TV, once per intro: a NaN used to pass the distance check, NaN > 40 being false)
+	if not Guard.vec(pos) or not tv or (pos - tv:GetPivot().Position).Magnitude > 40 then return end
+	if os.clock() - (spawnedAt[p] or -math.huge) < 20 then return end
+	spawnedAt[p] = os.clock()
 	Ghost.passive = false
 	Ghost.spawn(1, pos, "Woman")
 	-- (her wind-up runs on, out of sight behind the client's copy of her, and she is held just before the claws come
@@ -185,29 +191,32 @@ end
 
 function Tutorial.start(isLobby: boolean)
 	RS:SetAttribute("TutorialOn", isLobby)
-	Remotes.Tutorial.OnServerEvent:Connect(function(p: Player, action: any, arg: any)
+	Remotes.Tutorial.OnServerEvent:Connect(function(p: Player, action: any, arg: any) if not Guard.ok(p, "Tutorial") then return end
 		-- (no rate limit: the steps come in quick pairs, and each one only acts in its own moment)
 		if action == "seen" or action == "skip" then
 			Data.setTutorialSeen(p)
+			if action == "seen" then Analytics.onboard(p, "ready") end -- (READY pressed)
 			return
 		elseif action == "enter" then
-			if isLobby then enter(p) end
+			if isLobby then enter(p); Analytics.onboard(p, "intro") end
 			return
 		end
 		if not inIntro[p] then
 			-- (an intro that never came into the house still ends in the park)
-			if action == "done" then Data.setTutorialSeen(p) end
+			if action == "done" then Data.setTutorialSeen(p); Analytics.onboard(p, "park") end
 			return
 		end
 		local T = tutorialFight()
 		if action == "spawn" then
 			spawnHer(p, arg)
+			Analytics.onboard(p, "monster")
 		elseif action == "windup" and T then
 			T.nextAt = 0
 			T.pause = math.huge
 			T.holdWindup = true
 		elseif action == "hold" then
 			hold(true)
+			Analytics.lesson(p)
 		elseif action == "release" then
 			hold(false)
 		elseif action == "combo" and T then
@@ -228,7 +237,9 @@ function Tutorial.start(isLobby: boolean)
 			T.stunOnly = nil
 			T.allowWeak = true
 			T.noKnock = nil
+			Analytics.onboard(p, "fight")
 		elseif action == "exit" then
+			Analytics.onboard(p, "won")
 			if Ghost.current then Ghost.despawn() end
 			local at = frontDoor()
 			local c = p.Character
@@ -239,12 +250,14 @@ function Tutorial.start(isLobby: boolean)
 			p:SetAttribute("IntroExit", true)
 		elseif action == "done" then
 			Data.setTutorialSeen(p)
+			Analytics.onboard(p, "park")
 			stop(p)
 			Sandbox.leave(p)
 		end
 	end)
 	Players.PlayerRemoving:Connect(function(p)
 		if inIntro[p] then stop(p) end
+		spawnedAt[p] = nil
 	end)
 end
 

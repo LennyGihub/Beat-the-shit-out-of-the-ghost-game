@@ -16,6 +16,7 @@ local Campaign = require(RS.Shared.Campaign)
 local HttpService = game:GetService("HttpService")
 local Grunge = require(script.Parent.Grunge)
 local Platform = require(script.Parent.Platform)
+local Translate = require(script.Parent.Translate)
 local Sfx = require(script.Parent.Sfx)
 local VialArt = require(script.Parent.VialArt)
 local Remotes = RS:WaitForChild("Remotes")
@@ -375,7 +376,7 @@ end
 -- a buy went wrong (Fx "FormResult")
 function UI.result(good: boolean, text: string)
 	waiting = false
-	if statusT then statusT.Text = string.upper(text) end
+	if statusT then statusT.Text = Translate.auto(string.upper(text)) end
 	if not good then Sfx.play("Click", { PlaybackSpeed = 0.6 }) end
 end
 

@@ -19,7 +19,9 @@ local RunService = game:GetService("RunService")
 local RS = game:GetService("ReplicatedStorage")
 local Forms = require(RS.Shared.Forms)
 local Remotes = require(script.Parent.Remotes)
+local Guard = require(script.Parent.Guard)
 local Data = require(script.Parent.Data)
+local Analytics = require(script.Parent.Analytics)
 local Combat = require(script.Parent.Combat)
 
 local Trade = {}
@@ -153,6 +155,19 @@ local function execute(s: Session)
 	end
 	move(s.a, s.b)
 	move(s.b, s.a)
+	-- economy analytics: cash that changed hands (Server/Analytics)
+	-- (per player: what left first, with the balance right after it, then what came in, with the final balance)
+	for _, pair in { { s.a, s.b }, { s.b, s.a } } do
+		local me, them = pair[1], pair[2]
+		if me.p then
+			local bal = (Data.get(me.p) :: any).Cash
+			if me.cash > 0 then Analytics.cash(me.p, "Sink", me.cash, bal - them.cash, "Trade") end
+			if them.cash > 0 then Analytics.cash(me.p, "Source", them.cash, bal, "Trade") end
+		end
+	end
+	for _, side in { s.a, s.b } do
+		if side.p then Analytics.custom(side.p, "TradeDone", 1) end
+	end
 	local summary = {}
 	for _, side in { s.a, s.b } do
 		local n = 0
@@ -306,7 +321,7 @@ local function ready(p: Player, on: any)
 end
 
 function Trade.start()
-	Remotes.Trade.OnServerEvent:Connect(function(p, action, a, b)
+	Remotes.Trade.OnServerEvent:Connect(function(p, action, a, b) if not Guard.ok(p, "Trade") then return end
 		if action == "request" then request(p, a)
 		elseif action == "answer" then answer(p, a, b)
 		elseif action == "offer" then offer(p, a)

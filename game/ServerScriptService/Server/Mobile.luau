@@ -12,6 +12,7 @@ local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Config = require(RS.Shared.Config)
 local Remotes = require(script.Parent.Remotes)
+local Guard = require(script.Parent.Guard)
 
 local Mobile = {}
 local M = Config.Mobile
@@ -53,7 +54,7 @@ end
 
 function Mobile.start()
 	local last = {} :: { [Player]: number }
-	Remotes.Platform.OnServerEvent:Connect(function(p, mode)
+	Remotes.Platform.OnServerEvent:Connect(function(p, mode) if not Guard.ok(p, "Platform") then return end
 		if os.clock() - (last[p] or 0) < 0.5 then return end
 		last[p] = os.clock()
 		p:SetAttribute("Mobile", mode == "touch")

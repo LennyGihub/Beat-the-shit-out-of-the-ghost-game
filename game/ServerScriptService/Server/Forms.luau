@@ -23,7 +23,9 @@ local Forms = require(RS.Shared.Forms)
 local Levels = require(RS.Shared.Levels)
 local Campaign = require(RS.Shared.Campaign)
 local Remotes = require(script.Parent.Remotes)
+local Guard = require(script.Parent.Guard)
 local Data = require(script.Parent.Data)
+local Analytics = require(script.Parent.Analytics)
 local Combat = require(script.Parent.Combat)
 local HttpService = game:GetService("HttpService")
 
@@ -64,8 +66,10 @@ local function buy(p: Player, vialId: any, count: any)
 	local at = sellerPart(v.kind)
 	local hrp = p.Character and p.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	if at and hrp and (hrp.Position - at.Position).Magnitude > REACH then return end
-	if not Data.spend(p, v.price * n) then toast(p, "NOT ENOUGH CASH FOR " .. (n > 1 and (n .. " x ") or "") .. v.name); return end
+	if not Data.spend(p, v.price * n, "Shop", v.id) then toast(p, "NOT ENOUGH CASH FOR " .. (n > 1 and (n .. " x ") or "") .. v.name); return end
 	lastBuy[p] = os.clock()
+	Analytics.onboard(p, v.kind == "stim" and "jar" or "potion")
+	if n > 1 then Analytics.custom(p, "OpenMulti", n, v.id) end
 	if n > 1 then
 		-- X10 / X100: all at once
 		local results, ids = {}, {}
@@ -174,7 +178,9 @@ local function offline(p: Player, vialId: any, count: any)
 	settle(p, os.time()) -- (a finished one is out of the way first)
 	local n = math.min(want, Forms.OFFLINE.maxQueue - #k.q)
 	if n <= 0 then toast(p, "THE QUEUE IS FULL (" .. Forms.OFFLINE.maxQueue .. ")"); return end
-	if not Data.spend(p, v.price * n) then toast(p, "NOT ENOUGH CASH FOR " .. (n > 1 and (n .. " x ") or "") .. v.name); return end
+	if not Data.spend(p, v.price * n, "Shop", v.id) then toast(p, "NOT ENOUGH CASH FOR " .. (n > 1 and (n .. " x ") or "") .. v.name); return end
+	Analytics.onboard(p, v.kind == "stim" and "jar" or "potion")
+	Analytics.custom(p, "OfflineQueued", n, v.id)
 	for _ = 1, n do table.insert(k.q, v.id) end
 	if #k.q == n then k.t = os.time() end
 	publishOffline(p)
@@ -195,7 +201,7 @@ local function cancel(p: Player, kind: any)
 		if v then refund += v.price end
 	end
 	k.q = {}; k.t = 0
-	Data.addCash(p, refund)
+	Data.addCash(p, refund, "Refund", kind)
 	publishOffline(p)
 	task.spawn(Data.save, p)
 	Remotes.Fx:FireClient(p, "Toast", "QUEUE CANCELLED - " .. n .. (kind == "stim" and " JAR" or " POTION") .. (n > 1 and "S" or "") .. ", $" .. refund .. " BACK", true)
@@ -219,7 +225,7 @@ local function equip(p: Player, id: any)
 end
 
 function M.start()
-	Remotes.Forms.OnServerEvent:Connect(function(p, action, a, b)
+	Remotes.Forms.OnServerEvent:Connect(function(p, action, a, b) if not Guard.ok(p, "Forms") then return end
 		if action == "buy" then buy(p, a, b)
 		elseif action == "offline" then offline(p, a, b)
 		elseif action == "cancel" then cancel(p, a)

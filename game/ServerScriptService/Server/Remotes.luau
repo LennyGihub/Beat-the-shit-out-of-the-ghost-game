@@ -5,7 +5,7 @@ local folder = RS:FindFirstChild("Remotes") or Instance.new("Folder")
 folder.Name = "Remotes"
 folder.Parent = RS
 local R: { [string]: RemoteEvent } = {}
-for _, n in { "Punch", "Ultimate", "Grab", "Throw", "Sprint", "Buy", "NextGhost", "Fx", "BuyUlt", "EquipUlt", "ReturnLobby", "Use", "Select", "Drop", "RoomPick", "BuyMap", "Party", "Revive", "SaveSettings", "Charge", "Block", "Quest", "SwapUlt", "Sandbox", "Platform", "Tutorial", "Forms", "Stage", "Trade", "Codes", "FreeCam", "PatchNotes" } do
+for _, n in { "Punch", "Ultimate", "Grab", "Throw", "Sprint", "Buy", "NextGhost", "Fx", "BuyUlt", "EquipUlt", "ReturnLobby", "Use", "Select", "Drop", "RoomPick", "BuyMap", "Party", "Revive", "SaveSettings", "Charge", "Block", "Quest", "SwapUlt", "Sandbox", "Platform", "Tutorial", "Forms", "Stage", "Trade", "Codes", "FreeCam", "PatchNotes", "Share" } do
 	local e = folder:FindFirstChild(n) :: RemoteEvent?
 	if not e then
 		local ne = Instance.new("RemoteEvent")

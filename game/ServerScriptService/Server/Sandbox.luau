@@ -9,6 +9,7 @@
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local Remotes = require(script.Parent.Remotes)
+local Guard = require(script.Parent.Guard)
 local Run = require(script.Parent.Run)
 local Ghost = require(script.Parent.Ghost)
 local Combat = require(script.Parent.Combat)
@@ -170,7 +171,7 @@ function Sandbox.start()
 		task.wait(RESPAWN)
 		if active and mine == token and not Sandbox.holdDummy then spawnDummy() end
 	end
-	Remotes.Sandbox.OnServerEvent:Connect(function(p: Player, action: any, id: any)
+	Remotes.Sandbox.OnServerEvent:Connect(function(p: Player, action: any, id: any) if not Guard.ok(p, "Sandbox") then return end
 		local now = os.clock()
 		if now - (lastAsk[p] or 0) < 0.4 then return end
 		lastAsk[p] = now

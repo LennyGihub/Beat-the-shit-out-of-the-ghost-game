@@ -10,6 +10,7 @@ local Items = require(RS.Shared.Items)
 local Ultimates = require(RS.Shared.Ultimates)
 local Forms = require(RS.Shared.Forms)
 local Remotes = require(script.Parent.Remotes)
+local Guard = require(script.Parent.Guard)
 local Data = require(script.Parent.Data)
 local Furniture = require(script.Parent.Furniture)
 local Ghost = require(script.Parent.Ghost)
@@ -721,17 +722,17 @@ function Combat.start()
 	Ghost.slowPlayer = Combat.speedBuff
 	Ghost.guardPlayer = Combat.guard
 	Ghost.rootPlayer = Combat.root
-	Remotes.Punch.OnServerEvent:Connect(onPunch)
-	Remotes.Ultimate.OnServerEvent:Connect(onUltimate)
-	Remotes.Grab.OnServerEvent:Connect(onGrab)
-	Remotes.Throw.OnServerEvent:Connect(onThrow)
-	Remotes.Sprint.OnServerEvent:Connect(function(player, on)
+	Remotes.Punch.OnServerEvent:Connect(Guard.limit("Punch", onPunch))
+	Remotes.Ultimate.OnServerEvent:Connect(Guard.limit("Ultimate", onUltimate))
+	Remotes.Grab.OnServerEvent:Connect(Guard.limit("Grab", onGrab))
+	Remotes.Throw.OnServerEvent:Connect(Guard.limit("Throw", onThrow))
+	Remotes.Sprint.OnServerEvent:Connect(function(player, on) if not Guard.ok(player, "Sprint") then return end
 		local s = st(player)
 		s.sprinting = on == true
 		setWalk(player, s)
 	end)
-	Remotes.Charge.OnServerEvent:Connect(function(player) Combat.chargeStart(player) end)
-	Remotes.Block.OnServerEvent:Connect(function(player, on)
+	Remotes.Charge.OnServerEvent:Connect(function(player) if not Guard.ok(player, "Charge") then return end Combat.chargeStart(player) end)
+	Remotes.Block.OnServerEvent:Connect(function(player, on) if not Guard.ok(player, "Block") then return end
 		local s = st(player)
 		local want = on == true and player:GetAttribute("InMatch") == true and not s.carrying and os.clock() >= (s.blockBrokenUntil or 0)
 		if want ~= (s.blocking == true) then setBlocking(player, s, want) end

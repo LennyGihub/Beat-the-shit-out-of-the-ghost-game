@@ -84,6 +84,7 @@ local FxTier = require(Client.FxTier) -- the further the map, the bigger the eff
 local WeakFx = require(Client.WeakFx) -- a x5 combo: the monster goes WEAK (lift it, throw it)
 local TradeUI = require(Client.TradeUI) -- trading cash, jar forms and potion forms with other players
 local CodesUI = require(Client.CodesUI) -- the lobby's CODES window (redeemable codes: Server/Codes)
+local ShareUI = require(Client.ShareUI) -- the lobby's INVITE window + SHARE THIS after big moments (Server/Share)
 local FreeCam = require(Client.FreeCam) -- admins: SHIFT + C free camera
 local PatchNotesUI = require(Client.PatchNotesUI) -- WHAT'S NEW: the patch notes (Shared/PatchNotes)
 
@@ -98,6 +99,7 @@ do
 end
 LockOn.init() -- phones: the LOCK button keeps the view on the monster
 Settings.init()
+require(Client.Translate).init() -- the player's language for the texts built with numbers (Client/Translate)
 HUD.init()
 VM.init()
 GA.init()
@@ -160,9 +162,14 @@ BestiaryUI.init(function(open)
 end)
 Entrance.init(Fx, HUD) -- each monster's entrance cinematic
 LobbyUI.init(function() UltShop.open() end, function(open) Input.setShopOpen(open) end, function() QuestUI.open() end, QuestUI.claimable, QuestUI.changed,
-	function() BestiaryUI.open() end, function() TradeUI.openPicker() end, function() CodesUI.open() end)
+	function() BestiaryUI.open() end, function() TradeUI.openPicker() end, function() CodesUI.open() end, function() ShareUI.open() end)
 TradeUI.init(function(open) Input.setShopOpen(open) end)
 CodesUI.init(function(open) Input.setShopOpen(open) end)
+ShareUI.init(function(open) Input.setShopOpen(open) end)
+-- an EPIC+ form's reveal is a moment worth sharing (Client/ShareUI)
+FormCine.onReveal = function(fm: any)
+	if type(fm) == "table" and (tonumber(fm.rarity) or 0) >= 4 then ShareUI.moment(tostring(fm.name) .. "!") end
+end
 FreeCam.init(function(off) Input.setShopOpen(off) end)
 PatchNotesUI.init(function(open) Input.setShopOpen(open) end, function()
 	return FormCine.busy() or Intro.running() or Loading.isShown() or FreeCam.isOn()
@@ -194,6 +201,7 @@ local codeQueue, codeTurn = 0, 0 -- (a code's forms: their cinematics play one a
 Remotes.Fx.OnClientEvent:Connect(function(kind: string, ...)
 	if FIGHT[kind] and not lp:GetAttribute("InMatch") then return end
 	if kind == "Released" then CampFx.released() end -- (the Lake Witch's pull stops too)
+	if kind == "GhostDeath" then ShareUI.ghostDeath() end -- (a boss knocked out: SHARE THIS)
 	if kind == "Teleporting" then
 		Loading.teleport(...) -- the loading screen (ReplicatedFirst/Loading)
 	elseif kind == "TeleportFailed" then
@@ -250,6 +258,11 @@ Remotes.Fx.OnClientEvent:Connect(function(kind: string, ...)
 		task.spawn(TrainRide.arrive, ...)
 	elseif kind == "StageClear" then
 		StageUI.show(...)
+		local info = ...
+		local st = type(info) == "table" and require(RS.Shared.Campaign).stage(info.stage)
+		if st then ShareUI.moment(st.name .. " CLEARED") end
+	elseif kind == "ShareReward" then
+		ShareUI.reward(...)
 	elseif kind == "OpenSeller" then
 		if not FormCine.busy() then SellerUI.open(...) end
 	elseif kind == "FormResult" then

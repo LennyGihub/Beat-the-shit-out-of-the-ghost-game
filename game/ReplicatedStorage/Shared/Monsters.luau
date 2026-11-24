@@ -320,7 +320,9 @@ local function evolved(id: string, tier: number): Monster
 	local key = id .. t
 	if evoCache[key] then return evoCache[key] end
 	local base = byId[id] or byId.Woman
-	local e = EVO[base.id]
+	-- a monster with no evolved form (only the 10 in EVO have one) gets the stat boost under its own name instead
+	-- of an error (an error here froze endless runs on a boss wave, 2026-11-24)
+	local e = EVO[base.id] or { title = base.title }
 	local T = EVO_TIER[t]
 	local d = table.clone(base) :: any
 	for k, v in e do if k ~= "power" then d[k] = v end end
@@ -345,11 +347,12 @@ local function isEvolvedWave(wave: number): boolean return wave >= 3 and wave % 
 -- odds as the others), picked evenly among the ones it hasn't met yet; once all have come, `seen` starts over. The
 -- ones in `avoid` (the last two you fought) never come, even when a new round starts. The run keeps one `seen` set
 -- for the normal ghosts and one for the evolved ones. (`_weighted` is no longer used: rarity doesn't change the odds.)
-local function pickFresh(seen: { [string]: boolean }, avoid: { string? }, rng: Random, _weighted: boolean?): Monster
+-- `only` (optional): pick among these ids only (e.g. EVO for the evolved waves).
+local function pickFresh(seen: { [string]: boolean }, avoid: { string? }, rng: Random, _weighted: boolean?, only: { [string]: any }?): Monster
 	local function pool(): { Monster }
 		local out = {}
 		for _, d in List do
-			if not seen[d.id] and d.id ~= avoid[1] and d.id ~= avoid[2] then table.insert(out, d) end
+			if not seen[d.id] and d.id ~= avoid[1] and d.id ~= avoid[2] and (only == nil or only[d.id] ~= nil) then table.insert(out, d) end
 		end
 		return out
 	end

@@ -8,9 +8,11 @@ local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local MarketplaceService = game:GetService("MarketplaceService")
 local Remotes = require(script.Parent.Remotes)
+local Guard = require(script.Parent.Guard)
 local Run = require(script.Parent.Run)
 local Inventory = require(script.Parent.Inventory)
 local Data = require(script.Parent.Data)
+local Analytics = require(script.Parent.Analytics)
 local Config = require(RS.Shared.Config)
 local Passes = require(RS.Shared.Passes)
 
@@ -74,6 +76,7 @@ function Monetization.start()
 					if not p.Parent then return end
 					if ok and owns then
 						p:SetAttribute(pass.own, true)
+						Analytics.custom(p, "PassBought", 1, pass.name)
 						if pass.own == "GlockPass" and p:GetAttribute("InMatch") then Inventory.give(p, "Glock18") end
 						Remotes.Fx:FireClient(p, "Toast", pass.toast, true)
 						return
@@ -109,6 +112,7 @@ function Monetization.start()
 		end
 		if info.ProductId == id("ReviveProductId") then
 			granted[info.PurchaseId] = true
+			Analytics.custom(p, "ReviveBought", 1)
 			if not Run.revive(p) then
 				-- the death window closed while paying: keep it for the next death
 				p:SetAttribute("SpareRevives", (p:GetAttribute("SpareRevives") or 0) + 1)
@@ -119,7 +123,7 @@ function Monetization.start()
 		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
 	-- the client opened the purchase prompt: give them time to pay before the run ends
-	Remotes.Revive.OnServerEvent:Connect(function(p, what)
+	Remotes.Revive.OnServerEvent:Connect(function(p, what) if not Guard.ok(p, "Revive") then return end
 		if what == "prompt" then Run.extendRevive(p, 30) -- more time while the purchase dialog is open
 		elseif what == "lobby" then Run.giveUp(p)
 		elseif what == "watch" then Run.watch(p) end

@@ -7,6 +7,7 @@ local TweenService = game:GetService("TweenService")
 local Config = require(RS.Shared.Config)
 local Grunge = require(script.Parent.Grunge)
 local Platform = require(script.Parent.Platform)
+local Translate = require(script.Parent.Translate)
 local Ultimates = require(RS.Shared.Ultimates)
 
 local HUD = {}
@@ -159,7 +160,7 @@ end
 function HUD.setVisible(on: boolean) gui.Enabled = on end
 
 function HUD.toast(text: string, good: boolean?)
-	toast.Text = string.upper(text)
+	toast.Text = Translate.auto(string.upper(text)) -- (other languages: Client/Translate)
 	toast.TextColor3 = good == false and Color3.fromRGB(240, 80, 60) or (good and Color3.fromRGB(150, 220, 110) or Grunge.PAPER)
 	toast.Visible = true
 	local token = os.clock()
@@ -244,7 +245,7 @@ function HUD.update(dt: number)
 		obj = q and "WAITING FOR PLAYERS..." or (lp:GetAttribute("PartyId") and "IN A LOBBY - THE HOST PRESSES START" or "PRESS PLAY OR BOARD THE TRAIN AT THE STATION")
 		if Platform.windowOpen() then obj = "" end -- a window is open: no line of text behind (or sticking out above) it
 	end
-	objective.Text = obj
+	objective.Text = Translate.auto(obj)
 	objective.Visible = obj ~= ""
 	objSplat.Visible = objective.Visible
 	if obj == "GO OUTSIDE" then

@@ -6,6 +6,7 @@ local RunService = game:GetService("RunService")
 local Items = require(RS.Shared.Items)
 local Config = require(RS.Shared.Config)
 local Remotes = require(script.Parent.Remotes)
+local Guard = require(script.Parent.Guard)
 local Ghost = require(script.Parent.Ghost)
 local Combat = require(script.Parent.Combat)
 local Ragdoll = require(script.Parent.Ragdoll)
@@ -440,7 +441,8 @@ local function useTrap(p: Player, n: number, it)
 end
 
 local function onUse(p: Player, slot: any, look: any, rawCharge: any)
-	if type(slot) ~= "number" or typeof(look) ~= "Vector3" or look.Magnitude < 0.5 or look.Magnitude > 2 or look.X ~= look.X then return end
+	-- (every component finite: a NaN in Y or Z used to pass the old X-only check)
+	if type(slot) ~= "number" or not Guard.vec(look, 2) or look.Magnitude < 0.5 then return end
 	if not p:GetAttribute("InMatch") or p:GetAttribute("Carrying") then return end
 	local i = get(p)
 	local s = i.slots[slot]
@@ -524,14 +526,14 @@ function Inventory.start()
 	Ghost.hasItem = Inventory.has
 	Ghost.takeItem = Inventory.take
 	Ghost.giveItem = Inventory.giveUses
-	Remotes.Use.OnServerEvent:Connect(onUse)
-	Remotes.Select.OnServerEvent:Connect(function(p, n)
+	Remotes.Use.OnServerEvent:Connect(Guard.limit("Use", onUse))
+	Remotes.Select.OnServerEvent:Connect(function(p, n) if not Guard.ok(p, "Select") then return end
 		if type(n) ~= "number" then return end
 		local i = get(p)
 		n = math.floor(n)
 		if n == 0 or (n >= 1 and n <= SLOTS and i.slots[n]) then i.sel = n; publish(p) end
 	end)
-	Remotes.Drop.OnServerEvent:Connect(function(p, n)
+	Remotes.Drop.OnServerEvent:Connect(function(p, n) if not Guard.ok(p, "Drop") then return end
 		if type(n) ~= "number" then return end
 		local i = get(p)
 		if i.slots[n] then

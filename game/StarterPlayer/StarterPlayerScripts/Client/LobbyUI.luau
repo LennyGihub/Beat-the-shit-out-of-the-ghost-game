@@ -11,6 +11,8 @@ local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local HttpService = game:GetService("HttpService")
 local TweenService = game:GetService("TweenService")
+local UIS = game:GetService("UserInputService")
+local GuiService = game:GetService("GuiService")
 local Maps = require(RS.Shared.Maps)
 local Campaign = require(RS.Shared.Campaign)
 local Grunge = require(script.Parent.Grunge)
@@ -349,7 +351,7 @@ end
 
 -- quests: opener, how many are ready to claim, and the signal that fires when that may change
 function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpener: (() -> ())?, questCount: (() -> number)?, questChanged: RBXScriptSignal?,
-	bestiaryOpener: (() -> ())?, tradeOpener: (() -> ())?, codesOpener: (() -> ())?)
+	bestiaryOpener: (() -> ())?, tradeOpener: (() -> ())?, codesOpener: (() -> ())?, inviteOpener: (() -> ())?)
 	openShop = shopOpener
 	onToggle = toggled
 	gui = Instance.new("ScreenGui")
@@ -358,12 +360,13 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 	gui.Parent = lp:WaitForChild("PlayerGui")
 
 	-- left column: PLAY / SHOP / QUESTS, drawn like the fight HUD's bars (health red, stamina mustard, brutality orange)
-	-- (six buttons since the CODES one: the column is taller, each button the same size on screen as before)
-	side = Grunge.frame(gui, { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 28, 0.5, 0), Size = UDim2.fromScale(0.2, 0.6) })
-	local sar = Instance.new("UIAspectRatioConstraint"); sar.AspectRatio = 0.738; sar.Parent = side
-	local BH, STEP = 0.1395, 0.1485
-	bigButton("PLAY", "TAKE THE TRAIN", Color3.fromRGB(150, 18, 20), 0, -1.2, function() setOpen(not panel.Visible) end, BH)
-	bigButton("SHOP", "ULTS - HOUSES", Color3.fromRGB(176, 150, 40), STEP, 0.8, function()
+	-- (seven buttons since INVITE, 2026-11-24: the column is 12% taller - same width - and each button 5% smaller on
+	-- screen than with six)
+	side = Grunge.frame(gui, { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 28, 0.5, 0), Size = UDim2.fromScale(0.2, 0.672) })
+	local sar = Instance.new("UIAspectRatioConstraint"); sar.AspectRatio = 0.659; sar.Parent = side
+	local BH, STEP = 0.1183, 0.1259
+	local playBtn = bigButton("PLAY", "TAKE THE TRAIN", Color3.fromRGB(150, 18, 20), 0, -1.2, function() setOpen(not panel.Visible) end, BH)
+	local shopBtn = bigButton("SHOP", "ULTS - HOUSES", Color3.fromRGB(176, 150, 40), STEP, 0.8, function()
 		if panel.Visible then setOpen(false) end
 		if openShop then openShop() end
 	end, BH)
@@ -372,20 +375,55 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 		if questOpener then questOpener() end
 	end, BH)
 	-- the INVENTORY: your forms, the monsters you have beaten and the badges (Client/BestiaryUI)
-	bigButton("INVENTORY", "FORMS", Color3.fromRGB(96, 52, 150), STEP * 3, 0.7, function()
+	local invBtn = bigButton("INVENTORY", "FORMS", Color3.fromRGB(96, 52, 150), STEP * 3, 0.7, function()
 		if panel.Visible then setOpen(false) end
 		if bestiaryOpener then bestiaryOpener() end
 	end, BH)
 	-- trading with the other players here (Client/TradeUI)
-	bigButton("TRADE", "FORMS, CASH", Color3.fromRGB(40, 110, 120), STEP * 4, -0.9, function()
+	local tradeBtn = bigButton("TRADE", "FORMS, CASH", Color3.fromRGB(40, 110, 120), STEP * 4, -0.9, function()
 		if panel.Visible then setOpen(false) end
 		if tradeOpener then tradeOpener() end
 	end, BH)
 	-- redeemable codes (Client/CodesUI, Server/Codes)
-	bigButton("CODES", "FREE REWARDS", Color3.fromRGB(160, 36, 120), STEP * 5, 0.9, function()
+	local codesBtn = bigButton("CODES", "FREE REWARDS", Color3.fromRGB(160, 36, 120), STEP * 5, 0.9, function()
 		if panel.Visible then setOpen(false) end
 		if codesOpener then codesOpener() end
 	end, BH)
+	-- friend invites + share links (Client/ShareUI, Server/Share)
+	local inviteBtn = bigButton("INVITE", "FRIENDS = CASH", Color3.fromRGB(30, 120, 140), STEP * 6, -0.7, function()
+		if panel.Visible then setOpen(false) end
+		if inviteOpener then inviteOpener() end
+	end, BH)
+	-- CONTROLLER (2026-11-24): SELECT (the View / Back button) puts the controller on this column, top to bottom;
+	-- B or SELECT again gives the stick back to the character. (Roblox's own SELECT auto-pick is off so it can't pick
+	-- some other button on screen instead.)
+	local col = { playBtn, shopBtn, questBtn, invBtn, tradeBtn, codesBtn, inviteBtn }
+	for i, b in col do
+		b.Selectable = true
+		b.SelectionOrder = i
+		b.NextSelectionUp = col[i - 1]
+		b.NextSelectionDown = col[i + 1]
+	end
+	pcall(function() GuiService.AutoSelectGuiEnabled = false end)
+	-- (the controller hint line under the column says SELECT: MENU too)
+	local function onColumn(): boolean
+		local sel = GuiService.SelectedObject
+		return sel ~= nil and sel:IsDescendantOf(side)
+	end
+	UIS.InputBegan:Connect(function(input)
+		if Platform.mode() ~= "gamepad" then return end
+		if input.KeyCode == Enum.KeyCode.ButtonSelect then
+			local phase = lp:GetAttribute("IntroPhase")
+			if phase ~= nil and phase ~= "done" then return end -- (the intro's SELECT = skip)
+			if onColumn() then
+				GuiService.SelectedObject = nil
+			elseif side.Visible and gui.Enabled and not Platform.windowOpen() and not lp:GetAttribute("InMatch") then
+				GuiService.SelectedObject = col[1]
+			end
+		elseif input.KeyCode == Enum.KeyCode.ButtonB and onColumn() then
+			GuiService.SelectedObject = nil
+		end
+	end)
 	-- red badge: quests ready to claim
 	local badge = Grunge.frame(questBtn.Parent :: Instance, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.98, 0.2), Size = UDim2.fromScale(0.2, 0.46), BackgroundTransparency = 0, BackgroundColor3 = Color3.fromRGB(200, 30, 24), ZIndex = 10, Visible = false })
 	local bc = Instance.new("UICorner"); bc.CornerRadius = UDim.new(0.5, 0); bc.Parent = badge
@@ -401,7 +439,7 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 	refreshBadge()
 	-- controller: D-pad up opens PLAY (the stick keeps moving the character)
 	local padTag = Grunge.text(side, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0, 0.955), Size = UDim2.fromScale(1.1, 0.05), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = ACCENT, Rotation = -1 })
-	local function padHint() padTag.Text = Platform.mode() == "gamepad" and "D-PAD UP: PLAY   D-PAD LEFT: SETTINGS" or "" end
+	local function padHint() padTag.Text = Platform.mode() == "gamepad" and "SELECT: MENU   D-PAD UP: PLAY   D-PAD LEFT: SETTINGS" or "" end
 	padHint()
 	Platform.changed:Connect(padHint)
 	boostTag = Grunge.text(side, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0.02, 0.895), Size = UDim2.fromScale(1.1, 0.058), TextXAlignment = Enum.TextXAlignment.Left, Rotation = -1 })

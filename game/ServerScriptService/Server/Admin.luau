@@ -16,6 +16,7 @@ local Inventory = require(script.Parent.Inventory)
 local Ghost = require(script.Parent.Ghost)
 local Run = require(script.Parent.Run)
 local Remotes = require(script.Parent.Remotes) -- creates the Remotes folder
+local Guard = require(script.Parent.Guard)
 local Staff = require(script.Parent.Staff)
 
 local Admin = {}
@@ -59,7 +60,7 @@ local function find(list: { any }, word: string?): any
 	return nil
 end
 
-local HELP = "cash <n> | xp <n> | camp all|reset|<n> | trips reset|empty|<n> | form <id>|all|off|tutorial | code reset|<code> | tutorial reset | notes reset | offline finish | offline pity <h> | trade bot | runcash <n> | give <item> | clearitems | ult <id> | allults | allmaps | heal | brut | god | start [map] [diff] | "
+local HELP = "cash <n> | xp <n> | ref <userId>|done | camp all|reset|<n> | trips reset|empty|<n> | form <id>|all|off|tutorial | code reset|<code> | tutorial reset | notes reset | offline finish | offline pity <h> | trade bot | runcash <n> | give <item> | clearitems | ult <id> | allults | allmaps | heal | brut | god | start [map] [diff] | "
 	.. "revive | money2 | glock | vip | doubleult | secondchance | next | killghost | bring | ragdoll [power] | monster <id|off> | boss <id> [tier 1-3] | evolved on|off|<tier> | event plane|van|train | leave | endrun"
 
 local CMD: { [string]: (p: Player, a: string?, b: string?) -> (boolean, string) } = {}
@@ -130,6 +131,15 @@ CMD.form = function(p, a)
 	return true, "Wearing " .. fm.name .. " (" .. Forms.rarity[fm.rarity].name .. ")"
 end
 -- codes (Server/Codes): "code reset" forgets your used codes and takes the code forms back, "code <code>" redeems one
+-- INVITES (Server/Share): link yourself to <userId> as if you had joined with their link; `ref done` = your 10 minutes are up
+CMD.ref = function(p, a)
+	local Share = require(script.Parent.Share)
+	if a == "done" then Share.debugLink(p, nil); return true, "your play time is now " .. Share.PLAY .. " s (the reward goes within 15 s)" end
+	local id = tonumber(a)
+	if not id then return false, "Usage: ref <userId> | ref done" end
+	Share.debugLink(p, id)
+	return true, "linked to " .. id .. ": after " .. Share.PLAY .. " s of play they get their reward"
+end
 CMD.code = function(p, a, b)
 	local Codes = require(script.Parent.Codes)
 	if a == "reset" then return true, Codes.reset(p) end
@@ -192,7 +202,7 @@ end
 CMD.cash = function(p, a)
 	local n = num(a) or 0
 	if n == 0 then return false, "Usage: cash 10k" end
-	Data.addCash(p, n)
+	Data.addCash(p, n, "Admin")
 	return true, "+" .. n .. " cash (now " .. tostring(p:GetAttribute("Cash")) .. ")"
 end
 
@@ -449,7 +459,7 @@ function Admin.start()
 		if p.Parent then p.ReplicationFocus = nil end
 		if part then part:Destroy() end
 	end
-	Remotes.FreeCam.OnServerEvent:Connect(function(p: Player, action: any, pos: any)
+	Remotes.FreeCam.OnServerEvent:Connect(function(p: Player, action: any, pos: any) if not Guard.ok(p, "FreeCam") then return end
 		if action == "off" then camOff(p); return end
 		if action ~= "focus" or not isAdmin(p) or typeof(pos) ~= "Vector3" then return end
 		if pos.X ~= pos.X or pos.Y ~= pos.Y or pos.Z ~= pos.Z or pos.Magnitude > 1e5 then return end
@@ -471,7 +481,7 @@ function Admin.start()
 	end)
 	Players.PlayerRemoving:Connect(camOff)
 	-- the patch notes were read (Client/PatchNotesUI closed WHAT'S NEW)
-	Remotes.PatchNotes.OnServerEvent:Connect(function(p: Player, action: any)
+	Remotes.PatchNotes.OnServerEvent:Connect(function(p: Player, action: any) if not Guard.ok(p, "PatchNotes") then return end
 		if action == "seen" then Data.notesSeen(p) end
 	end)
 	local last = {} :: { [Player]: number }

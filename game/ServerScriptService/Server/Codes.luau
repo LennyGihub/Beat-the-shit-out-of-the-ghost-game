@@ -15,7 +15,9 @@ local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Forms = require(RS.Shared.Forms)
 local Remotes = require(script.Parent.Remotes)
+local Guard = require(script.Parent.Guard)
 local Data = require(script.Parent.Data)
+local Analytics = require(script.Parent.Analytics)
 local Combat = require(script.Parent.Combat)
 
 local M = {}
@@ -98,9 +100,10 @@ function M.redeem(p: Player, text: any, force: boolean?): (boolean, string)
 		return false, "already used"
 	end
 	Data.useCode(p, key)
+	if not again then Analytics.custom(p, "CodeRedeemed", 1, key) end
 	local got = {}
 	if not again and c.cash and c.cash > 0 then
-		Data.addCash(p, c.cash)
+		Data.addCash(p, c.cash, "Code", key)
 		table.insert(got, "$" .. c.cash)
 	end
 	for _, fm in give do
@@ -142,7 +145,7 @@ function M.reset(p: Player): string
 end
 
 function M.start()
-	Remotes.Codes.OnServerEvent:Connect(function(p, action, text)
+	Remotes.Codes.OnServerEvent:Connect(function(p, action, text) if not Guard.ok(p, "Codes") then return end
 		if action == "redeem" then
 			local ok, err = pcall(M.redeem, p, text)
 			if not ok then

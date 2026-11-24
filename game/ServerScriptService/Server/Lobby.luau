@@ -19,7 +19,9 @@ local Ultimates = require(RS.Shared.Ultimates)
 local Maps = require(RS.Shared.Maps)
 local Campaign = require(RS.Shared.Campaign)
 local Remotes = require(script.Parent.Remotes)
+local Guard = require(script.Parent.Guard)
 local Data = require(script.Parent.Data)
+local Analytics = require(script.Parent.Analytics)
 local Run = require(script.Parent.Run)
 
 local Lobby = {}
@@ -102,6 +104,7 @@ local function launch(room, members: { Player })
 		if #members == 0 then return end
 		for _, p in members do
 			p:SetAttribute("Boarding", true)
+			Analytics.onboard(p, "train")
 			Remotes.Fx:FireClient(p, "TrainDepart", room.map, room.diff, nil, true)
 		end
 		task.wait(TRAIN_DEPART)
@@ -235,7 +238,8 @@ end
 local function onParty(p: Player, action: any, a: any, b: any, c: any, d: any, e: any)
 	if type(action) ~= "string" or p:GetAttribute("InMatch") then return end
 	if action == "create" then
-		if type(a) ~= "string" or type(b) ~= "string" or type(c) ~= "number" then return end
+		-- (a finite size: a NaN one made math.clamp return NaN, and "full" was never true)
+		if type(a) ~= "string" or type(b) ~= "string" or not Guard.num(c, 1, 4) then return end
 		local private = d == true
 		local m, dd = Maps.byId[a], Maps.diffById[b]
 		if not m or not dd then return end
@@ -330,7 +334,7 @@ local function onBuyUlt(p: Player, id: any)
 		Remotes.Fx:FireClient(p, "UltResult", true, "Equipped " .. u.name)
 		return
 	end
-	if not Data.spend(p, u.price) then
+	if not Data.spend(p, u.price, "Shop", u.id) then
 		Remotes.Fx:FireClient(p, "UltResult", false, "Not enough cash for " .. u.name)
 		return
 	end
@@ -400,12 +404,12 @@ function Lobby.start()
 		pp.Parent = board
 		pp.Triggered:Connect(function(p) if not p:GetAttribute("InMatch") then Remotes.Fx:FireClient(p, "OpenPlay") end end)
 	end
-	Remotes.BuyUlt.OnServerEvent:Connect(onBuyUlt)
-	Remotes.Party.OnServerEvent:Connect(onParty)
+	Remotes.BuyUlt.OnServerEvent:Connect(Guard.limit("BuyUlt", onBuyUlt))
+	Remotes.Party.OnServerEvent:Connect(Guard.limit("Party", onParty))
 	Players.PlayerRemoving:Connect(leaveParty)
 	publish()
 	-- the room leader changes the map / difficulty (must own the map)
-	Remotes.RoomPick.OnServerEvent:Connect(function(p, roomName, mapId, diffId)
+	Remotes.RoomPick.OnServerEvent:Connect(function(p, roomName, mapId, diffId) if not Guard.ok(p, "RoomPick") then return end
 		if type(roomName) ~= "string" or type(mapId) ~= "string" or type(diffId) ~= "string" then return end
 		for _, room in rooms do
 			if room.name == roomName and room.leader == p then
@@ -419,17 +423,17 @@ function Lobby.start()
 		end
 	end)
 	-- buy a map at the dealer
-	Remotes.BuyMap.OnServerEvent:Connect(function(p, mapId)
+	Remotes.BuyMap.OnServerEvent:Connect(function(p, mapId) if not Guard.ok(p, "BuyMap") then return end
 		local m = type(mapId) == "string" and Maps.byId[mapId]
 		if not m or m.campaign then return end -- (the campaign's buildings are never sold)
 		if Data.ownsMap(p, m.id) then Remotes.Fx:FireClient(p, "UltResult", true, "You already own " .. m.name); return end
-		if not Data.spend(p, m.price) then Remotes.Fx:FireClient(p, "UltResult", false, "Not enough cash for " .. m.name); return end
+		if not Data.spend(p, m.price, "Shop", "Map_" .. m.id) then Remotes.Fx:FireClient(p, "UltResult", false, "Not enough cash for " .. m.name); return end
 		Data.own(p, "Map_" .. m.id)
 		task.spawn(Data.save, p)
 		Remotes.Fx:FireClient(p, "UltResult", true, "Bought " .. m.name .. " - pick it in PLAY > ENDLESS")
 	end)
 	-- slot 2 = the second ultimate of the Double Ultimate pass
-	Remotes.EquipUlt.OnServerEvent:Connect(function(p, id, slot)
+	Remotes.EquipUlt.OnServerEvent:Connect(function(p, id, slot) if not Guard.ok(p, "EquipUlt") then return end
 		if type(id) ~= "string" then return end
 		local second = slot == 2
 		if second and not p:GetAttribute("DoubleUlt") then
@@ -445,7 +449,7 @@ function Lobby.start()
 	end)
 	-- Double Ultimate: switch which of the two fires (in the park or in a fight, not while one is running)
 	local lastSwap = {} :: { [Player]: number }
-	Remotes.SwapUlt.OnServerEvent:Connect(function(p)
+	Remotes.SwapUlt.OnServerEvent:Connect(function(p) if not Guard.ok(p, "SwapUlt") then return end
 		if not p:GetAttribute("DoubleUlt") or p:GetAttribute("UltActive") then return end
 		if os.clock() - (lastSwap[p] or 0) < 0.4 then return end
 		lastSwap[p] = os.clock()
@@ -455,7 +459,7 @@ function Lobby.start()
 		end
 	end)
 	Players.PlayerRemoving:Connect(function(p) lastSwap[p] = nil end)
-	Remotes.ReturnLobby.OnServerEvent:Connect(function(p)
+	Remotes.ReturnLobby.OnServerEvent:Connect(function(p) if not Guard.ok(p, "ReturnLobby") then return end
 		if p:GetAttribute("InMatch") then Run.leave(p, "left") end
 	end)
 	Run.onReturnLobby = Lobby.returnPlayer

@@ -14,10 +14,12 @@ local DSS = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local Remotes = require(script.Parent.Remotes)
+local Guard = require(script.Parent.Guard)
 local Levels = require(game:GetService("ReplicatedStorage").Shared.Levels)
 local Campaign = require(game:GetService("ReplicatedStorage").Shared.Campaign)
 local Forms = require(game:GetService("ReplicatedStorage").Shared.Forms)
 local PatchNotes = require(game:GetService("ReplicatedStorage").Shared.PatchNotes)
+local Analytics = require(script.Parent.Analytics)
 
 local Data = {}
 -- THE TUTORIAL'S VERSION: a player whose save has seen an older one (TutorialV below this) gets the current one once,
@@ -41,6 +43,8 @@ local function fresh()
 		Trips = { n = 0, reset = 0 },
 		FormTut = false, FormTutCash = false, -- the jars / potions tutorial (Client/FormTutorial): done / its starter cash given
 		Codes = {} :: { [string]: boolean }, -- the codes already redeemed (Server/Codes)
+		Onb = 0 :: number?, -- the onboarding funnel's last step logged (Server/Analytics); nil = a save from before it (not in the funnel)
+		Ref = nil :: { by: number, t: number, done: boolean }?, -- who invited this (brand-new) save, its play seconds, rewarded (Server/Share)
 		Offline = { stim = { q = {} :: { string }, t = 0 }, potion = { q = {} :: { string }, t = 0 }, pity = 0 } }
 end
 local MAX_RECEIPTS = 100
@@ -53,6 +57,7 @@ local function cleanSettings(s: any): { [string]: any }?
 	local out = { sfx = 1, music = 1, binds = {}, hideKeys = s.hideKeys == true } -- hideKeys: controls reminder hidden (H)
 	-- fx: particle amount (low-end computers)
 	out.fx = (s.fx == "low" or s.fx == "high") and s.fx or "medium"
+	out.fxSet = s.fxSet == true -- the player picked it (else a phone starts on low: Client/Settings)
 	for _, k in { "sfx", "music" } do
 		local v = tonumber(s[k])
 		if v and v == v then out[k] = math.clamp(math.floor(v * 100 + 0.5) / 100, 0, 1) end
@@ -127,7 +132,7 @@ function Data.load(player: Player)
 	local c = Instance.new("IntValue"); c.Name = "Cash"; c.Parent = ls
 	local k = Instance.new("IntValue"); k.Name = "Kills"; k.Parent = ls
 	ls.Parent = player
-	local prof = { loaded = false, data = fresh() }
+	local prof = { loaded = false, data = fresh(), isNew = false }
 	profiles[player] = prof
 	if okStore then
 		local key = "u_" .. player.UserId
@@ -185,6 +190,11 @@ function Data.load(player: Player)
 						for code, v in res.Codes do if type(code) == "string" and #code <= 40 and v == true then prof.data.Codes[code] = true end end
 					end
 					prof.data.FormTutCash = res.FormTutCash == true
+					if type(res.Ref) == "table" and tonumber(res.Ref.by) then
+						prof.data.Ref = { by = math.floor(tonumber(res.Ref.by) :: number), t = math.max(0, math.floor(tonumber(res.Ref.t) or 0)), done = res.Ref.done == true }
+					end
+					local onb = tonumber(res.Onb)
+					prof.data.Onb = (onb and onb == onb) and math.clamp(math.floor(onb), 0, 100) or nil -- (older saves: nil)
 					if type(res.Trips) == "table" then
 						prof.data.Trips.n = math.clamp(math.floor(tonumber(res.Trips.n) or 0), 0, Campaign.TRIPS.max)
 						prof.data.Trips.reset = math.max(0, math.floor(tonumber(res.Trips.reset) or 0))
@@ -214,8 +224,13 @@ function Data.load(player: Player)
 		end
 	end
 	if not prof.loaded then warn("[Data] playing without saving for " .. player.Name) end
+	-- a brand-new save: loaded with nothing stored yet (Studio without DataStore: always)
+	prof.isNew = prof.data.Onb == 0 and (prof.loaded or game:GetService("RunService"):IsStudio())
+	-- a save that failed to load is not a new player: kept out of the onboarding funnel (Studio, no DataStore: in it)
+	if not prof.loaded and not game:GetService("RunService"):IsStudio() then prof.data.Onb = nil end
 	Data.mapLevel(player) -- (an older save may have cleared a map before this rule)
 	publish(player)
+	Analytics.joined(player)
 	return prof
 end
 
@@ -225,7 +240,8 @@ function Data.save(player: Player): boolean
 	if not prof or not prof.loaded or not okStore then return false end
 	local snap = { Cash = prof.data.Cash, GhostLevel = prof.data.GhostLevel, Kills = prof.data.Kills, Owned = table.clone(prof.data.Owned), Ults = table.clone(prof.data.Ults), Equipped = prof.data.Equipped, Equipped2 = prof.data.Equipped2, Settings = prof.data.Settings, Receipts = table.clone(prof.data.Receipts),
 		Bestiary = table.clone(prof.data.Bestiary), Badges = table.clone(prof.data.Badges), Nightmare = prof.data.Nightmare, XP = prof.data.XP,
-		Tutorial = prof.data.Tutorial == true, TutorialV = prof.data.TutorialV or 0, NotesV = prof.data.NotesV or 0,
+		Tutorial = prof.data.Tutorial == true, TutorialV = prof.data.TutorialV or 0, NotesV = prof.data.NotesV or 0, Onb = prof.data.Onb,
+		Ref = prof.data.Ref and table.clone(prof.data.Ref) or nil,
 		Campaign = table.clone(prof.data.Campaign), Forms = table.clone(prof.data.Forms), FormStim = prof.data.FormStim, FormPotion = prof.data.FormPotion,
 		FormN = table.clone(prof.data.FormN),
 		Trips = table.clone(prof.data.Trips), FormTut = prof.data.FormTut == true, FormTutCash = prof.data.FormTutCash == true,
@@ -254,6 +270,7 @@ function Data.grantCashReceipt(player: Player, purchaseId: string, cash: number)
 	local studio = game:GetService("RunService"):IsStudio()
 	if not prof.loaded and not studio then return "wait" end
 	prof.data.Cash += math.floor(cash)
+	Analytics.cash(player, "Source", math.floor(cash), prof.data.Cash, "IAP", "CashPack" .. math.floor(cash))
 	table.insert(prof.data.Receipts, purchaseId)
 	while #prof.data.Receipts > MAX_RECEIPTS do table.remove(prof.data.Receipts, 1) end
 	publish(player)
@@ -264,20 +281,33 @@ function Data.grantCashReceipt(player: Player, purchaseId: string, cash: number)
 end
 
 function Data.get(player: Player) local p = profiles[player]; return p and p.data end
+-- the onboarding funnel's step lives in the save (Server/Analytics can't require Data: Data requires it)
+Analytics.bind(function(p: Player): number?
+	local d = profiles[p]
+	return d and d.data.Onb or nil
+end, function(p: Player, n: number)
+	local d = profiles[p]
+	if d and d.data.Onb ~= nil then d.data.Onb = n end
+end)
 -- the save changed outside this module (Server/Bestiary): send the player's attributes again
 function Data.refresh(player: Player) publish(player) end
+-- a brand-new save (no save existed before this session; Server/Share)
+function Data.isNew(player: Player): boolean local p = profiles[player]; return p ~= nil and p.isNew == true end
 -- the save loaded (false: playing without saving, e.g. in Studio)
 function Data.loaded(player: Player): boolean local p = profiles[player]; return p ~= nil and p.loaded end
 
-function Data.addCash(player: Player, n: number)
+-- tx / sku: why, for the economy analytics (Server/Analytics.cash: tx = Gameplay, TimedReward, Shop, Trade...)
+function Data.addCash(player: Player, n: number, tx: string?, sku: string?)
 	local d = Data.get(player); if not d then return end
 	d.Cash += math.floor(n); publish(player)
+	Analytics.cash(player, n >= 0 and "Source" or "Sink", math.abs(math.floor(n)), d.Cash, tx or "Gameplay", sku)
 end
 
-function Data.spend(player: Player, n: number): boolean
+function Data.spend(player: Player, n: number, tx: string?, sku: string?): boolean
 	local d = Data.get(player)
 	if not d or d.Cash < n then return false end
 	d.Cash -= n; publish(player)
+	Analytics.cash(player, "Sink", n, d.Cash, tx or "Shop", sku)
 	return true
 end
 
@@ -473,6 +503,7 @@ function Data.formTutorial(player: Player, what: string): boolean
 		d.FormTutCash = true
 		d.Cash += 20
 		publish(player)
+		Analytics.cash(player, "Source", 20, d.Cash, "Onboarding", "StarterCash")
 		return true
 	elseif what == "done" then
 		d.FormTut = true
@@ -597,7 +628,7 @@ end
 
 function Data.start()
 	local last = {} :: { [Player]: number }
-	Remotes.SaveSettings.OnServerEvent:Connect(function(p, s)
+	Remotes.SaveSettings.OnServerEvent:Connect(function(p, s) if not Guard.ok(p, "SaveSettings") then return end
 		if os.clock() - (last[p] or 0) < 0.4 then return end
 		last[p] = os.clock()
 		local prof = profiles[p]

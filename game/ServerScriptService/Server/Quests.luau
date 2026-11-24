@@ -9,6 +9,7 @@ local HttpService = game:GetService("HttpService")
 local Q = require(RS.Shared.Quests)
 local Data = require(script.Parent.Data)
 local Remotes = require(script.Parent.Remotes)
+local Guard = require(script.Parent.Guard)
 
 local Quests = {}
 local dirty = {} :: { [Player]: boolean }
@@ -129,7 +130,7 @@ local function claim(p: Player, id: any)
 		if s.ach[id] or progress(p, s, quest) < quest.goal then return end
 		s.ach[id] = true
 	end
-	Data.addCash(p, quest.reward)
+	Data.addCash(p, quest.reward, "TimedReward", tostring(id))
 	task.spawn(Data.save, p)
 	Remotes.Fx:FireClient(p, "Toast", "+$" .. quest.reward .. "  " .. quest.name, true)
 	publish(p)
@@ -146,7 +147,7 @@ function Quests.setup(p: Player)
 end
 
 function Quests.start()
-	Remotes.Quest.OnServerEvent:Connect(function(p, action, id)
+	Remotes.Quest.OnServerEvent:Connect(function(p, action, id) if not Guard.ok(p, "Quest") then return end
 		if action == "claim" then claim(p, id) end
 	end)
 	Players.PlayerRemoving:Connect(function(p) dirty[p] = nil; lastClaim[p] = nil end)

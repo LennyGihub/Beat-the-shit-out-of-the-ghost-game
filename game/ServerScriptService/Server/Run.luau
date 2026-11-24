@@ -15,7 +15,9 @@ local TeleportService = game:GetService("TeleportService")
 local Config = require(RS.Shared.Config)
 local Items = require(RS.Shared.Items)
 local Remotes = require(script.Parent.Remotes)
+local Guard = require(script.Parent.Guard)
 local Data = require(script.Parent.Data)
+local Analytics = require(script.Parent.Analytics)
 local Furniture = require(script.Parent.Furniture)
 local Ghost = require(script.Parent.Ghost)
 local Combat = require(script.Parent.Combat)
@@ -48,6 +50,7 @@ local seenMonsters = {} :: { [string]: boolean }
 local seenEvolved = {} :: { [string]: boolean }
 local busy = false
 local breakUntil = 0
+local runMap = "" -- this run's map / building id (Run.configure; analytics)
 -- secondChance = the free revive of the SECOND CHANCE pass was used in this run
 local stats = {} :: { [Player]: { earned: number, damage: number, kills: number, paid: boolean, revives: number?, secondChance: boolean? } }
 local temp = {} :: { Instance }
@@ -131,7 +134,10 @@ function Run.payout(p: Player, reason: string, bonusXP: number?): (number, numbe
 	local g = Ghost.current
 	if g and g.damageBy[p] then st.damage += g.damageBy[p]; g.damageBy[p] = 0 end
 	local cash = math.floor((st.earned + st.damage / Config.Payout.DamageDiv * diff.reward) * cashMult(p))
-	Data.addCash(p, cash)
+	Data.addCash(p, cash, "Gameplay", stage and stage.id or ("Endless_" .. runMap))
+	-- analytics: a building lost / left (cleared ones log their own), an endless run's monsters
+	if stage and reason ~= "cleared" then Analytics.stage(p, "fail", stage.level, stage.id, diff.id)
+	elseif not stage then Analytics.custom(p, "EndlessKills", st.kills, runMap, diff.id) end
 	-- and the XP for the player's level (Shared/Levels)
 	local xp = Levels.runXP(st.kills, st.damage, diff.id) + math.floor((bonusXP or 0) * Levels.diffMult(diff.id))
 	local before, after = Data.addXP(p, xp)
@@ -152,11 +158,9 @@ local function doorPrompt()
 	end)
 end
 
-function Run.startFight()
-	-- a campaign building: the party arrives by train first (Main calls this once the party is in)
-	if stage and not arrived then task.spawn(Run.startStage); return end
-	if busy or #Run.matchPlayers() == 0 then return end
-	busy = true
+-- one monster's arrival. `safe` = an earlier try errored: the plain Woman this time, no boss, no admin overrides.
+-- (Run.startFight runs it inside xpcall: an error here used to leave `busy` stuck, and no monster ever came again.)
+local function fightBody(safe: boolean)
 	if Run.respawnSpectators then Run.respawnSpectators() end -- (normally done when the last wave ended)
 	level = stage and stage.level or kills + 1
 	clearTemp()
@@ -184,19 +188,21 @@ function Run.startFight()
 		if phase >= 2 and Monsters.evo[def.id] then evoTier = math.clamp((Campaign.diffRank[diff.id] or 2) - 1, 1, 3) end
 	elseif Monsters.isEvolvedWave(level) and diff.bosses then
 		evoTier = level // 3
-		def = Monsters.pickFresh(seenEvolved, { lastMonster, prevMonster }, rng) -- not the last two you fought
+		-- only monsters that HAVE an evolved form (Monsters.evo: 10 of the 27); the campaign-only ones have none and
+		-- picking one crashed Monsters.evolved, which froze endless runs on a boss wave
+		def = Monsters.pickFresh(seenEvolved, { lastMonster, prevMonster }, rng, nil, Monsters.evo) -- not the last two you fought
 	elseif level <= 1 then
 		def = Monsters.byId.Woman
 		seenMonsters.Woman = true
 	else
 		def = Monsters.pickFresh(seenMonsters, { lastMonster, prevMonster }, rng) -- never one of the last two
 	end
-	local forced = RS:GetAttribute("AdminMonster") or (RunService:IsStudio() and RS:GetAttribute("DebugMonster")) -- admin panel / Studio hook
+	local forced = not safe and (RS:GetAttribute("AdminMonster") or (RunService:IsStudio() and RS:GetAttribute("DebugMonster"))) -- admin panel / Studio hook
 	if type(forced) == "string" and Monsters.byId[forced] then def = Monsters.byId[forced] end
-	local forcedEvo = RS:GetAttribute("AdminEvolved") or (RunService:IsStudio() and RS:GetAttribute("DebugEvolved")) -- admin 'evolved on'
+	local forcedEvo = not safe and (RS:GetAttribute("AdminEvolved") or (RunService:IsStudio() and RS:GetAttribute("DebugEvolved"))) -- admin 'evolved on'
 	if forcedEvo then evoTier = type(forcedEvo) == "number" and forcedEvo or math.max(1, level // 3) end
 	-- admin 'boss <id> [tier]': that monster's boss variant, this ghost only
-	local once = RS:GetAttribute("AdminBossOnce")
+	local once = not safe and RS:GetAttribute("AdminBossOnce")
 	if type(once) == "string" then
 		RS:SetAttribute("AdminBossOnce", nil)
 		local id, t = string.match(once, "^(%w+):(%d)$")
@@ -205,6 +211,9 @@ function Run.startFight()
 			evoTier = math.clamp(tonumber(t) or 1, 1, 3)
 		end
 	end
+	if safe then def = Monsters.byId.Woman; evoTier = nil end
+	-- a monster with no evolved form (forced by an admin / a hook) comes as itself
+	if evoTier and not Monsters.evo[def.id] then evoTier = nil end
 	prevMonster = lastMonster
 	lastMonster = def.id
 	if evoTier then lastEvolved = def.id end
@@ -213,7 +222,7 @@ function Run.startFight()
 	setState("Intro", (stage and phase >= 2) and "IT'S NOT DEAD YET..." or (evoTier and "SOMETHING WORSE IS COMING..." or "SOMETHING IS COMING..."))
 	for _, p in list do Remotes.Fx:FireClient(p, "Intro", level, shown.title, shown.rarity, evoTier ~= nil) end
 	task.wait(3)
-	if #Run.matchPlayers() == 0 then busy = false; return end
+	if #Run.matchPlayers() == 0 then return end
 	-- a random spot in the house, never right next to a player
 	local players = {}
 	for _, p in Run.matchPlayers() do
@@ -226,6 +235,32 @@ function Run.startFight()
 		for _, p in Run.matchPlayers() do Remotes.Fx:FireClient(p, "Toast", "A MEDICAL ITEM IS LYING SOMEWHERE IN THE HOUSE", true) end
 	end
 	setState("Fight", "")
+	-- analytics: a building's fight begins (its first phase)
+	if stage and phase == 1 then
+		for _, p in Run.matchPlayers() do
+			Analytics.stage(p, "start", stage.level, stage.id, diff.id)
+			Analytics.onboard(p, "stage")
+		end
+	end
+end
+
+function Run.startFight()
+	-- a campaign building: the party arrives by train first (Main calls this once the party is in)
+	if stage and not arrived then task.spawn(Run.startStage); return end
+	if busy or #Run.matchPlayers() == 0 then return end
+	busy = true
+	local ok, err = xpcall(fightBody, debug.traceback, false)
+	if not ok then
+		warn("[Run] a monster failed to come, sending the plain one instead: " .. tostring(err))
+		ok, err = xpcall(fightBody, debug.traceback, true)
+		if not ok then
+			-- still broken: a short break and the timer tries again (never a run frozen with no monster)
+			warn("[Run] the plain monster failed too: " .. tostring(err))
+			pcall(Ghost.despawn)
+			breakUntil = os.clock() + 5
+			setState("Break", "")
+		end
+	end
 	busy = false
 end
 
@@ -414,6 +449,9 @@ function Run.stageCleared()
 			local _, lv = Data.mapLevel(p)
 			if lv > after then after = lv; task.spawn(Data.save, p) end
 		end
+		Analytics.stage(p, "complete", s0.level, s0.id, diff.id)
+		Analytics.onboard(p, "clear")
+		if s0.map == "Camp" and Campaign.mapDone(prog, "Camp") then Analytics.onboard(p, "camp") end
 		local done, total = Campaign.cleared(prog, s0.map)
 		local goal = Campaign.goal(prog)
 		Quests.add(p, "stage")
@@ -637,6 +675,7 @@ end
 function Run.configure(mapId: string?, diffId: string?, friendlyFire: boolean?)
 	RS:SetAttribute("FriendlyFire", friendlyFire ~= false)
 	MapLoader.load(mapId or Maps.default)
+	runMap = mapId or Maps.default
 	diff = Maps.diffById[diffId or ""] or Maps.diffById[Maps.defaultDiff]
 	stage = Campaign.stage(mapId)
 	if stage and not MapLoader.exists(stage.id) then warn("[Run] the building " .. stage.id .. " is not built yet: the Mansion stands in for it") end
@@ -697,8 +736,8 @@ function Run.start()
 	Ghost.onDeath = function(g) task.spawn(onGhostDeath, g) end
 	Events.onBuy = onBuy
 	Events.onLeave = function(p) Run.leave(p, "left") end
-	Remotes.Stage.OnServerEvent:Connect(function(p, choice) task.spawn(onStageChoice, p, choice) end)
-	Remotes.NextGhost.OnServerEvent:Connect(function(p)
+	Remotes.Stage.OnServerEvent:Connect(function(p, choice) if not Guard.ok(p, "Stage") then return end task.spawn(onStageChoice, p, choice) end)
+	Remotes.NextGhost.OnServerEvent:Connect(function(p) if not Guard.ok(p, "NextGhost") then return end
 		if state == "Break" and p:GetAttribute("InMatch") then task.spawn(Run.startFight) end
 	end)
 	Players.PlayerRemoving:Connect(function(p)
