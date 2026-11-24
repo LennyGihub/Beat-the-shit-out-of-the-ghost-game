@@ -104,6 +104,150 @@ function boot() {
   ready.catch((e) => log("initialize failed:", e.message));
 }
 
+// ---- PC TOOLS (2026-11-24: the TikTok clip maker, run by the cloud session) --------------------------------------
+// Tools this gateway answers itself (they never reach Studio): pc_info, pc_window, pc_ffmpeg, pc_job, pc_stop,
+// pc_put, pc_get, pc_files. They only touch one folder, WORK (%USERPROFILE%\Videos\JumpTheGhost\work): file names are
+// plain names (no folders), ffmpeg runs inside it, and its arguments (and a -filter_complex_script file) may not hold
+// paths, ".." or network / file protocols. Same key as everything else. The screen is recorded with ffmpeg's
+// ddagrab (Windows desktop duplication: 60 fps, light on the PC); the edits run here too, only the finished clips go
+// back through the tunnel.
+const os = require("os");
+const path = require("path");
+const WORK = process.env.CLIP_WORK || path.join(os.homedir(), "Videos", "JumpTheGhost", "work");
+// (winget puts ffmpeg in WinGet\Links: found there even before Windows refreshes the PATH of this window)
+const WINGET_FFMPEG = path.join(process.env.LOCALAPPDATA || "", "Microsoft", "WinGet", "Links", "ffmpeg.exe");
+const FFMPEG = process.env.FFMPEG || (process.platform === "win32" && fs.existsSync(WINGET_FFMPEG) ? WINGET_FFMPEG : "ffmpeg");
+const jobs = new Map();
+let jobN = 0;
+const NAME = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,100}$/;
+const BAD_ARG = /(^[A-Za-z]:[\\/])|(^[\\/])|(\.\.)|(^(https?|ftp|file|tcp|udp|rtmp|rtsp|concat|subfile|pipe|data|crypto|async|cache|smb|sftp|srt|gopher|unix|fd|tee|tls|zmq):)/i;
+const BAD_GRAPH = /([A-Za-z]:[\\/])|(\\\\)|(\.\.)|([=:,;'"]\/)|\bmovie=|\bamovie=|sendcmd|zmq/i;
+function inWork(n) {
+  if (typeof n !== "string" || !NAME.test(n) || n.includes("..")) throw new Error("bad file name: " + n);
+  return path.join(WORK, n);
+}
+function checkArgs(args) {
+  if (!Array.isArray(args) || args.length > 200) throw new Error("args must be a list");
+  args.forEach((a, i) => {
+    if (typeof a !== "string" || a.length > 4000) throw new Error("bad argument");
+    if (BAD_ARG.test(a)) throw new Error("argument not allowed: " + a.slice(0, 80));
+    if (args[i - 1] === "-filter_complex_script" && BAD_GRAPH.test(fs.readFileSync(inWork(a), "utf8"))) throw new Error("filter script not allowed");
+  });
+}
+function runCapture(cmd, args, input) {
+  return new Promise((resolve) => {
+    let out = "", err = "";
+    let p;
+    try { p = spawn(cmd, args, { windowsHide: true }); } catch (e) { resolve({ code: -2, out: "", err: String(e.message) }); return; }
+    p.stdout.on("data", (d) => (out += d));
+    p.stderr.on("data", (d) => (err += d));
+    p.on("error", (e) => resolve({ code: -2, out, err: err + e.message }));
+    p.on("exit", (code) => resolve({ code, out, err }));
+    if (input) p.stdin.end(input);
+  });
+}
+const PS_WINDOW = `
+Add-Type @"
+using System; using System.Runtime.InteropServices;
+public class W {
+  [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int n);
+  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
+  [DllImport("user32.dll")] public static extern void keybd_event(byte k, byte s, uint f, UIntPtr e);
+  [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
+  public struct RECT { public int L, T, R, B; }
+}
+"@
+$p = Get-Process RobloxStudioBeta -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1
+if (-not $p) { "none"; exit }
+[W]::keybd_event(0x12, 0, 0, [UIntPtr]::Zero); [W]::keybd_event(0x12, 0, 2, [UIntPtr]::Zero)
+[W]::ShowWindow($p.MainWindowHandle, 3) | Out-Null
+[W]::SetForegroundWindow($p.MainWindowHandle) | Out-Null
+Start-Sleep -Milliseconds 400
+$r = New-Object W+RECT; [W]::GetWindowRect($p.MainWindowHandle, [ref]$r) | Out-Null
+"$($r.L),$($r.T),$($r.R),$($r.B)"`;
+const PS_AWAKE = (s) => `
+Add-Type @"
+using System; using System.Runtime.InteropServices;
+public class A { [DllImport("kernel32.dll")] public static extern uint SetThreadExecutionState(uint f); }
+"@
+[A]::SetThreadExecutionState(0x80000003) | Out-Null
+Start-Sleep -Seconds ${Math.max(1, Math.min(3600, Math.floor(s)))}`;
+let awake = null;
+const PC_TOOLS = [
+  { name: "pc_info", description: "PC side of the clip maker: ffmpeg version, H.264 encoders, the work folder.", inputSchema: { type: "object", properties: {} } },
+  { name: "pc_window", description: "Brings Roblox Studio to the front, maximised; keeps the screen awake for awake_s seconds. Returns the window rectangle.", inputSchema: { type: "object", properties: { awake_s: { type: "number" } } } },
+  { name: "pc_ffmpeg", description: "Runs ffmpeg in the work folder (plain file names only). wait=true waits for the end; else returns a job id.", inputSchema: { type: "object", properties: { args: { type: "array", items: { type: "string" } }, wait: { type: "boolean" }, timeout_s: { type: "number" } }, required: ["args"] } },
+  { name: "pc_job", description: "A pc_ffmpeg job: running or its exit code, and the end of its log. wait_s waits up to that long for it to end.", inputSchema: { type: "object", properties: { job: { type: "string" }, wait_s: { type: "number" } }, required: ["job"] } },
+  { name: "pc_stop", description: "Asks a running pc_ffmpeg job to finish (like pressing q).", inputSchema: { type: "object", properties: { job: { type: "string" } }, required: ["job"] } },
+  { name: "pc_put", description: "Writes a file (base64) into the work folder.", inputSchema: { type: "object", properties: { name: { type: "string" }, data: { type: "string" }, append: { type: "boolean" } }, required: ["name", "data"] } },
+  { name: "pc_get", description: "Reads part of a file of the work folder (base64, 6 MB at most per call).", inputSchema: { type: "object", properties: { name: { type: "string" }, offset: { type: "number" }, length: { type: "number" } }, required: ["name"] } },
+  { name: "pc_files", description: "Lists the work folder; delete = names to remove first.", inputSchema: { type: "object", properties: { delete: { type: "array", items: { type: "string" } } } } },
+];
+async function pcTool(name, a) {
+  fs.mkdirSync(WORK, { recursive: true });
+  if (name === "pc_info") {
+    const v = await runCapture(FFMPEG, ["-hide_banner", "-version"]);
+    const e = v.code === 0 ? await runCapture(FFMPEG, ["-hide_banner", "-encoders"]) : { out: "" };
+    const f = v.code === 0 ? await runCapture(FFMPEG, ["-hide_banner", "-filters"]) : { out: "" };
+    const enc = ["h264_nvenc", "h264_qsv", "h264_amf", "libx264"].filter((x) => e.out.includes(" " + x + " "));
+    return { platform: process.platform, ffmpeg: v.code === 0 ? v.out.split("\n")[0] : null, encoders: enc, ddagrab: / ddagrab /.test(f.out), drawtext: / drawtext /.test(f.out), work: WORK, cpus: os.cpus().length };
+  }
+  if (name === "pc_window") {
+    if (process.platform !== "win32") return { rect: null };
+    const r = await runCapture("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", PS_WINDOW]);
+    if (a.awake_s) {
+      if (awake) try { awake.kill(); } catch {}
+      awake = spawn("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", PS_AWAKE(a.awake_s)], { windowsHide: true, stdio: "ignore" });
+    }
+    return { rect: r.out.trim() || null, err: r.err.slice(-300) };
+  }
+  if (name === "pc_ffmpeg") {
+    checkArgs(a.args);
+    const id = "j" + ++jobN;
+    const p = spawn(FFMPEG, a.args, { cwd: WORK, windowsHide: true, stdio: ["pipe", "ignore", "pipe"] });
+    const job = { p, err: "", code: null, t0: Date.now() };
+    p.stderr.setEncoding("utf8");
+    p.stderr.on("data", (d) => (job.err = (job.err + d).slice(-8000)));
+    p.on("exit", (c) => (job.code = c === null ? -1 : c));
+    p.on("error", (e) => { job.code = -2; job.err += "\n" + e.message; });
+    setTimeout(() => { if (job.code === null) try { p.kill(); } catch {} }, Math.min(3600, a.timeout_s || 900) * 1000);
+    jobs.set(id, job);
+    if (!a.wait) return { job: id };
+    while (job.code === null) await new Promise((r) => setTimeout(r, 200));
+    return { job: id, code: job.code, log: job.err.slice(-1500), seconds: (Date.now() - job.t0) / 1000 };
+  }
+  if (name === "pc_job" || name === "pc_stop") {
+    const job = jobs.get(a.job);
+    if (!job) throw new Error("no job " + a.job);
+    if (name === "pc_stop" && job.code === null) try { job.p.stdin.write("q"); } catch {}
+    const until = Date.now() + Math.min(600, a.wait_s || (name === "pc_stop" ? 15 : 0)) * 1000;
+    while (job.code === null && Date.now() < until) await new Promise((r) => setTimeout(r, 200));
+    return { running: job.code === null, code: job.code, log: job.err.slice(-1500), seconds: (Date.now() - job.t0) / 1000 };
+  }
+  if (name === "pc_put") {
+    const buf = Buffer.from(String(a.data || ""), "base64");
+    if (buf.length > 25e6) throw new Error("too big");
+    (a.append ? fs.appendFileSync : fs.writeFileSync)(inWork(a.name), buf);
+    return { name: a.name, size: fs.statSync(inWork(a.name)).size };
+  }
+  if (name === "pc_get") {
+    const f = inWork(a.name);
+    const size = fs.statSync(f).size;
+    const off = Math.max(0, Math.floor(a.offset || 0));
+    const len = Math.max(0, Math.min(6e6, Math.floor(a.length || 6e6), size - off));
+    const fd = fs.openSync(f, "r");
+    const buf = Buffer.alloc(len);
+    fs.readSync(fd, buf, 0, len, off);
+    fs.closeSync(fd);
+    return { name: a.name, size, offset: off, data: buf.toString("base64") };
+  }
+  if (name === "pc_files") {
+    for (const n of a.delete || []) try { fs.unlinkSync(inWork(n)); } catch {}
+    return { work: WORK, files: fs.readdirSync(WORK).map((n) => ({ name: n, size: fs.statSync(path.join(WORK, n)).size })) };
+  }
+  throw new Error("unknown tool " + name);
+}
+
 function authorized(req) {
   const a = req.headers["authorization"] || "";
   const x = req.headers["x-api-key"] || "";
@@ -123,8 +267,18 @@ async function handle(msg) {
     return null;
   }
   if (!msg.method) return null; // a client response to a server request: nothing waits for it
+  // the PC tools are answered here (see PC TOOLS above)
+  if (msg.method === "tools/call" && msg.params && String(msg.params.name).startsWith("pc_")) {
+    try {
+      const out = await pcTool(msg.params.name, msg.params.arguments || {});
+      return { jsonrpc: "2.0", id: msg.id, result: { content: [{ type: "text", text: JSON.stringify(out) }] } };
+    } catch (e) {
+      return { jsonrpc: "2.0", id: msg.id, result: { isError: true, content: [{ type: "text", text: String(e.message || e) }] } };
+    }
+  }
   await ready;
   const r = await request(msg.method, msg.params);
+  if (msg.method === "tools/list" && r.result && Array.isArray(r.result.tools)) r.result.tools = r.result.tools.concat(PC_TOOLS);
   return { jsonrpc: "2.0", id: msg.id, ...(r.error ? { error: r.error } : { result: r.result }) };
 }
 

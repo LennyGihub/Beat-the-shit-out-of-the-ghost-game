@@ -7,7 +7,9 @@
 //   node clipper.js list                                                    (what it can film)
 // (make-clips.bat = "node clipper.js make 4")
 // How: Studio (through mcp-gateway.js, like pull-from-github.js) -> the game's Studio-only film camera + bot
-// (Client/ClipCam: player attributes ClipShot / ClipCalib) -> OBS records the Studio window (obs-websocket) ->
+// (Client/ClipCam: player attributes ClipShot / ClipCalib) -> the PC records the game picture at 60 fps: by default
+// through the gateway's PC tools (pc_window / pc_ffmpeg: ffmpeg ddagrab, no OBS; the edit runs on the PC too and only
+// the finished clip comes back, so a cloud session can make clips by itself), or with OBS (--obs) ->
 // ffmpeg edits: finds the game picture by the magenta calibration frame, makes it 1080x1920, writes the hook in
 // the game's marker font, adds the end card ("SEARCH JUMP THE GHOST ON ROBLOX - CODE: TIKTOK").
 // Output: %USERPROFILE%\Videos\JumpTheGhost\clips\<date>_<kind>_<name>.mp4 + .txt (the caption to paste).
@@ -169,7 +171,7 @@ const RARITY = ["COMMON", "UNCOMMON", "RARE", "EPIC", "LEGENDARY", "MYTHIC"];
 const pickOf = (a) => a[Math.floor(Math.random() * a.length)];
 const KINDS = {
   fight: {
-    layout: "full",
+    layout: "tall",
     list: (c) => c.monsters,
     hooks: ["POV: tonight YOU are the scary one", "{name} picked the wrong house", "When the ghost realises you fight back",
       "I punched {name} across the room", "Ghosts when I start swinging", "{name} vs my fists", "Nobody warned {name} about me"],
@@ -200,7 +202,7 @@ const KINDS = {
     async after() { await setShot(null); },
   },
   ultimate: {
-    layout: "full",
+    layout: "tall",
     list: (c) => c.ults,
     hooks: ["Rating every ultimate: {name}", "This ultimate is unfair: {name}", "Ghosts hate this move", "POV: you unlocked {name}", "The {name} ultimate goes crazy"],
     async prep(p) { await toPark(); await client(`RS.Remotes.Sandbox:FireServer("enter", ${lua(p.id)}) return "ok"`); await sleep(7000);
@@ -209,7 +211,7 @@ const KINDS = {
     async after() { await setShot(null); await client(`RS.Remotes.Sandbox:FireServer("leave") return "ok"`); await sleep(2000); },
   },
   giant: {
-    layout: "full",
+    layout: "tall",
     list: (c) => c.giants,
     hooks: ["When you open a {rarity} {kind}...", "My form is 10x bigger than me", "Getting the {name} form be like", "Flexing my {rarity} form in the lobby",
       "POV: you pulled a {rarity}"],
@@ -343,6 +345,116 @@ class Frames {
   close() {}
 }
 
+// THE PC TOOLS (mcp-gateway.js pc_*): ffmpeg ddagrab records the game picture at 60 fps on the PC, the edit runs on
+// the PC, the finished clip comes back in pieces. Works from a cloud session through the tunnel.
+const jparse = (content) => { const t = textOf(content); return JSON.parse(t.slice(t.search(/[{[]/))); };
+class PcRec {
+  async connect() {
+    let info;
+    try { info = jparse(await call("pc_info", {})); } catch (e) {
+      throw new Error("the bridge has no PC tools yet: update mcp-gateway.js on the PC and restart start-bridge.bat (" + e.message + ")");
+    }
+    if (!info.ffmpeg) throw new Error("ffmpeg is missing on the PC: winget install Gyan.FFmpeg, then restart start-bridge.bat");
+    if (!info.ddagrab) throw new Error("the PC's ffmpeg cannot grab the screen (no ddagrab): winget upgrade Gyan.FFmpeg");
+    this.enc = ["h264_nvenc", "h264_qsv", "h264_amf", "libx264"].filter((e) => info.encoders.includes(e));
+    this.cpus = info.cpus || 4;
+    log(`PC: ${info.ffmpeg.split(" Copyright")[0]}, encoders ${this.enc.join(", ")}`);
+    const files = jparse(await call("pc_files", {})).files;
+    if (!files.some((f) => f.name === "font.ttf")) {
+      await ensureFont();
+      await call("pc_put", { name: "font.ttf", data: fs.readFileSync(FONT).toString("base64") });
+    }
+  }
+  async ff(args, wait, timeout) { return jparse(await call("pc_ffmpeg", { args, wait: wait !== false, timeout_s: timeout || 900 })); }
+  encArgs(e, quality) {
+    if (e === "h264_nvenc") return ["-c:v", "h264_nvenc", "-preset", "p5", "-rc", "vbr", "-cq", quality ? "19" : "17", "-b:v", "0"];
+    if (e === "h264_qsv") return ["-c:v", "h264_qsv", "-global_quality", quality ? "21" : "18"];
+    if (e === "h264_amf") return ["-c:v", "h264_amf", "-rc", "cqp", "-qp_i", quality ? "20" : "17", "-qp_p", quality ? "22" : "19"];
+    return ["-c:v", "libx264", "-preset", quality ? (this.cpus >= 8 ? "medium" : "faster") : "veryfast", "-crf", quality ? "19" : "16"];
+  }
+  // a file of the work folder -> here, in 6 MB pieces
+  async fetch(name, dest) {
+    let off = 0, size = 1;
+    const out = fs.openSync(dest, "w");
+    while (off < size) {
+      const r = jparse(await call("pc_get", { name, offset: off, length: 6e6 }));
+      size = r.size;
+      const b = Buffer.from(r.data, "base64");
+      if (!b.length) break;
+      fs.writeSync(out, b);
+      off += b.length;
+    }
+    fs.closeSync(out);
+    return dest;
+  }
+  // where the game picture is on the screen (while the magenta frame is up): Studio to the front, one grabbed frame
+  async locate() {
+    const w = jparse(await call("pc_window", { awake_s: 1800 }));
+    if (!w.rect || w.rect === "none") throw new Error("no Roblox Studio window on the PC");
+    await sleep(1500);
+    for (const idx of [0, 1, 2]) {
+      const r = await this.ff(["-y", "-v", "error", "-f", "lavfi", "-i", `ddagrab=output_idx=${idx}:framerate=10:draw_mouse=0`, "-frames:v", "8",
+        "-vf", "hwdownload,format=bgra,scale=iw/2:ih/2", "-update", "1", "calib.png"], true, 60);
+      if (r.code !== 0) continue;
+      const rect = magentaRect(await this.fetch("calib.png", path.join(os.tmpdir(), "clip-calib.png")));
+      if (rect) {
+        const ev = (v) => Math.max(2, Math.floor(v / 2) * 2);
+        this.idx = idx;
+        this.rect = { x: ev(rect.x * 2), y: ev(rect.y * 2), w: ev(rect.w * 2), h: ev(rect.h * 2) };
+        return this.rect;
+      }
+    }
+    throw new Error("the game picture is not on the screen: keep the Studio window visible (not minimised, screen on)");
+  }
+  async start(maxS) {
+    const r = this.rect;
+    this.raw = "raw_" + Date.now() + ".mp4";
+    const res = await this.ff(["-y", "-v", "error", "-f", "lavfi", "-i",
+      `ddagrab=output_idx=${this.idx}:framerate=60:draw_mouse=0:offset_x=${r.x}:offset_y=${r.y}:video_size=${r.w}x${r.h}`,
+      "-vf", "hwdownload,format=bgra", "-t", String(maxS), ...this.encArgs(this.enc[0], false), "-pix_fmt", "yuv420p", "-r", "60", this.raw], false, maxS + 120);
+    this.job = res.job;
+    await sleep(1500);
+    const st = jparse(await call("pc_job", { job: this.job }));
+    if (!st.running && st.code !== 0) {
+      // (a GPU encoder listed by ffmpeg but not usable on this PC: the next one)
+      if (this.enc.length > 1) { log(`  (${this.enc[0]} failed, trying ${this.enc[1]})`); this.enc.shift(); return this.start(maxS); }
+      throw new Error("the recording failed: " + st.log.slice(-400));
+    }
+  }
+  async stop() {
+    let st = jparse(await call("pc_stop", { job: this.job }));
+    for (let i = 0; i < 20 && st.running; i++) st = jparse(await call("pc_job", { job: this.job, wait_s: 3 }));
+    if (st.code !== 0 && st.code !== 255) throw new Error("the recording ended badly: " + st.log.slice(-400));
+    return this.raw;
+  }
+  // the edit, on the PC: texts + filter script uploaded, ffmpeg makes the 1080x1920 60 fps clip
+  // the real length of a recording on the PC (a quick copy pass to nowhere; its log's last time=)
+  async duration(name) {
+    const r = await this.ff(["-v", "info", "-i", name, "-map", "0:v:0", "-c", "copy", "-f", "null", "-"], true, 120);
+    const m = [...String(r.log).matchAll(/time=(\d+):(\d+):(\d+(?:\.\d+)?)/g)].pop();
+    return m ? Number(m[1]) * 3600 + Number(m[2]) * 60 + Number(m[3]) : null;
+  }
+  async edit(raw, o) {
+    const id = "c" + Date.now();
+    const d = await this.duration(raw);
+    if (d) o = Object.assign({}, o, { len: Math.max(2, Math.min(o.len, d - o.start - 0.05)) });
+    const { graph, texts } = buildGraph(Object.assign({}, o, { crop: { x: 0, y: 0, w: this.rect.w, h: this.rect.h }, fps: 60 }), (i) => `${id}_t${i}.txt`, "font.ttf");
+    for (let i = 0; i < texts.length; i++) await call("pc_put", { name: `${id}_t${i}.txt`, data: Buffer.from(texts[i]).toString("base64") });
+    await call("pc_put", { name: `${id}_g.txt`, data: Buffer.from(graph).toString("base64") });
+    const total = (o.len + END_CARD).toFixed(2);
+    const final = `${id}_final.mp4`;
+    const args = (enc) => ["-y", "-v", "error", "-i", raw, "-f", "lavfi", "-t", total, "-i", "anullsrc=r=48000:cl=stereo", "-filter_complex_script", `${id}_g.txt`,
+      "-map", "[v]", "-map", "1:a", "-t", total, ...this.encArgs(enc, true), "-pix_fmt", "yuv420p", "-r", "60", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", final];
+    let r = await this.ff(args(this.enc[0]), true, 1200);
+    if (r.code !== 0 && this.enc[0] !== "libx264") r = await this.ff(args("libx264"), true, 1800);
+    await call("pc_files", { delete: texts.map((_, i) => `${id}_t${i}.txt`).concat([`${id}_g.txt`]) });
+    if (r.code !== 0) throw new Error("the edit failed on the PC: " + r.log.slice(-500));
+    return final;
+  }
+  get calibMs() { return 700; }
+  close() {}
+}
+
 // ---- editing (ffmpeg) -------------------------------------------------------------------------------------------
 function run(cmd, args, opts) {
   const r = spawnSync(cmd, args, Object.assign({ maxBuffer: 1 << 30 }, opts || {}));
@@ -401,6 +513,65 @@ function wrap(text, max) {
   if (cur) lines.push(cur);
   return lines.slice(0, 4);
 }
+// the magenta frame in one picture: its rectangle (in that picture's pixels), or nil
+function magentaRect(file) {
+  const info = probe(file);
+  const sw = Math.min(640, info.w), sh = Math.round((info.h * sw) / info.w);
+  const buf = run(FFMPEG, ["-v", "error", "-i", file, "-frames:v", "1", "-vf", `scale=${sw}:${sh}`, "-f", "rawvideo", "-pix_fmt", "rgb24", "-"]);
+  let x0 = sw, y0 = sh, x1 = -1, y1 = -1, count = 0;
+  for (let y = 0; y < sh; y++) {
+    for (let x = 0; x < sw; x++) {
+      const o = (y * sw + x) * 3;
+      if (buf[o] > 170 && buf[o + 1] < 100 && buf[o + 2] > 170) {
+        count++;
+        if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+      }
+    }
+  }
+  if (count < sw * sh * 0.04) return null;
+  const k = info.w / sw, m = 2;
+  return { x: Math.floor((x0 + m) * k), y: Math.floor((y0 + m) * k), w: Math.floor((x1 - x0 + 1 - 2 * m) * k), h: Math.floor((y1 - y0 + 1 - 2 * m) * k) };
+}
+// the filter graph of a clip (shared by the PC edit and the local one). o: crop {x,y,w,h}, start, len, layout
+// (tall | full | framed), hook, fps. textName(i) = the file name of text i; font = the font file's name.
+function buildGraph(o, textName, font) {
+  const texts = [];
+  const tf = (str) => { texts.push(str); return textName(texts.length - 1); };
+  const draw = (str, size, y, color, extra) =>
+    `drawtext=fontfile=${font}:textfile=${tf(str)}:fontsize=${size}:fontcolor=${color}:borderw=${Math.round(size / 11)}:bordercolor=black:` +
+    `shadowx=0:shadowy=${Math.round(size / 14)}:shadowcolor=black@0.6:x=(w-text_w)/2:y=${y}${extra || ""}`;
+  const c = o.crop, L = o.len.toFixed(2);
+  let g = `[0:v]trim=start=${o.start.toFixed(3)}:duration=${o.len.toFixed(3)},setpts=PTS-STARTPTS,crop=${c.w}:${c.h}:${c.x}:${c.y}`;
+  let hookY = Math.round(H * 0.11);
+  if (o.layout === "framed") {
+    // the whole picture in the middle, a blurred zoom of it behind
+    g += `,split[a][b];[a]scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},boxblur=26:2,eq=brightness=-0.22[bg];` +
+      `[b]scale=${W}:-2:flags=lanczos[fg];[bg][fg]overlay=0:(H-h)/2+40,setsar=1`;
+  } else if (o.layout === "tall") {
+    // a 3:4 slice of the middle (sharper than a 9:16 one: less enlarged), 1080x1440 under a band for the hook
+    const tw = Math.min(c.w, Math.floor((c.h * 3) / 4 / 2) * 2);
+    g += `,crop=${tw}:${c.h}:(in_w-${tw})/2:0,split[a][b];[a]scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},boxblur=30:2,eq=brightness=-0.32[bg];` +
+      `[b]scale=${W}:1440:flags=lanczos[fg];[bg][fg]overlay=0:400,setsar=1`;
+    hookY = 80;
+  } else {
+    // full screen: the middle 9:16 of the picture
+    const tw = Math.min(c.w, Math.floor((c.h * 9) / 16 / 2) * 2);
+    g += `,crop=${tw}:${c.h}:(in_w-${tw})/2:0,scale=${W}:${H}:flags=lanczos,setsar=1`;
+  }
+  g += `,fps=${o.fps || FPS},tpad=stop_mode=clone:stop_duration=${END_CARD}`;
+  const lines = wrap(o.hook || "", 16);
+  const size = lines.some((l) => l.length > 12) ? 82 : 96;
+  lines.forEach((l, i) => { g += "," + draw(l, size, hookY + i * Math.round(size * 1.18), "white", `:enable='lt(t,${L})'`); });
+  const on = `:enable='gte(t,${L})':alpha='min(1,(t-${L})/0.25)'`;
+  g += `,drawbox=x=0:y=0:w=iw:h=ih:color=black@0.62:t=fill:enable='gte(t,${L})'`;
+  g += "," + draw("SEARCH", 64, 640, "white", on);
+  g += "," + draw("JUMP THE GHOST", 102, 735, "white", on);
+  g += "," + draw("ON ROBLOX", 74, 880, "white", on);
+  g += "," + draw("CODE: TIKTOK", 86, 1080, "0xFFC446", on);
+  g += ",format=yuv420p[v]";
+  return { graph: g, texts };
+}
+// the edit here (the edit command, OBS and --frames recordings): finds the game picture by the magenta frame
 function edit(file, o) {
   const info = probe(file);
   const cal = findCalib(file, info);
@@ -410,35 +581,9 @@ function edit(file, o) {
   const len = Math.max(2, Math.min(o.dur || 999, info.dur - start - 0.2));
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "clipedit-"));
   fs.copyFileSync(FONT, path.join(tmp, "font.ttf"));
-  // every text goes through a file (no escaping problems); ffmpeg runs inside tmp, so the paths are plain names
-  let n = 0;
-  const textFile = (s) => { const f = "t" + n++ + ".txt"; fs.writeFileSync(path.join(tmp, f), s); return f; };
-  const draw = (s, size, y, color, extra) =>
-    `drawtext=fontfile=font.ttf:textfile=${textFile(s)}:fontsize=${size}:fontcolor=${color}:borderw=${Math.round(size / 11)}:bordercolor=black:` +
-    `shadowx=0:shadowy=${Math.round(size / 14)}:shadowcolor=black@0.6:x=(w-text_w)/2:y=${y}${extra || ""}`;
-  let g = `[0:v]trim=start=${start.toFixed(3)}:duration=${len.toFixed(3)},setpts=PTS-STARTPTS,crop=${c.w}:${c.h}:${c.x}:${c.y}`;
-  if (o.layout === "framed") {
-    // the whole picture in the middle, a blurred zoom of it behind
-    g += `,split[a][b];[a]scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},boxblur=26:2,eq=brightness=-0.22[bg];` +
-      `[b]scale=${W}:-2:flags=lanczos[fg];[bg][fg]overlay=0:(H-h)/2+40,setsar=1`;
-  } else {
-    // full screen: the middle of the picture (ClipCam keeps the action in the middle)
-    const tw = Math.min(c.w, Math.floor((c.h * 9) / 16 / 2) * 2);
-    g += `,crop=${tw}:${c.h}:(in_w-${tw})/2:0,scale=${W}:${H}:flags=lanczos,setsar=1`;
-  }
-  g += `,fps=${FPS},tpad=stop_mode=clone:stop_duration=${END_CARD}`;
-  // the hook, big, in the top part (the whole clip)
-  const lines = wrap(o.hook || "", 16);
-  const size = lines.some((l) => l.length > 12) ? 82 : 96;
-  lines.forEach((l, i) => { g += "," + draw(l, size, Math.round(H * 0.11) + i * Math.round(size * 1.18), "white", `:enable='lt(t,${len.toFixed(2)})'`); });
-  // the end card: darker, the game's name, the code
-  const on = `:enable='gte(t,${len.toFixed(2)})':alpha='min(1,(t-${len.toFixed(2)})/0.25)'`;
-  g += `,drawbox=x=0:y=0:w=iw:h=ih:color=black@0.62:t=fill:enable='gte(t,${len.toFixed(2)})'`;
-  g += "," + draw("SEARCH", 64, 640, "white", on);
-  g += "," + draw("JUMP THE GHOST", 102, 735, "white", on);
-  g += "," + draw("ON ROBLOX", 74, 880, "white", on);
-  g += "," + draw("CODE: TIKTOK", 86, 1080, "0xFFC446", on);
-  g += ",format=yuv420p[v]";
+  const built = buildGraph({ crop: c, start, len, layout: o.layout, hook: o.hook, fps: o.fps || FPS }, (i) => "t" + i + ".txt", "font.ttf");
+  built.texts.forEach((t, i) => fs.writeFileSync(path.join(tmp, "t" + i + ".txt"), t));
+  let g = built.graph;
   const total = len + END_CARD;
   const args = ["-y", "-v", "error", "-i", path.resolve(file)];
   if (info.audio) {
@@ -449,7 +594,7 @@ function edit(file, o) {
   }
   fs.writeFileSync(path.join(tmp, "graph.txt"), g);
   args.push("-filter_complex_script", "graph.txt", "-map", "[v]", "-map", info.audio ? "[a]" : "1:a", "-t", total.toFixed(2),
-    "-c:v", "libx264", "-preset", "medium", "-crf", "19", "-r", String(FPS), "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", path.resolve(o.out));
+    "-c:v", "libx264", "-preset", "medium", "-crf", "19", "-r", String(o.fps || FPS), "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", path.resolve(o.out));
   run(FFMPEG, args, { cwd: tmp });
   fs.rmSync(tmp, { recursive: true, force: true });
   return { len: total, crop: c };
@@ -459,14 +604,13 @@ function edit(file, o) {
 const slug = (s) => String(s).replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 32);
 const stamp = () => new Date().toISOString().replace(/[:T]/g, "-").slice(0, 19);
 
-async function make(count, kindArg, nameArg, frames) {
+async function make(count, kindArg, nameArg, mode) {
   ensureFfmpeg();
   await ensureFont();
   const s = await pickStudio();
   log(`Studio: ${s.name}`);
   const startedPlay = !/Current Studio Mode:\s*Play/i.test(await studioMode());
   if (startedPlay) { log("starting a playtest..."); await setPlay(true); await sleep(14000); }
-  // the client is ready and its window is big enough
   let size = "";
   for (let i = 0; i < 30 && !size; i++) {
     const r = await client(`local v = workspace.CurrentCamera.ViewportSize
@@ -474,11 +618,8 @@ return (lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") and lp:
     if (!r.includes("wait")) size = r.trim(); else await sleep(2000);
   }
   if (!size) throw new Error("the playtest's player never appeared");
-  const [vw, vh] = size.split("x").map(Number);
-  if (vw < 400 || vh < 300) throw new Error(`the Studio window is minimised or too small (${size}): keep it big and visible while filming`);
-  log(`game picture: ${size}`);
   const cat = await catalog();
-  const rec = frames ? new Frames() : new Obs();
+  const rec = mode === "frames" ? new Frames() : mode === "obs" ? new Obs() : new PcRec();
   await rec.connect();
   const hist = loadHist();
   fs.mkdirSync(path.join(OUT, "clips"), { recursive: true });
@@ -492,28 +633,53 @@ return (lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") and lp:
       log(`[${i + 1}/${count}] ${kind}: ${p.name}`);
       try {
         await K.prep(p, cat);
-        await rec.start();
-        await sleep(600);
-        await setCalib(true);
-        await sleep(rec.calibMs);
-        await setCalib(false);
-        await K.action(p, cat);
-        const raw = await rec.stop();
-        await K.after(p, cat);
         const hook = hookFor(kind, p);
         const out = path.join(OUT, "clips", `${stamp()}_${kind}_${slug(p.name)}.mp4`);
-        log(`  editing (${path.basename(raw)}) -> ${path.basename(out)}`);
-        edit(raw, { hook, layout: K.layout, out });
+        if (rec instanceof PcRec) {
+          // where the game picture is (once a run: Studio is brought to the front, maximised), then 60 fps
+          if (!rec.rect) {
+            await setCalib(true);
+            await sleep(900);
+            try { await rec.locate(); } finally { await setCalib(false); }
+            log(`  game picture on the PC screen: ${rec.rect.w}x${rec.rect.h} at ${rec.rect.x},${rec.rect.y}`);
+          }
+          const fps = (await client(`local n = 0 local c = game:GetService("RunService").RenderStepped:Connect(function() n += 1 end) task.wait(1) c:Disconnect() return tostring(n)`)).trim();
+          if (Number(fps) < 45) log(`  (warning: Studio draws only ${fps} frames a second${Number(fps) === 0 ? ": is its window visible and the screen on?" : ""})`);
+          await rec.start(70);
+          const tA = Date.now();
+          await K.action(p, cat);
+          const len = (Date.now() - tA) / 1000 + 0.3;
+          const raw = await rec.stop();
+          await K.after(p, cat);
+          log(`  editing on the PC (${len.toFixed(1)} s, Studio at ${fps} fps)...`);
+          const final = await rec.edit(raw, { hook, layout: K.layout, start: 1.2, len });
+          log("  downloading the clip...");
+          await rec.fetch(final, out);
+          await call("pc_files", { delete: [raw] });
+        } else {
+          await rec.start();
+          await sleep(600);
+          await setCalib(true);
+          await sleep(rec.calibMs);
+          await setCalib(false);
+          await K.action(p, cat);
+          const raw = await rec.stop();
+          await K.after(p, cat);
+          log(`  editing (${path.basename(raw)}) -> ${path.basename(out)}`);
+          edit(raw, { hook, layout: K.layout, out, fps: mode === "frames" ? 30 : 60 });
+        }
         fs.writeFileSync(out.replace(/\.mp4$/, ".txt"), caption(hook));
         hist.n++;
         hist.used[kind + ":" + p.id] = (hist.used[kind + ":" + p.id] || 0) + 1;
         saveHist(hist);
         made.push(out);
+        log("  -> " + path.basename(out));
       } catch (e) {
         log("  failed: " + e.message);
         await setCalib(false).catch(() => {});
         await setShot(null).catch(() => {});
         if (rec instanceof Obs) await rec.req("StopRecord").catch(() => {});
+        if (rec instanceof PcRec && rec.job) await call("pc_stop", { job: rec.job }).catch(() => {});
       }
     }
   } finally {
@@ -529,10 +695,10 @@ function ensureFfmpeg() { run(FFMPEG, ["-version"]); }
 
 async function main() {
   const cmd = argv.shift();
-  const kind = opt("kind", null), name = opt("name", null), frames = opt("frames", false);
+  const kind = opt("kind", null), name = opt("name", null), mode = opt("frames", false) ? "frames" : opt("obs", false) ? "obs" : "pc";
   const hook = opt("hook", ""), layout = opt("layout", "full"), out = opt("out", null);
   if (cmd === "make") {
-    await make(parseInt(argv[0] || "1", 10) || 1, kind, name, frames);
+    await make(parseInt(argv[0] || "1", 10) || 1, kind, name, mode);
   } else if (cmd === "edit") {
     ensureFfmpeg();
     await ensureFont();
@@ -553,4 +719,5 @@ async function main() {
     log(fs.readFileSync(__filename, "utf8").split("\n").slice(2, 8).join("\n"));
   }
 }
-main().catch((e) => { console.error("ERROR: " + e.message); process.exit(1); });
+if (require.main === module) main().catch((e) => { console.error("ERROR: " + e.message); process.exit(1); });
+module.exports = { PcRec, buildGraph, magentaRect, edit, call, textOf };

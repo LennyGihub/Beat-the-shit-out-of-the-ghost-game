@@ -54,30 +54,29 @@ Studio (Edit mode only: it waits while a playtest runs). Nothing to log in to, n
 cannot see Studio through it (no playtest, no screenshots), so save the place and tell Claude what you see.
 `node pull-from-github.js --all` pushes every pending script again. `github-sync.bat` restarts the sync alone (the gateway must be running).
 
-## TikTok clips (clipper.js)
+## TikTok clips (clipper.js) - made by the cloud session
 
-`make-clips.bat` films the game and edits the clips for TikTok by itself: it starts a playtest, sets up each shot
-(a first-person fight that ends in a knockout, a monster's entrance, an ultimate in the sandbox, a Moon form's giant
-in the park), records the Studio window with OBS, then makes a 1080x1920 clip with the hook text in the game's marker
-font and an end card ("SEARCH JUMP THE GHOST ON ROBLOX - CODE: TIKTOK"). Clips + captions land in
-`%USERPROFILE%\Videos\JumpTheGhost\clips` (`.mp4` + `.txt`). The game's music is muted while filming (it is
-licensed for Roblox only): add a TikTok sound when you post.
+The cloud Claude session makes the clips by itself, at 60 fps: it starts a playtest, sets up each shot (a
+first-person fight that ends in a knockout, a monster's entrance, an ultimate in the sandbox, a Moon form's giant in
+the park), and through the gateway's **PC tools** (`pc_window`, `pc_ffmpeg`, `pc_get`... in mcp-gateway.js) brings
+Studio to the front, records the game picture with ffmpeg (Windows desktop duplication, `ddagrab`: no OBS), edits it
+on this PC (1080x1920 60 fps, the hook in the game's marker font, an end card "SEARCH JUMP THE GHOST ON ROBLOX - CODE:
+TIKTOK") and downloads only the finished clip. Work files: `%USERPROFILE%\Videos\JumpTheGhost\work` (the PC tools
+can touch nothing else; their ffmpeg arguments may not hold paths or network addresses). No game sound: the clips get
+a TikTok sound when they are posted (the game's music / sounds are licensed for Roblox only).
 
-One-time setup:
+One-time setup: double-click **`update-bridge.bat`** (or, the first time, in a PowerShell window in this folder:
+`iwr -UseBasicParsing https://raw.githubusercontent.com/LennyGihub/Beat-the-shit-out-of-the-ghost-game/main/roblox-mcp-bridge/update-bridge.ps1 -OutFile update-bridge.ps1; powershell -ExecutionPolicy Bypass -File .\update-bridge.ps1`).
+It downloads the new bridge files and installs ffmpeg. Then close the bridge windows and start `start-bridge.bat`.
 
-1. `winget install OBSProject.OBSStudio` and `winget install Gyan.FFmpeg` (then open a new window).
-2. OBS: add a source **Window Capture** of the Roblox Studio window (no need to crop it: the clip maker finds the game
-   picture by itself). Settings > Output > Recording format: mkv or mp4.
-3. OBS: Tools > WebSocket Server Settings > **Enable WebSocket server**, then Show Connect Info and put the password in
-   `%USERPROFILE%\obs-websocket-password.txt` (one line).
-4. Put `clipper.js` and `make-clips.bat` in this folder (next to `start-bridge.bat`). It downloads the marker font
-   into `fonts\` the first time.
+While it films: Roblox Studio open on the place, the bridge running, the screen on (no sleep), and nobody using the
+PC (the recording takes what is on the screen: Studio is brought to the front and maximised by itself).
 
-Each time: Studio open on the place with MCP Ready, `start-bridge.bat` running, OBS open, then double-click
-`make-clips.bat` (4 clips; `make-clips.bat 8` for 8; `make-clips.bat 2 --kind fight --name scarecrow`). Keep the
-Studio window big and visible while it films (a minimised window draws nothing), and other sounds off (OBS records the
-PC's sound). `node clipper.js list` shows what it can film; `node clipper.js edit <video> --hook "..."` edits a video
-you recorded yourself. It remembers what it filmed (`history.json`) so clips don't repeat.
+On the PC itself: `make-clips.bat` (`node clipper.js make 4`) does the same; `--obs` records with OBS instead
+(Tools > WebSocket Server Settings > Enable, password in `%USERPROFILE%\obs-websocket-password.txt`, a Window Capture
+of Studio); `node clipper.js list` shows what it can film; `node clipper.js edit <video> --hook "..."` edits a video
+you recorded yourself. Clips + captions: `%USERPROFILE%\Videos\JumpTheGhost\clips`; `history.json` keeps them from
+repeating.
 
 ## Each time you want to test
 
