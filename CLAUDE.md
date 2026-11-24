@@ -19,6 +19,8 @@
 
 - Before designing or changing a loop, progression, economy, rebirth, a tutorial or retention features, read `.claude/game-loops.md` (what makes a good Roblox game loop; the user asked for it to be learned, 2026-11-18).
 - Before planning an update's monetization (Robux, passes, subscriptions, ads), retention / first minute, marketing (thumbnails, Share Links, Moments, Ads Manager), performance budgets, saves / security, or anything touching paid randomness, trading, DevEx or tax, read `.claude/business-2026.md` (the user's 2026 Roblox business guide, learned 2026-11-23; its last section lists this game's gaps found in the code). The user said "don't modify the game yet": propose those fixes, don't make them unasked.
+- Before planning growth, ads, a launch, Kids and Select, a new game / genre choice, pricing or a pass ladder, read `.claude/strategy-2026-11.md` (English digest of the user's "STRATEGIE-ROBLOX" study, learned 2026-11-24: how Recommended For You ranks, the 16+ trial until 250 highly engaged players, Top Earning data, DevEx maths, ad break-even, quotas, strategies S1-S12 and stop rules; full French copy in `.claude/reference/`). This game's own rules win where they differ (e.g. no Roblox AI generation).
+- The user saves Claude quota by using Gemini as prompt writer and outside debugger ("Gate & Clear"): read `.claude/working-with-gemini.md`. In short: finish each step with its own check, never start step N+1 on a broken step N, no unasked "polish", and if a fix fails once, say so plainly with the console error and the file so the user can take it to Gemini. It also summarises the user's other game, Patate Merge (repo `jeu-1-patate`; full handoff in `.claude/reference/`).
 
 ## 3D models: hand-built blocky PS2 parts only
 
