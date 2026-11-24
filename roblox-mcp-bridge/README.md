@@ -54,6 +54,31 @@ Studio (Edit mode only: it waits while a playtest runs). Nothing to log in to, n
 cannot see Studio through it (no playtest, no screenshots), so save the place and tell Claude what you see.
 `node pull-from-github.js --all` pushes every pending script again. `github-sync.bat` restarts the sync alone (the gateway must be running).
 
+## TikTok clips (clipper.js)
+
+`make-clips.bat` films the game and edits the clips for TikTok by itself: it starts a playtest, sets up each shot
+(a first-person fight that ends in a knockout, a monster's entrance, an ultimate in the sandbox, a Moon form's giant
+in the park), records the Studio window with OBS, then makes a 1080x1920 clip with the hook text in the game's marker
+font and an end card ("SEARCH JUMP THE GHOST ON ROBLOX - CODE: TIKTOK"). Clips + captions land in
+`%USERPROFILE%\Videos\JumpTheGhost\clips` (`.mp4` + `.txt`). The game's music is muted while filming (it is
+licensed for Roblox only): add a TikTok sound when you post.
+
+One-time setup:
+
+1. `winget install OBSProject.OBSStudio` and `winget install Gyan.FFmpeg` (then open a new window).
+2. OBS: add a source **Window Capture** of the Roblox Studio window (no need to crop it: the clip maker finds the game
+   picture by itself). Settings > Output > Recording format: mkv or mp4.
+3. OBS: Tools > WebSocket Server Settings > **Enable WebSocket server**, then Show Connect Info and put the password in
+   `%USERPROFILE%\obs-websocket-password.txt` (one line).
+4. Put `clipper.js` and `make-clips.bat` in this folder (next to `start-bridge.bat`). It downloads the marker font
+   into `fonts\` the first time.
+
+Each time: Studio open on the place with MCP Ready, `start-bridge.bat` running, OBS open, then double-click
+`make-clips.bat` (4 clips; `make-clips.bat 8` for 8; `make-clips.bat 2 --kind fight --name scarecrow`). Keep the
+Studio window big and visible while it films (a minimised window draws nothing), and other sounds off (OBS records the
+PC's sound). `node clipper.js list` shows what it can film; `node clipper.js edit <video> --hook "..."` edits a video
+you recorded yourself. It remembers what it filmed (`history.json`) so clips don't repeat.
+
 ## Each time you want to test
 
 1. Open Roblox Studio on your place, check **MCP Ready** (bottom-right).
