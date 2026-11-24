@@ -240,8 +240,9 @@ The user said "don't modify the game yet": this is a list for future updates, to
 - **Live ops**: no weekly event rhythm yet; codes and patch notes exist and can carry one.
 - **Security**: DONE 2026-11-24 (Server/Guard on all 31 handlers; NaN holes fixed in Inventory.onUse, Tutorial
   spawn, the party size).
-- **Performance**: phones start on LOW particles (Client/Settings); `tools/build/perf_pass.luau` (report / APPLY)
-  still has to be run in Studio; streaming settings undecided (the pass reports them).
+- **Performance**: phones start on LOW particles (Client/Settings); `tools/build/perf_pass.luau` APPLIED 2026-11-24
+  (29,085 shadows off, 564 decor meshes boxed); streaming already had the guide's values. SLIM avatars and the
+  avatar type can only be set by the user in Studio (scripts lack the capability).
 - **Languages**: Client/Translate + tools/localization; the user still has to switch on automatic capture +
   translation and upload `patterns.csv`.
 - **Controller**: fights and windows already worked; SELECT now reaches the lobby column (2026-11-24).

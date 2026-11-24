@@ -81,8 +81,8 @@ say("")
 say("STREAMING (now -> the guide): StreamingEnabled " .. prop("StreamingEnabled") .. " -> true | ModelStreamingBehavior " .. prop("ModelStreamingBehavior")
 	.. " -> Improved | StreamingIntegrityMode " .. prop("StreamingIntegrityMode") .. " -> PauseOutsideLoadedArea | StreamOutBehavior "
 	.. prop("StreamOutBehavior") .. " -> Opportunistic | MinRadius " .. prop("StreamingMinRadius") .. " -> 64 | TargetRadius " .. prop("StreamingTargetRadius") .. " -> 1024")
-say("SLIM avatars: " .. prop("EnableSLIMAvatars") .. (APPLY and " -> true" or " (APPLY sets it true)"))
-if APPLY then pcall(function() (workspace :: any).EnableSLIMAvatars = true end) end
+local slimSet = APPLY and pcall(function() (workspace :: any).EnableSLIMAvatars = true end)
+say("SLIM avatars: " .. prop("EnableSLIMAvatars") .. (slimSet and " -> true" or (APPLY and " (a script can't set it here: Workspace > EnableSLIMAvatars in Studio's Properties panel)" or " (APPLY tries to set it)")))
 say(("TOTAL: %d parts, %d shadows %s, %d decor meshes %s, %d lights (%d cast shadows: the guide says at most 2 per room), %d emitters")
 	:format(tot.parts, tot.shadowOff, APPLY and "turned off" or "to turn off", tot.boxed, APPLY and "boxed" or "to box", tot.lights, tot.shadowLights, tot.emitters))
 say(APPLY and "APPLIED. Save the place (File > Save) and re-run without APPLY to check: the counts to change should be 0." or "REPORT ONLY (nothing changed).")
