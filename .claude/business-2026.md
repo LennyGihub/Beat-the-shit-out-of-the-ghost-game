@@ -238,6 +238,8 @@ The user said "don't modify the game yet": this is a list for future updates, to
 - **First 60 seconds**: a new player starts on an all-black READY screen, then the intro. MEASURED since 2026-11-24
   (ReadySeconds, QuitBeforeReady, OnboardingQuit, IntroSkipped): change the screen only once the numbers say so.
 - **Live ops**: no weekly event rhythm yet; codes and patch notes exist and can carry one.
+- **Daily return**: DONE 2026-11-24 (week 1: login streak + shield + day 30 form, welcome jar, free daily samples, push
+  notifications planned in game and sent by GitHub Actions once the user sets up the API key and notification strings).
 - **Security**: DONE 2026-11-24 (Server/Guard on all 31 handlers; NaN holes fixed in Inventory.onUse, Tutorial
   spawn, the party size).
 - **Performance**: phones start on LOW particles (Client/Settings); `tools/build/perf_pass.luau` APPLIED 2026-11-24

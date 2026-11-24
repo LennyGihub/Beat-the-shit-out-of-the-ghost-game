@@ -1,0 +1,18 @@
+# Push notifications for the game (2026-11-24): every hour, send the reminders the game planned (Server/Notify)
+# through Roblox Open Cloud. Needs the repository secret ROBLOX_API_KEY (see tools/notify/send.py).
+name: Push notifications
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: tools/notify
+      - run: python3 tools/notify/send.py
+        env:
+          ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}

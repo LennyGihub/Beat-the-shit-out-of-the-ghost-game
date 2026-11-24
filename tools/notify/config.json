@@ -1,0 +1,16 @@
+{
+  "universe": 10776928900,
+  "map": "Notify_v1",
+  "templates": {
+    "welcome": "",
+    "streak": "",
+    "daily": "",
+    "miss": ""
+  },
+  "texts_to_create_in_creator_hub": {
+    "welcome": "Your welcome jar is ready to open!",
+    "streak": "Your {days}-day streak ends soon. Day {next} is waiting for you!",
+    "daily": "Your daily reward is ready. Come and claim it!",
+    "miss": "The ghosts are back in the house. Come and beat them!"
+  }
+}
