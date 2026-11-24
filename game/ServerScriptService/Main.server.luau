@@ -39,6 +39,8 @@ local FormShop = require(Server.Forms)
 local Trade = require(Server.Trade)
 local Codes = require(Server.Codes)
 local Share = require(Server.Share)
+local Daily = require(Server.Daily)
+local Notify = require(Server.Notify)
 local Analytics = require(Server.Analytics)
 
 local isMatchServer = game.PrivateServerId ~= "" and game.PrivateServerOwnerId == 0
@@ -60,6 +62,8 @@ FormShop.start() -- Doc Mercy's ectoplasm, Mother Moth's potions (the park's two
 Trade.start() -- players trade cash, jar forms and potion forms in the park
 Codes.start() -- redeemable codes (the lobby's CODES button)
 Share.start() -- the INVITE button: friend invites, share links, the reward for friends who play 10 minutes
+Daily.start() -- the login streak, the welcome jar, the free samples (the lobby's DAILY button)
+Notify.start() -- push notifications: plans each player's reminders when they leave (sent by tools/notify/send.py)
 Admin.start()
 Friends.start()
 Monetization.start()
@@ -123,6 +127,8 @@ local function onPlayer(p: Player)
 	Quests.setup(p)
 	Bestiary.setup(p) -- badges already earned by an older save
 	FormShop.setup(p) -- the jars / potions that finished opening while the player was away
+	Daily.setup(p)
+	Notify.setup(p)
 	if Run.mode == "Match" then
 		firstJoin = firstJoin or os.clock()
 		-- start when the whole party has arrived (or after 15 s)

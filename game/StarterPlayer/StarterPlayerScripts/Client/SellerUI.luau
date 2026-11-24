@@ -28,6 +28,7 @@ local panel: Frame
 local titleT: TextLabel
 local subT: TextLabel
 local cashT: TextLabel
+local freeBtn: TextButton? = nil -- FREE SAMPLE (Server/Daily): one free jar / potion of this kind a day
 local statusT: TextLabel
 local offlineT: TextLabel
 local vialFrame: Frame
@@ -117,6 +118,16 @@ local function refresh()
 	local kind = kindOpen
 	if not kind or not panel then return end
 	local seller = Forms.SELLER[kind]
+	-- today's FREE SAMPLE (player attribute Daily from Server/Daily: fs = the free jar, fp = the free potion)
+	if freeBtn then
+		local okD, d = pcall(function() return HttpService:JSONDecode(lp:GetAttribute("Daily") or "{}") end)
+		local ready = okD and type(d) == "table" and (kind == "stim" and d.fs == true or kind == "potion" and d.fp == true)
+		local lab = freeBtn:FindFirstChild("Label") :: TextLabel?
+		if lab then lab.Text = ready and ("FREE " .. (kind == "stim" and "JAR" or "POTION") .. " TODAY!") or "NEXT FREE ONE TOMORROW" end
+		local br = freeBtn:FindFirstChild("Brush")
+		if br then Grunge.paint(br, ready and Color3.fromRGB(62, 118, 40) or DARK) end
+		freeBtn:SetAttribute("Ready", ready)
+	end
 	titleT.Text = seller.name
 	subT.Text = kind == "stim" and "ECTOPLASM  -  FIST FORMS: PUNCH DAMAGE AND KNOCKBACK" or "POTIONS  -  BODY FORMS: HEALTH AND STAMINA"
 	subT.TextColor3 = ACCENT[kind]
@@ -427,6 +438,22 @@ function UI.init()
 		end)
 		tabs[set] = t
 	end
+	-- FREE SAMPLE: one free jar / potion of this kind a day (Remotes.Forms "sample": Server/Forms + Server/Daily)
+	freeBtn = button(panel, "FREE TODAY!", { Name = "FreeSample", Position = UDim2.fromScale(0.62, 0.172), Size = UDim2.fromScale(0.34, 0.058), ZIndex = 12, Rotation = 1 },
+		Color3.fromRGB(62, 118, 40))
+	;(freeBtn :: TextButton).Activated:Connect(function()
+		local kind = kindOpen
+		if not kind or waiting then return end
+		Sfx.play("Click")
+		if not (freeBtn :: TextButton):GetAttribute("Ready") then
+			statusT.Text = "ONE FREE " .. (kind == "stim" and "JAR" or "POTION") .. " A DAY - COME BACK TOMORROW"
+			return
+		end
+		waiting = true
+		statusT.Text = kind == "stim" and "THE DOC HANDS YOU A FREE JAR..." or "SHE POURS YOU A FREE ONE..."
+		;(Remotes :: any).Forms:FireServer("sample", kind)
+		task.delay(4, function() waiting = false end)
+	end)
 	vialFrame = Grunge.frame(panel, { Position = UDim2.fromScale(0.04, 0.24), Size = UDim2.fromScale(0.56, 0.64), ZIndex = 10 })
 	local grid = Instance.new("UIGridLayout"); grid.CellSize = UDim2.fromScale(0.49, 0.485); grid.CellPadding = UDim2.fromScale(0.02, 0.03)
 	grid.SortOrder = Enum.SortOrder.LayoutOrder; grid.Parent = vialFrame
@@ -479,7 +506,7 @@ function UI.init()
 	list.ScrollBarThickness = 5; list.ScrollBarImageColor3 = Color3.fromRGB(150, 30, 26); list.AutomaticCanvasSize = Enum.AutomaticSize.Y
 	list.CanvasSize = UDim2.new(); list.ZIndex = 10; list.Parent = panel
 	local ll = Instance.new("UIListLayout"); ll.Padding = UDim.new(0, 4); ll.SortOrder = Enum.SortOrder.LayoutOrder; ll.Parent = list
-	for _, a in { "Cash", "XP", "Forms", "FormStim", "FormPotion", "Offline" } do
+	for _, a in { "Cash", "XP", "Forms", "FormStim", "FormPotion", "Offline", "Daily" } do
 		lp:GetAttributeChangedSignal(a):Connect(function() if panel.Visible then refresh() end end)
 	end
 	-- walking away closes it

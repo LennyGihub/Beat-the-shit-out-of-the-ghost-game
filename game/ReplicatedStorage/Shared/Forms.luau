@@ -16,7 +16,7 @@
 -- (player attributes FormStim / FormPotion), the rest wait in the collection. Server/Forms rolls, saves and applies
 -- them (Combat.stat); Client/FormCine plays the first-person jar / drink and shows what you got.
 export type Form = { id: string, kind: string, set: string, name: string, rarity: number, color: Color3, desc: string,
-	dmg: number?, knock: number?, hp: number?, sta: number?, exclusive: boolean?, color2: Color3? }
+	dmg: number?, knock: number?, hp: number?, sta: number?, exclusive: boolean?, color2: Color3?, source: string? }
 export type Vial = { id: string, kind: string, set: string, tier: number, name: string, level: number, price: number, odds: { number }, color: Color3, desc: string }
 
 local function C(r, g, b) return Color3.fromRGB(r, g, b) end
@@ -304,6 +304,10 @@ for _, x in {
 		dmg = 1.5, knock = 0.35, desc = "For the ones who played before the game was finished. Some of its bugs came with you." }),
 	f({ id = "AlphaHolo", kind = "potion", name = "ALPHA HOLOGRAM", rarity = 5, exclusive = true, color = C(170, 110, 255), color2 = C(70, 235, 255),
 		hp = 1.5, sta = 0.4, desc = "Half of you isn't really there. The ghosts keep hitting that half." }),
+	-- a 30-day LOGIN STREAK (2026-11-24, Shared/Daily: day 30 gives it): a body form with the Camp LEGENDARY potion's
+	-- buff, gold. (source = the line the INVENTORY shows instead of "FROM A CODE")
+	f({ id = "ThirtyNights", kind = "potion", name = "THIRTY NIGHTS", rarity = 5, exclusive = true, color = C(255, 196, 70), color2 = C(255, 110, 40),
+		hp = 1.5, sta = 0.4, source = "A 30-DAY STREAK", desc = "You came back thirty nights in a row. The ghosts started to recognise you." }),
 } do table.insert(List, x) end
 
 -- odds = weights for rarity 1..6, in % (the rare ones are very rare: the jars are cheap, open lots of them)

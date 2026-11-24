@@ -27,6 +27,7 @@ local Guard = require(script.Parent.Guard)
 local Data = require(script.Parent.Data)
 local Analytics = require(script.Parent.Analytics)
 local Combat = require(script.Parent.Combat)
+local Daily = require(script.Parent.Daily)
 local HttpService = game:GetService("HttpService")
 
 local M = {}
@@ -96,6 +97,29 @@ local function buy(p: Player, vialId: any, count: any)
 	local prev = Data.formOf(p, v.kind)
 	local isNew = Data.addForm(p, fm.id)
 	-- nothing worn yet: wear it now; otherwise the player picks (EQUIP / KEEP on the reveal card)
+	local worn = prev == nil
+	if worn then Data.equipForm(p, fm.id) end
+	task.spawn(Data.save, p)
+	Combat.refreshHealth(p)
+	Remotes.Fx:FireClient(p, "FormRolled", v.kind, v.id, fm.id, isNew, worn, prev or "")
+end
+
+-- FREE SAMPLE (2026-11-24, Server/Daily): one free jar / potion of this kind per day, at the seller's counter (the
+-- cheapest of the best set the player has open); plays like a buy (Fx "FormRolled": the seller's panel comes back)
+local function sample(p: Player, kind: any)
+	if kind ~= "stim" and kind ~= "potion" then return end
+	if p:GetAttribute("InMatch") or os.clock() - (lastBuy[p] or 0) < BUY_GAP then return end
+	if not Daily.sampleReady(p, kind) then toast(p, "COME BACK TOMORROW FOR ANOTHER FREE " .. (kind == "stim" and "JAR" or "POTION")); return end
+	local at = sellerPart(kind)
+	local hrp = p.Character and p.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if at and hrp and (hrp.Position - at.Position).Magnitude > REACH then return end
+	local v = Daily.useSample(p, kind)
+	if not v then return end
+	lastBuy[p] = os.clock()
+	Analytics.custom(p, "FreeSample", 1, kind)
+	local fm = Forms.roll(v, rng)
+	local prev = Data.formOf(p, v.kind)
+	local isNew = Data.addForm(p, fm.id)
 	local worn = prev == nil
 	if worn then Data.equipForm(p, fm.id) end
 	task.spawn(Data.save, p)
@@ -230,6 +254,7 @@ function M.start()
 		elseif action == "offline" then offline(p, a, b)
 		elseif action == "cancel" then cancel(p, a)
 		elseif action == "equip" then equip(p, a)
+		elseif action == "sample" then sample(p, a)
 		elseif action == "tutorial" and (a == "start" or a == "done") then
 			-- the jars / potions tutorial (Client/FormTutorial): starter cash once, then done
 			if Data.formTutorial(p, a) then Remotes.Fx:FireClient(p, "Toast", "+$20 STARTER CASH - GO SEE THE SELLERS", true) end

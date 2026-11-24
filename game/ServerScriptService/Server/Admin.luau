@@ -60,7 +60,7 @@ local function find(list: { any }, word: string?): any
 	return nil
 end
 
-local HELP = "cash <n> | xp <n> | ref <userId>|done | camp all|reset|<n> | trips reset|empty|<n> | form <id>|all|off|tutorial | code reset|<code> | tutorial reset | notes reset | offline finish | offline pity <h> | trade bot | runcash <n> | give <item> | clearitems | ult <id> | allults | allmaps | heal | brut | god | start [map] [diff] | "
+local HELP = "daily reset|welcome|sample|<n> | notify | cash <n> | xp <n> | ref <userId>|done | camp all|reset|<n> | trips reset|empty|<n> | form <id>|all|off|tutorial | code reset|<code> | tutorial reset | notes reset | offline finish | offline pity <h> | trade bot | runcash <n> | give <item> | clearitems | ult <id> | allults | allmaps | heal | brut | god | start [map] [diff] | "
 	.. "revive | money2 | glock | vip | doubleult | secondchance | next | killghost | bring | ragdoll [power] | monster <id|off> | boss <id> [tier 1-3] | evolved on|off|<tier> | event plane|van|train | leave | endrun"
 
 local CMD: { [string]: (p: Player, a: string?, b: string?) -> (boolean, string) } = {}
@@ -145,6 +145,20 @@ CMD.code = function(p, a, b)
 	if a == "reset" then return true, Codes.reset(p) end
 	if not a then return false, "Usage: code reset | code <code>" end
 	return Codes.redeem(p, a .. (b and (" " .. b) or ""), true)
+end
+-- "daily reset | welcome | sample | shield | miss <days> | <n>": the login streak (Server/Daily). <n> = as if day n was
+-- claimed yesterday (claim again for day n+1); welcome = the welcome jar ready now; sample = today's free samples back
+CMD.daily = function(p, a, b)
+	local Daily = require(script.Parent.Daily)
+	local n = tonumber(a)
+	if n then return true, Daily.admin(p, "streak", n) end
+	if a == "miss" then return true, Daily.admin(p, "miss", tonumber(b) or 1) end
+	if a == "reset" or a == "welcome" or a == "sample" or a == "shield" then return true, Daily.admin(p, a) end
+	return false, "Usage: daily reset | welcome | sample | shield | miss <days> | <n>"
+end
+-- "notify": the push notifications that would be planned if you left now (Server/Notify; Studio: NotifyLog)
+CMD.notify = function(p)
+	return true, require(script.Parent.Notify).debug(p)
 end
 -- "notes reset": the patch notes count as not read (WHAT'S NEW opens by itself again)
 CMD.notes = function(p, a)

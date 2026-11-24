@@ -85,6 +85,7 @@ local WeakFx = require(Client.WeakFx) -- a x5 combo: the monster goes WEAK (lift
 local TradeUI = require(Client.TradeUI) -- trading cash, jar forms and potion forms with other players
 local CodesUI = require(Client.CodesUI) -- the lobby's CODES window (redeemable codes: Server/Codes)
 local ShareUI = require(Client.ShareUI) -- the lobby's INVITE window + SHARE THIS after big moments (Server/Share)
+local DailyUI = require(Client.DailyUI) -- the lobby's DAILY window: login streak, welcome jar, free samples (Server/Daily)
 local FreeCam = require(Client.FreeCam) -- admins: SHIFT + C free camera
 local PatchNotesUI = require(Client.PatchNotesUI) -- WHAT'S NEW: the patch notes (Shared/PatchNotes)
 
@@ -166,6 +167,8 @@ LobbyUI.init(function() UltShop.open() end, function(open) Input.setShopOpen(ope
 TradeUI.init(function(open) Input.setShopOpen(open) end)
 CodesUI.init(function(open) Input.setShopOpen(open) end)
 ShareUI.init(function(open) Input.setShopOpen(open) end)
+-- the login streak / welcome jar / free samples window (the lobby's DAILY bar; opens by itself when a reward waits)
+DailyUI.init(function(open) Input.setShopOpen(open) end, function() return FormCine.busy() end)
 -- an EPIC+ form's reveal is a moment worth sharing (Client/ShareUI)
 FormCine.onReveal = function(fm: any)
 	if type(fm) == "table" and (tonumber(fm.rarity) or 0) >= 4 then ShareUI.moment(tostring(fm.name) .. "!") end
@@ -275,12 +278,15 @@ Remotes.Fx.OnClientEvent:Connect(function(kind: string, ...)
 		task.spawn(FormCine.play, args[1], args[2], args[3], args[4], args[5], args[6])
 	elseif kind == "CodeResult" then
 		CodesUI.result(...)
-	elseif kind == "CodeReward" then
+	elseif kind == "CodeReward" or kind == "DailyReward" then
 		-- a code gave a form: the jar / potion cinematic (no seller, no vial), then WEAR IT / KEEP. A code giving two
-		-- forms: the second one plays when the first is over (in the order they came)
+		-- forms: the second one plays when the first is over (in the order they came).
+		-- DailyReward (Server/Daily: a streak day, the welcome jar): the same, with its jar / potion (kind, vialId, ...)
 		local args = table.pack(...)
+		if kind == "CodeReward" then args = table.pack(args[1], "", args[2], args[3], args[4], args[5]) end
 		CodesUI.close()
 		SellerUI.close()
+		DailyUI.close()
 		codeQueue += 1
 		local my = codeQueue
 		task.spawn(function()
@@ -288,7 +294,7 @@ Remotes.Fx.OnClientEvent:Connect(function(kind: string, ...)
 			task.wait(codeTurn > 0 and 0.4 or 0)
 			FormCine.onDone = nil
 			codeTurn = my
-			FormCine.play(args[1], "", args[2], args[3], args[4], args[5])
+			FormCine.play(args[1], args[2], args[3], args[4], args[5], args[6])
 		end)
 	elseif kind == "FormMulti" then
 		SellerUI.multi(...)

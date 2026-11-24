@@ -145,6 +145,23 @@ local function fit(m: Menu)
 end
 
 local windowIsOpen = false
+-- a dim layer behind an open window (rebrand 2026-11-24: one thing on screen at a time). DisplayOrder 4: over the
+-- HUD and the level card, under every window (they are 5 and up).
+local dim: Frame? = nil
+local function setDim(on: boolean)
+	if not dim then
+		local pg = lp:FindFirstChildOfClass("PlayerGui")
+		if not pg then return end
+		local g = Instance.new("ScreenGui")
+		g.Name = "WindowDim"; g.ResetOnSpawn = false; g.IgnoreGuiInset = true; g.DisplayOrder = 4
+		g.Parent = pg
+		local f = Instance.new("Frame")
+		f.BorderSizePixel = 0; f.BackgroundColor3 = Color3.new(0, 0, 0); f.BackgroundTransparency = 1; f.Size = UDim2.fromScale(1, 1); f.Active = false
+		f.Parent = g
+		dim = f
+	end
+	(dim :: Frame).BackgroundTransparency = on and 0.45 or 1
+end
 function Platform.windowOpen(): boolean return windowIsOpen end
 -- every frame: place the open window, tell the listeners when one opens / the last one closes
 local function windowStep()
@@ -152,6 +169,7 @@ local function windowStep()
 	if m then fit(m) end
 	if (m ~= nil) ~= windowIsOpen then
 		windowIsOpen = m ~= nil
+		setDim(windowIsOpen)
 		windowChanged:Fire(windowIsOpen)
 	end
 end

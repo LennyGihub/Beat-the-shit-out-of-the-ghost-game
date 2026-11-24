@@ -135,9 +135,9 @@ local function bigButton(text: string, sub: string, color: Color3, y: number, ro
 	seedN += 7
 	local holder = Grunge.frame(side, { Position = UDim2.fromScale(0, y), Size = UDim2.fromScale(1, h or 0.2) })
 	local bar = Grunge.bar(holder, { size = UDim2.fromScale(1, 0.78), pos = UDim2.fromScale(0, 0.18), color = color, rot = rot, seed = seedN, slices = 26, outline = false })
-	local word = Grunge.text(holder, { Text = text, Position = UDim2.fromScale(0.05, 0.12), Size = UDim2.fromScale(0.62, 0.82), TextXAlignment = Enum.TextXAlignment.Left,
+	local word = Grunge.text(holder, { Name = "Word", Text = text, Position = UDim2.fromScale(0.05, 0.12), Size = UDim2.fromScale(0.52, 0.82), TextXAlignment = Enum.TextXAlignment.Left,
 		Rotation = rot - 2, ZIndex = 8 })
-	Grunge.text(holder, { Text = sub, Font = Grunge.TYPE, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.fromScale(0.95, 0.6), Size = UDim2.fromScale(0.42, 0.26),
+	Grunge.text(holder, { Name = "Sub", Text = sub, Font = Grunge.TYPE, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.fromScale(0.95, 0.6), Size = UDim2.fromScale(0.36, 0.26),
 		TextXAlignment = Enum.TextXAlignment.Right, Rotation = rot, ZIndex = 8, TextTransparency = 0.1 })
 	local b = Instance.new("TextButton")
 	b.BackgroundTransparency = 1; b.Size = UDim2.fromScale(1, 1); b.Text = ""; b.ZIndex = 9
@@ -155,6 +155,8 @@ local function bigButton(text: string, sub: string, color: Color3, y: number, ro
 	local _ = bar
 	return b
 end
+
+local dailyHolder: Frame? = nil -- (the DAILY bar's holder: LobbyUI.daily sets its line / badge)
 
 local function progress(): Campaign.Progress
 	local ok, t = pcall(function() return HttpService:JSONDecode(lp:GetAttribute("Campaign") or "{}") end)
@@ -330,13 +332,24 @@ function LobbyUI.startButton(): GuiObject? return (mine ~= nil and mine.Visible 
 
 local function refreshVisible()
 	local inMatch = lp:GetAttribute("InMatch") == true
-	-- small screens: the buttons step aside while a window is open (they would sit on top of it)
-	side.Visible = not inMatch and not (Platform.compact() and Platform.windowOpen())
+	-- the buttons step aside while any window is open (they would sit next to / on top of it)
+	side.Visible = not inMatch and not Platform.windowOpen()
 	if inMatch and panel.Visible then setOpen(false) end
 	local b = lp:GetAttribute("FriendBoost") or 0
 	local n = lp:GetAttribute("FriendCount") or 0
 	boostTag.Text = b > 0 and ("FRIEND BOOST +" .. math.floor(b * 100 + 0.5) .. "% CASH  (" .. n .. " FRIEND" .. (n > 1 and "S" or "") .. ")") or "FRIEND BOOST: +10% CASH PER FRIEND"
 	boostTag.TextColor3 = b > 0 and Color3.fromRGB(150, 220, 110) or Color3.fromRGB(190, 180, 160)
+end
+
+-- the DAILY menu bar (Client/DailyUI): what opens it, its little line, and its badge ("!" when a reward waits)
+function LobbyUI.daily(opener: () -> (), sub: string, ready: boolean)
+	(LobbyUI :: any).dailyOpener = opener
+	local h = dailyHolder
+	if not h then return end
+	local s = h:FindFirstChild("Sub")
+	if s and s:IsA("TextLabel") then s.Text = sub end
+	local b = h:FindFirstChild("Badge")
+	if b and b:IsA("GuiObject") then b.Visible = ready end
 end
 
 -- someone invited you (Fx "PartyInvite")
@@ -359,51 +372,58 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	gui.Parent = lp:WaitForChild("PlayerGui")
 
-	-- left column: PLAY / SHOP / QUESTS, drawn like the fight HUD's bars (health red, stamina mustard, brutality orange)
-	-- (seven buttons since INVITE, 2026-11-24: the column is 12% taller - same width - and each button 5% smaller on
-	-- screen than with six)
-	side = Grunge.frame(gui, { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 28, 0.5, 0), Size = UDim2.fromScale(0.2, 0.672) })
-	local sar = Instance.new("UIAspectRatioConstraint"); sar.AspectRatio = 0.659; sar.Parent = side
-	local BH, STEP = 0.1183, 0.1259
-	local playBtn = bigButton("PLAY", "TAKE THE TRAIN", Color3.fromRGB(150, 18, 20), 0, -1.2, function() setOpen(not panel.Visible) end, BH)
-	local shopBtn = bigButton("SHOP", "ULTS - HOUSES", Color3.fromRGB(176, 150, 40), STEP, 0.8, function()
-		if panel.Visible then setOpen(false) end
-		if openShop then openShop() end
+	-- left column: the grunge bars, like the fight HUD's (health red, stamina mustard, brutality orange).
+	-- PLACEMENT (2026-11-24): PLAY a bit bigger on top; a gap; the everyday ones (DAILY, QUESTS, SHOP, INVENTORY) as
+	-- equal bars on one step; a gap; TRADE / CODES / INVITE as three small brush buttons on one row. The column starts
+	-- below the top-left corner (the admin tag sits there) and hides while any window is open (refreshVisible).
+	side = Grunge.frame(gui, { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 28, 0.5, 24), Size = UDim2.fromScale(0.2, 0.7) })
+	local sar = Instance.new("UIAspectRatioConstraint"); sar.AspectRatio = 0.633; sar.Parent = side
+	local BH, STEP, TOP = 0.11, 0.118, 0.19
+	local function closePlay() if panel.Visible then setOpen(false) end end
+	local playBtn = bigButton("PLAY", "TAKE THE TRAIN", Color3.fromRGB(150, 18, 20), 0, -1.2, function() setOpen(not panel.Visible) end, 0.15)
+	-- DAILY: the login streak calendar (Client/DailyUI wires it: LobbyUI.daily)
+	local dailyBtn = bigButton("DAILY", "LOGIN REWARDS", Color3.fromRGB(70, 130, 40), TOP, 0.8, function()
+		closePlay()
+		local o = (LobbyUI :: any).dailyOpener
+		if o then o() end
 	end, BH)
-	local questBtn = bigButton("QUESTS", "DAILY CASH", Color3.fromRGB(210, 86, 18), STEP * 2, -0.6, function()
-		if panel.Visible then setOpen(false) end
+	dailyHolder = dailyBtn.Parent :: Frame
+	local questBtn = bigButton("QUESTS", "DAILY CASH", Color3.fromRGB(210, 86, 18), TOP + STEP, -0.6, function()
+		closePlay()
 		if questOpener then questOpener() end
 	end, BH)
+	local shopBtn = bigButton("SHOP", "ULTS - HOUSES", Color3.fromRGB(176, 150, 40), TOP + STEP * 2, 0.8, function()
+		closePlay()
+		if openShop then openShop() end
+	end, BH)
 	-- the INVENTORY: your forms, the monsters you have beaten and the badges (Client/BestiaryUI)
-	local invBtn = bigButton("INVENTORY", "FORMS", Color3.fromRGB(96, 52, 150), STEP * 3, 0.7, function()
-		if panel.Visible then setOpen(false) end
+	local invBtn = bigButton("INVENTORY", "FORMS", Color3.fromRGB(96, 52, 150), TOP + STEP * 3, 0.7, function()
+		closePlay()
 		if bestiaryOpener then bestiaryOpener() end
 	end, BH)
-	-- trading with the other players here (Client/TradeUI)
-	local tradeBtn = bigButton("TRADE", "FORMS, CASH", Color3.fromRGB(40, 110, 120), STEP * 4, -0.9, function()
-		if panel.Visible then setOpen(false) end
-		if tradeOpener then tradeOpener() end
-	end, BH)
-	-- redeemable codes (Client/CodesUI, Server/Codes)
-	local codesBtn = bigButton("CODES", "FREE REWARDS", Color3.fromRGB(160, 36, 120), STEP * 5, 0.9, function()
-		if panel.Visible then setOpen(false) end
-		if codesOpener then codesOpener() end
-	end, BH)
-	-- friend invites + share links (Client/ShareUI, Server/Share)
-	local inviteBtn = bigButton("INVITE", "FRIENDS = CASH", Color3.fromRGB(30, 120, 140), STEP * 6, -0.7, function()
-		if panel.Visible then setOpen(false) end
-		if inviteOpener then inviteOpener() end
-	end, BH)
+	-- the small row: trading (Client/TradeUI), codes (Client/CodesUI), friend invites + share links (Client/ShareUI)
+	local rowY = TOP + STEP * 4 + 0.035
+	local function small(text: string, color: Color3, i: number, onClick: () -> ()): TextButton
+		local b = button(side, text, { Position = UDim2.fromScale((i - 1) * 0.345, rowY), Size = UDim2.fromScale(0.31, 0.085), BackgroundColor3 = color, ZIndex = 9 })
+		b.Activated:Connect(function() Sfx.play("Click"); closePlay(); onClick() end)
+		return b
+	end
+	local tradeBtn = small("TRADE", Color3.fromRGB(40, 110, 120), 1, function() if tradeOpener then tradeOpener() end end)
+	local codesBtn = small("CODES", Color3.fromRGB(160, 36, 120), 2, function() if codesOpener then codesOpener() end end)
+	local inviteBtn = small("INVITE", Color3.fromRGB(30, 120, 140), 3, function() if inviteOpener then inviteOpener() end end)
 	-- CONTROLLER (2026-11-24): SELECT (the View / Back button) puts the controller on this column, top to bottom;
 	-- B or SELECT again gives the stick back to the character. (Roblox's own SELECT auto-pick is off so it can't pick
 	-- some other button on screen instead.)
-	local col = { playBtn, shopBtn, questBtn, invBtn, tradeBtn, codesBtn, inviteBtn }
+	local col = { playBtn, dailyBtn, questBtn, shopBtn, invBtn, tradeBtn, codesBtn, inviteBtn }
 	for i, b in col do
 		b.Selectable = true
 		b.SelectionOrder = i
 		b.NextSelectionUp = col[i - 1]
 		b.NextSelectionDown = col[i + 1]
 	end
+	tradeBtn.NextSelectionRight = codesBtn; codesBtn.NextSelectionLeft = tradeBtn
+	codesBtn.NextSelectionRight = inviteBtn; inviteBtn.NextSelectionLeft = codesBtn
+	codesBtn.NextSelectionUp = invBtn; inviteBtn.NextSelectionUp = invBtn
 	pcall(function() GuiService.AutoSelectGuiEnabled = false end)
 	-- (the controller hint line under the column says SELECT: MENU too)
 	local function onColumn(): boolean
@@ -437,12 +457,17 @@ function LobbyUI.init(shopOpener: () -> (), toggled: (boolean) -> (), questOpene
 	end
 	if questChanged then questChanged:Connect(refreshBadge) end
 	refreshBadge()
+	-- the same badge on DAILY ("!" when a reward waits: LobbyUI.daily)
+	local dBadge = badge:Clone()
+	dBadge.Name = "Badge"; dBadge.Visible = false; dBadge.Parent = dailyHolder
+	local dbt = dBadge:FindFirstChildOfClass("TextLabel")
+	if dbt then dbt.Text = "!" end
 	-- controller: D-pad up opens PLAY (the stick keeps moving the character)
-	local padTag = Grunge.text(side, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0, 0.955), Size = UDim2.fromScale(1.1, 0.05), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = ACCENT, Rotation = -1 })
+	local padTag = Grunge.text(side, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0, 0.87), Size = UDim2.fromScale(1.1, 0.04), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = ACCENT, Rotation = -1 })
 	local function padHint() padTag.Text = Platform.mode() == "gamepad" and "SELECT: MENU   D-PAD UP: PLAY   D-PAD LEFT: SETTINGS" or "" end
 	padHint()
 	Platform.changed:Connect(padHint)
-	boostTag = Grunge.text(side, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0.02, 0.895), Size = UDim2.fromScale(1.1, 0.058), TextXAlignment = Enum.TextXAlignment.Left, Rotation = -1 })
+	boostTag = Grunge.text(side, { Text = "", Font = Grunge.TYPE, Position = UDim2.fromScale(0.02, 0.815), Size = UDim2.fromScale(1, 0.045), TextXAlignment = Enum.TextXAlignment.Left, Rotation = -1 })
 
 	-- PLAY panel: a painted ink slab over a blood splat, the title over a red brush (like the ghost name over its bar)
 	panel = Grunge.slab(gui, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.55, 0.52), Size = UDim2.fromScale(0.62, 0.8), Visible = false, ZIndex = 8 }, Color3.fromRGB(21, 17, 15), 33, 6, false) -- no pen lines around the lobby's panels and bars

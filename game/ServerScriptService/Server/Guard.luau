@@ -21,7 +21,7 @@ local LIMITS: { [string]: { number } } = {
 	-- the lobby and the menus
 	Party = { 4, 8 }, RoomPick = { 4, 8 }, BuyUlt = { 4, 8 }, BuyMap = { 4, 8 }, EquipUlt = { 6, 10 }, SwapUlt = { 6, 10 },
 	ReturnLobby = { 2, 4 }, Quest = { 6, 12 }, Stage = { 3, 6 }, NextGhost = { 3, 6 }, Revive = { 3, 6 },
-	Tutorial = { 10, 25 }, Trade = { 10, 20 }, Codes = { 3, 6 }, Forms = { 8, 15 }, Share = { 1, 3 }, PatchNotes = { 2, 4 },
+	Tutorial = { 10, 25 }, Trade = { 10, 20 }, Codes = { 3, 6 }, Forms = { 8, 15 }, Share = { 1, 3 }, PatchNotes = { 2, 4 }, Daily = { 2, 4 },
 	Sandbox = { 4, 6 }, SaveSettings = { 4, 6 }, Platform = { 2, 4 }, FreeCam = { 8, 12 },
 }
 local DEFAULT = { 10, 20 }

@@ -17,9 +17,10 @@ local lp = Players.LocalPlayer
 
 function LevelUI.init()
 	local gui = Instance.new("ScreenGui")
-	gui.Name = "LevelUI"; gui.ResetOnSpawn = false; gui.DisplayOrder = 3
+	gui.Name = "LevelUI"; gui.ResetOnSpawn = false; gui.DisplayOrder = 3; gui.IgnoreGuiInset = true
 	gui.Parent = lp:WaitForChild("PlayerGui")
-	local box = Grunge.frame(gui, { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -22, 0.06, 26), Size = UDim2.fromScale(0.2, 0.07), Visible = false, ZIndex = 2 })
+	-- (placement 2026-11-24: the top-right stack = the cash, this right under it, SETTINGS under this)
+	local box = Grunge.frame(gui, { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -24, 0, 64), Size = UDim2.fromScale(0.2, 0.07), Visible = false, ZIndex = 2 })
 	local min = Instance.new("UISizeConstraint"); min.MinSize = Vector2.new(190, 46); min.Parent = box
 	local lv = Grunge.text(box, { Text = "LV 1", AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 0), Size = UDim2.fromScale(0.3, 0.56),
 		TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = Grunge.PAPER, Rotation = 1, ZIndex = 4 })

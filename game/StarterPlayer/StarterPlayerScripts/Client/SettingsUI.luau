@@ -197,7 +197,8 @@ function UI.init(toggled: (boolean) -> ())
 	local hud = Instance.new("ScreenGui")
 	hud.Name = "SettingsButton"; hud.ResetOnSpawn = false; hud.IgnoreGuiInset = true; hud.DisplayOrder = 6
 	hud.Parent = lp:WaitForChild("PlayerGui")
-	openBtn = button(hud, "SETTINGS", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -20, 0, 74), Size = UDim2.fromOffset(150, 40), Rotation = -2, Font = Grunge.FONT })
+	-- (placement 2026-11-24: under the cash and the level, same right edge)
+	openBtn = button(hud, "SETTINGS", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -24, 0, 130), Size = UDim2.fromOffset(150, 40), Rotation = -2, Font = Grunge.FONT })
 	openBtn.Activated:Connect(function() Sfx.play("Click"); UI.toggle() end)
 	local function label()
 		local m = Platform.mode()
@@ -207,7 +208,7 @@ function UI.init(toggled: (boolean) -> ())
 	label()
 	Platform.changed:Connect(label)
 	-- small screens: the button steps aside while a window is open (it would sit on the window's corner)
-	local function show() openBtn.Visible = not (Platform.compact() and Platform.windowOpen()) end
+	local function show() openBtn.Visible = not Platform.windowOpen() end
 	Platform.windowChanged:Connect(show)
 	Platform.changed:Connect(show)
 	Settings.changed:Connect(function(k) if k == "binds" then label() end end)

@@ -97,7 +97,7 @@ function HUD.init()
 		Grunge.frame(arrow, { BackgroundTransparency = 0, BackgroundColor3 = Grunge.INK, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 10, 0.5, rot > 0 and -15 or 15), Size = UDim2.fromOffset(66, 18), Rotation = rot, ZIndex = 0 })
 	end
 	toast = Grunge.text(gui, { Text = "", Font = Grunge.TYPE, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 0.86, 0), Size = UDim2.fromScale(0.5, 0.045), Visible = false, ZIndex = 30 })
-	cashLabel = Grunge.text(gui, { Text = "$0", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -24, 0, 20), Size = UDim2.fromScale(0.14, 0.06), TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = Color3.fromRGB(150, 220, 110), Rotation = 2, Visible = false })
+	cashLabel = Grunge.text(gui, { Text = "$0", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -24, 0, 14), Size = UDim2.fromScale(0.14, 0.06), TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = Color3.fromRGB(150, 220, 110), Rotation = 2, Visible = false })
 
 	-- banner (intro / victory / shop)
 	banner = Grunge.frame(gui, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.33), Size = UDim2.fromScale(0.6, 0.2), Visible = false, ZIndex = 20 })

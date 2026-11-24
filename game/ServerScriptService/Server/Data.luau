@@ -8,6 +8,7 @@
 -- Offline: the jars / potions opening by themselves (Server/Forms: a queue of vial ids per kind + when the first one
 -- started, and the opening time towards the RARE+ guarantee). Trips: train tickets used ({ n, reset }: Campaign.TRIPS).
 -- Codes: the codes this player already redeemed (normalized code -> true; Server/Codes).
+-- Daily: the login streak, the welcome jar and today's free samples (Server/Daily, Shared/Daily).
 -- A cleared map brings the player's level up to what that map's best jar / potion needs (Data.mapLevel).
 -- Never overwrites a save that failed to load; saves on leave, every 90 s and on shutdown.
 local DSS = game:GetService("DataStoreService")
@@ -156,6 +157,7 @@ function Data.load(player: Player)
 						for id, v in res.Owned do if type(id) == "string" and v == true then prof.data.Owned[id] = true end end
 					end
 					if type(res.Quests) == "table" then prof.data.Quests = res.Quests end -- cleaned up by Server/Quests
+					if type(res.Daily) == "table" then prof.data.Daily = res.Daily end -- the login streak etc.: cleaned up by Server/Daily
 					if type(res.Bestiary) == "table" then
 						for key, n in res.Bestiary do
 							local c = tonumber(n)
@@ -248,7 +250,8 @@ function Data.save(player: Player): boolean
 		Codes = table.clone(prof.data.Codes),
 		Offline = { stim = { q = table.clone(prof.data.Offline.stim.q), t = prof.data.Offline.stim.t },
 			potion = { q = table.clone(prof.data.Offline.potion.q), t = prof.data.Offline.potion.t }, pity = prof.data.Offline.pity },
-		Quests = prof.data.Quests and HttpService:JSONDecode(HttpService:JSONEncode(prof.data.Quests)) or nil }
+		Quests = prof.data.Quests and HttpService:JSONDecode(HttpService:JSONEncode(prof.data.Quests)) or nil,
+		Daily = prof.data.Daily and HttpService:JSONDecode(HttpService:JSONEncode(prof.data.Daily)) or nil }
 	for i = 1, 3 do
 		local ok, err = pcall(function()
 			store:UpdateAsync("u_" .. player.UserId, function() return snap end)

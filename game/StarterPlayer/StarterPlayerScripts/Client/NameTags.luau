@@ -46,14 +46,17 @@ local function build(p: Player, head: BasePart): BillboardGui
 	local level = p:GetAttribute("Level")
 	if type(level) == "number" then
 		local name, color = Levels.title(level)
-		local text = "LV " .. level .. "  " .. name
+		-- the LOGIN STREAK (Server/Daily, player attribute Streak) from 2 days on, in gold
+		local streak = tonumber(p:GetAttribute("Streak")) or 0
+		local streakText = streak >= 2 and ("  " .. streak .. " DAY STREAK") or ""
+		local text = "LV " .. level .. "  " .. name .. streakText
 		local lw = math.clamp(0.16 + (utf8.len(text) or 12) * 0.036, 0.4, 0.98)
 		local row = Grunge.brush(bb, {
 			AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, #mine > 0 and 0.02 or Y(0.06)), Size = UDim2.fromScale(lw, 0.22),
 			Rotation = 1, ZIndex = 5,
 		}, Color3.fromRGB(26, 20, 18), seed + 11, 10, false)
 		Grunge.text(row, {
-			Text = '<font color="#E8E0CD">LV ' .. level .. '</font>  ' .. name, RichText = true, AnchorPoint = Vector2.new(0.5, 0.5),
+			Text = '<font color="#E8E0CD">LV ' .. level .. '</font>  ' .. name .. (streakText ~= "" and ('<font color="#FFC446">' .. streakText .. '</font>') or ""), RichText = true, AnchorPoint = Vector2.new(0.5, 0.5),
 			Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.92, 0.8), TextColor3 = color, TextStrokeTransparency = 0.2, ZIndex = 8,
 		})
 	end
@@ -102,7 +105,7 @@ local function onPlayer(p: Player)
 		ch:WaitForChild("Head", 10)
 		if p.Character == ch then refresh(p) end
 	end)
-	for _, a in { "InMatch", "VIP", "Dev", "Level" } do
+	for _, a in { "InMatch", "VIP", "Dev", "Level", "Streak" } do
 		p:GetAttributeChangedSignal(a):Connect(function() refresh(p) end)
 	end
 	p:GetPropertyChangedSignal("DisplayName"):Connect(function() refresh(p) end)

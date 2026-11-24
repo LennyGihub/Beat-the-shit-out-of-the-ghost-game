@@ -72,7 +72,7 @@ local function vialFor(fm: Forms.Form): Forms.Vial
 end
 
 local function source(fm: Forms.Form): string
-	if fm.exclusive then return "EXCLUSIVE  -  FROM A CODE" end
+	if fm.exclusive then return "EXCLUSIVE  -  FROM " .. (fm.source or "A CODE") end
 	local m = Campaign.mapById[fm.set]
 	return (m and m.name or fm.set) .. "  -  " .. (fm.kind == "stim" and "DOC MERCY'S ECTOPLASM" or "MOTHER MOTH'S POTIONS")
 end
