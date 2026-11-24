@@ -7,7 +7,8 @@
 --   1. CastShadow off on small decoration (CanCollide off, largest side < 3 studs) and on every Neon part (lights).
 --   2. CollisionFidelity Box on PURE decoration MeshParts / Unions (CanCollide, CanQuery and CanTouch all off: no
 --      raycast, touch or physics ever uses their exact shape, but its collision geometry still sits in memory).
---   3. Workspace.EnableSLIMAvatars = true (lighter avatars: the guide reports -93% triangles, -60% memory).
+--   3. Workspace.EnableSLIMAvatars = Enum.RolloutState.Enabled (lighter avatars: the guide reports -93% triangles,
+--      -60% memory; usually refused here: set it from Studio's Command Bar or Properties window).
 -- It REPORTS (never changes): the streaming settings next to the guide's values, shadow-casting lights per map,
 -- particle emitters, parts / draw-call suspects (distinct MeshIds) per container. Streaming changes can break client
 -- code that expects parts to be there, so they wait for a decision + a playtest.
@@ -81,8 +82,9 @@ say("")
 say("STREAMING (now -> the guide): StreamingEnabled " .. prop("StreamingEnabled") .. " -> true | ModelStreamingBehavior " .. prop("ModelStreamingBehavior")
 	.. " -> Improved | StreamingIntegrityMode " .. prop("StreamingIntegrityMode") .. " -> PauseOutsideLoadedArea | StreamOutBehavior "
 	.. prop("StreamOutBehavior") .. " -> Opportunistic | MinRadius " .. prop("StreamingMinRadius") .. " -> 64 | TargetRadius " .. prop("StreamingTargetRadius") .. " -> 1024")
-local slimSet = APPLY and pcall(function() (workspace :: any).EnableSLIMAvatars = true end)
-say("SLIM avatars: " .. prop("EnableSLIMAvatars") .. (slimSet and " -> true" or (APPLY and " (a script can't set it here: Workspace > EnableSLIMAvatars in Studio's Properties panel)" or " (APPLY tries to set it)")))
+-- (an Enum.RolloutState, not a boolean; Roblox only lets the Properties window, the Command Bar or a plugin set it)
+local slimSet = APPLY and pcall(function() (workspace :: any).EnableSLIMAvatars = Enum.RolloutState.Enabled end)
+say("SLIM avatars: " .. prop("EnableSLIMAvatars") .. (slimSet and " -> true" or (APPLY and " (a script can't set it here: Studio's Command Bar: workspace.EnableSLIMAvatars = Enum.RolloutState.Enabled)" or " (APPLY tries to set it)")))
 say(("TOTAL: %d parts, %d shadows %s, %d decor meshes %s, %d lights (%d cast shadows: the guide says at most 2 per room), %d emitters")
 	:format(tot.parts, tot.shadowOff, APPLY and "turned off" or "to turn off", tot.boxed, APPLY and "boxed" or "to box", tot.lights, tot.shadowLights, tot.emitters))
 say(APPLY and "APPLIED. Save the place (File > Save) and re-run without APPLY to check: the counts to change should be 0." or "REPORT ONLY (nothing changed).")
