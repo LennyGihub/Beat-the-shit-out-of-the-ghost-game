@@ -25,7 +25,7 @@ local function id(attr: string): number return tonumber(RS:GetAttribute(attr)) o
 -- attributes when this module loads (before any module starts); an attribute already set to another id wins.
 -- 0 = not made yet (the shop shows SOON).
 local IDS: { [string]: number } = {
-	Money2PassId = 0,
+	Money2PassId = 2098744808, -- 2X MONEY (199 R$, made 2026-11-24)
 	DoubleUltPassId = 2092401025,
 	VipPassId = 2093960947,
 	SecondChancePassId = 2094074958,

@@ -362,8 +362,8 @@
    "file": "ServerScriptService/Server/Monetization.luau",
    "instance": "game.ServerScriptService.Server.Monetization",
    "class": "ModuleScript",
-   "bytes": 6512,
-   "sha1": "aa8a1a438c4b48fa109d1aff366d8f459e3da8eb"
+   "bytes": 6559,
+   "sha1": "2eb5a631b552ddeff9614e327691081a8819190f"
   },
   {
    "file": "ServerScriptService/Server/MoonMonsters.luau",
